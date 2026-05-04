@@ -1,0 +1,4149 @@
+openapi: 3.1.0
+info:
+  title: WazerPay Gateway API
+  version: 1.0.0
+  description: |
+    API do WazerPay Gateway para processamento de pagamentos via PIX, Cartao de Credito e Boleto.
+
+    ## Visao Geral
+
+    O WazerPay Gateway permite que voce integre pagamentos no seu sistema de forma simples e segura.
+    Crie checkouts personalizados, processe cobrancas via PIX, cartao ou boleto, e acompanhe todas as transacoes em tempo real.
+
+    **Adquirente Principal:** PayFort Bank (PIX) - Taxa fixa de R$ 0,90 por transacao.
+
+    ## Autenticacao
+
+    Todas as requisicoes a API devem ser autenticadas com uma **API Key** enviada no header `X-API-Key`.
+
+    ### Endpoints Externos vs Internos
+
+    A API possui dois grupos de endpoints:
+
+    | Tipo | Prefixo | Autenticação | Uso |
+    |---|---|---|---|
+    | **Externo** | `/api/v1/external/*` | API Key (X-API-Key) | Integrações externas, webhooks, apps |
+    | **Interno** | `/api/v1/*` | JWT Token (Bearer) | Dashboard, painel administrativo |
+
+    > **IMPORTANTE:** Para criar cobranças via API Key, use sempre o endpoint `/api/v1/external/charges`.
+    > O endpoint `/api/v1/charges` (sem `/external/`) requer autenticação JWT e retornará erro 500 com API Key.
+
+    ### Tipos de chave
+
+    O WazerPay possui **dois tipos de chaves** com niveis de acesso diferentes:
+
+    | Tipo | Prefixo | Permissoes | Uso |
+    |---|---|---|---|
+    | **Secreta** | `sk_live_` / `sk_test_` | Acesso completo (leitura + escrita) | Servidor (backend) |
+    | **Publica** | `pk_live_` / `pk_test_` | Somente leitura | Frontend / cliente |
+
+    > **IMPORTANTE:** Para criar cobrancas, gerenciar checkouts, processar pagamentos e outras operacoes de escrita, voce PRECISA de uma **chave secreta** (`sk_live_`).
+    > Chaves publicas (`pk_live_`) retornarao **403 Insufficient permissions** em operacoes de escrita.
+
+    ### Como obter sua API Key
+
+    1. Acesse o painel WazerPay em [app.wazerpay.com.br](https://app.wazerpay.com.br)
+    2. Va em **Configuracoes** no menu lateral
+    3. Clique na aba **Chaves API**
+    4. Clique em **Nova Chave**
+    5. Selecione o **tipo**: Secreta (sk_) para acesso completo ou Publica (pk_) para somente leitura
+    6. De um nome para identificar a chave (ex: "Meu E-commerce", "App Mobile")
+    7. Selecione o ambiente (Producao ou Sandbox)
+    8. Clique em **Criar** e copie a chave gerada
+
+    > **Importante:** A chave so e exibida uma vez. Guarde-a em local seguro.
+
+    ### Permissoes disponiveis
+
+    **Chaves secretas (`sk_live_`) tem todas as permissoes por padrao (`*`).**
+    Chaves publicas (`pk_live_`) so podem ter permissoes de leitura.
+
+    | Permissao | Descricao | pk_ | sk_ |
+    |---|---|---|---|
+    | `charges:read` | Listar e visualizar cobrancas | Sim | Sim |
+    | `charges:write` | Criar, cancelar e estornar cobrancas | Nao | Sim |
+    | `payments:read` | Consultar pagamentos e metodos | Sim | Sim |
+    | `payments:write` | Processar pagamentos | Nao | Sim |
+    | `checkouts:read` | Listar e visualizar checkouts | Sim | Sim |
+    | `checkouts:write` | Criar, atualizar e remover checkouts | Nao | Sim |
+    | `products:read` | Listar e visualizar produtos | Sim | Sim |
+    | `products:write` | Criar, atualizar e remover produtos | Nao | Sim |
+    | `customers:read` | Listar e visualizar clientes | Sim | Sim |
+    | `customers:write` | Criar e atualizar clientes | Nao | Sim |
+    | `webhooks:read` | Listar webhooks | Sim | Sim |
+    | `webhooks:write` | Criar, atualizar e remover webhooks | Nao | Sim |
+    | `withdrawals:read` | Listar e visualizar saques | Sim | Sim |
+    | `withdrawals:write` | Solicitar e cancelar saques | Nao | Sim |
+
+    ### Como usar a API Key
+
+    Inclua o header `X-API-Key` em todas as requisicoes:
+
+    ```bash
+    # Use sua chave SECRETA (sk_live_) para operacoes de escrita
+    curl -X GET https://api.wazerpay.com.br/api/v1/external/charges \
+      -H "X-API-Key: sk_live_sua_chave_secreta_aqui" \
+      -H "Content-Type: application/json"
+    ```
+
+    Alternativamente, voce pode enviar a chave como query parameter (nao recomendado):
+    ```
+    GET https://api.wazerpay.com.br/api/v1/external/charges?api_key=sk_live_sua_chave_aqui
+    ```
+
+    ### Exemplo: Criar uma cobranca PIX
+
+    ```bash
+    # IMPORTANTE: Use o endpoint /api/v1/external/charges (com /external/)
+    # Use chave SECRETA (sk_live_) - chave publica retornara 403
+    curl -X POST https://api.wazerpay.com.br/api/v1/external/charges \
+      -H "X-API-Key: sk_live_sua_chave_secreta_aqui" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "amount": 5000,
+        "payment_method": "pix",
+        "description": "Pedido #1234",
+        "customer": {
+          "name": "Joao Silva",
+          "email": "joao@email.com",
+          "document": "12345678900"
+        }
+      }'
+    ```
+
+    A resposta incluira o `pix_qr_code` e `pix_copy_paste` para o cliente efetuar o pagamento.
+
+    > **ATENÇÃO:** O endpoint correto é `/api/v1/external/charges` (com `/external/`).
+    > Usar `/api/v1/charges` (sem `/external/`) resultará em erro 500.
+
+    ### Exemplo: Criar uma cobranca Cartao de Credito
+
+    ```bash
+    curl -X POST https://api.wazerpay.com.br/api/v1/external/charges \
+      -H "X-API-Key: sk_live_sua_chave_secreta_aqui" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "amount": 15990,
+        "payment_method": "credit_card",
+        "description": "Assinatura Premium",
+        "installments": 3,
+        "customer": {
+          "name": "Maria Santos",
+          "email": "maria@email.com",
+          "document": "98765432100"
+        },
+        "card": {
+          "number": "4111111111111111",
+          "holder_name": "MARIA SANTOS",
+          "exp_month": "12",
+          "exp_year": "2027",
+          "cvv": "123"
+        }
+      }'
+    ```
+
+    ### Exemplo: Criar uma cobranca Boleto
+
+    ```bash
+    curl -X POST https://api.wazerpay.com.br/api/v1/external/charges \
+      -H "X-API-Key: sk_live_sua_chave_secreta_aqui" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "amount": 29900,
+        "payment_method": "boleto",
+        "description": "Fatura mensal",
+        "customer": {
+          "name": "Carlos Souza",
+          "email": "carlos@email.com",
+          "document": "11122233344",
+          "address": {
+            "street": "Rua das Flores",
+            "number": "123",
+            "neighborhood": "Centro",
+            "city": "Sao Paulo",
+            "state": "SP",
+            "zip_code": "01001000"
+          }
+        }
+      }'
+    ```
+
+    A resposta incluira `boleto_url` (link do boleto) e `boleto_barcode` (codigo de barras).
+
+    ### Erros de autenticacao
+
+    | Codigo HTTP | Descricao |
+    |---|---|
+    | `401 Unauthorized` | API Key ausente, invalida ou expirada |
+    | `403 Forbidden` | API Key nao possui permissao para este endpoint |
+    | `429 Too Many Requests` | Limite de requisicoes excedido |
+
+    ### Boas praticas
+
+    - **Nunca exponha** sua chave secreta (`sk_live_`) no frontend ou codigo-fonte publico
+    - Use chaves publicas (`pk_live_`) apenas no frontend/cliente (somente leitura)
+    - Use chaves secretas (`sk_live_`) apenas no servidor (backend)
+    - Use variaveis de ambiente para armazenar as chaves
+    - Crie chaves separadas para cada ambiente (producao, staging, desenvolvimento)
+    - Revogue chaves comprometidas imediatamente no painel
+    - Use apenas as permissoes necessarias para cada integracao (principio do menor privilegio)
+
+    ## Valores Monetarios
+
+    **Todos os valores monetarios sao em centavos (integer).**
+    Exemplo: R$ 100,50 = `10050`
+
+    ## Idempotencia
+
+    Endpoints de criacao suportam o header `Idempotency-Key` para evitar cobrancas duplicadas.
+
+    ```bash
+    curl -X POST https://api.wazerpay.com.br/api/v1/external/charges \
+      -H "X-API-Key: sk_live_sua_chave_secreta_aqui" \
+      -H "Idempotency-Key: pedido-1234-unique-id" \
+      -H "Content-Type: application/json" \
+      -d '{"amount": 5000, "payment_method": "pix", ...}'
+    ```
+
+    ## Webhooks
+
+    Receba notificacoes automaticas quando o status de um pagamento mudar.
+
+    ### Como funciona
+    1. Cadastre uma URL no painel ou via API (`POST /v1/webhooks`)
+    2. Escolha os eventos que deseja receber
+    3. O WazerPay envia um `POST` na sua URL com os dados do evento
+    4. Responda com HTTP `200` para confirmar o recebimento
+
+    ### Eventos disponiveis
+    | Evento | Descricao |
+    |---|---|
+    | `charge.created` | Cobranca criada |
+    | `charge.paid` | Pagamento confirmado |
+    | `charge.failed` | Pagamento falhou |
+    | `charge.refunded` | Estorno realizado |
+    | `charge.disputed` | Disputa aberta |
+    | `payment.approved` | Pagamento aprovado |
+    | `payment.rejected` | Pagamento rejeitado |
+    | `payment.expired` | Pagamento expirado |
+    | `payment.cancelled` | Pagamento cancelado |
+    | `payment.chargedback` | Chargeback recebido |
+    | `withdrawal.requested` | Saque solicitado |
+    | `withdrawal.completed` | Saque concluido |
+    | `*` | Todos os eventos |
+
+    ### Exemplo de payload recebido
+    ```json
+    {
+      "event": "charge.paid",
+      "charge_id": "ea5069a7-84f9-4727-a455-de285a3eee4f",
+      "status": "approved",
+      "amount": 5000,
+      "payment_method": "pix",
+      "paid_at": "2026-02-23T14:30:00Z"
+    }
+    ```
+
+    ### Retentativas
+    Se sua URL nao responder com `200`, o WazerPay reenvia ate **5 vezes** com backoff exponencial (1min, 5min, 15min, 30min, 1h).
+
+    ## Rate Limiting
+
+    A API possui rate limiting de 1000 requisicoes por minuto.
+    Os headers `X-RateLimit-Limit`, `X-RateLimit-Remaining` e `X-RateLimit-Reset` sao incluidos nas respostas.
+  contact:
+    name: WazerPay Suporte
+    email: suporte@wazerpay.com.br
+  license:
+    name: Proprietária
+    url: https://wazerpay.com.br/termos
+
+servers:
+  - url: https://api.wazerpay.com.br/api
+    description: Produção
+  - url: http://localhost:8000/api
+    description: Desenvolvimento Local
+
+security:
+  - apiKeyAuth: []
+
+tags:
+  - name: Cobranças
+    description: Criar e gerenciar cobranças (PIX, Cartão, Boleto)
+  - name: Pagamentos
+    description: Processar pagamentos e consultar métodos disponíveis
+  - name: Checkout
+    description: Criar e gerenciar páginas de checkout personalizadas
+  - name: Checkout Público
+    description: Endpoints públicos para exibir e processar pagamentos via checkout
+  - name: Produtos
+    description: Gerenciar produtos e serviços
+  - name: Webhooks
+    description: Gerenciar webhooks e receber notificações de eventos de pagamento
+  - name: Split de Pagamento
+    description: Configurar regras de split automático para dividir pagamentos entre múltiplos destinatários
+  - name: Saques
+    description: Solicitar e gerenciar saques (withdrawals) via PIX ou transferência bancária
+
+paths:
+  # ==========================================
+  # COBRANCAS EXTERNAS (API Key)
+  # ==========================================
+  /v1/external/charges:
+    post:
+      tags: [Cobranças]
+      summary: Criar cobrança (API Externa)
+      description: |
+        **Endpoint correto para criar cobranças via API Key.**
+
+        Cria uma nova cobrança. O valor deve ser em **centavos** (integer).
+
+        ### Exemplo PIX
+        Ao criar uma cobrança PIX, a resposta incluirá `pix_qr_code` (base64 da imagem) e `pix_copy_paste` (código copia e cola).
+
+        ### Exemplo Boleto
+        A resposta incluirá `boleto_url`, `boleto_barcode` e `boleto_digitable_line`.
+
+        ### Exemplo Cartão de Crédito
+        Envie os dados do cartão no objeto `card`. Suporta parcelamento de 1 a 12x.
+
+        > **IMPORTANTE:** Este é o endpoint correto para uso com API Key.
+        > Não use `/v1/charges` (sem `/external/`) pois resultará em erro 500.
+      operationId: createExternalCharge
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChargeRequest'
+            examples:
+              pix:
+                summary: Cobrança PIX - R$ 100,50
+                description: |
+                  Exemplo completo de criação de cobrança PIX.
+                  O valor deve ser em centavos (10050 = R$ 100,50).
+                  A resposta incluirá o QR Code e código copia e cola.
+                value:
+                  amount: 10050
+                  payment_method: pix
+                  description: "Assinatura Premium - Janeiro/2026"
+                  customer:
+                    name: "Maria Santos"
+                    email: "maria@email.com"
+                    document: "12345678900"
+                    phone: "11999998888"
+                  metadata:
+                    order_id: "ORD-12345"
+                    source: "meu_ecommerce"
+              pix_simples:
+                summary: PIX Simples - R$ 50,00
+                description: Exemplo mínimo para gerar PIX
+                value:
+                  amount: 5000
+                  payment_method: pix
+                  description: "Pagamento de produto"
+                  customer:
+                    name: "João Silva"
+                    email: "joao@email.com"
+                    document: "98765432100"
+              boleto:
+                summary: Cobrança Boleto - R$ 250,00
+                description: |
+                  Exemplo de cobrança via boleto bancário.
+                  A resposta incluirá a URL do boleto e código de barras.
+                value:
+                  amount: 25000
+                  payment_method: boleto
+                  description: "Curso Online - Marketing Digital"
+                  customer:
+                    name: "Carlos Oliveira"
+                    email: "carlos@email.com"
+                    document: "98765432100"
+                    phone: "21988887777"
+              cartao:
+                summary: Cartão de Crédito - R$ 499,90 em 3x
+                description: |
+                  Exemplo de cobrança com cartão de crédito parcelado.
+                  Suporta de 1 a 12 parcelas.
+                value:
+                  amount: 49990
+                  payment_method: credit_card
+                  description: "Plano Anual"
+                  installments: 3
+                  customer:
+                    name: "Ana Costa"
+                    email: "ana@email.com"
+                    document: "11122233344"
+                    phone: "11977776666"
+                  card:
+                    number: "4111111111111111"
+                    holder_name: "ANA COSTA"
+                    exp_month: "12"
+                    exp_year: "2028"
+                    cvv: "123"
+                  billing:
+                    street: "Rua das Flores"
+                    number: "100"
+                    complement: "Apto 42"
+                    neighborhood: "Centro"
+                    city: "São Paulo"
+                    state: "SP"
+                    zip_code: "01001000"
+              cartao_vista:
+                summary: Cartão à Vista - R$ 199,00
+                description: Pagamento com cartão em uma parcela
+                value:
+                  amount: 19900
+                  payment_method: credit_card
+                  description: "Produto Digital"
+                  installments: 1
+                  customer:
+                    name: "Pedro Alves"
+                    email: "pedro@email.com"
+                    document: "55544433322"
+                  card:
+                    number: "5555555555554444"
+                    holder_name: "PEDRO ALVES"
+                    exp_month: "06"
+                    exp_year: "2027"
+                    cvv: "456"
+      responses:
+        '201':
+          description: Cobrança criada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ChargeResponse'
+              examples:
+                pix_response:
+                  summary: Resposta PIX
+                  value:
+                    success: true
+                    data:
+                      charge_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+                      status: pending
+                      amount: 10050
+                      payment_method: pix
+                      acquirer: payfort
+                      transaction_id: "trx_abc123"
+                      pix_qr_code: "00020126580014br.gov.bcb.pix0136..."
+                      pix_copy_paste: "00020126580014br.gov.bcb.pix0136..."
+                      pix_qr_code_url: "data:image/png;base64,iVBORw0KGgo..."
+                      expires_at: "2026-02-16T18:30:00Z"
+                      fees:
+                        fixed: 90
+                        percentage: 0
+                boleto_response:
+                  summary: Resposta Boleto
+                  value:
+                    success: true
+                    data:
+                      charge_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+                      status: pending
+                      amount: 25000
+                      payment_method: boleto
+                      acquirer: payfort
+                      transaction_id: "trx_def456"
+                      boleto_url: "https://api.payfortbank.com/boleto/..."
+                      boleto_barcode: "23793.381296 60000.000003 00000.000402 1 84340000025000"
+                      boleto_digitable_line: "23791843400000250003381296000000000000000040"
+                      expires_at: "2026-02-19T23:59:59Z"
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Permissão insuficiente (use chave secreta sk_live_)
+
+    get:
+      tags: [Cobranças]
+      summary: Listar cobranças (API Externa)
+      description: Lista todas as cobranças da conta com paginação e filtros.
+      operationId: listCharges
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, expired, cancelled, refunded, rejected, failed]
+          description: Filtrar por status
+        - name: payment_method
+          in: query
+          schema:
+            type: string
+            enum: [pix, credit_card, boleto]
+          description: Filtrar por método de pagamento
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Data inicial (YYYY-MM-DD)
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Data final (YYYY-MM-DD)
+        - name: customer_email
+          in: query
+          schema:
+            type: string
+          description: Filtrar por email do cliente
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Busca por ID, email ou nome do cliente
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 15
+            maximum: 100
+          description: Itens por página
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Número da página
+      responses:
+        '200':
+          description: Lista de cobranças
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Charge'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/external/charges/{chargeId}:
+    get:
+      tags: [Cobranças]
+      summary: Detalhes da cobrança
+      description: Retorna os detalhes completos de uma cobrança específica.
+      operationId: getCharge
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ChargeId'
+      responses:
+        '200':
+          description: Detalhes da cobrança
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Charge'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/external/charges/{chargeId}/cancel:
+    post:
+      tags: [Cobranças]
+      summary: Cancelar cobrança
+      description: Cancela uma cobrança pendente.
+      operationId: cancelCharge
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ChargeId'
+      responses:
+        '200':
+          description: Cobrança cancelada
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Cobrança não pode ser cancelada (já paga ou já cancelada)
+
+  /v1/external/charges/{chargeId}/refund:
+    post:
+      tags: [Cobranças]
+      summary: Estornar cobrança
+      description: |
+        Realiza o estorno total ou parcial de uma cobrança paga.
+        Para estorno parcial, envie o campo `amount` com o valor em centavos.
+      operationId: refundCharge
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ChargeId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  description: Valor do estorno parcial em centavos. Se omitido, estorna o valor total.
+                  example: 5000
+                reason:
+                  type: string
+                  description: Motivo do estorno
+                  example: Produto com defeito
+      responses:
+        '200':
+          description: Estorno realizado com sucesso
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Cobrança não pode ser estornada
+
+  # ==========================================
+  # SAQUES (API Key)
+  # ==========================================
+  /v1/external/withdrawals:
+    get:
+      tags: [Saques]
+      summary: Listar saques
+      description: |
+        Lista todos os saques da conta com paginação e filtros.
+      operationId: listWithdrawals
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, processing, completed, cancelled, failed]
+          description: Filtrar por status
+        - name: method
+          in: query
+          schema:
+            type: string
+            enum: [pix, bank_transfer]
+          description: Filtrar por método
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Data inicial
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Data final
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: Itens por página
+      responses:
+        '200':
+          description: Lista de saques
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Withdrawal'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Saques]
+      summary: Solicitar saque
+      description: |
+        Cria uma nova solicitação de saque. O valor deve ser em **centavos** (mínimo R$ 1,00 = 100).
+
+        ### Métodos disponíveis
+        - **pix**: Transferência instantânea via chave PIX
+        - **bank_transfer**: Transferência bancária (TED/DOC)
+
+        ### Destino do saque
+        Informe os dados de destino no objeto `destination`:
+        - Para PIX: envie `type: "pix"`, `pix_key` e `pix_type`
+        - Para transferência bancária: envie `type: "bank_account"` com dados bancários completos
+
+        ### Segurança - IP Whitelist
+        Se você configurou IPs permitidos para saque nas configurações da conta,
+        apenas requisições originadas desses IPs serão aceitas. Caso contrário,
+        a resposta será **403 ip_not_allowed**.
+
+        Configure os IPs permitidos via `PUT /v1/account/withdrawal-ips`.
+
+        ### MFA (2FA)
+        Para saques via dashboard (JWT), é obrigatório enviar o código MFA no campo `mfa_code`.
+        Para saques via API Key, o MFA não é exigido, mas a validação de IP whitelist é aplicada.
+
+        ### Processamento
+        Saques PIX são processados instantaneamente. Transferências bancárias podem
+        ser processadas automaticamente ou ficar pendentes para aprovação manual.
+
+        ### Exemplo: Saque PIX
+
+        ```bash
+        curl -X POST https://api.wazerpay.com.br/api/v1/external/withdrawals \
+          -H "X-API-Key: sk_live_sua_chave_secreta_aqui" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "amount": 50000,
+            "method": "pix",
+            "mfa_code": "123456",
+            "destination": {
+              "type": "pix",
+              "pix_key": "email@exemplo.com",
+              "pix_type": "email"
+            }
+          }'
+        ```
+      operationId: createWithdrawal
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWithdrawalRequest'
+            examples:
+              pix_cpf:
+                summary: Saque PIX via CPF - R$ 500,00
+                value:
+                  amount: 50000
+                  method: pix
+                  mfa_code: "123456"
+                  destination:
+                    type: pix
+                    pix_key: "12345678900"
+                    pix_type: cpf
+              pix_email:
+                summary: Saque PIX via email - R$ 200,00
+                value:
+                  amount: 20000
+                  method: pix
+                  mfa_code: "654321"
+                  destination:
+                    type: pix
+                    pix_key: "meuemail@exemplo.com"
+                    pix_type: email
+              pix_chave_aleatoria:
+                summary: Saque PIX via chave aleatória - R$ 1.000,00
+                value:
+                  amount: 100000
+                  method: pix
+                  mfa_code: "789012"
+                  destination:
+                    type: pix
+                    pix_key: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    pix_type: random
+              transferencia_bancaria:
+                summary: Transferência bancária - R$ 2.000,00
+                value:
+                  amount: 200000
+                  method: bank_transfer
+                  mfa_code: "345678"
+                  destination:
+                    type: bank_account
+                    bank_code: "001"
+                    bank_name: "Banco do Brasil"
+                    agency: "1234"
+                    account_number: "12345-6"
+                    account_type: checking
+                    holder_name: "João Silva"
+                    holder_document: "12345678900"
+                  notes: "Saque mensal"
+      responses:
+        '201':
+          description: Saque criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Withdrawal'
+                  message:
+                    type: string
+                    example: Solicitação de saque criada com sucesso
+              examples:
+                pix_processado:
+                  summary: Saque PIX processado instantaneamente
+                  value:
+                    success: true
+                    data:
+                      id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+                      account_id: "550e8400-e29b-41d4-a716-446655440000"
+                      amount: 50000
+                      fee: 0
+                      net_amount: 50000
+                      status: completed
+                      method: pix
+                      destination:
+                        type: pix
+                        pix_key: "12345678900"
+                        pix_type: cpf
+                      created_at: "2026-02-23T14:30:00Z"
+                    processing:
+                      success: true
+                      transfer_id: "txn_pix_abc123"
+                    message: Saque enviado via PIX com sucesso
+                pendente:
+                  summary: Saque pendente de aprovação
+                  value:
+                    success: true
+                    data:
+                      id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+                      account_id: "550e8400-e29b-41d4-a716-446655440000"
+                      amount: 200000
+                      fee: 500
+                      net_amount: 195000
+                      status: pending
+                      method: bank_transfer
+                      destination:
+                        type: bank_account
+                        bank_code: "001"
+                        bank_name: "Banco do Brasil"
+                        agency: "1234"
+                        account_number: "12345-6"
+                        account_type: checking
+                        holder_name: "João Silva"
+                        holder_document: "12345678900"
+                      created_at: "2026-02-23T14:30:00Z"
+                    message: Solicitação de saque criada com sucesso
+        '403':
+          description: IP não autorizado ou MFA não ativado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                ip_bloqueado:
+                  summary: IP não autorizado para saques
+                  value:
+                    success: false
+                    error:
+                      code: ip_not_allowed
+                      message: "O IP deste servidor não está autorizado para realizar saques. Configure os IPs permitidos nas configurações."
+                mfa_necessario:
+                  summary: MFA não ativado
+                  value:
+                    success: false
+                    error:
+                      code: mfa_required
+                      message: "Você precisa ativar a verificação em dois fatores (2FA) nas configurações antes de realizar saques."
+        '422':
+          description: Dados inválidos ou saldo insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                saldo_insuficiente:
+                  summary: Saldo insuficiente
+                  value:
+                    success: false
+                    message: "Saldo insuficiente para saque"
+                    data:
+                      requested: 50000
+                      available: 30000
+                mfa_invalido:
+                  summary: Código MFA inválido
+                  value:
+                    success: false
+                    error:
+                      code: mfa_invalid
+                      message: "Código de verificação 2FA inválido. Tente novamente."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/external/withdrawals/summary:
+    get:
+      tags: [Saques]
+      summary: Resumo de saques
+      description: |
+        Retorna o resumo financeiro da conta incluindo saldo disponível,
+        total sacado, saques pendentes e histórico recente.
+      operationId: getWithdrawalSummary
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Resumo de saques
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      available_balance:
+                        type: integer
+                        description: Saldo disponível para saque em centavos
+                        example: 150000
+                      pending_balance:
+                        type: integer
+                        description: Saldo em saques pendentes em centavos
+                        example: 50000
+                      total_withdrawn:
+                        type: integer
+                        description: Total já sacado (líquido) em centavos
+                        example: 500000
+                      this_month_withdrawn:
+                        type: integer
+                        description: Total sacado neste mês em centavos
+                        example: 100000
+                      pending_amount:
+                        type: integer
+                        description: Valor em saques pendentes/processando
+                        example: 50000
+                      recent_withdrawals:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Withdrawal'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/external/withdrawals/{withdrawalId}:
+    get:
+      tags: [Saques]
+      summary: Detalhes do saque
+      description: Retorna os detalhes completos de um saque específico.
+      operationId: getWithdrawal
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: withdrawalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID do saque
+      responses:
+        '200':
+          description: Detalhes do saque
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Withdrawal'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v1/external/withdrawals/{withdrawalId}/cancel:
+    post:
+      tags: [Saques]
+      summary: Cancelar saque
+      description: |
+        Cancela um saque pendente. O valor é devolvido ao saldo disponível.
+        Apenas saques com status `pending` podem ser cancelados.
+      operationId: cancelWithdrawal
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: withdrawalId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID do saque
+      responses:
+        '200':
+          description: Saque cancelado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Withdrawal'
+                  message:
+                    type: string
+                    example: Saque cancelado com sucesso
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Saque não pode ser cancelado (já processado ou já cancelado)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================
+  # IP WHITELIST PARA SAQUES
+  # ==========================================
+  /v1/account/withdrawal-ips:
+    get:
+      tags: [Saques]
+      summary: Listar IPs autorizados para saques
+      description: |
+        Retorna a lista de IPs autorizados para realizar saques via API.
+        Se a lista estiver vazia, qualquer IP pode realizar saques.
+      operationId: getWithdrawalIpWhitelist
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Lista de IPs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      ips:
+                        type: array
+                        items:
+                          type: string
+                        example: ["177.10.20.30", "200.100.50.25"]
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags: [Saques]
+      summary: Configurar IPs autorizados para saques
+      description: |
+        Define a lista de IPs autorizados a realizar saques via API Key.
+        Máximo de **20 IPs**.
+
+        - Se a lista estiver **vazia**, qualquer IP pode realizar saques.
+        - Se a lista tiver IPs, **apenas requisições desses IPs** poderão solicitar saques.
+
+        ### Exemplo
+
+        ```bash
+        curl -X PUT https://api.wazerpay.com.br/api/v1/account/withdrawal-ips \
+          -H "X-API-Key: sk_live_sua_chave_secreta_aqui" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "ips": ["177.10.20.30", "200.100.50.25"]
+          }'
+        ```
+      operationId: updateWithdrawalIpWhitelist
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ips]
+              properties:
+                ips:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: string
+                    format: ipv4
+                  description: Lista de IPs autorizados (vazio para permitir qualquer IP)
+                  example: ["177.10.20.30", "200.100.50.25"]
+      responses:
+        '200':
+          description: IPs atualizados
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      ips:
+                        type: array
+                        items:
+                          type: string
+                        example: ["177.10.20.30", "200.100.50.25"]
+                  message:
+                    type: string
+                    example: IPs autorizados atualizados com sucesso.
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================
+  # CHECKOUT PUBLICO
+  # ==========================================
+  /v1/checkout/{slug}:
+    get:
+      tags: [Checkout Público]
+      summary: Obter página de checkout
+      description: |
+        Retorna os dados de uma página de checkout pública pelo slug.
+        Use este endpoint para renderizar um checkout customizado no seu frontend.
+      operationId: getPublicCheckout
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          example: curso-marketing-digital
+          description: Slug único do checkout
+      responses:
+        '200':
+          description: Dados do checkout
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/PublicCheckout'
+        '404':
+          description: Checkout não encontrado
+
+  /v1/checkout/{slug}/process:
+    post:
+      tags: [Checkout Público]
+      summary: Processar pagamento do checkout
+      description: |
+        Processa o pagamento de um checkout público. Este é o endpoint principal para realizar pagamentos.
+
+        ### Fluxo PIX
+        1. Envie `payment_method: "pix"` com os dados do cliente
+        2. Receba o `pix_qr_code` e `pix_copy_paste` na resposta
+        3. Exiba o QR Code para o cliente
+        4. Faça polling no endpoint `GET /v1/checkout/charge/{chargeId}/status` para verificar o pagamento
+        5. Quando `status` mudar para `approved`, o pagamento foi confirmado
+
+        ### Fluxo Cartão de Crédito
+        1. Envie `payment_method: "credit_card"` com dados do cartão e cliente
+        2. A resposta já terá `status: "approved"` se aprovado, ou `status: "rejected"` se recusado
+
+        ### Fluxo Boleto
+        1. Envie `payment_method: "boleto"` com os dados do cliente
+        2. Receba `boleto_url` e `boleto_barcode` na resposta
+        3. Redirecione o cliente para o boleto ou exiba o código de barras
+      operationId: processCheckoutPayment
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+          example: curso-marketing-digital
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessPaymentRequest'
+            examples:
+              pix:
+                summary: Pagamento PIX
+                value:
+                  payment_method: pix
+                  customer:
+                    name: Maria Santos
+                    email: maria@email.com
+                    document: "12345678900"
+                    phone: "11999998888"
+              cartao:
+                summary: Pagamento Cartão
+                value:
+                  payment_method: credit_card
+                  installments: 3
+                  customer:
+                    name: Ana Costa
+                    email: ana@email.com
+                    document: "11122233344"
+                    phone: "11988887777"
+                  card:
+                    number: "4111111111111111"
+                    holder_name: ANA COSTA
+                    exp_month: "12"
+                    exp_year: "2028"
+                    cvv: "123"
+                  billing:
+                    street: Rua das Flores
+                    number: "100"
+                    neighborhood: Centro
+                    city: São Paulo
+                    state: SP
+                    zip_code: "01001000"
+              boleto:
+                summary: Pagamento Boleto
+                value:
+                  payment_method: boleto
+                  customer:
+                    name: Carlos Oliveira
+                    email: carlos@email.com
+                    document: "98765432100"
+                    phone: "21977776666"
+      responses:
+        '201':
+          description: Pagamento processado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ChargeResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          description: Checkout não encontrado
+
+  /v1/checkout/charge/{chargeId}/status:
+    get:
+      tags: [Checkout Público]
+      summary: Verificar status do pagamento
+      description: |
+        Verifica o status atual de uma cobrança. Use para polling após gerar um PIX ou boleto.
+
+        **Recomendação:** Faça polling a cada 3-5 segundos por no máximo 30 minutos para PIX.
+      operationId: checkPaymentStatus
+      parameters:
+        - name: chargeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID da cobrança
+      responses:
+        '200':
+          description: Status da cobrança
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  charge_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [pending, approved, expired, cancelled, refunded, rejected]
+                    description: |
+                      - `pending` - Aguardando pagamento
+                      - `approved` - Pagamento confirmado
+                      - `expired` - Expirado (PIX não pago a tempo)
+                      - `cancelled` - Cancelado
+                      - `refunded` - Estornado
+                      - `rejected` - Recusado pelo adquirente
+                  payment_method:
+                    type: string
+                    enum: [pix, credit_card, boleto]
+                  amount:
+                    type: integer
+                    description: Valor em centavos
+                  paid_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  synced:
+                    type: boolean
+              example:
+                charge_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+                status: approved
+                payment_method: pix
+                amount: 10050
+                paid_at: "2026-02-16T15:30:00Z"
+                synced: true
+
+  # ==========================================
+  # CHECKOUT (Dashboard - JWT Auth)
+  # ==========================================
+  /v1/checkouts:
+    get:
+      tags: [Checkout]
+      summary: Listar checkouts
+      description: Lista todos os checkouts da conta.
+      operationId: listCheckouts
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Lista de checkouts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Checkout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Checkout]
+      summary: Criar checkout
+      description: |
+        Cria uma nova página de checkout personalizada.
+        O checkout gerado terá uma URL pública acessível em `/checkout/{slug}`.
+      operationId: createCheckout
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckoutRequest'
+            examples:
+              checkout_simples:
+                summary: Checkout simples
+                value:
+                  name: Checkout Curso Marketing
+                  product_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+                  type: redirect
+                  theme:
+                    primaryColor: "#8b5cf6"
+                    secondaryColor: "#6366f1"
+                    backgroundColor: "#f8fafc"
+                    textColor: "#1e293b"
+                    borderRadius: "lg"
+                    shadow: "lg"
+              checkout_customizado:
+                summary: Checkout totalmente customizado
+                value:
+                  name: Checkout Premium
+                  slug: checkout-premium
+                  product_id: "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d"
+                  type: embedded
+                  theme:
+                    primaryColor: "#10b981"
+                    secondaryColor: "#059669"
+                    backgroundColor: "#ffffff"
+                    textColor: "#111827"
+                    borderRadius: "xl"
+                    shadow: "xl"
+                  settings:
+                    blocks:
+                      - type: header
+                        enabled: true
+                        config:
+                          showLogo: true
+                          showTimer: false
+                      - type: product
+                        enabled: true
+                        config:
+                          showImage: true
+                          showDescription: true
+                      - type: payment
+                        enabled: true
+                        config:
+                          methods: [pix, credit_card, boleto]
+                          maxInstallments: 12
+                      - type: testimonials
+                        enabled: true
+                        config:
+                          items:
+                            - name: João Silva
+                              text: Produto excelente!
+                              rating: 5
+                      - type: guarantee
+                        enabled: true
+                        config:
+                          days: 7
+                          text: Garantia incondicional de 7 dias
+                      - type: faq
+                        enabled: true
+                        config:
+                          items:
+                            - question: Como funciona?
+                              answer: Após o pagamento, você recebe o acesso imediatamente.
+      responses:
+        '201':
+          description: Checkout criado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Checkout'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /v1/checkouts/{checkoutId}:
+    get:
+      tags: [Checkout]
+      summary: Detalhes do checkout
+      description: Retorna os detalhes completos de um checkout.
+      operationId: getCheckout
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CheckoutId'
+      responses:
+        '200':
+          description: Detalhes do checkout
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Checkout'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Checkout]
+      summary: Atualizar checkout
+      description: Atualiza as configurações de um checkout existente.
+      operationId: updateCheckout
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CheckoutId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCheckoutRequest'
+      responses:
+        '200':
+          description: Checkout atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Checkout'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    delete:
+      tags: [Checkout]
+      summary: Excluir checkout
+      description: Remove um checkout permanentemente.
+      operationId: deleteCheckout
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CheckoutId'
+      responses:
+        '200':
+          description: Checkout excluído
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/checkouts/{checkoutId}/clone:
+    post:
+      tags: [Checkout]
+      summary: Clonar checkout
+      description: Cria uma cópia de um checkout existente com um novo slug.
+      operationId: cloneCheckout
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CheckoutId'
+      responses:
+        '201':
+          description: Checkout clonado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Checkout'
+
+  /v1/checkouts/{checkoutId}/analytics:
+    get:
+      tags: [Checkout]
+      summary: Analytics do checkout
+      description: Retorna métricas de performance do checkout.
+      operationId: getCheckoutAnalytics
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CheckoutId'
+      responses:
+        '200':
+          description: Analytics do checkout
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      views:
+                        type: integer
+                        example: 1250
+                      conversions:
+                        type: integer
+                        example: 87
+                      conversion_rate:
+                        type: number
+                        format: float
+                        example: 6.96
+                      total_revenue:
+                        type: integer
+                        description: Receita total em centavos
+                        example: 4349130
+
+  # ==========================================
+  # PAGAMENTOS
+  # ==========================================
+  /v1/external/payments/methods:
+    get:
+      tags: [Pagamentos]
+      summary: Métodos de pagamento disponíveis
+      description: Lista os métodos de pagamento habilitados para a conta.
+      operationId: getPaymentMethods
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Métodos disponíveis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: pix
+                        name:
+                          type: string
+                          example: PIX
+                        enabled:
+                          type: boolean
+                          example: true
+                        installments_enabled:
+                          type: boolean
+                          example: false
+                        max_installments:
+                          type: integer
+                          example: 1
+              example:
+                success: true
+                data:
+                  - id: pix
+                    name: PIX
+                    enabled: true
+                    installments_enabled: false
+                    max_installments: 1
+                  - id: credit_card
+                    name: Cartão de Crédito
+                    enabled: true
+                    installments_enabled: true
+                    max_installments: 12
+                  - id: boleto
+                    name: Boleto Bancário
+                    enabled: true
+                    installments_enabled: false
+                    max_installments: 1
+
+  /v1/external/payments/installments:
+    get:
+      tags: [Pagamentos]
+      summary: Opções de parcelamento
+      description: Retorna as opções de parcelamento disponíveis para um valor.
+      operationId: getInstallmentOptions
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: amount
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Valor em centavos
+          example: 49990
+      responses:
+        '200':
+          description: Opções de parcelamento
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        number:
+                          type: integer
+                          description: Número de parcelas
+                          example: 3
+                        amount:
+                          type: integer
+                          description: Valor de cada parcela em centavos
+                          example: 16663
+                        total:
+                          type: integer
+                          description: Valor total em centavos
+                          example: 49990
+                        interest_free:
+                          type: boolean
+                          description: Se é sem juros
+                          example: true
+                        interest_rate:
+                          type: number
+                          description: Taxa de juros (%)
+                          example: 0
+
+  # ==========================================
+  # PRODUTOS
+  # ==========================================
+  /v1/products:
+    get:
+      tags: [Produtos]
+      summary: Listar produtos
+      description: Lista todos os produtos da conta.
+      operationId: listProducts
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Lista de produtos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+
+    post:
+      tags: [Produtos]
+      summary: Criar produto
+      description: Cria um novo produto. O preço deve ser em centavos.
+      operationId: createProduct
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+            examples:
+              produto_digital:
+                summary: Produto digital
+                value:
+                  name: Curso de Marketing Digital
+                  description: Aprenda as melhores estratégias de marketing digital
+                  type: digital
+                  price: 19990
+                  original_price: 29990
+                  currency: BRL
+                  affiliate_enabled: true
+                  commission_percent: 40
+              produto_fisico:
+                summary: Produto físico
+                value:
+                  name: Camiseta Premium
+                  description: Camiseta 100% algodão
+                  type: physical
+                  price: 7990
+                  currency: BRL
+                  stock_enabled: true
+                  stock_quantity: 100
+      responses:
+        '201':
+          description: Produto criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /v1/products/{productId}:
+    get:
+      tags: [Produtos]
+      summary: Detalhes do produto
+      operationId: getProduct
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalhes do produto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Product'
+
+    put:
+      tags: [Produtos]
+      summary: Atualizar produto
+      operationId: updateProduct
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '200':
+          description: Produto atualizado
+
+    delete:
+      tags: [Produtos]
+      summary: Excluir produto
+      operationId: deleteProduct
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Produto excluído
+
+  # ==========================================
+  # API KEYS
+  # ==========================================
+  /v1/api-keys:
+    get:
+      tags: [API Keys]
+      summary: Listar API Keys
+      description: Lista todas as API Keys da conta.
+      operationId: listApiKeys
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Lista de API Keys
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApiKey'
+
+    post:
+      tags: [API Keys]
+      summary: Criar API Key
+      description: |
+        Cria uma nova API Key com permissoes especificas.
+
+        **Tipos de chave:**
+        - `secret` (padrao): Gera chave `sk_live_` / `sk_test_` com acesso completo. Use no servidor.
+        - `public`: Gera chave `pk_live_` / `pk_test_` com acesso somente leitura. Segura para frontend.
+
+        **A chave completa so e exibida uma vez na criacao.**
+      operationId: createApiKey
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  example: Integração E-commerce
+                  description: Nome descritivo para a chave
+                type:
+                  type: string
+                  enum: [public, secret]
+                  default: secret
+                  description: |
+                    Tipo da chave:
+                    - `secret` (padrao): Acesso completo (sk_live_ / sk_test_). Use para criar cobrancas, gerenciar checkouts, processar pagamentos.
+                    - `public`: Somente leitura (pk_live_ / pk_test_). Segura para uso no frontend.
+                environment:
+                  type: string
+                  enum: [production, sandbox]
+                  default: production
+                  description: Ambiente da chave
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - '*'
+                      - charges:read
+                      - charges:write
+                      - payments:read
+                      - payments:write
+                      - products:read
+                      - products:write
+                      - checkouts:read
+                      - checkouts:write
+                      - customers:read
+                      - customers:write
+                      - webhooks:read
+                      - webhooks:write
+                  description: |
+                    Permissoes da chave. Chaves secretas tem `['*']` por padrao (acesso total).
+                    Chaves publicas so aceitam permissoes de leitura (`:read`).
+                  example: ['*']
+                ip_whitelist:
+                  type: array
+                  items:
+                    type: string
+                  description: Lista de IPs permitidos (vazio = qualquer IP)
+                  example: []
+                expires_at:
+                  type: string
+                  format: date-time
+                  description: Data de expiracao (opcional)
+      responses:
+        '201':
+          description: API Key criada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/ApiKey'
+                      - type: object
+                        properties:
+                          key:
+                            type: string
+                            description: Chave completa (exibida apenas na criacao)
+                            example: sk_live_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+                  message:
+                    type: string
+                    example: Chave secreta criada. Use esta chave no header X-API-Key para operacoes via API.
+                  warning:
+                    type: string
+                    example: Salve esta chave de API em um local seguro. Ela nao sera exibida novamente.
+
+  /v1/api-keys/{apiKeyId}/rotate:
+    post:
+      tags: [API Keys]
+      summary: Rotacionar API Key
+      description: Gera uma nova chave, invalidando a anterior.
+      operationId: rotateApiKey
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: apiKeyId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Nova chave gerada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                        example: wzp_live_x9y8z7w6v5u4t3s2r1q0p9o8n7m6l5k4
+
+  # ==========================================
+  # WEBHOOKS - Gerenciamento
+  # ==========================================
+  /v1/webhooks:
+    get:
+      tags: [Webhooks]
+      summary: Listar webhooks
+      description: Retorna todos os webhooks cadastrados na sua conta e a lista de eventos disponiveis.
+      operationId: listWebhooks
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Lista de webhooks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Webhook'
+                  available_events:
+                    type: array
+                    items:
+                      type: string
+                    example:
+                      - charge.created
+                      - charge.paid
+                      - charge.failed
+                      - charge.refunded
+                      - charge.disputed
+                      - payment.approved
+                      - payment.rejected
+                      - payment.expired
+                      - payment.cancelled
+                      - payment.chargedback
+                      - withdrawal.requested
+                      - withdrawal.completed
+                      - "*"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Webhooks]
+      summary: Criar webhook
+      description: |
+        Cadastra uma URL para receber notificacoes de eventos.
+        Maximo de **5 webhooks** por conta.
+
+        ### Exemplo rapido
+        ```bash
+        curl -X POST https://api.wazerpay.com.br/api/v1/webhooks \
+          -H "X-API-Key: sk_live_sua_chave" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "url": "https://meusite.com/webhooks/wazerpay",
+            "events": ["charge.paid", "charge.refunded"]
+          }'
+        ```
+      operationId: createWebhook
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+            example:
+              url: "https://meusite.com/webhooks/wazerpay"
+              events: ["charge.paid", "charge.refunded"]
+      responses:
+        '201':
+          description: Webhook criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Webhook'
+                  message:
+                    type: string
+                    example: Webhook criado com sucesso
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Limite de webhooks atingido ou dados invalidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      callbacks:
+        onEvent:
+          '{$request.body#/url}':
+            post:
+              summary: Notificacao enviada na sua URL
+              description: Payload que o WazerPay envia quando um evento ocorre.
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      $ref: '#/components/schemas/WebhookPayload'
+              responses:
+                '200':
+                  description: Confirme o recebimento retornando HTTP 200
+                '400':
+                  description: Erro ao processar o evento
+
+  /v1/webhooks/{webhookId}:
+    put:
+      tags: [Webhooks]
+      summary: Atualizar webhook
+      description: Atualiza URL, eventos ou status (ativo/inativo) de um webhook.
+      operationId: updateWebhook
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID do webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWebhookRequest'
+            example:
+              events: ["charge.paid", "charge.refunded", "payment.approved"]
+              is_active: true
+      responses:
+        '200':
+          description: Webhook atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Webhook'
+                  message:
+                    type: string
+                    example: Webhook atualizado com sucesso
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Webhooks]
+      summary: Remover webhook
+      description: Remove um webhook. A URL deixara de receber notificacoes.
+      operationId: deleteWebhook
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID do webhook
+      responses:
+        '200':
+          description: Webhook removido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Webhook removido com sucesso
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/webhooks/{webhookId}/regenerate-secret:
+    post:
+      tags: [Webhooks]
+      summary: Regenerar secret do webhook
+      description: |
+        Gera um novo secret para validar a autenticidade das notificacoes.
+        O secret anterior e invalidado imediatamente.
+
+        Use o secret para verificar o header `X-Webhook-Signature` nas notificacoes recebidas.
+      operationId: regenerateWebhookSecret
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: webhookId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID do webhook
+      responses:
+        '200':
+          description: Secret regenerado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      secret:
+                        type: string
+                        description: Novo secret (exibido apenas uma vez)
+                        example: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+                  message:
+                    type: string
+                    example: Secret regenerado com sucesso
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==========================================
+  # SPLIT DE PAGAMENTO (JWT auth)
+  # ==========================================
+  /v1/splits/config:
+    get:
+      tags: [Split de Pagamento]
+      summary: Obter configuração de split
+      description: |
+        Retorna a configuração atual de split da conta autenticada,
+        incluindo configurações legadas de afiliado e regras automáticas.
+      operationId: getSplitConfig
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Configuração de split
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SplitConfig'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [Split de Pagamento]
+      summary: Atualizar configuração legada de split
+      description: |
+        Atualiza a configuração legada de split (afiliado).
+        Para configurações avançadas, use as rotas de regras (`/v1/splits/rules`).
+      operationId: updateSplitConfig
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                affiliate_id:
+                  type: string
+                  format: uuid
+                  description: ID da conta afiliada
+                affiliate_percentage:
+                  type: number
+                  minimum: 0
+                  maximum: 100
+                  description: Percentual do afiliado (0-100)
+                  example: 10
+                enabled:
+                  type: boolean
+                  description: Se o split legado está ativo
+      responses:
+        '200':
+          description: Configuração atualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SplitConfig'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /v1/splits/charges/{chargeId}:
+    get:
+      tags: [Split de Pagamento]
+      summary: Listar splits de uma cobrança
+      description: Retorna todos os splits gerados para uma cobrança específica.
+      operationId: getChargeSplits
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: chargeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Lista de splits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Split'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/splits/rules:
+    get:
+      tags: [Split de Pagamento]
+      summary: Listar regras de split
+      description: |
+        Retorna todas as regras de split automático da conta autenticada.
+        Regras determinam como os pagamentos são divididos entre destinatários.
+
+        **Prioridade de resolução:**
+        1. Regra específica para produto + checkout
+        2. Regra específica para produto
+        3. Regra específica para checkout
+        4. Regra padrão (is_default = true)
+        5. Split legado de afiliado (fallback)
+      operationId: listSplitRules
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Lista de regras de split
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SplitRule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Split de Pagamento]
+      summary: Criar regra de split
+      description: |
+        Cria uma nova regra de split automático. A soma dos percentuais dos
+        destinatários não pode exceder 100%.
+
+        ### Tipos de split por destinatário
+        - **percentage**: Percentual do valor total (ex: 10 = 10%)
+        - **fixed**: Valor fixo em centavos (ex: 500 = R$ 5,00)
+
+        ### Tipos de destinatário
+        - **account**: Conta WazerPay (recebe no wallet)
+        - **affiliate**: Afiliado (recebe no wallet)
+        - **external**: Conta bancária externa (transferência manual)
+      operationId: createSplitRule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSplitRuleRequest'
+            examples:
+              default_rule:
+                summary: Regra padrão - 2 destinatários
+                value:
+                  name: "Regra Padrão"
+                  is_default: true
+                  recipients:
+                    - recipient_id: "550e8400-e29b-41d4-a716-446655440001"
+                      recipient_type: "affiliate"
+                      type: "percentage"
+                      value: 10
+                      description: "Comissão afiliado"
+                    - recipient_id: "550e8400-e29b-41d4-a716-446655440002"
+                      recipient_type: "account"
+                      type: "percentage"
+                      value: 5
+                      description: "Taxa plataforma"
+                  charge_fee_to_producer: true
+                  auto_process: true
+              product_rule:
+                summary: Regra por produto
+                value:
+                  name: "Split Produto Premium"
+                  product_id: "550e8400-e29b-41d4-a716-446655440099"
+                  recipients:
+                    - recipient_id: "550e8400-e29b-41d4-a716-446655440001"
+                      recipient_type: "affiliate"
+                      type: "percentage"
+                      value: 20
+                      description: "Comissão premium"
+                  minimum_amount: 5000
+                  auto_process: true
+      responses:
+        '201':
+          description: Regra criada com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Regra de split criada com sucesso
+                  data:
+                    $ref: '#/components/schemas/SplitRule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /v1/splits/rules/{ruleId}:
+    get:
+      tags: [Split de Pagamento]
+      summary: Obter regra de split
+      description: Retorna os detalhes de uma regra de split específica.
+      operationId: getSplitRule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detalhes da regra
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SplitRule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Split de Pagamento]
+      summary: Atualizar regra de split
+      description: |
+        Atualiza uma regra de split existente. Todos os campos são opcionais.
+        Se `recipients` for enviado, substitui a lista completa de destinatários.
+      operationId: updateSplitRule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSplitRuleRequest'
+      responses:
+        '200':
+          description: Regra atualizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Regra de split atualizada com sucesso
+                  data:
+                    $ref: '#/components/schemas/SplitRule'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Split de Pagamento]
+      summary: Excluir regra de split
+      description: Remove uma regra de split. Splits já criados por esta regra não são afetados.
+      operationId: deleteSplitRule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Regra excluída
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Regra de split excluída com sucesso
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/splits/rules/{ruleId}/simulate:
+    post:
+      tags: [Split de Pagamento]
+      summary: Simular split de uma regra
+      description: |
+        Simula a aplicação de uma regra de split para um valor informado,
+        sem criar registros. Útil para visualizar como o valor seria dividido
+        antes de configurar a regra em produção.
+      operationId: simulateSplitRule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: ruleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: integer
+                  description: Valor em centavos para simulação
+                  example: 10000
+                fee_amount:
+                  type: integer
+                  description: Valor da taxa em centavos (opcional)
+                  example: 90
+            examples:
+              basic:
+                summary: Simular R$ 100,00 com taxa de R$ 0,90
+                value:
+                  amount: 10000
+                  fee_amount: 90
+      responses:
+        '200':
+          description: Resultado da simulação
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/SplitSimulation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /v1/splits/process-pending:
+    post:
+      tags: [Split de Pagamento]
+      summary: Processar splits pendentes
+      description: |
+        Processa manualmente todos os splits com status `pending` da conta autenticada.
+        Cada split pendente será transferido para o wallet do destinatário.
+
+        Normalmente os splits são processados automaticamente quando `auto_process` está
+        ativado na regra. Use este endpoint para processar manualmente quando necessário.
+      operationId: processPendingSplits
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Resultado do processamento
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      processed:
+                        type: integer
+                        description: Quantidade de splits processados
+                        example: 5
+                      failed:
+                        type: integer
+                        description: Quantidade de splits que falharam
+                        example: 0
+                      total:
+                        type: integer
+                        description: Total de splits pendentes encontrados
+                        example: 5
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==========================================
+  # WEBHOOK - Recebimento interno (adquirentes)
+  # ==========================================
+  /v1/webhook:
+    post:
+      tags: [Webhooks]
+      summary: Webhook unificado (uso interno)
+      description: |
+        Endpoint interno que recebe notificacoes das adquirentes (PayFort, Babylon, Stripe, etc).
+
+        **Voce NAO precisa chamar este endpoint.** Ele e usado automaticamente pelas adquirentes
+        para notificar o WazerPay sobre mudancas de status dos pagamentos.
+
+        Quando um pagamento muda de status, o WazerPay processa a notificacao e
+        dispara os webhooks cadastrados na sua conta (veja `POST /v1/webhooks`).
+
+        O payload enviado na sua URL segue o formato descrito em `WebhookPayload`.
+      operationId: unifiedWebhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Payload da adquirente (formato varia)
+      responses:
+        '200':
+          description: Processado com sucesso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+        '400':
+          description: Payload invalido
+        '500':
+          description: Erro interno
+
+components:
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        Chave de API gerada no painel do WazerPay para autenticar suas requisicoes.
+
+        Existem dois tipos de chaves:
+        - **Secreta (`sk_live_` / `sk_test_`)**: Acesso completo. Use no servidor para criar cobrancas, gerenciar checkouts, processar pagamentos, etc.
+        - **Publica (`pk_live_` / `pk_test_`)**: Somente leitura. Segura para uso no frontend.
+
+        > Para operacoes de escrita (criar cobrancas, checkouts, etc), use SEMPRE uma chave secreta (`sk_live_`).
+
+        ## Como obter sua API Key
+
+        1. Acesse [app.wazerpay.com.br](https://app.wazerpay.com.br) e faca login
+        2. No menu lateral, va em **Configuracoes > Chaves API**
+        3. Clique em **Nova Chave**
+        4. Selecione o **tipo**: Secreta (sk_) para acesso completo ou Publica (pk_) somente leitura
+        5. Selecione as permissoes desejadas
+        6. Copie a chave gerada (ela so sera exibida uma vez)
+
+        ## Como usar
+
+        Envie a API Key no header de todas as requisicoes:
+
+        ```
+        X-API-Key: sk_live_sua_chave_secreta_aqui
+        ```
+
+        ### Exemplo com cURL
+
+        ```bash
+        curl -X GET https://api.wazerpay.com.br/api/v1/external/charges \
+          -H "X-API-Key: sk_live_sua_chave_secreta_aqui" \
+          -H "Content-Type: application/json"
+        ```
+
+        ### Exemplo com JavaScript (fetch)
+
+        ```javascript
+        const response = await fetch('https://api.wazerpay.com.br/api/v1/external/charges', {
+          headers: {
+            'X-API-Key': 'sk_live_sua_chave_secreta_aqui',
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await response.json();
+        ```
+
+        ### Exemplo com PHP
+
+        ```php
+        $ch = curl_init('https://api.wazerpay.com.br/api/v1/external/charges');
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'X-API-Key: sk_live_sua_chave_secreta_aqui',
+            'Content-Type: application/json'
+        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
+        ```
+
+        ### Exemplo com Python
+
+        ```python
+        import requests
+
+        headers = {
+            'X-API-Key': 'sk_live_sua_chave_secreta_aqui',
+            'Content-Type': 'application/json'
+        }
+        response = requests.get('https://api.wazerpay.com.br/api/v1/external/charges', headers=headers)
+        data = response.json()
+        ```
+
+        ## Erros comuns
+
+        | HTTP Status | Mensagem | Causa |
+        |---|---|---|
+        | 401 | API Key invalida | Chave incorreta, expirada ou revogada |
+        | 403 | Permissao insuficiente | A chave nao tem permissao para este endpoint. Chaves publicas (pk_live_) nao podem criar cobrancas. |
+        | 429 | Rate limit excedido | Muitas requisicoes em pouco tempo |
+
+  parameters:
+    ChargeId:
+      name: chargeId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID da cobrança
+    CheckoutId:
+      name: checkoutId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: ID do checkout
+
+  schemas:
+    # Charges
+    Charge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+          nullable: true
+        checkout_id:
+          type: string
+          format: uuid
+          nullable: true
+        amount:
+          type: integer
+          description: Valor em centavos
+          example: 10050
+        currency:
+          type: string
+          example: BRL
+        payment_method:
+          type: string
+          enum: [pix, credit_card, boleto]
+        status:
+          type: string
+          enum: [pending, approved, expired, cancelled, refunded, rejected, failed]
+        customer:
+          type: object
+          properties:
+            name:
+              type: string
+            email:
+              type: string
+            document:
+              type: string
+            phone:
+              type: string
+        description:
+          type: string
+          nullable: true
+        installments:
+          type: integer
+          example: 1
+        acquirer:
+          type: string
+          example: babylon
+        acquirer_transaction_id:
+          type: string
+          nullable: true
+        pix_qr_code:
+          type: string
+          nullable: true
+          description: QR Code PIX em base64
+        pix_copy_paste:
+          type: string
+          nullable: true
+          description: Código PIX copia e cola
+        boleto_url:
+          type: string
+          nullable: true
+          description: URL do boleto
+        boleto_barcode:
+          type: string
+          nullable: true
+          description: Código de barras do boleto
+        boleto_digitable_line:
+          type: string
+          nullable: true
+          description: Linha digitável do boleto
+        fee_amount:
+          type: integer
+          nullable: true
+          description: Taxa cobrada em centavos
+        net_amount:
+          type: integer
+          nullable: true
+          description: Valor líquido em centavos
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        refunded_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ChargeResponse:
+      type: object
+      description: Resposta da criação de cobrança
+      properties:
+        charge_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        amount:
+          type: integer
+          description: Valor em centavos
+        payment_method:
+          type: string
+          enum: [pix, credit_card, boleto]
+        acquirer:
+          type: string
+          example: babylon
+        transaction_id:
+          type: string
+          nullable: true
+        pix_qr_code:
+          type: string
+          nullable: true
+          description: Imagem do QR Code em base64 (apenas para PIX)
+        pix_copy_paste:
+          type: string
+          nullable: true
+          description: Código copia e cola do PIX
+        boleto_url:
+          type: string
+          nullable: true
+          description: URL do boleto para visualização
+        boleto_barcode:
+          type: string
+          nullable: true
+        boleto_digitable_line:
+          type: string
+          nullable: true
+        payment_url:
+          type: string
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateChargeRequest:
+      type: object
+      required: [amount, payment_method, customer]
+      properties:
+        amount:
+          type: integer
+          minimum: 100
+          description: Valor em centavos (mínimo R$1,00 = 100)
+          example: 10050
+        payment_method:
+          type: string
+          enum: [pix, credit_card, boleto]
+          description: Método de pagamento
+        description:
+          type: string
+          example: Assinatura Premium
+          description: Descrição da cobrança
+        product_id:
+          type: string
+          format: uuid
+          description: ID do produto (opcional)
+        checkout_id:
+          type: string
+          format: uuid
+          description: ID do checkout (opcional)
+        installments:
+          type: integer
+          minimum: 1
+          maximum: 12
+          default: 1
+          description: Número de parcelas (apenas cartão)
+        customer:
+          type: object
+          required: [name, email, document]
+          properties:
+            name:
+              type: string
+              example: Maria Santos
+            email:
+              type: string
+              format: email
+              example: maria@email.com
+            document:
+              type: string
+              description: CPF (11 dígitos) ou CNPJ (14 dígitos)
+              example: "12345678900"
+            phone:
+              type: string
+              example: "11999998888"
+        card:
+          type: object
+          description: Dados do cartão (obrigatório para credit_card)
+          properties:
+            number:
+              type: string
+              example: "4111111111111111"
+            holder_name:
+              type: string
+              example: MARIA SANTOS
+            exp_month:
+              type: string
+              example: "12"
+            exp_year:
+              type: string
+              example: "2028"
+            cvv:
+              type: string
+              example: "123"
+        billing:
+          type: object
+          description: Endereço de cobrança (recomendado para cartão)
+          properties:
+            street:
+              type: string
+              example: Rua das Flores
+            number:
+              type: string
+              example: "100"
+            complement:
+              type: string
+              example: Apto 42
+            neighborhood:
+              type: string
+              example: Centro
+            city:
+              type: string
+              example: São Paulo
+            state:
+              type: string
+              example: SP
+            zip_code:
+              type: string
+              example: "01001000"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Dados adicionais em formato chave-valor
+          example:
+            order_id: "ORD-12345"
+            source: meu_ecommerce
+
+    # Withdrawals
+    Withdrawal:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          description: Valor bruto em centavos
+          example: 50000
+        fee:
+          type: integer
+          description: Taxa em centavos
+          example: 0
+        net_amount:
+          type: integer
+          description: Valor líquido em centavos
+          example: 50000
+        status:
+          type: string
+          enum: [pending, processing, completed, cancelled, failed]
+          description: |
+            - `pending` - Aguardando processamento
+            - `processing` - Em processamento
+            - `completed` - Concluído com sucesso
+            - `cancelled` - Cancelado pelo usuário
+            - `failed` - Falha no processamento
+        method:
+          type: string
+          enum: [pix, bank_transfer]
+        is_instant:
+          type: boolean
+        destination:
+          type: object
+          description: Dados de destino do saque
+          properties:
+            type:
+              type: string
+              enum: [pix, bank_account]
+            pix_key:
+              type: string
+              nullable: true
+            pix_type:
+              type: string
+              enum: [cpf, cnpj, email, phone, random]
+              nullable: true
+            bank_code:
+              type: string
+              nullable: true
+            bank_name:
+              type: string
+              nullable: true
+            agency:
+              type: string
+              nullable: true
+            account_number:
+              type: string
+              nullable: true
+            account_type:
+              type: string
+              enum: [checking, savings]
+              nullable: true
+            holder_name:
+              type: string
+              nullable: true
+            holder_document:
+              type: string
+              nullable: true
+        notes:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateWithdrawalRequest:
+      type: object
+      required: [amount, method, mfa_code, destination]
+      properties:
+        amount:
+          type: integer
+          minimum: 100
+          description: Valor em centavos (mínimo R$ 1,00 = 100)
+          example: 50000
+        method:
+          type: string
+          enum: [pix, bank_transfer]
+          description: Método de saque
+        mfa_code:
+          type: string
+          pattern: '^\d{6}$'
+          description: Código de verificação 2FA (6 dígitos). Obrigatório para saques via dashboard (JWT). Via API Key, não é validado.
+          example: "123456"
+        is_instant:
+          type: boolean
+          default: false
+          description: Solicitar processamento instantâneo (quando disponível)
+        destination:
+          type: object
+          required: [type]
+          description: |
+            Dados de destino do saque.
+            - Para PIX: `type: "pix"` + `pix_key` + `pix_type`
+            - Para transferência bancária: `type: "bank_account"` + dados bancários
+          properties:
+            type:
+              type: string
+              enum: [pix, bank_account]
+              description: Tipo de destino
+            pix_key:
+              type: string
+              description: Chave PIX (obrigatório se type=pix)
+              example: "12345678900"
+            pix_type:
+              type: string
+              enum: [cpf, cnpj, email, phone, random]
+              description: Tipo da chave PIX
+              example: cpf
+            bank_code:
+              type: string
+              description: Código do banco (obrigatório se type=bank_account)
+              example: "001"
+            bank_name:
+              type: string
+              description: Nome do banco
+              example: "Banco do Brasil"
+            agency:
+              type: string
+              description: Número da agência
+              example: "1234"
+            account_number:
+              type: string
+              description: Número da conta
+              example: "12345-6"
+            account_type:
+              type: string
+              enum: [checking, savings]
+              description: Tipo de conta
+              example: checking
+            holder_name:
+              type: string
+              description: Nome do titular
+              example: "João Silva"
+            holder_document:
+              type: string
+              description: CPF/CNPJ do titular
+              example: "12345678900"
+        notes:
+          type: string
+          maxLength: 500
+          description: Observações (opcional)
+          example: "Saque mensal de comissões"
+
+    ProcessPaymentRequest:
+      type: object
+      required: [payment_method]
+      properties:
+        payment_method:
+          type: string
+          enum: [pix, credit_card, boleto]
+        installments:
+          type: integer
+          minimum: 1
+          maximum: 12
+          default: 1
+        customer:
+          type: object
+          properties:
+            name:
+              type: string
+              example: Maria Santos
+            email:
+              type: string
+              format: email
+              example: maria@email.com
+            document:
+              type: string
+              example: "12345678900"
+            phone:
+              type: string
+              example: "11999998888"
+        card:
+          type: object
+          description: Dados do cartão (obrigatório para credit_card)
+          properties:
+            number:
+              type: string
+            holder_name:
+              type: string
+            exp_month:
+              type: string
+            exp_year:
+              type: string
+            cvv:
+              type: string
+        billing:
+          type: object
+          properties:
+            street:
+              type: string
+            number:
+              type: string
+            complement:
+              type: string
+            neighborhood:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            zip_code:
+              type: string
+        affiliate_code:
+          type: string
+          description: Código do afiliado (opcional)
+
+    # Checkout
+    Checkout:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+          nullable: true
+        name:
+          type: string
+          example: Checkout Curso Marketing
+        slug:
+          type: string
+          example: curso-marketing-digital
+        type:
+          type: string
+          enum: [redirect, embedded, popup]
+        status:
+          type: string
+          enum: [active, inactive, draft]
+        url:
+          type: string
+          description: URL pública do checkout
+          example: https://api.wazerpay.com.br/checkout/curso-marketing-digital
+        theme:
+          $ref: '#/components/schemas/CheckoutTheme'
+        settings:
+          type: object
+          description: Configurações avançadas (blocos, pagamento, conversão)
+        fields:
+          type: object
+          description: Campos do formulário
+        views_count:
+          type: integer
+          example: 1250
+        conversions_count:
+          type: integer
+          example: 87
+        conversion_rate:
+          type: number
+          format: float
+          example: 6.96
+        total_revenue:
+          type: integer
+          description: Receita em centavos
+          example: 4349130
+        product:
+          $ref: '#/components/schemas/Product'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PublicCheckout:
+      type: object
+      description: Dados públicos do checkout (sem informações sensíveis)
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+          enum: [redirect, embedded, popup]
+        theme:
+          $ref: '#/components/schemas/CheckoutTheme'
+        settings:
+          type: object
+        fields:
+          type: object
+        product:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Curso de Marketing Digital
+            description:
+              type: string
+              example: Aprenda as melhores estratégias
+            price:
+              type: integer
+              description: Preço em centavos
+              example: 19990
+            original_price:
+              type: integer
+              nullable: true
+              description: Preço original (riscado) em centavos
+              example: 29990
+            currency:
+              type: string
+              example: BRL
+            image_url:
+              type: string
+              nullable: true
+            type:
+              type: string
+              enum: [digital, physical, service, subscription]
+
+    CheckoutTheme:
+      type: object
+      properties:
+        primaryColor:
+          type: string
+          example: "#8b5cf6"
+          description: Cor principal (botões, destaques)
+        secondaryColor:
+          type: string
+          example: "#6366f1"
+          description: Cor secundária
+        backgroundColor:
+          type: string
+          example: "#f8fafc"
+          description: Cor de fundo da página
+        textColor:
+          type: string
+          example: "#1e293b"
+          description: Cor do texto principal
+        mutedColor:
+          type: string
+          example: "#64748b"
+          description: Cor do texto secundário
+        borderRadius:
+          type: string
+          enum: [none, sm, md, lg, xl, "2xl", full]
+          example: lg
+          description: Arredondamento dos cantos
+        shadow:
+          type: string
+          enum: [none, sm, md, lg, xl, "2xl"]
+          example: lg
+          description: Sombra do container
+
+    CreateCheckoutRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: Checkout Curso Marketing
+        slug:
+          type: string
+          description: Slug único (auto-gerado se omitido)
+          example: curso-marketing-digital
+        type:
+          type: string
+          enum: [redirect, embedded, popup]
+          default: redirect
+        product_id:
+          type: string
+          format: uuid
+          description: ID do produto vinculado
+        theme:
+          $ref: '#/components/schemas/CheckoutTheme'
+        settings:
+          type: object
+          description: |
+            Configurações avançadas do checkout.
+            Inclui `blocks` (array de blocos visuais), `payment` e `conversion`.
+          properties:
+            blocks:
+              type: array
+              items:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [header, product, payment, testimonials, guarantee, faq, trust_badges, social_proof, bonus, urgency, shipping, video, coupon, custom_html]
+                  enabled:
+                    type: boolean
+                  config:
+                    type: object
+
+    UpdateCheckoutRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+          enum: [redirect, embedded, popup]
+        status:
+          type: string
+          enum: [active, inactive, draft]
+        product_id:
+          type: string
+          format: uuid
+        theme:
+          $ref: '#/components/schemas/CheckoutTheme'
+        settings:
+          type: object
+        fields:
+          type: object
+
+    # Products
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Curso de Marketing Digital
+        slug:
+          type: string
+          example: curso-marketing-digital
+        description:
+          type: string
+          example: Aprenda as melhores estratégias de marketing digital
+        type:
+          type: string
+          enum: [digital, physical, service, subscription]
+        price:
+          type: integer
+          description: Preço em centavos
+          example: 19990
+        original_price:
+          type: integer
+          nullable: true
+          description: Preço original (para mostrar desconto)
+          example: 29990
+        currency:
+          type: string
+          example: BRL
+        image_url:
+          type: string
+          nullable: true
+        affiliate_enabled:
+          type: boolean
+          example: true
+        commission_percent:
+          type: number
+          nullable: true
+          example: 40
+        commission_fixed:
+          type: integer
+          nullable: true
+          description: Comissão fixa em centavos
+        stock_enabled:
+          type: boolean
+          example: false
+        stock_quantity:
+          type: integer
+          nullable: true
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateProductRequest:
+      type: object
+      required: [name, price]
+      properties:
+        name:
+          type: string
+          example: Curso de Marketing Digital
+        description:
+          type: string
+          example: Aprenda as melhores estratégias
+        type:
+          type: string
+          enum: [digital, physical, service, subscription]
+          default: digital
+        price:
+          type: integer
+          minimum: 100
+          description: Preço em centavos (mínimo R$1,00)
+          example: 19990
+        original_price:
+          type: integer
+          nullable: true
+          description: Preço original para exibir desconto
+          example: 29990
+        currency:
+          type: string
+          default: BRL
+        affiliate_enabled:
+          type: boolean
+          default: false
+        commission_percent:
+          type: number
+          description: Percentual de comissão para afiliados
+          example: 40
+        commission_fixed:
+          type: integer
+          description: Comissão fixa em centavos
+        stock_enabled:
+          type: boolean
+          default: false
+        stock_quantity:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties: true
+
+    # Webhooks
+    Webhook:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+          example: "https://meusite.com/webhooks/wazerpay"
+        events:
+          type: array
+          items:
+            type: string
+          example: ["charge.paid", "charge.refunded"]
+        is_active:
+          type: boolean
+          example: true
+        secret:
+          type:
+            - string
+            - 'null'
+          description: Secret mascarado (apenas ultimos 4 caracteres visiveis)
+          example: "****************************a1b2"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateWebhookRequest:
+      type: object
+      required: [url, events]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: URL que recebera as notificacoes (deve aceitar POST)
+          example: "https://meusite.com/webhooks/wazerpay"
+        events:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum:
+              - charge.created
+              - charge.paid
+              - charge.failed
+              - charge.refunded
+              - charge.disputed
+              - payment.approved
+              - payment.rejected
+              - payment.refunded
+              - payment.expired
+              - payment.cancelled
+              - payment.chargedback
+              - withdrawal.requested
+              - withdrawal.completed
+              - "*"
+          description: Lista de eventos para receber. Use `*` para todos.
+          example: ["charge.paid", "charge.refunded"]
+
+    UpdateWebhookRequest:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          example: "https://meusite.com/webhooks/wazerpay"
+        events:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          example: ["charge.paid", "charge.refunded", "payment.approved"]
+        is_active:
+          type: boolean
+          description: Ativar ou desativar o webhook
+          example: true
+
+    WebhookPayload:
+      type: object
+      description: Payload enviado pelo WazerPay na URL cadastrada
+      properties:
+        event:
+          type: string
+          description: Tipo do evento
+          example: charge.paid
+        charge_id:
+          type: string
+          format: uuid
+          example: ea5069a7-84f9-4727-a455-de285a3eee4f
+        status:
+          type: string
+          example: approved
+        amount:
+          type: integer
+          description: Valor em centavos
+          example: 5000
+        payment_method:
+          type: string
+          enum: [pix, credit_card, boleto]
+          example: pix
+        paid_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+
+    # API Keys
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: Integração E-commerce
+        type:
+          type: string
+          enum: [public, secret]
+          description: |
+            Tipo da chave:
+            - `secret`: Acesso completo (sk_live_ / sk_test_). Para uso no servidor.
+            - `public`: Somente leitura (pk_live_ / pk_test_). Para uso no frontend.
+          example: secret
+        key_prefix:
+          type: string
+          description: Prefixo da chave (para identificação)
+          example: sk_live_a1b2
+        environment:
+          type: string
+          enum: [production, sandbox]
+          example: production
+        permissions:
+          type: array
+          items:
+            type: string
+          description: |
+            Permissões da chave. Chaves secretas tem `['*']` por padrão.
+            Chaves públicas só aceitam permissões de leitura.
+          example: ['*']
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    # Common
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Credenciais inválidas
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Os dados fornecidos são inválidos
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            email: ["O campo email é obrigatório."]
+            amount: ["O campo valor deve ser no mínimo 100."]
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 15
+        total:
+          type: integer
+          example: 142
+        last_page:
+          type: integer
+          example: 10
+
+    # ==========================================
+    # SPLIT DE PAGAMENTO
+    # ==========================================
+    SplitConfig:
+      type: object
+      description: Configuração de split da conta
+      properties:
+        affiliate_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID da conta afiliada (split legado)
+        affiliate_percentage:
+          type: number
+          description: Percentual do afiliado (0-100)
+          example: 10
+        enabled:
+          type: boolean
+          description: Se o split legado está ativo
+        rules_count:
+          type: integer
+          description: Quantidade de regras automáticas ativas
+          example: 3
+
+    SplitRule:
+      type: object
+      description: Regra de split automático
+      properties:
+        id:
+          type: string
+          format: uuid
+        account_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Nome identificador da regra
+          example: "Regra Padrão - 2 Destinatários"
+        product_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID do produto (null = aplica a todos)
+        checkout_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID do checkout (null = aplica a todos)
+        is_default:
+          type: boolean
+          description: Se é a regra padrão (usada quando nenhuma específica aplica)
+        is_active:
+          type: boolean
+          description: Se a regra está ativa
+        priority:
+          type: integer
+          description: Prioridade (menor = maior prioridade)
+          example: 0
+        recipients:
+          type: array
+          description: Lista de destinatários do split
+          items:
+            $ref: '#/components/schemas/SplitRecipient'
+        charge_fee_to_producer:
+          type: boolean
+          description: Se a taxa da transação é cobrada do produtor (true) ou distribuída (false)
+        minimum_amount:
+          type: integer
+          description: Valor mínimo em centavos para aplicar esta regra
+          example: 0
+        auto_process:
+          type: boolean
+          description: Se os splits são processados automaticamente após criação
+        transfer_delay_hours:
+          type: integer
+          description: Horas de espera antes de processar o split
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SplitRecipient:
+      type: object
+      description: Destinatário de um split
+      required: [recipient_id, recipient_type, type, value]
+      properties:
+        recipient_id:
+          type: string
+          format: uuid
+          description: ID do destinatário (account_id ou identificador externo)
+        recipient_type:
+          type: string
+          enum: [account, affiliate, external]
+          description: |
+            Tipo do destinatário:
+            - **account**: Conta WazerPay (credita no wallet)
+            - **affiliate**: Afiliado (credita no wallet)
+            - **external**: Conta externa (transferência manual)
+        type:
+          type: string
+          enum: [percentage, fixed]
+          description: |
+            Tipo de divisão:
+            - **percentage**: Percentual do valor (ex: 10 = 10%)
+            - **fixed**: Valor fixo em centavos (ex: 500 = R$ 5,00)
+        value:
+          type: number
+          description: Valor do split (percentual ou centavos conforme o tipo)
+          example: 10
+        description:
+          type: string
+          nullable: true
+          description: Descrição opcional do split
+          example: "Comissão do afiliado"
+
+    CreateSplitRuleRequest:
+      type: object
+      required: [name, recipients]
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Nome da regra
+          example: "Regra Padrão"
+        product_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Vincular a um produto específico
+        checkout_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Vincular a um checkout específico
+        is_default:
+          type: boolean
+          default: false
+          description: Definir como regra padrão
+        is_active:
+          type: boolean
+          default: true
+        priority:
+          type: integer
+          default: 0
+          minimum: 0
+        recipients:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/SplitRecipient'
+        charge_fee_to_producer:
+          type: boolean
+          default: true
+        minimum_amount:
+          type: integer
+          default: 0
+          minimum: 0
+        auto_process:
+          type: boolean
+          default: true
+        transfer_delay_hours:
+          type: integer
+          default: 0
+          minimum: 0
+
+    UpdateSplitRuleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        product_id:
+          type: string
+          format: uuid
+          nullable: true
+        checkout_id:
+          type: string
+          format: uuid
+          nullable: true
+        is_default:
+          type: boolean
+        is_active:
+          type: boolean
+        priority:
+          type: integer
+          minimum: 0
+        recipients:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/SplitRecipient'
+        charge_fee_to_producer:
+          type: boolean
+        minimum_amount:
+          type: integer
+          minimum: 0
+        auto_process:
+          type: boolean
+        transfer_delay_hours:
+          type: integer
+          minimum: 0
+
+    Split:
+      type: object
+      description: Registro de split de uma cobrança
+      properties:
+        id:
+          type: string
+          format: uuid
+        charge_id:
+          type: string
+          format: uuid
+        transaction_id:
+          type: string
+          format: uuid
+          nullable: true
+        recipient_id:
+          type: string
+          format: uuid
+        recipient_type:
+          type: string
+          enum: [account, affiliate, external]
+        type:
+          type: string
+          enum: [percentage, fixed]
+        amount:
+          type: integer
+          description: Valor bruto em centavos
+        percentage:
+          type: number
+          description: Percentual aplicado
+        fee_amount:
+          type: integer
+          description: Valor da taxa em centavos
+        net_amount:
+          type: integer
+          description: Valor líquido em centavos
+        status:
+          type: string
+          enum: [pending, processing, transferred, failed]
+        transferred_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    SplitSimulation:
+      type: object
+      description: Resultado da simulação de split
+      properties:
+        rule:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        input:
+          type: object
+          properties:
+            amount:
+              type: integer
+              description: Valor informado em centavos
+            fee_amount:
+              type: integer
+              description: Taxa informada em centavos
+        splits:
+          type: array
+          description: Lista de splits que seriam criados
+          items:
+            type: object
+            properties:
+              recipient_id:
+                type: string
+                format: uuid
+              recipient_type:
+                type: string
+              type:
+                type: string
+              value:
+                type: number
+              amount:
+                type: integer
+                description: Valor calculado em centavos
+              fee_amount:
+                type: integer
+              net_amount:
+                type: integer
+              description:
+                type: string
+                nullable: true
+        totals:
+          type: object
+          properties:
+            total_split_amount:
+              type: integer
+              description: Soma de todos os splits em centavos
+            producer_amount:
+              type: integer
+              description: Valor que fica com o produtor em centavos
+            split_count:
+              type: integer
+              description: Quantidade de splits
+
+  responses:
+    Unauthorized:
+      description: Token JWT inválido ou expirado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Token inválido ou expirado
+    NotFound:
+      description: Recurso não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: false
+              message:
+                type: string
+                example: Recurso não encontrado
+    ValidationError:
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'

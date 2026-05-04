@@ -1,0 +1,44 @@
+# Environment files
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Dependencies
+backend/vendor/
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Laravel
+backend/storage/logs/*.log
+backend/storage/framework/cache/data/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*.php
+backend/bootstrap/cache/*.php
+
+# PowerShell test scripts (local only)
+*.ps1
+
+# Docker
+docker-compose.override.yml
+
+# Debug/test files (never commit)
+backend/public/debug-*.php
+backend/test_*.php
+**/debug-env.php
+database/database.sqlite

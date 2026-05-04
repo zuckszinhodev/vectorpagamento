@@ -1,0 +1,15 @@
+# robots.txt for GatePro
+User-agent: *
+Allow: /
+
+# Disallow admin and private areas
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://app.wazerpay.com.br/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 1

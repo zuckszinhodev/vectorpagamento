@@ -1,0 +1,35 @@
+{
+  "name": "GatePro - Gateway de Pagamento",
+  "short_name": "GatePro",
+  "description": "Plataforma completa de pagamentos com checkout personalizável, sistema de afiliados e gestão financeira",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "300x100",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["finance", "business", "productivity"],
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "scope": "/",
+  "screenshots": [
+    {
+      "src": "/img/bannersocial.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "label": "GatePro Dashboard"
+    }
+  ]
+}

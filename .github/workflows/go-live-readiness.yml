@@ -1,0 +1,151 @@
+name: Go Live Readiness Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Target environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - staging
+      release_tag:
+        description: "Release tag/version (e.g. v2026.04.17)"
+        required: true
+        type: string
+      real_integration_run_url:
+        description: "URL da execucao do Backend Real Integration Tests"
+        required: true
+        type: string
+      load_tests_run_url:
+        description: "URL da execucao do Backend Load Tests"
+        required: true
+        type: string
+      reconciliation_signoff:
+        description: "Confirmacao de reconciliacao financeira/historica"
+        required: true
+        type: choice
+        options:
+          - approved
+          - pending
+      rollback_plan_ready:
+        description: "Rollback plan pronto e testado"
+        required: true
+        type: choice
+        options:
+          - yes
+          - no
+      incident_contacts_ready:
+        description: "On-call e contatos de incidente confirmados"
+        required: true
+        type: choice
+        options:
+          - yes
+          - no
+      final_confirmation:
+        description: "Digite GO-LIVE-APPROVED para liberar"
+        required: true
+        type: string
+
+jobs:
+  readiness-gate:
+    name: Go Live Gate (${{ inputs.target_environment }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate manual approvals
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          REAL_INTEGRATION_RUN_URL: ${{ inputs.real_integration_run_url }}
+          LOAD_TESTS_RUN_URL: ${{ inputs.load_tests_run_url }}
+          RECONCILIATION_SIGNOFF: ${{ inputs.reconciliation_signoff }}
+          ROLLBACK_PLAN_READY: ${{ inputs.rollback_plan_ready }}
+          INCIDENT_CONTACTS_READY: ${{ inputs.incident_contacts_ready }}
+          FINAL_CONFIRMATION: ${{ inputs.final_confirmation }}
+        run: |
+          set -euo pipefail
+
+          require_non_empty() {
+            local name="$1"
+            local value="$2"
+            if [ -z "$value" ]; then
+              echo "Missing required input: $name"
+              exit 1
+            fi
+          }
+
+          require_non_empty "release_tag" "$RELEASE_TAG"
+          require_non_empty "real_integration_run_url" "$REAL_INTEGRATION_RUN_URL"
+          require_non_empty "load_tests_run_url" "$LOAD_TESTS_RUN_URL"
+
+          if [ "$RECONCILIATION_SIGNOFF" != "approved" ]; then
+            echo "Gate blocked: reconciliation_signoff is not approved."
+            exit 1
+          fi
+
+          if [ "$ROLLBACK_PLAN_READY" != "yes" ]; then
+            echo "Gate blocked: rollback_plan_ready is not yes."
+            exit 1
+          fi
+
+          if [ "$INCIDENT_CONTACTS_READY" != "yes" ]; then
+            echo "Gate blocked: incident_contacts_ready is not yes."
+            exit 1
+          fi
+
+          if [ "$FINAL_CONFIRMATION" != "GO-LIVE-APPROVED" ]; then
+            echo "Gate blocked: final_confirmation must be exactly GO-LIVE-APPROVED."
+            exit 1
+          fi
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_sqlite, mbstring, xml, ctype, json, tokenizer, bcmath, redis
+          coverage: none
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare .env
+        working-directory: backend
+        run: |
+          cp .env.example .env 2>/dev/null || echo "APP_KEY=" > .env
+          php artisan key:generate
+
+      - name: Run backend baseline test suite
+        working-directory: backend
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_DRIVER: array
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: array
+        run: |
+          vendor/bin/pest --stop-on-failure --colors=never
+
+      - name: Publish go-live summary
+        if: always()
+        env:
+          TARGET_ENV: ${{ inputs.target_environment }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          REAL_INTEGRATION_RUN_URL: ${{ inputs.real_integration_run_url }}
+          LOAD_TESTS_RUN_URL: ${{ inputs.load_tests_run_url }}
+        run: |
+          {
+            echo "## Go Live Readiness Summary"
+            echo ""
+            echo "- Environment: $TARGET_ENV"
+            echo "- Release: $RELEASE_TAG"
+            echo "- Real integration evidence: $REAL_INTEGRATION_RUN_URL"
+            echo "- Load test evidence: $LOAD_TESTS_RUN_URL"
+            echo ""
+            echo "If this workflow passed, baseline test suite and manual approvals are green."
+          } >> "$GITHUB_STEP_SUMMARY"

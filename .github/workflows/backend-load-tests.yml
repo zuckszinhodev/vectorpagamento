@@ -1,0 +1,136 @@
+name: Backend Load Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: "Load test scenario"
+        required: true
+        default: "charge-load"
+        type: choice
+        options:
+          - charge-load
+          - charge-idempotency
+          - public-checkout-load
+          - withdrawal-burst
+
+jobs:
+  load-tests:
+    name: Load Test (${{ inputs.scenario }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Validate required configuration
+        env:
+          SCENARIO: ${{ inputs.scenario }}
+          K6_BASE_URL: ${{ vars.K6_BASE_URL }}
+          K6_EMAIL: ${{ secrets.K6_EMAIL }}
+          K6_PASSWORD: ${{ secrets.K6_PASSWORD }}
+          K6_CHECKOUT_SLUG: ${{ vars.K6_CHECKOUT_SLUG }}
+          K6_MFA_CODE: ${{ secrets.K6_MFA_CODE }}
+          K6_PIX_KEY: ${{ secrets.K6_PIX_KEY }}
+        run: |
+          set -euo pipefail
+
+          require_value() {
+            local name="$1"
+            local value="$2"
+            if [ -z "$value" ]; then
+              echo "Missing required config: $name"
+              exit 1
+            fi
+          }
+
+          require_value "K6_BASE_URL" "$K6_BASE_URL"
+
+          if [ "$SCENARIO" = "charge-load" ] || [ "$SCENARIO" = "charge-idempotency" ] || [ "$SCENARIO" = "withdrawal-burst" ]; then
+            require_value "K6_EMAIL" "$K6_EMAIL"
+            require_value "K6_PASSWORD" "$K6_PASSWORD"
+          fi
+
+          if [ "$SCENARIO" = "public-checkout-load" ]; then
+            require_value "K6_CHECKOUT_SLUG" "$K6_CHECKOUT_SLUG"
+          fi
+
+          if [ "$SCENARIO" = "withdrawal-burst" ]; then
+            require_value "K6_MFA_CODE" "$K6_MFA_CODE"
+            require_value "K6_PIX_KEY" "$K6_PIX_KEY"
+          fi
+
+      - name: Run k6 scenario
+        env:
+          K6_BASE_URL: ${{ vars.K6_BASE_URL }}
+          K6_EMAIL: ${{ secrets.K6_EMAIL }}
+          K6_PASSWORD: ${{ secrets.K6_PASSWORD }}
+          K6_CHECKOUT_SLUG: ${{ vars.K6_CHECKOUT_SLUG }}
+          K6_CHARGE_AMOUNT: ${{ vars.K6_CHARGE_AMOUNT || '500' }}
+          K6_TARGET_VUS: ${{ vars.K6_TARGET_VUS || '10' }}
+          K6_STAGE_RAMP_UP: ${{ vars.K6_STAGE_RAMP_UP || '30s' }}
+          K6_STAGE_SUSTAIN: ${{ vars.K6_STAGE_SUSTAIN || '1m' }}
+          K6_STAGE_RAMP_DOWN: ${{ vars.K6_STAGE_RAMP_DOWN || '30s' }}
+          K6_IDEMPOTENCY_VUS: ${{ vars.K6_IDEMPOTENCY_VUS || '1' }}
+          K6_IDEMPOTENCY_ITERATIONS: ${{ vars.K6_IDEMPOTENCY_ITERATIONS || '5' }}
+          K6_BATCH_SIZE: ${{ vars.K6_BATCH_SIZE || '5' }}
+          K6_FIXED_IDEMPOTENCY_KEY: ${{ vars.K6_FIXED_IDEMPOTENCY_KEY || '' }}
+          K6_WITHDRAWAL_VUS: ${{ vars.K6_WITHDRAWAL_VUS || '1' }}
+          K6_WITHDRAWAL_ITERATIONS: ${{ vars.K6_WITHDRAWAL_ITERATIONS || '3' }}
+          K6_WITHDRAWAL_AMOUNT: ${{ vars.K6_WITHDRAWAL_AMOUNT || '1000' }}
+          K6_MFA_CODE: ${{ secrets.K6_MFA_CODE }}
+          K6_PIX_KEY: ${{ secrets.K6_PIX_KEY }}
+          K6_PIX_TYPE: ${{ vars.K6_PIX_TYPE || 'cpf' }}
+        run: |
+          mkdir -p /tmp/k6
+          k6 run --summary-export /tmp/k6/summary.json "load-tests/k6/${{ inputs.scenario }}.js"
+
+      - name: Publish k6 Summary
+        if: always()
+        env:
+          SCENARIO: ${{ inputs.scenario }}
+        run: |
+          if [ ! -f /tmp/k6/summary.json ]; then
+            echo "## k6 Summary" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Scenario: $SCENARIO" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "No k6 summary file was produced." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+summary_path = Path('/tmp/k6/summary.json')
+summary = json.loads(summary_path.read_text())
+scenario = os.environ.get('SCENARIO', 'unknown')
+
+metrics = summary.get('metrics', {})
+http_failed = metrics.get('http_req_failed', {}).get('rate', 0)
+http_duration = metrics.get('http_req_duration', {})
+checks = metrics.get('checks', {})
+iterations = metrics.get('iterations', {}).get('count', 0)
+
+lines = [
+    '## k6 Summary',
+    '',
+    f'Scenario: {scenario}',
+    '',
+    '| Metric | Value |',
+    '| --- | ---: |',
+    f'| Iterations | {iterations} |',
+    f'| http_req_failed rate | {http_failed:.4f} |',
+    f'| http_req_duration p95 | {http_duration.get("p(95)", 0):.2f} ms |',
+    f'| http_req_duration p99 | {http_duration.get("p(99)", 0):.2f} ms |',
+    f'| checks pass rate | {checks.get("rate", 0):.4f} |',
+]
+
+with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as handle:
+    handle.write('\n'.join(lines) + '\n')
+PY

@@ -1,0 +1,92 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary Meta Tags -->
+    <title>GatePro - Gateway de Pagamento</title>
+    <meta name="title" content="GatePro - Gateway de Pagamento Completo | Checkout, Afiliados e GestÃ£o Financeira" />
+    <meta name="description" content="Plataforma completa de pagamentos com checkout personalizÃ¡vel, sistema de afiliados, gestÃ£o de produtos digitais e fÃ­sicos, webhooks, API robusta e muito mais. Aceite pagamentos com PIX, cartÃ£o de crÃ©dito e boleto." />
+    <meta name="keywords" content="gateway de pagamento, checkout, afiliados, pagamento online, pix, cartÃ£o de crÃ©dito, boleto, api de pagamento, webhook, gestÃ£o financeira, produtos digitais, ecommerce" />
+    <meta name="author" content="GatePro" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="Portuguese" />
+    <meta name="revisit-after" content="7 days" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#16a34a" />
+    <meta name="msapplication-TileColor" content="#16a34a" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://app.wazerpay.com.br/" />
+    <meta property="og:title" content="GatePro - Gateway de Pagamento Completo" />
+    <meta property="og:description" content="Plataforma completa de pagamentos com checkout personalizÃ¡vel, sistema de afiliados, gestÃ£o de produtos digitais e fÃ­sicos. Aceite PIX, cartÃ£o e boleto." />
+    <meta property="og:image" content="https://app.wazerpay.com.br/img/bannersocial.png" />
+    <meta property="og:image:secure_url" content="https://app.wazerpay.com.br/img/bannersocial.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="GatePro - Gateway de Pagamento" />
+    <meta property="og:site_name" content="GatePro" />
+    <meta property="og:locale" content="pt_BR" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://app.wazerpay.com.br/" />
+    <meta name="twitter:title" content="GatePro - Gateway de Pagamento Completo" />
+    <meta name="twitter:description" content="Plataforma completa de pagamentos com checkout personalizÃ¡vel, sistema de afiliados, gestÃ£o de produtos digitais e fÃ­sicos. Aceite PIX, cartÃ£o e boleto." />
+    <meta name="twitter:image" content="https://app.wazerpay.com.br/img/bannersocial.png" />
+    <meta name="twitter:image:alt" content="GatePro - Gateway de Pagamento" />
+    <meta name="twitter:creator" content="@wazerpay" />
+    
+    <!-- WhatsApp -->
+    <meta property="og:image:width" content="300" />
+    <meta property="og:image:height" content="300" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://app.wazerpay.com.br/" />
+    
+    <!-- Preconnect for Performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="antialiased" style="background-color:#08080c">
+    <script>
+      // Prevent white flash: apply dark mode before first paint
+      try {
+        var raw = localStorage.getItem('gatepro-theme') || localStorage.getItem('gatepro-theme') || '{}';
+        var stored = JSON.parse(raw);
+        var theme = stored && stored.state && stored.state.theme;
+        if (theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else if (theme === 'light') {
+          document.body.style.backgroundColor = '#FAFAFA';
+        } else {
+          // Default to dark
+          document.documentElement.classList.add('dark');
+        }
+      } catch(e) {
+        document.documentElement.classList.add('dark');
+      }
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

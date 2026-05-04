@@ -1,0 +1,249 @@
+name: Backend Real Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Suite to run"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - external-pix
+          - internal-real-pix
+          - turbos
+
+jobs:
+  real-integration:
+    name: Real Integration (${{ inputs.suite }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_sqlite, mbstring, xml, ctype, json, tokenizer, bcmath, redis
+          coverage: none
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare .env
+        working-directory: backend
+        run: |
+          cp .env.example .env 2>/dev/null || echo "APP_KEY=" > .env
+          php artisan key:generate
+
+      - name: Validate required secrets
+        env:
+          SUITE: ${{ inputs.suite }}
+          EXTERNAL_PIX_API_KEY: ${{ secrets.EXTERNAL_PIX_API_KEY }}
+          PAYFORT_API_KEY: ${{ secrets.PAYFORT_API_KEY }}
+          PAYFORT_API_SECRET: ${{ secrets.PAYFORT_API_SECRET }}
+          TURBOS_PUBLIC_KEY: ${{ secrets.TURBOS_PUBLIC_KEY }}
+          TURBOS_SECRET_KEY: ${{ secrets.TURBOS_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+
+          fail_if_empty() {
+            local var_name="$1"
+            local value="$2"
+            if [ -z "$value" ]; then
+              echo "Missing required secret: $var_name"
+              exit 1
+            fi
+          }
+
+          if [ "$SUITE" = "external-pix" ] || [ "$SUITE" = "all" ]; then
+            fail_if_empty "EXTERNAL_PIX_API_KEY" "$EXTERNAL_PIX_API_KEY"
+          fi
+
+          if [ "$SUITE" = "internal-real-pix" ] || [ "$SUITE" = "all" ]; then
+            fail_if_empty "PAYFORT_API_KEY" "$PAYFORT_API_KEY"
+            fail_if_empty "PAYFORT_API_SECRET" "$PAYFORT_API_SECRET"
+          fi
+
+          if [ "$SUITE" = "turbos" ] || [ "$SUITE" = "all" ]; then
+            fail_if_empty "TURBOS_PUBLIC_KEY" "$TURBOS_PUBLIC_KEY"
+            fail_if_empty "TURBOS_SECRET_KEY" "$TURBOS_SECRET_KEY"
+          fi
+
+      - name: Run External PIX integration tests
+        id: external_pix
+        if: ${{ inputs.suite == 'external-pix' || inputs.suite == 'all' }}
+        working-directory: backend
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_DRIVER: array
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: array
+          RUN_EXTERNAL_PIX_TESTS: 'true'
+          EXTERNAL_PIX_API_BASE_URL: ${{ vars.EXTERNAL_PIX_API_BASE_URL || 'https://api.wazerpay.com.br/api/v1/external' }}
+          EXTERNAL_PIX_API_KEY: ${{ secrets.EXTERNAL_PIX_API_KEY }}
+        run: |
+          set -o pipefail
+          vendor/bin/pest tests/Feature/ExternalPixApiTest.php --ci --colors=never | tee /tmp/pest-external.log
+          test_exit=${PIPESTATUS[0]}
+
+          tests_line=$(grep -E "^\s*Tests:" /tmp/pest-external.log | tail -1 || true)
+          if [ -z "$tests_line" ]; then
+            echo "Could not parse Pest summary for External PIX suite."
+            exit 1
+          fi
+
+          skipped=$(echo "$tests_line" | grep -Eo "[0-9]+ skipped" | awk '{print $1}')
+          passed=$(echo "$tests_line" | grep -Eo "[0-9]+ passed" | awk '{print $1}')
+          failed=$(echo "$tests_line" | grep -Eo "[0-9]+ failed" | awk '{print $1}')
+
+          skipped=${skipped:-0}
+          passed=${passed:-0}
+          failed=${failed:-0}
+
+          echo "passed=$passed" >> "$GITHUB_OUTPUT"
+          echo "skipped=$skipped" >> "$GITHUB_OUTPUT"
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+
+          if [ "$test_exit" -ne 0 ]; then
+            exit "$test_exit"
+          fi
+
+          if [ "$passed" -eq 0 ] && [ "$skipped" -gt 0 ]; then
+            echo "Guardrail failure: External PIX suite terminou com 100% skipped ($skipped skipped, $passed passed)."
+            exit 1
+          fi
+
+      - name: Run internal real PIX integration tests
+        id: internal_real_pix
+        if: ${{ inputs.suite == 'internal-real-pix' || inputs.suite == 'all' }}
+        working-directory: backend
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_DRIVER: array
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: array
+          RUN_REAL_PIX_TESTS: 'true'
+          PAYFORT_ENABLED: 'true'
+          PAYFORT_API_KEY: ${{ secrets.PAYFORT_API_KEY }}
+          PAYFORT_API_SECRET: ${{ secrets.PAYFORT_API_SECRET }}
+          PAYFORT_BASE_URL: ${{ vars.PAYFORT_BASE_URL || 'https://api.payfortbank.com' }}
+        run: |
+          set -o pipefail
+          vendor/bin/pest tests/Feature/PixGenerationTest.php --ci --colors=never | tee /tmp/pest-internal-real-pix.log
+          test_exit=${PIPESTATUS[0]}
+
+          tests_line=$(grep -E "^\s*Tests:" /tmp/pest-internal-real-pix.log | tail -1 || true)
+          if [ -z "$tests_line" ]; then
+            echo "Could not parse Pest summary for Internal real PIX suite."
+            exit 1
+          fi
+
+          skipped=$(echo "$tests_line" | grep -Eo "[0-9]+ skipped" | awk '{print $1}')
+          passed=$(echo "$tests_line" | grep -Eo "[0-9]+ passed" | awk '{print $1}')
+          failed=$(echo "$tests_line" | grep -Eo "[0-9]+ failed" | awk '{print $1}')
+
+          skipped=${skipped:-0}
+          passed=${passed:-0}
+          failed=${failed:-0}
+
+          echo "passed=$passed" >> "$GITHUB_OUTPUT"
+          echo "skipped=$skipped" >> "$GITHUB_OUTPUT"
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+
+          if [ "$test_exit" -ne 0 ]; then
+            exit "$test_exit"
+          fi
+
+          if [ "$passed" -eq 0 ] && [ "$skipped" -gt 0 ]; then
+            echo "Guardrail failure: Internal real PIX suite terminou com 100% skipped ($skipped skipped, $passed passed)."
+            exit 1
+          fi
+
+      - name: Run TurbosCash integration tests
+        id: turbos
+        if: ${{ inputs.suite == 'turbos' || inputs.suite == 'all' }}
+        working-directory: backend
+        env:
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          CACHE_DRIVER: array
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: array
+          TURBOS_ENABLED: 'true'
+          TURBOS_PUBLIC_KEY: ${{ secrets.TURBOS_PUBLIC_KEY }}
+          TURBOS_SECRET_KEY: ${{ secrets.TURBOS_SECRET_KEY }}
+          TURBOS_WITHDRAW_KEY: ${{ secrets.TURBOS_WITHDRAW_KEY }}
+          TURBOS_BASE_URL: ${{ vars.TURBOS_BASE_URL || 'https://api.turbos.cash' }}
+        run: |
+          set -o pipefail
+          vendor/bin/pest tests/Feature/TurbosCashIntegrationTest.php --ci --colors=never | tee /tmp/pest-turbos.log
+          test_exit=${PIPESTATUS[0]}
+
+          tests_line=$(grep -E "^\s*Tests:" /tmp/pest-turbos.log | tail -1 || true)
+          if [ -z "$tests_line" ]; then
+            echo "Could not parse Pest summary for Turbos suite."
+            exit 1
+          fi
+
+          skipped=$(echo "$tests_line" | grep -Eo "[0-9]+ skipped" | awk '{print $1}')
+          passed=$(echo "$tests_line" | grep -Eo "[0-9]+ passed" | awk '{print $1}')
+          failed=$(echo "$tests_line" | grep -Eo "[0-9]+ failed" | awk '{print $1}')
+
+          skipped=${skipped:-0}
+          passed=${passed:-0}
+          failed=${failed:-0}
+
+          echo "passed=$passed" >> "$GITHUB_OUTPUT"
+          echo "skipped=$skipped" >> "$GITHUB_OUTPUT"
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+
+          if [ "$test_exit" -ne 0 ]; then
+            exit "$test_exit"
+          fi
+
+          if [ "$passed" -eq 0 ] && [ "$skipped" -gt 0 ]; then
+            echo "Guardrail failure: Turbos suite terminou com 100% skipped ($skipped skipped, $passed passed)."
+            exit 1
+          fi
+
+      - name: Publish Real Integration Summary
+        if: always()
+        env:
+          SUITE: ${{ inputs.suite }}
+          EXT_PASSED: ${{ steps.external_pix.outputs.passed }}
+          EXT_SKIPPED: ${{ steps.external_pix.outputs.skipped }}
+          EXT_FAILED: ${{ steps.external_pix.outputs.failed }}
+          INT_PASSED: ${{ steps.internal_real_pix.outputs.passed }}
+          INT_SKIPPED: ${{ steps.internal_real_pix.outputs.skipped }}
+          INT_FAILED: ${{ steps.internal_real_pix.outputs.failed }}
+          TURBOS_PASSED: ${{ steps.turbos.outputs.passed }}
+          TURBOS_SKIPPED: ${{ steps.turbos.outputs.skipped }}
+          TURBOS_FAILED: ${{ steps.turbos.outputs.failed }}
+        run: |
+          {
+            echo "## Real Integration Summary"
+            echo ""
+            echo "Selected suite: $SUITE"
+            echo ""
+            echo "| Suite | Passed | Skipped | Failed |"
+            echo "| --- | ---: | ---: | ---: |"
+
+            if [ "$SUITE" = "external-pix" ] || [ "$SUITE" = "all" ]; then
+              echo "| External PIX API | ${EXT_PASSED:-0} | ${EXT_SKIPPED:-0} | ${EXT_FAILED:-0} |"
+            fi
+
+            if [ "$SUITE" = "internal-real-pix" ] || [ "$SUITE" = "all" ]; then
+              echo "| Internal Real PIX | ${INT_PASSED:-0} | ${INT_SKIPPED:-0} | ${INT_FAILED:-0} |"
+            fi
+
+            if [ "$SUITE" = "turbos" ] || [ "$SUITE" = "all" ]; then
+              echo "| TurbosCash | ${TURBOS_PASSED:-0} | ${TURBOS_SKIPPED:-0} | ${TURBOS_FAILED:-0} |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
