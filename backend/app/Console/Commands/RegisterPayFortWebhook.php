@@ -78,11 +78,9 @@ class RegisterPayFortWebhook extends Command
         $events = [
             'transaction_created',
             'transaction_paid',
-            'transaction_refused',
-            'transaction_canceled',
             'transaction_refunded',
+            // PayFort sends rejected/canceled changes through transaction_updated with status.
             'transaction_updated',
-            'transaction_infraction',
             'transfer_created',
             'transfer_completed',
             'transfer_canceled',
@@ -232,11 +230,9 @@ class RegisterPayFortWebhook extends Command
             'events' => [
                 'transaction_created',
                 'transaction_paid',
-                'transaction_refused',
-                'transaction_canceled',
                 'transaction_refunded',
+                // PayFort sends rejected/canceled changes through transaction_updated with status.
                 'transaction_updated',
-                'transaction_infraction',
                 'transfer_created',
                 'transfer_completed',
                 'transfer_canceled',
