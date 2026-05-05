@@ -86,7 +86,13 @@ class PayFortWebhookHandler
             'url' => $request->fullUrl(),
             'content_type' => $request->header('Content-Type'),
             'body_size' => strlen($request->getContent()),
-            'has_signature' => !empty($request->header('payfort-signature') ?? $request->header('payfort-Signature')),
+            'has_signature' => !empty(
+                $request->header('payfort-signature')
+                ?? $request->header('payfort-Signature')
+                ?? $request->header('Payfort-Signature')
+                ?? $request->header('cotapay-signature')
+                ?? $request->header('CotaPay-Signature')
+            ),
             'all_headers' => collect($request->headers->all())->map(fn($v) => $v[0] ?? $v)->toArray(),
             'body_preview' => substr($request->getContent(), 0, 300),
         ]);
@@ -104,6 +110,12 @@ class PayFortWebhookHandler
             $signatureHeader = $request->header('payfort-signature') 
                 ?? $request->header('payfort-Signature')
                 ?? $request->header('Payfort-Signature');
+
+            if (empty($signatureHeader)) {
+                // Some PayFort tenants still send alias header name.
+                $signatureHeader = $request->header('cotapay-signature')
+                    ?? $request->header('CotaPay-Signature');
+            }
 
             $webhookSecret = config('acquirers.payfort.webhook_secret');
 
