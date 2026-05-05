@@ -54,6 +54,28 @@ interface ChargeFilters {
   search?: string;
 }
 
+const PAID_CHARGE_STATUSES = new Set(['paid', 'approved']);
+const FINAL_CHARGE_STATUSES = new Set(['paid', 'approved', 'failed', 'refunded', 'cancelled', 'expired', 'chargeback']);
+
+function normalizeChargeStatus(status: string | null | undefined): string {
+  const normalized = String(status ?? '').toLowerCase().trim();
+  if (!normalized) {
+    return 'pending';
+  }
+  if (normalized === 'canceled') {
+    return 'cancelled';
+  }
+  return normalized;
+}
+
+function isPaidChargeStatus(status: string): boolean {
+  return PAID_CHARGE_STATUSES.has(normalizeChargeStatus(status));
+}
+
+function shouldPollChargeStatus(status: string): boolean {
+  return !FINAL_CHARGE_STATUSES.has(normalizeChargeStatus(status));
+}
+
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     paid: 'badge-success',
@@ -69,7 +91,7 @@ function StatusBadge({ status }: { status: string }) {
 
   const labels: Record<string, string> = {
     paid: 'Pago',
-    approved: 'Aprovado',
+    approved: 'Pago',
     pending: 'Pendente',
     processing: 'Processando',
     failed: 'Falhou',
@@ -96,6 +118,9 @@ function NewPixChargeModal({
   const [pixCode, setPixCode] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showQrCode, setShowQrCode] = useState(false);
+  const [createdChargeId, setCreatedChargeId] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string>('pending');
+  const paymentConfirmedToastShown = useRef(false);
   const queryClient = useQueryClient();
 
   const createChargeMutation = useMutation({
@@ -113,6 +138,11 @@ function NewPixChargeModal({
     },
     onSuccess: async (response) => {
       const chargeData = response.data || response;
+      const initialStatus = normalizeChargeStatus(chargeData.status);
+
+      setCreatedChargeId(chargeData.id ?? null);
+      setPaymentStatus(initialStatus);
+      paymentConfirmedToastShown.current = isPaidChargeStatus(initialStatus);
       
       // Usar PIX retornado pela API ou gerar código simulado como fallback
       const pixCopyPaste = chargeData.pix_copy_paste || chargeData.pix_qr_code || 
@@ -149,6 +179,60 @@ function NewPixChargeModal({
       toast.error(error.response?.data?.error?.message || 'Erro ao criar cobrança');
     },
   });
+
+  useEffect(() => {
+    if (!isOpen || !showQrCode || !createdChargeId || !shouldPollChargeStatus(paymentStatus)) {
+      return;
+    }
+
+    let isCancelled = false;
+    let intervalId: number | null = null;
+
+    const syncChargeStatus = async () => {
+      try {
+        const response = await api.post(`/charges/${createdChargeId}/sync`);
+        const responseData = response.data?.data ?? {};
+        const nextStatus = normalizeChargeStatus(responseData.status ?? paymentStatus);
+
+        if (isCancelled) {
+          return;
+        }
+
+        let statusChanged = false;
+        setPaymentStatus((current) => {
+          const normalizedCurrent = normalizeChargeStatus(current);
+          statusChanged = normalizedCurrent !== nextStatus;
+          return nextStatus;
+        });
+
+        if (statusChanged || response.data?.synced) {
+          queryClient.invalidateQueries({ queryKey: ['charges'] });
+        }
+
+        if (isPaidChargeStatus(nextStatus) && !paymentConfirmedToastShown.current) {
+          paymentConfirmedToastShown.current = true;
+          toast.success('Pagamento confirmado!');
+        }
+
+        if (!shouldPollChargeStatus(nextStatus) && intervalId) {
+          window.clearInterval(intervalId);
+          intervalId = null;
+        }
+      } catch {
+        // Em falha momentanea de rede/gateway, o polling continua no proximo ciclo.
+      }
+    };
+
+    syncChargeStatus();
+    intervalId = window.setInterval(syncChargeStatus, 5000);
+
+    return () => {
+      isCancelled = true;
+      if (intervalId) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, [isOpen, showQrCode, createdChargeId, paymentStatus, queryClient]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,6 +276,9 @@ function NewPixChargeModal({
     setPixCode('');
     setQrCodeUrl('');
     setShowQrCode(false);
+    setCreatedChargeId(null);
+    setPaymentStatus('pending');
+    paymentConfirmedToastShown.current = false;
     onClose();
   };
 
@@ -355,6 +442,18 @@ function NewPixChargeModal({
                             <ClipboardDocumentIcon className="h-5 w-5 text-tx-muted" />
                           </button>
                         </div>
+                      </div>
+
+                      <div className="rounded-lg border border-border-DEFAULT bg-surface-elevated p-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-tx-muted">Status do pagamento</span>
+                          <StatusBadge status={paymentStatus} />
+                        </div>
+                        <p className="mt-2 text-xs text-tx-muted">
+                          {isPaidChargeStatus(paymentStatus)
+                            ? 'Pagamento identificado e confirmado no gateway.'
+                            : 'Aguardando confirmação de pagamento. Atualização automática a cada 5 segundos.'}
+                        </p>
                       </div>
 
                       <div className="rounded-lg bg-accent-subtle p-4">
@@ -769,6 +868,25 @@ export default function ChargesPage() {
   // Usar dados da API
   const charges: Charge[] = data?.data || [];
   const pagination = data?.meta || { total: 0, last_page: 1 };
+
+  useEffect(() => {
+    if (!selectedCharge) {
+      return;
+    }
+
+    const freshSelectedCharge = charges.find((charge) => charge.id === selectedCharge.id);
+
+    if (!freshSelectedCharge) {
+      return;
+    }
+
+    if (
+      freshSelectedCharge.status !== selectedCharge.status
+      || (freshSelectedCharge.paid_at ?? null) !== (selectedCharge.paid_at ?? null)
+    ) {
+      setSelectedCharge(freshSelectedCharge);
+    }
+  }, [charges, selectedCharge]);
 
   const handleViewCharge = (charge: Charge) => {
     setSelectedCharge(charge);

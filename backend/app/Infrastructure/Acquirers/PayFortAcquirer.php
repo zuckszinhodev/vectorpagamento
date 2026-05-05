@@ -370,13 +370,37 @@ class PayFortAcquirer implements AcquirerInterface
             if ($response->successful()) {
                 $data = $response->json();
                 $txData = $data['data'] ?? $data;
+                $transaction = is_array($txData['transaction'] ?? null)
+                    ? $txData['transaction']
+                    : $txData;
+
+                $status = strtolower((string) (
+                    $transaction['status']
+                    ?? $txData['status']
+                    ?? data_get($data, 'data.transaction.status')
+                    ?? 'unknown'
+                ));
+
+                $amount = $transaction['amount']
+                    ?? $transaction['amountInCents']
+                    ?? $txData['amount']
+                    ?? $txData['amountInCents']
+                    ?? data_get($data, 'data.transaction.amount')
+                    ?? data_get($data, 'data.transaction.amountInCents');
+
+                $paidAt = $transaction['paidAt']
+                    ?? $transaction['paid_at']
+                    ?? $txData['paidAt']
+                    ?? $txData['paid_at']
+                    ?? data_get($data, 'data.transaction.paidAt')
+                    ?? data_get($data, 'data.transaction.paid_at');
 
                 return [
                     'success' => true,
-                    'status' => $txData['status'] ?? 'unknown',
-                    'amount' => $txData['amount'] ?? $txData['amountInCents'] ?? null,
-                    'paid_at' => $txData['paidAt'] ?? $txData['paid_at'] ?? null,
-                    'data' => $txData,
+                    'status' => $status,
+                    'amount' => $amount,
+                    'paid_at' => $paidAt,
+                    'data' => $transaction,
                 ];
             }
 
