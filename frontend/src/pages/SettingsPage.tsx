@@ -204,10 +204,10 @@ function CreateApiKeyModal({
  <div className="max-h-[60vh] space-y-4 overflow-y-auto px-4 sm:px-6 py-4">
  <input type="hidden" {...register('type')} value="secret" />
  <div className="rounded-lg bg-accent-subtle p-3">
- <p className="text-sm font-medium text-accent-primary">
+ <p className="text-sm font-medium text-green-600">
  Chave Privada (sk_live_ )
  </p>
- <p className="mt-1 text-xs text-accent-primary">
+ <p className="mt-1 text-xs text-green-600">
  Acesso completo: criar cobranças, gerenciar checkouts, processar pagamentos.
  </p>
  </div>
@@ -451,7 +451,7 @@ function MfaCodeModal({
  <div className="px-4 sm:px-6 py-5">
  <div className="flex items-center gap-3 mb-4">
  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-subtle">
- <LockClosedIcon className="h-5 w-5 text-accent-primary" />
+ <LockClosedIcon className="h-5 w-5 text-green-600" />
  </div>
  <div>
  <Dialog.Title className="text-lg font-semibold text-tx-primary">
@@ -635,7 +635,7 @@ function WithdrawalIpWhitelist() {
  >
  <div className="flex items-center gap-3">
  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-subtle">
- <GlobeAltIcon className="h-4 w-4 text-accent-primary" />
+ <GlobeAltIcon className="h-4 w-4 text-green-600" />
  </div>
  <code className="text-sm font-mono text-tx-primary">{ip}</code>
  </div>
@@ -654,7 +654,7 @@ function WithdrawalIpWhitelist() {
 
  {/* Info box */}
  <div className="rounded-lg bg-accent-subtle p-3">
- <p className="text-xs text-accent-primary">
+ <p className="text-xs text-green-600">
  <strong>Como funciona:</strong> Quando IPs estão configurados, apenas requisições de saque
  (via chave API) vindas desses IPs serão aceitas. Saques pelo painel não são afetados.
  </p>
@@ -1099,7 +1099,7 @@ export default function SettingsPage() {
  onClick={() => setActiveTab('personal')}
  className={`${
  activeTab === 'personal'
- ? 'border-accent-primary text-accent-primary'
+ ? 'border-green-500 text-green-600'
  : 'border-transparent text-tx-muted hover:border-border-DEFAULT hover:text-tx-secondary'
  } flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium transition-colors`}
  >
@@ -1110,7 +1110,7 @@ export default function SettingsPage() {
  onClick={() => setActiveTab('security')}
  className={`${
  activeTab === 'security'
- ? 'border-accent-primary text-accent-primary'
+ ? 'border-green-500 text-green-600'
  : 'border-transparent text-tx-muted hover:border-border-DEFAULT hover:text-tx-secondary'
  } flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium transition-colors`}
  >
@@ -1121,7 +1121,7 @@ export default function SettingsPage() {
  onClick={() => setActiveTab('api')}
  className={`${
  activeTab === 'api'
- ? 'border-accent-primary text-accent-primary'
+ ? 'border-green-500 text-green-600'
  : 'border-transparent text-tx-muted hover:border-border-DEFAULT hover:text-tx-secondary'
  } flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium transition-colors`}
  >
@@ -1132,7 +1132,7 @@ export default function SettingsPage() {
  onClick={() => setActiveTab('webhooks')}
  className={`${
  activeTab === 'webhooks'
- ? 'border-accent-primary text-accent-primary'
+ ? 'border-green-500 text-green-600'
  : 'border-transparent text-tx-muted hover:border-border-DEFAULT hover:text-tx-secondary'
  } flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium transition-colors`}
  >
@@ -1143,7 +1143,7 @@ export default function SettingsPage() {
  onClick={() => setActiveTab('splits')}
  className={`${
  activeTab === 'splits'
- ? 'border-accent-primary text-accent-primary'
+ ? 'border-green-500 text-green-600'
  : 'border-transparent text-tx-muted hover:border-border-DEFAULT hover:text-tx-secondary'
  } flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium transition-colors`}
  >
@@ -1289,7 +1289,7 @@ export default function SettingsPage() {
  </div>
 
  <div className="rounded-lg bg-accent-subtle p-4">
- <p className="text-sm text-accent-primary">
+ <p className="text-sm text-green-600">
  <strong>Nota:</strong> Mantenha suas informações sempre atualizadas para
  garantir o melhor funcionamento da plataforma e receber notificações
  importantes.
@@ -1418,8 +1418,8 @@ export default function SettingsPage() {
  <span
  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
  (key.type || 'public') === 'secret'
- ? 'bg-accent-subtle text-accent-primary0/20'
- : 'bg-accent-subtle text-accent-primary'
+ ? 'bg-accent-subtle text-green-600'
+ : 'bg-accent-subtle text-green-600'
  }`}
  >
  {(key.type || 'public') === 'secret' ? 'Secreta (sk_)' : 'Pública (pk_)'}
@@ -1568,8 +1568,8 @@ export default function SettingsPage() {
  <span
  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
  (key.type || 'public') === 'secret'
- ? 'bg-accent-subtle text-accent-primary'
- : 'bg-accent-subtle text-accent-primary'
+ ? 'bg-accent-subtle text-green-600'
+ : 'bg-accent-subtle text-green-600'
  }`}
  >
  {(key.type || 'public') === 'secret' ? 'Secreta' : 'Pública'}
@@ -1618,7 +1618,7 @@ export default function SettingsPage() {
  <div className="card flex items-center justify-between p-4 sm:p-5 border border-accent-subtle">
  <div className="flex items-center gap-3">
  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-subtle">
- <SignalIcon className="h-5 w-5 text-accent-primary" />
+ <SignalIcon className="h-5 w-5 text-green-600" />
  </div>
  <div>
  <p className="text-sm font-semibold text-tx-primary">Logs de Entrega</p>
@@ -1677,7 +1677,7 @@ export default function SettingsPage() {
  {webhook.events.map((event) => (
  <span
  key={event}
- className="rounded-md bg-accent-subtle px-2 py-0.5 text-xs font-medium text-accent-primary"
+ className="rounded-md bg-accent-subtle px-2 py-0.5 text-xs font-medium text-green-600"
  >
  {eventLabels[event] || event}
  </span>
@@ -1803,7 +1803,7 @@ export default function SettingsPage() {
  setWebhookEvents([]);
  }
  }}
- className="rounded border-border-DEFAULT text-accent-primary"
+ className="rounded border-border-DEFAULT text-green-600"
  />
  <span className="text-sm font-medium text-tx-primary">
  Todos os eventos (*)
@@ -1823,7 +1823,7 @@ export default function SettingsPage() {
  setWebhookEvents(webhookEvents.filter(ev => ev !== event));
  }
  }}
- className="rounded border-border-DEFAULT text-accent-primary"
+ className="rounded border-border-DEFAULT text-green-600"
  />
  <span className="text-sm text-tx-secondary">
  {eventLabels[event] || event}

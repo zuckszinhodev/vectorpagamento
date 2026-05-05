@@ -1,8 +1,8 @@
-# 🧪 Guia de Testes - GatePro Gateway
+# 🧪 Guia de Testes - Vector Pagamentos Gateway
 
 ## 📋 Resumo
 
-Foi implementada uma suíte completa de testes automatizados para o GatePro Gateway, aumentando a cobertura de testes de **< 5%** para aproximadamente **60-70%** do código crítico.
+Foi implementada uma suíte completa de testes automatizados para o Vector Pagamentos Gateway, aumentando a cobertura de testes de **< 5%** para aproximadamente **60-70%** do código crítico.
 
 ## ✅ O Que Foi Implementado
 
@@ -301,7 +301,7 @@ php artisan config:clear
 
 ## 🎉 Conclusão
 
-A suíte de testes implementada cobre as funcionalidades críticas do GatePro Gateway, garantindo:
+A suíte de testes implementada cobre as funcionalidades críticas do Vector Pagamentos Gateway, garantindo:
 
 - ✅ Qualidade do código
 - ✅ Prevenção de regressões

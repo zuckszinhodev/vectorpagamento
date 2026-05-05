@@ -73,7 +73,7 @@ interface CheckoutForm {
 }
 
 const defaultSettings = {
- theme_color: '#6366f1',
+ theme_color: '#16a34a',
  collect_cpf: true,
  collect_address: true,
  collect_phone: true,

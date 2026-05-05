@@ -1,4 +1,4 @@
-# ⚡ Quick Start - Testes GatePro
+# ⚡ Quick Start - Testes Vector Pagamentos
 
 ## 🚀 Início Rápido (5 minutos)
 
@@ -205,7 +205,7 @@ php artisan test --watch
 
 ## 🎉 Pronto!
 
-Agora você está pronto para executar e criar testes no GatePro Gateway!
+Agora você está pronto para executar e criar testes no Vector Pagamentos Gateway!
 
 **Dúvidas?** Consulte a documentação completa em `tests/README.md`
 

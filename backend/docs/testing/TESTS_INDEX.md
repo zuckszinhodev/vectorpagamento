@@ -183,7 +183,7 @@ Consulte a seção "Troubleshooting" em:
 
 ## 🎉 Conclusão
 
-Toda a documentação necessária para trabalhar com testes no GatePro Gateway está organizada e acessível. Escolha o documento apropriado para sua necessidade e comece!
+Toda a documentação necessária para trabalhar com testes no Vector Pagamentos Gateway está organizada e acessível. Escolha o documento apropriado para sua necessidade e comece!
 
 **Dica:** Marque este arquivo como favorito para acesso rápido a toda documentação de testes.
 
@@ -191,4 +191,4 @@ Toda a documentação necessária para trabalhar com testes no GatePro Gateway e
 
 **Última atualização:** Janeiro 2026
 **Versão:** 1.0.0
-**Mantido por:** Equipe GatePro
+**Mantido por:** Equipe Vector Pagamentos

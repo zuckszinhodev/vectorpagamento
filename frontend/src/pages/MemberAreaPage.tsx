@@ -246,7 +246,7 @@ export default function MemberAreaPage() {
  title="Total de Cursos"
  value={dashboard?.total_courses || 0}
  icon={AcademicCapIcon}
- color="purple"
+ color="green"
  />
  <StatCard
  title="Total de Aulas"

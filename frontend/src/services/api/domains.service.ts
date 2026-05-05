@@ -60,7 +60,7 @@ export const domainsService = {
   },
 
   /**
-   * Create a GatePro subdomain (e.g., meusite.wazerpay.com.br)
+  * Create a Vector Pagamentos subdomain (e.g., meusite.wazerpay.com.br)
    */
   async createSubdomain(subdomain: string, useFor?: DomainPurpose[]): Promise<{ data: CustomDomain; message: string }> {
     const response = await api.post('/domains', { subdomain, type: 'wazerpay', use_for: useFor || ['checkout', 'members'] });

@@ -315,7 +315,7 @@ export default function AdminLayout() {
                 Saques pendentes: {pulseData.queues.pending_withdrawals}
               </Link>
 
-              <Link to="/admin/control-tower" className="rounded-full bg-indigo-500/10 px-2.5 py-1 font-medium text-indigo-600 hover:bg-indigo-500/20">
+              <Link to="/admin/control-tower" className="rounded-full bg-green-500/10 px-2.5 py-1 font-medium text-green-600 hover:bg-green-500/20">
                 Abrir control tower
               </Link>
 
@@ -390,7 +390,7 @@ function SidebarContent({
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center">
         <Link to="/admin" className="flex items-center">
-          <span className="text-lg font-bold text-white">GatePro</span>
+          <span className="text-lg font-bold text-white">Vector Pagamentos</span>
           <span className="ml-2 rounded bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-300">
             Admin
           </span>
@@ -423,7 +423,7 @@ function SidebarContent({
                         to={item.href}
                         className={`group flex items-center gap-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                           active
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-900/30'
+                            ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg shadow-green-900/30'
                             : 'text-slate-300 hover:bg-white/10 hover:text-white'
                         }`}
                       >
@@ -450,11 +450,11 @@ function SidebarContent({
         {/* Footer */}
         <div className="mt-auto border-t border-white/10 pt-4">
           <div className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-xs font-bold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-green-600 to-green-700 text-xs font-bold text-white">
               W
             </div>
             <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium text-white">GatePro Gateway</p>
+              <p className="truncate text-sm font-medium text-white">Vector Pagamentos Gateway</p>
               <p className="truncate text-xs text-slate-400">Sistema Administrativo</p>
             </div>
           </div>

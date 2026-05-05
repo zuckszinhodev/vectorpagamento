@@ -82,7 +82,7 @@ export function ClassicCheckoutPreview({ theme, product, blocks }: ClassicChecko
               <div key={block.id} className="flex items-center justify-between gap-2 p-4 border-b" style={{ borderColor: `${theme.primaryColor || '#16a34a'}20` }}>
                 <div>
                   <h1 className="text-xl font-bold" style={{ color: theme.primaryColor || '#16a34a' }}>
-                    {settings.title || product?.name || 'GatePro'}
+                    {settings.title || product?.name || 'Vector Pagamentos'}
                   </h1>
                   {settings.showSecureBadge && (
                     <span className="text-xs font-semibold text-status-success">Compra Segura</span>
@@ -326,7 +326,7 @@ export function ClassicCheckoutPreview({ theme, product, blocks }: ClassicChecko
           className="w-full py-3.5 text-sm font-bold text-white"
           style={{
             background: theme.buttonStyle === 'gradient'
-              ? `linear-gradient(135deg, ${theme.primaryColor || '#16a34a'}, ${theme.secondaryColor || '#6366f1'})`
+              ? `linear-gradient(135deg, ${theme.primaryColor || '#16a34a'}, ${theme.secondaryColor || '#22c55e'})`
               : theme.primaryColor || '#16a34a',
             borderRadius: getBorderRadiusValue(theme.borderRadius),
           }}

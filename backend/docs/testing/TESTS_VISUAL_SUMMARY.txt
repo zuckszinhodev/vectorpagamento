@@ -1,6 +1,6 @@
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
-║                    🧪 GATEPRO GATEWAY - TEST SUITE                          ║
+║                    🧪 VECTOR PAGAMENTOS GATEWAY - TEST SUITE                ║
 ║                                                                              ║
 ║                         ✅ IMPLEMENTAÇÃO COMPLETA                            ║
 ║                                                                              ║
@@ -231,4 +231,4 @@ backend/tests/
 
 Data: Janeiro 2026
 Versão: 1.0.0
-Desenvolvido com ❤️ para o GatePro Gateway
+Desenvolvido com ❤️ para o Vector Pagamentos Gateway

@@ -244,7 +244,7 @@ function DashboardTab({ stats, loadingStats, whatsappStatus }: {
         <StatCard icon={PaperAirplaneIcon} label="Mensagens Enviadas" value={whatsappSent} color="green" />
         <StatCard icon={CheckCircleIcon} label="Taxa de Entrega" value={`${deliveryRate}%`} color="blue" />
         <StatCard icon={ExclamationTriangleIcon} label="Falhas" value={totalFailed} color="red" />
-        <StatCard icon={DocumentTextIcon} label="Templates Ativos" value={stats?.templates?.active || 0} color="purple" />
+        <StatCard icon={DocumentTextIcon} label="Templates Ativos" value={stats?.templates?.active || 0} color="green" />
       </div>
 
       {/* Connection Info */}

@@ -208,9 +208,9 @@ const PALETTE = {
     gradientBot: { dark: 'rgba(22, 163, 74, 0)', light: 'rgba(22, 163, 74, 0)' },
     point: 'rgb(22, 163, 74)',
     pointBorder: { dark: 'rgb(22, 22, 22)', light: '#ffffff' },
-    tooltip: { bg: '#1e1b4b', border: 'rgba(22, 163, 74, 0.4)' },
+    tooltip: { bg: '#052e16', border: 'rgba(22, 163, 74, 0.4)' },
     grid: { dark: 'rgba(22, 163, 74, 0.08)', light: 'rgba(22, 163, 74, 0.06)' },
-    tick: { dark: 'rgba(168, 162, 186, 0.6)', light: 'rgba(100, 100, 130, 0.6)' },
+    tick: { dark: 'rgba(120, 140, 120, 0.6)', light: 'rgba(100, 120, 100, 0.6)' },
   },
   violet: {
     line: 'rgb(21, 128, 61)',
@@ -220,21 +220,21 @@ const PALETTE = {
     gradientBot: { dark: 'rgba(21, 128, 61, 0.50)', light: 'rgba(21, 128, 61, 0.35)' },
     point: 'rgb(21, 128, 61)',
     pointBorder: { dark: 'rgb(22, 22, 22)', light: '#ffffff' },
-    tooltip: { bg: '#1e1b4b', border: 'rgba(21, 128, 61, 0.4)' },
+    tooltip: { bg: '#052e16', border: 'rgba(21, 128, 61, 0.4)' },
     grid: { dark: 'rgba(21, 128, 61, 0.08)', light: 'rgba(21, 128, 61, 0.06)' },
-    tick: { dark: 'rgba(168, 162, 186, 0.6)', light: 'rgba(100, 100, 130, 0.6)' },
+    tick: { dark: 'rgba(120, 140, 120, 0.6)', light: 'rgba(100, 120, 100, 0.6)' },
   },
   fuchsia: {
     line: 'rgb(34, 197, 94)',
-    lineHover: 'rgb(232, 121, 249)',
+    lineHover: 'rgb(74, 222, 128)',
     gradientTop: { dark: 'rgba(34, 197, 94, 0.25)', light: 'rgba(34, 197, 94, 0.14)' },
     gradientMid: { dark: 'rgba(34, 197, 94, 0.06)', light: 'rgba(34, 197, 94, 0.04)' },
     gradientBot: { dark: 'rgba(34, 197, 94, 0)', light: 'rgba(34, 197, 94, 0)' },
     point: 'rgb(34, 197, 94)',
     pointBorder: { dark: 'rgb(22, 22, 22)', light: '#ffffff' },
-    tooltip: { bg: '#1e1b4b', border: 'rgba(34, 197, 94, 0.4)' },
+    tooltip: { bg: '#052e16', border: 'rgba(34, 197, 94, 0.4)' },
     grid: { dark: 'rgba(34, 197, 94, 0.08)', light: 'rgba(34, 197, 94, 0.06)' },
-    tick: { dark: 'rgba(168, 162, 186, 0.6)', light: 'rgba(100, 100, 130, 0.6)' },
+    tick: { dark: 'rgba(120, 140, 120, 0.6)', light: 'rgba(100, 120, 100, 0.6)' },
   },
   rose: {
     line: 'rgb(225, 29, 72)',
@@ -319,7 +319,7 @@ export function GlowLineChart({
           backgroundColor: (context: any) => {
             const chart = context.chart;
             const { ctx, chartArea } = chart;
-            if (!chartArea) return 'rgba(147,51,234,0)';
+            if (!chartArea) return 'rgba(34,197,94,0)';
             return createGradient(ctx, chartArea);
           },
           tension,
@@ -550,7 +550,7 @@ export function GlowDoughnutChart({
           },
         },
         tooltip: {
-          backgroundColor: '#1e1b4b',
+          backgroundColor: '#052e16',
           titleColor: '#e2e8f0',
           bodyColor: '#ffffff',
           borderColor: 'rgba(22, 163, 74, 0.4)',

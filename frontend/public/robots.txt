@@ -1,4 +1,4 @@
-# robots.txt for GatePro
+# robots.txt for Vector Pagamentos
 User-agent: *
 Allow: /
 

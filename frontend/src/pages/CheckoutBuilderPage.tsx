@@ -288,7 +288,7 @@ const defaultSettings: CheckoutSettings = {
   theme: {
     template: 'classic',
     primaryColor: '#16a34a',
-    secondaryColor: '#6366f1',
+    secondaryColor: '#22c55e',
     backgroundColor: '#f8fafc',
     cardBackground: '#ffffff',
     textColor: '#1e293b',
@@ -1926,9 +1926,9 @@ export default function CheckoutBuilderPage() {
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     {
-                      name: 'Roxo Moderno',
-                      preview: { bg: '#f8fafc', card: '#ffffff', primary: '#16a34a', secondary: '#6366f1', text: '#1e293b', muted: '#64748b' },
-                      theme: { primaryColor: '#16a34a', secondaryColor: '#6366f1', backgroundColor: '#f8fafc', cardBackground: '#ffffff', textColor: '#1e293b', mutedColor: '#64748b', borderRadius: 'xl', fontFamily: 'Inter', buttonStyle: 'gradient', shadow: 'lg' },
+                      name: 'Verde Moderno',
+                      preview: { bg: '#f8fafc', card: '#ffffff', primary: '#16a34a', secondary: '#22c55e', text: '#1e293b', muted: '#64748b' },
+                      theme: { primaryColor: '#16a34a', secondaryColor: '#22c55e', backgroundColor: '#f8fafc', cardBackground: '#ffffff', textColor: '#1e293b', mutedColor: '#64748b', borderRadius: 'xl', fontFamily: 'Inter', buttonStyle: 'gradient', shadow: 'lg' },
                     },
                     {
                       name: 'Verde Vendas',

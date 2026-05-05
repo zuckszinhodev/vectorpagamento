@@ -22,7 +22,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { domainsService, CustomDomain, DomainPurpose, DomainType } from '@/services/api/domains.service';
 
-const GATEPRO_BASE_DOMAIN = 'wazerpay.com.br';
+const VECTOR_BASE_DOMAIN = 'wazerpay.com.br';
 
 export default function DomainsPage() {
  const queryClient = useQueryClient();
@@ -58,11 +58,11 @@ export default function DomainsPage() {
  },
  });
 
- // Create GatePro subdomain
+ // Create Vector Pagamentos subdomain
  const createSubdomainMutation = useMutation({
  mutationFn: ({ subdomain, useFor }: { subdomain: string; useFor: DomainPurpose[] }) => domainsService.createSubdomain(subdomain, useFor),
  onSuccess: (result) => {
- toast.success(result.message || 'Subdomínio GatePro criado!');
+ toast.success(result.message || 'Subdomínio Vector Pagamentos criado!');
  queryClient.invalidateQueries({ queryKey: ['domains'] });
  closeAddModal();
  },
@@ -212,7 +212,7 @@ export default function DomainsPage() {
  </div>
  <button
  onClick={() => setShowAddModal(true)}
- className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:from-green-700 hover:to-indigo-700 transition-all"
+ className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-600 to-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:from-green-700 hover:to-green-800 transition-all"
  >
  <PlusIcon className="h-5 w-5" />
  Adicionar Domínio
@@ -266,12 +266,12 @@ export default function DomainsPage() {
  <span className="text-tx-muted text-xs">— Checkout</span>
  </div>
  <div className="flex items-center gap-2">
- <AcademicCapIcon className="h-4 w-4 text-indigo-500" />
+ <AcademicCapIcon className="h-4 w-4 text-green-500" />
  <code className="text-tx-primary font-mono text-xs">alunos.meusite.com.br</code>
  <span className="text-tx-muted text-xs">— Membros</span>
  </div>
  <div className="flex items-center gap-2">
- <AcademicCapIcon className="h-4 w-4 text-indigo-500" />
+ <AcademicCapIcon className="h-4 w-4 text-green-500" />
  <code className="text-tx-primary font-mono text-xs">cursos.meusite.com.br</code>
  <span className="text-tx-muted text-xs">— Membros</span>
  </div>
@@ -283,7 +283,7 @@ export default function DomainsPage() {
  <div className="space-y-3">
  <div className="flex items-center gap-2">
  <span className="flex items-center justify-center h-7 w-7 rounded-full bg-green-100 text-green-700 text-sm font-bold">2</span>
- <h3 className="text-base font-semibold text-tx-primary">Adicione o domínio na GatePro</h3>
+ <h3 className="text-base font-semibold text-tx-primary">Adicione o domínio na Vector Pagamentos</h3>
  </div>
  <p className="text-sm text-tx-secondary ml-0 sm:ml-9">
  Clique em <strong>"Adicionar Domínio"</strong> acima, digite seu domínio e escolha se quer usar no Checkout, Área de Membros ou ambos. Após adicionar, o sistema vai gerar os registros DNS que você precisa configurar.
@@ -353,7 +353,7 @@ export default function DomainsPage() {
  <li>Adicione o registro <strong>CNAME</strong>: Nome = seu subdomínio, Destino = <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.wazerpay.com.br</code></li>
  <li><strong>Ative o proxy (nuvem laranja)</strong> — isso garante SSL automático</li>
  <li>Adicione o registro <strong>TXT</strong>: Nome = <code className="px-1 py-0.5 bg-surface-hover rounded">_wazerpay-verification.seudominio.com</code>, Conteúdo = seu token</li>
- <li>Aguarde 1-5 minutos e clique em <strong>"Verificar"</strong> na GatePro</li>
+ <li>Aguarde 1-5 minutos e clique em <strong>"Verificar"</strong> na Vector Pagamentos</li>
  </ol>
  <div className="mt-2 p-2 rounded bg-green-50 border border-green-200">
  <p className="text-xs text-green-700"><strong>Recomendado:</strong> Cloudflare é o provedor ideal pois fornece SSL gratuito e CDN automaticamente. O proxy (nuvem laranja) DEVE estar ativo.</p>
@@ -375,7 +375,7 @@ export default function DomainsPage() {
  <li>Selecione tipo <strong>CNAME</strong>, preencha o nome e destino</li>
  <li>Adicione outro registro tipo <strong>TXT</strong> com o token de verificação</li>
  <li>Salve e aguarde até 15 minutos para propagação</li>
- <li>Volte na GatePro e clique em <strong>"Verificar"</strong></li>
+ <li>Volte na Vector Pagamentos e clique em <strong>"Verificar"</strong></li>
  </ol>
  </div>
  </details>
@@ -393,7 +393,7 @@ export default function DomainsPage() {
  <li>Vá em <strong>DNS → DNS Records</strong></li>
  <li>Clique em <strong>"Add New Record"</strong></li>
  <li>Tipo: <strong>CNAME</strong>, Nome: seu subdomínio, Valor: <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.wazerpay.com.br</code></li>
- <li>Adicione outro: Tipo: <strong>TXT</strong>, Nome e Valor conforme exibido na GatePro</li>
+ <li>Adicione outro: Tipo: <strong>TXT</strong>, Nome e Valor conforme exibido na Vector Pagamentos</li>
  <li>Salve e aguarde entre 15-60 minutos para propagação</li>
  </ol>
  </div>
@@ -454,7 +454,7 @@ export default function DomainsPage() {
  <CheckCircleIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
  <div>
  <p className="text-xs font-semibold text-green-800">CNAME válido</p>
- <p className="text-xs text-green-700">Seu domínio aponta corretamente para a GatePro</p>
+ <p className="text-xs text-green-700">Seu domínio aponta corretamente para a Vector Pagamentos</p>
  </div>
  </div>
  <div className="flex items-start gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
@@ -483,9 +483,9 @@ export default function DomainsPage() {
  <ShoppingCartIcon className="h-4 w-4 text-green-600" />
  <span className="text-xs text-green-800"><strong>Checkout:</strong> Seus clientes pagam via seu domínio</span>
  </div>
- <div className="flex items-center gap-2 p-2 rounded bg-indigo-50">
- <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
- <span className="text-xs text-indigo-800"><strong>Membros:</strong> Selecione na configuração da Área de Membros</span>
+ <div className="flex items-center gap-2 p-2 rounded bg-green-50">
+ <AcademicCapIcon className="h-4 w-4 text-green-600" />
+ <span className="text-xs text-green-800"><strong>Membros:</strong> Selecione na configuração da Área de Membros</span>
  </div>
  </div>
  </div>
@@ -573,7 +573,7 @@ export default function DomainsPage() {
  <span className="font-semibold text-tx-primary break-all">{domain.domain}</span>
  {domain.type === 'wazerpay' && (
  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">
- GatePro
+ Vector Pagamentos
  </span>
  )}
  {domain.is_primary && (
@@ -585,7 +585,7 @@ export default function DomainsPage() {
  </div>
  <p className="text-sm text-tx-muted">
  {domain.type === 'wazerpay'
- ? 'Subdomínio GatePro • Verificado automaticamente'
+ ? 'Subdomínio Vector Pagamentos • Verificado automaticamente'
  : domain.verified_at
  ? `Verificado em ${new Date(domain.verified_at).toLocaleDateString('pt-BR')}`
  : 'Aguardando verificação DNS'}
@@ -601,7 +601,7 @@ export default function DomainsPage() {
  </span>
  )}
  {domain.use_for?.includes('members') && (
- <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-50 text-indigo-700">
+ <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-50 text-green-700">
  <AcademicCapIcon className="h-3 w-3" />
  Membros
  </span>
@@ -767,9 +767,9 @@ export default function DomainsPage() {
  if (updated.length > 0) updateUseForMutation.mutate({ id: domain.id, useFor: updated });
  else toast.error('O domínio deve ter pelo menos um uso');
  }}
- className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+ className="rounded border-gray-300 text-green-600 focus:ring-green-500"
  />
- <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
+ <AcademicCapIcon className="h-4 w-4 text-green-600" />
  <span className="text-sm text-tx-secondary">Área de Membros</span>
  </label>
  </div>
@@ -813,7 +813,7 @@ export default function DomainsPage() {
  : 'bg-surface-page text-tx-muted hover:bg-surface-hover border-r border-border-DEFAULT'
  }`}
  >
- Subdomínio GatePro
+ Subdomínio Vector Pagamentos
  </button>
  <button
  onClick={() => setNewDomainType('custom')}
@@ -827,7 +827,7 @@ export default function DomainsPage() {
  </button>
  </div>
 
- {/* GatePro Subdomain Input */}
+ {/* Vector Pagamentos Subdomain Input */}
  {newDomainType === 'wazerpay' && (
  <div>
  <label className="block text-sm font-medium text-tx-secondary mb-1">
@@ -842,12 +842,12 @@ export default function DomainsPage() {
  className="flex-1 rounded-l-element border border-r-0 border-border-DEFAULT bg-surface-card px-4 py-2.5 text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
  />
  <span className="inline-flex items-center px-3 py-2.5 border border-border-DEFAULT bg-surface-page rounded-r-element text-sm text-tx-muted">
- .{GATEPRO_BASE_DOMAIN}
+ .{VECTOR_BASE_DOMAIN}
  </span>
  </div>
  {newSubdomain && (
  <p className="mt-1.5 text-xs text-emerald-600 font-medium">
- Seu endereço será: <strong>{newSubdomain}.{GATEPRO_BASE_DOMAIN}</strong>
+ Seu endereço será: <strong>{newSubdomain}.{VECTOR_BASE_DOMAIN}</strong>
  </p>
  )}
  <p className="mt-1 text-xs text-tx-muted">
@@ -855,7 +855,7 @@ export default function DomainsPage() {
  </p>
  <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-200 p-3">
  <p className="text-xs text-emerald-700">
- <strong>Gratuito e instantâneo!</strong> Subdomínios GatePro são verificados automaticamente, sem necessidade de configuração DNS.
+ <strong>Gratuito e instantâneo!</strong> Subdomínios Vector Pagamentos são verificados automaticamente, sem necessidade de configuração DNS.
  </p>
  </div>
  </div>
@@ -912,9 +912,9 @@ export default function DomainsPage() {
  : prev.filter(u => u !== 'members')
  );
  }}
- className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+ className="rounded border-gray-300 text-green-600 focus:ring-green-500"
  />
- <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
+ <AcademicCapIcon className="h-4 w-4 text-green-600" />
  <span className="text-sm text-tx-secondary">Área de Membros</span>
  </label>
  </div>
@@ -944,7 +944,7 @@ export default function DomainsPage() {
  className={`flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-element transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
  newDomainType === 'wazerpay'
  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700'
- : 'bg-gradient-to-r from-green-600 to-indigo-600 hover:from-green-700 hover:to-indigo-700'
+ : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
  }`}
  >
  {isCreating ? 'Criando...' : newDomainType === 'wazerpay' ? 'Criar Subdomínio' : 'Adicionar Domínio'}

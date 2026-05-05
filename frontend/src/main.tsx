@@ -18,40 +18,46 @@ const queryClient = new QueryClient({
   },
 });
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+
+const app = (
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <App />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#1f2937',
+            color: '#f9fafb',
+            cursor: 'pointer',
+          },
+        }}
+      >
+        {(t) => (
+          <div onClick={() => toast.dismiss(t.id)} style={{ cursor: 'pointer' }}>
+            <ToastBar toast={t} />
+          </div>
+        )}
+      </Toaster>
+    </BrowserRouter>
+  </QueryClientProvider>
+);
+
+const appWithGoogle = googleClientId ? (
+  <GoogleOAuthProvider clientId={googleClientId}>{app}</GoogleOAuthProvider>
+) : (
+  app
+);
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <HelmetProvider>
-      <GoogleOAuthProvider clientId={googleClientId}>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
-            <App />
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#1f2937',
-                  color: '#f9fafb',
-                  cursor: 'pointer',
-                },
-              }}
-            >
-              {(t) => (
-                <div onClick={() => toast.dismiss(t.id)} style={{ cursor: 'pointer' }}>
-                  <ToastBar toast={t} />
-                </div>
-              )}
-            </Toaster>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </GoogleOAuthProvider>
-    </HelmetProvider>
+    <HelmetProvider>{appWithGoogle}</HelmetProvider>
   </React.StrictMode>
 );

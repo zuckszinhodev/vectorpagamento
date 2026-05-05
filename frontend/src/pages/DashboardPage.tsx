@@ -722,14 +722,14 @@ export default function DashboardPage() {
 
             {/* Alertas de chargeback */}
             <div 
-              className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#151018] via-[#100c14] to-[#0a0910] p-3 sm:p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-fuchsia-400/35 hover:shadow-[0_10px_30px_rgba(217,70,239,0.12)]"
+              className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#101512] via-[#0c100d] to-[#0a0c0a] p-3 sm:p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-green-400/35 hover:shadow-[0_10px_30px_rgba(34,197,94,0.12)]"
               onClick={() => navigate('/chargebacks')}
             >
-              <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-fuchsia-500/10 blur-2xl" />
+              <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-green-500/10 blur-2xl" />
               <div className="relative flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-fuchsia-500/10 ring-1 ring-fuchsia-500/20">
-                    <ExclamationTriangleIcon className="h-5 w-5 text-fuchsia-400" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/10 ring-1 ring-green-500/20">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-green-400" />
                   </div>
                   <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">Alertas de chargeback</span>
                 </div>

@@ -307,7 +307,7 @@ export default function WazerAIChat() {
                 </button>
               </div>
               <p className="mt-1.5 text-center text-[10px] text-tx-muted/60">
-                @GatePro inteligência para o seu negócio.
+                @Vector Pagamentos inteligência para o seu negócio.
               </p>
             </div>
           </motion.div>

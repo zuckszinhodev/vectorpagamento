@@ -1042,7 +1042,7 @@ function RuleModal({
                                 onChange={(e) => updateRecipient(idx, 'recipient_type', e.target.value)}
                                 className="input w-full text-sm"
                               >
-                                <option value="account">Conta GatePro</option>
+                                <option value="account">Conta Vector Pagamentos</option>
                                 <option value="affiliate">Afiliado</option>
                                 <option value="external">Externo</option>
                               </select>

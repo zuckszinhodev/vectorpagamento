@@ -102,7 +102,7 @@ export default function AdminBranding() {
                 type="text"
                 value={form.platform_name}
                 onChange={(e) => setForm({ ...form, platform_name: e.target.value })}
-                placeholder="GatePro"
+                placeholder="Vector Pagamentos"
                 className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
               />
             </div>

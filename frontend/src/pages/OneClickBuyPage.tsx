@@ -31,7 +31,7 @@ const CARD_BRANDS: Record<string, { color: string; gradient: string }> = {
   visa: { color: '#1A1F71', gradient: 'from-blue-800 to-blue-600' },
   mastercard: { color: '#EB001B', gradient: 'from-red-600 to-orange-500' },
   elo: { color: '#00A4E0', gradient: 'from-cyan-600 to-blue-500' },
-  amex: { color: '#006FCF', gradient: 'from-blue-600 to-indigo-600' },
+  amex: { color: '#006FCF', gradient: 'from-green-600 to-green-700' },
   hipercard: { color: '#822124', gradient: 'from-red-800 to-red-600' },
   default: { color: '#16a34a', gradient: 'from-green-700 to-green-500' },
 };
