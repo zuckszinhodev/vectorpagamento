@@ -47,11 +47,52 @@ function AuthTabs({ active }: { active: 'login' | 'register' }) {
   );
 }
 
+interface GoogleAuthButtonProps {
+  loading: boolean;
+  setLoading: (value: boolean) => void;
+  onToken: (accessToken: string) => Promise<void>;
+  onAuthError: () => void;
+}
+
+function GoogleAuthButton({ loading, setLoading, onToken, onAuthError }: GoogleAuthButtonProps) {
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      try {
+        await onToken(tokenResponse.access_token);
+      } catch {
+        // Errors are handled by the caller.
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: onAuthError,
+  });
+
+  return (
+    <button
+      type="button"
+      disabled={loading}
+      onClick={() => handleGoogleLogin()}
+      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.03] text-base font-semibold text-zinc-100 transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <span className="text-xl">G</span>
+      Continuar com Google
+    </button>
+  );
+}
+
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mfaCode, setMfaCode] = useState(['', '', '', '', '', '']);
   const [mfaLoading, setMfaLoading] = useState(false);
+<<<<<<< HEAD
+=======
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+  const isGoogleEnabled = Boolean(googleClientId);
+>>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
   const mfaInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const { login, verifyMfa, cancelMfa, mfaPending } = useAuthStore();
@@ -143,9 +184,33 @@ export default function LoginPage() {
     setMfaCode(['', '', '', '', '', '']);
   };
 
+<<<<<<< HEAD
+=======
+  const handleGoogleToken = async (accessToken: string) => {
+    try {
+      await googleLogin(accessToken);
+      const state = useAuthStore.getState();
+
+      if (state.mfaPending) {
+        return;
+      }
+
+      toast.success('Login realizado com sucesso!');
+      navigate('/dashboard');
+    } catch (error: any) {
+      const message = error.response?.data?.error?.message || 'Erro ao fazer login com Google.';
+      toast.error(message);
+    }
+  };
+
+  const handleGoogleAuthError = () => {
+    toast.error('Erro ao fazer login com Google. Tente novamente.');
+  };
+
+>>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
   return (
     <>
-      <SEO title="Login" description="Acesse sua conta GatePro e gerencie seus pagamentos, produtos e afiliados" url="/login" />
+      <SEO title="Login" description="Acesse sua conta Vector Pagamentos e gerencie seus pagamentos, produtos e afiliados" url="/login" />
 
       <div className="w-full">
         <AuthTabs active="login" />
@@ -195,9 +260,36 @@ export default function LoginPage() {
         ) : (
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white">Bem-vindo de volta</h1>
+<<<<<<< HEAD
             <p className="mt-1 text-base text-zinc-400">Faça login com seu e-mail e senha</p>
 
             <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-3">
+=======
+            <p className="mt-1 text-base text-zinc-400">
+              {isGoogleEnabled ? 'Continue com Google ou use e-mail e senha' : 'Use e-mail e senha para continuar'}
+            </p>
+
+            {isGoogleEnabled && (
+              <>
+                <div className="mt-4 space-y-2.5">
+                  <GoogleAuthButton
+                    loading={googleLoading}
+                    setLoading={setGoogleLoading}
+                    onToken={handleGoogleToken}
+                    onAuthError={handleGoogleAuthError}
+                  />
+                </div>
+
+                <div className="my-4 flex items-center gap-3">
+                  <span className="h-px flex-1 bg-white/15" />
+                  <span className="text-sm text-zinc-500">ou continue com e-mail</span>
+                  <span className="h-px flex-1 bg-white/15" />
+                </div>
+              </>
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)} className={isGoogleEnabled ? 'space-y-3' : 'mt-4 space-y-3'}>
+>>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
               <div>
                 <label className="mb-1 block text-sm font-medium text-zinc-200">E-mail</label>
                 <div className="relative">

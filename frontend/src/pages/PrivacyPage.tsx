@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">1. Introdução</h2>
             <p>
-              A GatePro ("nós", "nosso" ou "Plataforma") está comprometida em proteger a sua privacidade. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações pessoais quando você utiliza nossos serviços.
+              A Vector Pagamentos ("nós", "nosso" ou "Plataforma") está comprometida em proteger a sua privacidade. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações pessoais quando você utiliza nossos serviços.
             </p>
           </section>
 
@@ -151,7 +151,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">10. Inteligência Artificial</h2>
             <p>
-              A GatePro utiliza serviços de inteligência artificial de terceiros para geração de conteúdo (páginas de venda, textos e imagens). Os dados enviados a estes serviços são limitados ao necessário para a geração do conteúdo solicitado e não incluem dados pessoais identificáveis dos usuários.
+              A Vector Pagamentos utiliza serviços de inteligência artificial de terceiros para geração de conteúdo (páginas de venda, textos e imagens). Os dados enviados a estes serviços são limitados ao necessário para a geração do conteúdo solicitado e não incluem dados pessoais identificáveis dos usuários.
             </p>
           </section>
 
@@ -175,7 +175,7 @@ export default function PrivacyPage() {
               Para dúvidas sobre esta Política de Privacidade ou sobre o tratamento de seus dados pessoais, entre em contato:
             </p>
             <div className="mt-3 p-3 sm:p-4 rounded-lg bg-gray-900 border border-gray-800">
-              <p className="text-white font-medium">GatePro - Encarregado de Dados (DPO)</p>
+              <p className="text-white font-medium">Vector Pagamentos - Encarregado de Dados (DPO)</p>
               <p className="mt-1">
                 E-mail:{' '}
                 <a href="mailto:contato@wazerpay.com.br" className="text-green-400 hover:text-green-300 hover:underline">
@@ -188,7 +188,7 @@ export default function PrivacyPage() {
 
         <div className="mt-8 pt-6 sm:mt-12 sm:pt-8 border-t border-gray-800">
           <p className="text-sm text-gray-400 text-center">
-            © 2026 GatePro. Todos os direitos reservados.
+            © 2026 Vector Pagamentos. Todos os direitos reservados.
           </p>
         </div>
       </div>

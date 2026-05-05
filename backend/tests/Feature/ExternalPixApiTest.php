@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /**
- * Teste de Integração Real — PIX via API Externa GatePro
+ * Teste de Integração Real — PIX via API Externa Vector Pagamentos
  *
  * Chama a API de produção em https://api.wazerpay.com.br/api/v1/external/charges
  * usando a API Key (sk_live_*) para gerar cobranças PIX reais.

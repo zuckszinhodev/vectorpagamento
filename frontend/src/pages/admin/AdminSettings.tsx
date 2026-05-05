@@ -63,7 +63,7 @@ interface PlatformSettingsResponse {
 
 const defaultSettings: PlatformSettingsResponse = {
   general: {
-    platform_name: 'GatePro',
+    platform_name: 'Vector Pagamentos',
     support_email: '',
     support_phone: '',
     default_currency: 'BRL',
@@ -76,7 +76,7 @@ const defaultSettings: PlatformSettingsResponse = {
     smtp_username: '',
     smtp_password: '',
     smtp_encryption: 'tls',
-    from_name: 'GatePro',
+    from_name: 'Vector Pagamentos',
     from_email: '',
   },
   payments: {

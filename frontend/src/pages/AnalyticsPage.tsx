@@ -144,10 +144,10 @@ export default function AnalyticsPage() {
 
  {/* Transactions */}
  <div className="group relative rounded-2xl bg-surface-card p-3 sm:p-6 shadow-slate-200/50 border border-border-DEFAULT/50/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 hover:-translate-y-1 overflow-hidden">
- <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-10 rounded-full blur-3xl group-hover:opacity-30 transition-opacity duration-500 pointer-events-none" />
+ <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-green-500 to-green-600 opacity-10 rounded-full blur-3xl group-hover:opacity-30 transition-opacity duration-500 pointer-events-none" />
  <div className="relative flex items-center justify-between mb-2">
  <p className="text-xs sm:text-sm text-tx-secondary">Transações</p>
- <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+ <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
  <CreditCard className="w-5 h-5 text-white" />
  </div>
  </div>
@@ -161,10 +161,10 @@ export default function AnalyticsPage() {
 
  {/* Customers */}
  <div className="group relative rounded-2xl bg-surface-card p-3 sm:p-6 shadow-slate-200/50 border border-border-DEFAULT/50/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 hover:-translate-y-1 overflow-hidden">
- <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-fuchsia-500 to-green-600 opacity-10 rounded-full blur-3xl group-hover:opacity-30 transition-opacity duration-500 pointer-events-none" />
+ <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-emerald-500 to-green-600 opacity-10 rounded-full blur-3xl group-hover:opacity-30 transition-opacity duration-500 pointer-events-none" />
  <div className="relative flex items-center justify-between mb-2">
  <p className="text-xs sm:text-sm text-tx-secondary">Clientes</p>
- <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-green-600 flex items-center justify-center">
+ <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
  <Users className="w-5 h-5 text-white" />
  </div>
  </div>
@@ -279,7 +279,7 @@ export default function AnalyticsPage() {
  </div>
  <div className="w-full bg-surface-hover rounded-full h-2.5 overflow-hidden">
  <div
- className="h-2.5 rounded-full bg-gradient-to-r from-green-600 to-fuchsia-500 transition-all duration-1000 ease-out"
+ className="h-2.5 rounded-full bg-gradient-to-r from-green-600 to-green-500 transition-all duration-1000 ease-out"
  style={{ width: `${stage.rate}%` }}
  />
  </div>

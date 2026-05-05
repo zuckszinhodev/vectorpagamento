@@ -125,16 +125,16 @@ void main(){
   wisps *= smoothstep(0.0, 0.1, cy) * topFade;
 
   // ---- 4. Color composition ----
-  // Brighter purple for core, standard purple for glow
-  vec3 coreCol = u_color * 1.6 + vec3(0.15, 0.05, 0.2); // bright green-white
+  // Brighter green for core, standard green for glow
+  vec3 coreCol = u_color * 1.6 + vec3(0.05, 0.15, 0.05); // bright green-white
   coreCol = min(coreCol, vec3(1.0));
   vec3 glowCol = u_color;
   vec3 ambCol  = u_color * 0.7;
 
   vec3 col = vec3(0.0);
   col += coreCol * core;           // razor-thin bright center
-  col += glowCol * glow1;          // medium purple glow
-  col += ambCol  * glow2;          // wide ambient purple
+  col += glowCol * glow1;          // medium green glow
+  col += ambCol  * glow2;          // wide ambient green
   col += glowCol * fog;            // base fog
   col += ambCol  * wisps;          // floating particles
 
@@ -142,7 +142,7 @@ void main(){
   float vig = 1.0 - length(uv - vec2(0.5)) * 0.3;
   col *= vig;
 
-  // Dark background tint (very subtle purple in dark areas)
+  // Dark background tint (very subtle green in dark areas)
   col += u_color * 0.008;
 
   gl_FragColor = vec4(col, 1.0);

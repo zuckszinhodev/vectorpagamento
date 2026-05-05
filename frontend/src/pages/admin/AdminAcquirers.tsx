@@ -711,7 +711,7 @@ function EditAcquirerModal({
 
           {/* Gateway/Platform Fees */}
           <div>
-            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa da Plataforma (GatePro)</h3>
+            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa da Plataforma (Vector Pagamentos)</h3>
             <p className="text-xs text-tx-muted mb-3">Taxa que cobramos do vendedor por transação</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>

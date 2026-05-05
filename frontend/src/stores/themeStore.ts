@@ -60,7 +60,7 @@ export const useThemeStore = create<ThemeState>()(
       theme: 'dark',
       themeVariant: 'classic' as ThemeVariant,
       primaryColor: '#16a34a',
-      platformName: 'GatePro',
+      platformName: 'Vector Pagamentos',
       setTheme: (theme: Theme) => {
         set({ theme });
         // Reapply theme variant CSS vars for the new mode
@@ -97,7 +97,7 @@ export const useThemeStore = create<ThemeState>()(
       },
     }),
     {
-      name: 'gatepro-theme',
+      name: 'vectorpagamentos-theme',
       onRehydrateStorage: () => (state) => {
         // Aplicar tema quando o store for hidratado
         if (state) {

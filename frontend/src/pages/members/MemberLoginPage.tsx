@@ -199,7 +199,7 @@ export default function MemberLoginPage() {
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-green-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '6s' }} />
         <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-green-500/10 blur-[140px] animate-pulse" style={{ animationDuration: '8s', animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-indigo-600/8 blur-[100px] animate-pulse" style={{ animationDuration: '7s', animationDelay: '4s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-green-600/8 blur-[100px] animate-pulse" style={{ animationDuration: '7s', animationDelay: '4s' }} />
       </div>
 
       {/* ── particles ── */}
@@ -209,7 +209,7 @@ export default function MemberLoginPage() {
       <div
         className="absolute inset-0 opacity-[0.03]"
         style={{
-          backgroundImage: `linear-gradient(rgba(139,92,246,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(139,92,246,0.3) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(rgba(34,197,94,0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.25) 1px, transparent 1px)`,
           backgroundSize: '60px 60px',
         }}
       />

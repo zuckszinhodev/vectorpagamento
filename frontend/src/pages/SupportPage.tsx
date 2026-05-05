@@ -36,7 +36,7 @@ const faqItems = [
  'Você pode criar checkouts personalizados com sua marca em Checkouts > Novo Checkout. Defina cores, logo, campos personalizados e o produto. Depois é só compartilhar o link gerado.',
  },
  {
- question: 'Quais são as taxas da GatePro?',
+ question: 'Quais são as taxas da Vector Pagamentos?',
  answer:
  'As taxas variam conforme o método de pagamento: Pix tem taxa fixa por transação, Boleto tem taxa fixa, e Cartão de Crédito tem taxa percentual. Consulte a tabela completa em Configurações > Plano.',
  },

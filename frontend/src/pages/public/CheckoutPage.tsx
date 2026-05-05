@@ -644,7 +644,7 @@ function ResultScreen({ result }: { result: PaymentResult }) {
 
 // Default blocks if none configured - matches CheckoutBuilderPage defaults
 const defaultBlocks: CheckoutBlock[] = [
-  { id: 'header', type: 'header', enabled: true, settings: { showLogo: true, showSecureBadge: true, title: 'GatePro' } },
+  { id: 'header', type: 'header', enabled: true, settings: { showLogo: true, showSecureBadge: true, title: 'Vector Pagamentos' } },
   { id: 'product', type: 'product', enabled: true, settings: { showImage: true, showDescription: true, showOriginalPrice: true } },
   { id: 'urgency', type: 'urgency', enabled: true, settings: { 
     style: 'banner',
@@ -1111,7 +1111,7 @@ export default function PublicCheckoutPage() {
   // Theme - defaults match CheckoutBuilderPage
   const theme = {
     primaryColor: themeData.primaryColor || settings.theme_color || '#16a34a',
-    secondaryColor: themeData.secondaryColor || '#6366f1',
+    secondaryColor: themeData.secondaryColor || '#22c55e',
     backgroundColor: themeData.backgroundColor || '#f8fafc',
     cardBackground: themeData.cardBackground || '#ffffff',
     textColor: themeData.textColor || '#1e293b',
@@ -1232,7 +1232,7 @@ export default function PublicCheckoutPage() {
                         className="text-xl font-bold"
                         style={{ color: theme.primaryColor }}
                       >
-                        {block.settings.title || 'GatePro'}
+                        {block.settings.title || 'Vector Pagamentos'}
                       </h1>
                     )}
                     {block.settings.showSecureBadge && (
@@ -1741,7 +1741,7 @@ export default function PublicCheckoutPage() {
 
         {/* Footer */}
         <div className="mt-6 text-center text-xs" style={{ color: theme.mutedColor }}>
-          <p>© {new Date().getFullYear()} Powered by GatePro</p>
+          <p>© {new Date().getFullYear()} Powered by Vector Pagamentos</p>
           <p className="mt-1">
             <a href="#" className="hover:underline">Termos de Uso</a>
             {' · '}

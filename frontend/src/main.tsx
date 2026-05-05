@@ -17,6 +17,7 @@ const queryClient = new QueryClient({
   },
 });
 
+<<<<<<< HEAD
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <HelmetProvider>
@@ -48,5 +49,48 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </BrowserRouter>
       </QueryClientProvider>
     </HelmetProvider>
+=======
+const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
+
+const app = (
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <App />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#1f2937',
+            color: '#f9fafb',
+            cursor: 'pointer',
+          },
+        }}
+      >
+        {(t) => (
+          <div onClick={() => toast.dismiss(t.id)} style={{ cursor: 'pointer' }}>
+            <ToastBar toast={t} />
+          </div>
+        )}
+      </Toaster>
+    </BrowserRouter>
+  </QueryClientProvider>
+);
+
+const appWithGoogle = googleClientId ? (
+  <GoogleOAuthProvider clientId={googleClientId}>{app}</GoogleOAuthProvider>
+) : (
+  app
+);
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <HelmetProvider>{appWithGoogle}</HelmetProvider>
+>>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
   </React.StrictMode>
 );

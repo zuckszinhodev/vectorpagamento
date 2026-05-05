@@ -1,6 +1,6 @@
 {
-  "name": "GatePro - Gateway de Pagamento",
-  "short_name": "GatePro",
+  "name": "Vector Pagamentos - Gateway de Pagamento",
+  "short_name": "Vector Pagamentos",
   "description": "Plataforma completa de pagamentos com checkout personalizável, sistema de afiliados e gestão financeira",
   "start_url": "/",
   "display": "standalone",
@@ -29,7 +29,7 @@
       "src": "/img/bannersocial.png",
       "sizes": "1200x630",
       "type": "image/png",
-      "label": "GatePro Dashboard"
+      "label": "Vector Pagamentos Dashboard"
     }
   ]
 }

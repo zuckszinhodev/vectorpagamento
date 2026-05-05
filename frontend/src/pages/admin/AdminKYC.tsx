@@ -434,7 +434,7 @@ export default function AdminKYC() {
                           href={`https://wa.me/55${selectedSubmission.phone.replace(/\D/g, '')}?text=${encodeURIComponent(
 `Olá, ${selectedSubmission.full_name?.split(' ')[0]}! 👋
 
-Sua conta foi *aprovada com sucesso* na *GatePro*! ✅
+Sua conta foi *aprovada com sucesso* na *Vector Pagamentos*! ✅
 
 Gostaríamos de agradecer seu interesse em utilizar nossa plataforma de pagamentos. Estamos muito felizes em ter você conosco!
 
@@ -447,7 +447,7 @@ Oferecemos *suporte exclusivo de integração* com nossos desenvolvedores para a
 
 Se precisar de qualquer ajuda, estamos à disposição! 💜
 
-— Equipe GatePro`)}`}
+— Equipe Vector Pagamentos`)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 rounded-lg bg-green-500 px-2 py-1 text-[10px] font-semibold text-white hover:bg-green-600 transition-colors"

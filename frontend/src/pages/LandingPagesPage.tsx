@@ -378,14 +378,14 @@ export default function LandingPagesPage() {
  <div
  className="w-full h-full flex flex-col items-center justify-center p-4 text-center"
  style={{
- background: `linear-gradient(135deg, ${lp.content?.theme?.primaryColor || '#6366f1'}22, ${lp.content?.theme?.secondaryColor || '#16a34a'}22)`,
+ background: `linear-gradient(135deg, ${lp.content?.theme?.primaryColor || '#16a34a'}22, ${lp.content?.theme?.secondaryColor || '#22c55e'}22)`,
  }}
  >
  {lp.content?.sections?.[0]?.content?.headline ? (
  <>
  <p
  className="text-sm font-bold line-clamp-2 mb-1"
- style={{ color: lp.content?.theme?.primaryColor || '#6366f1' }}
+ style={{ color: lp.content?.theme?.primaryColor || '#16a34a' }}
  >
  {lp.content.sections[0].content.headline}
  </p>

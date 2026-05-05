@@ -40,7 +40,6 @@ const navigation: NavItem[] = [
   { name: 'Transações', href: '/charges', icon: CurrencyDollarIcon, match: ['/charges', '/chargebacks'] },
   { name: 'Financeiro', href: '/withdrawals', icon: BanknotesIcon, match: ['/withdrawals', '/reports'] },
   { name: 'Produtos', href: '/products', icon: CubeIcon, match: ['/products'] },
-  { name: 'Assinaturas', href: '/checkouts', icon: SparklesIcon, match: ['/checkouts', '/coupons'] },
   { name: 'Vitrine', href: '/vitrine', icon: ShoppingBagIcon, match: ['/vitrine'] },
   { name: 'Afiliados', href: '/splits', icon: UserGroupIcon, match: ['/splits'] },
   { name: 'Indique e Ganhe', href: '/affiliates', icon: MegaphoneIcon, match: ['/affiliates'] },
@@ -69,14 +68,14 @@ const pageTitles: Record<string, string> = {
   '/messaging': 'Mensagens',
   '/support': 'Backlog',
   '/splits': 'Afiliados',
-  '/wazer-ia': 'GatePro IA',
+  '/wazer-ia': 'Vector Pagamentos IA',
   '/admin': 'Administração',
 };
 
 function BrandMark() {
   return (
     <div className="flex items-center">
-      <span className="text-[2rem] leading-none font-bold tracking-tight text-white">GatePro</span>
+      <img src="/img/logo.png" alt="Vector Pagamentos" className="h-10 w-auto" />
     </div>
   );
 }
@@ -96,7 +95,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     const path = location.pathname;
     const title = pageTitles[path] || Object.entries(pageTitles).find(([key]) => path.startsWith(key))?.[1] || 'Dashboard';
-    document.title = `${title} | GatePro`;
+    document.title = `${title} | Vector Pagamentos`;
   }, [location.pathname]);
 
   useEffect(() => {

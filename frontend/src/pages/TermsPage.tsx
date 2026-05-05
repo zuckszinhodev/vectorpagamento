@@ -20,14 +20,14 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">1. Aceitação dos Termos</h2>
             <p>
-              Ao acessar e utilizar a plataforma GatePro ("Plataforma"), você concorda em cumprir e estar vinculado a estes Termos de Uso. Se você não concordar com qualquer parte destes termos, não deverá utilizar a Plataforma.
+              Ao acessar e utilizar a plataforma Vector Pagamentos ("Plataforma"), você concorda em cumprir e estar vinculado a estes Termos de Uso. Se você não concordar com qualquer parte destes termos, não deverá utilizar a Plataforma.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">2. Descrição do Serviço</h2>
             <p>
-              A GatePro é uma plataforma de gateway de pagamentos que permite a criação de checkouts personalizados, páginas de venda, gestão de produtos digitais e processamento de transações financeiras. Os serviços incluem, mas não se limitam a:
+              A Vector Pagamentos é uma plataforma de gateway de pagamentos que permite a criação de checkouts personalizados, páginas de venda, gestão de produtos digitais e processamento de transações financeiras. Os serviços incluem, mas não se limitam a:
             </p>
             <ul className="list-disc list-inside mt-3 space-y-1 text-gray-300">
               <li>Criação e personalização de páginas de checkout</li>
@@ -46,7 +46,7 @@ export default function TermsPage() {
               Para utilizar a Plataforma, você deve criar uma conta fornecendo informações verdadeiras, precisas e completas. Você é responsável por manter a confidencialidade de sua senha e por todas as atividades realizadas em sua conta.
             </p>
             <p className="mt-2">
-              Você concorda em notificar imediatamente a GatePro sobre qualquer uso não autorizado de sua conta ou qualquer violação de segurança.
+              Você concorda em notificar imediatamente a Vector Pagamentos sobre qualquer uso não autorizado de sua conta ou qualquer violação de segurança.
             </p>
           </section>
 
@@ -60,7 +60,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">5. Pagamentos e Taxas</h2>
             <p>
-              A GatePro cobra taxas sobre as transações processadas através da Plataforma. As taxas aplicáveis serão informadas antes da ativação da conta e podem variar de acordo com o plano contratado e o volume de transações.
+              A Vector Pagamentos cobra taxas sobre as transações processadas através da Plataforma. As taxas aplicáveis serão informadas antes da ativação da conta e podem variar de acordo com o plano contratado e o volume de transações.
             </p>
             <p className="mt-2">
               Os valores recebidos ficam disponíveis para saque após o período de liquidação estabelecido, que pode variar conforme o método de pagamento utilizado pelo comprador.
@@ -70,7 +70,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">6. Saques e Transferências</h2>
             <p>
-              Os saques são processados conforme a modalidade escolhida (padrão ou instantâneo) e estão sujeitos a taxas específicas. A GatePro reserva-se o direito de reter valores em caso de suspeita de fraude, chargebacks ou disputas.
+              Os saques são processados conforme a modalidade escolhida (padrão ou instantâneo) e estão sujeitos a taxas específicas. A Vector Pagamentos reserva-se o direito de reter valores em caso de suspeita de fraude, chargebacks ou disputas.
             </p>
           </section>
 
@@ -91,42 +91,42 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">8. Propriedade Intelectual</h2>
             <p>
-              Todo o conteúdo da Plataforma, incluindo design, código, logotipos e marcas, é de propriedade da GatePro. O conteúdo gerado pela IA (páginas de venda, textos) é licenciado para uso do usuário que o gerou.
+              Todo o conteúdo da Plataforma, incluindo design, código, logotipos e marcas, é de propriedade da Vector Pagamentos. O conteúdo gerado pela IA (páginas de venda, textos) é licenciado para uso do usuário que o gerou.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">9. Chargebacks e Disputas</h2>
             <p>
-              Em caso de chargebacks ou disputas de pagamento, a GatePro poderá debitar o valor correspondente do saldo do vendedor. O vendedor é responsável por manter documentação adequada para contestar chargebacks indevidos.
+              Em caso de chargebacks ou disputas de pagamento, a Vector Pagamentos poderá debitar o valor correspondente do saldo do vendedor. O vendedor é responsável por manter documentação adequada para contestar chargebacks indevidos.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">10. Suspensão e Encerramento</h2>
             <p>
-              A GatePro reserva-se o direito de suspender ou encerrar contas que violem estes Termos de Uso, pratiquem fraudes, ou realizem atividades que possam prejudicar a Plataforma ou outros usuários.
+              A Vector Pagamentos reserva-se o direito de suspender ou encerrar contas que violem estes Termos de Uso, pratiquem fraudes, ou realizem atividades que possam prejudicar a Plataforma ou outros usuários.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">11. Limitação de Responsabilidade</h2>
             <p>
-              A GatePro não se responsabiliza por danos indiretos, incidentais ou consequenciais resultantes do uso da Plataforma. Nossa responsabilidade total em qualquer caso estará limitada ao valor das taxas pagas pelo usuário nos últimos 12 meses.
+              A Vector Pagamentos não se responsabiliza por danos indiretos, incidentais ou consequenciais resultantes do uso da Plataforma. Nossa responsabilidade total em qualquer caso estará limitada ao valor das taxas pagas pelo usuário nos últimos 12 meses.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">12. Alterações nos Termos</h2>
             <p>
-              A GatePro pode alterar estes Termos de Uso a qualquer momento, notificando os usuários por e-mail ou através da Plataforma. O uso continuado após as alterações implica na aceitação dos novos termos.
+              A Vector Pagamentos pode alterar estes Termos de Uso a qualquer momento, notificando os usuários por e-mail ou através da Plataforma. O uso continuado após as alterações implica na aceitação dos novos termos.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">13. Legislação Aplicável</h2>
             <p>
-              Estes Termos de Uso são regidos pelas leis da República Federativa do Brasil. Qualquer disputa será submetida ao foro da comarca da sede da GatePro.
+              Estes Termos de Uso são regidos pelas leis da República Federativa do Brasil. Qualquer disputa será submetida ao foro da comarca da sede da Vector Pagamentos.
             </p>
           </section>
 
@@ -143,7 +143,7 @@ export default function TermsPage() {
 
         <div className="mt-8 pt-6 sm:mt-12 sm:pt-8 border-t border-gray-800">
           <p className="text-sm text-gray-400 text-center">
-            © 2026 GatePro. Todos os direitos reservados.
+            © 2026 Vector Pagamentos. Todos os direitos reservados.
           </p>
         </div>
       </div>

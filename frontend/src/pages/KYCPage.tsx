@@ -486,6 +486,7 @@ export default function KYCPage() {
  <>
  {/* Header */}
  <div className="mb-4 sm:mb-6 text-center">
+ <img src="/img/logo.png" alt="Vector Pagamentos" className="mx-auto mb-3 h-10 w-auto" />
  <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 via-green-800 to-green-900 bg-clip-text text-transparent mb-1.5">
  Verificação de Identidade
  </h1>

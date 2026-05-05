@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo   GatePro Gateway - Start Frontend
+echo   Vector Pagamentos Gateway - Start Frontend
 echo ========================================
 echo.
 

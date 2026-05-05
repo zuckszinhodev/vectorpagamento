@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 function BrandMark() {
   return (
     <div className="flex items-center">
-      <span className="text-[2rem] leading-none font-bold tracking-tight text-white">GatePro</span>
+      <img src="/img/logo.png" alt="Vector Pagamentos" className="h-12 w-auto" />
     </div>
   );
 }

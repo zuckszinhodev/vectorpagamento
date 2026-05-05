@@ -1,6 +1,6 @@
-# GatePro - Test Suite
+# Vector Pagamentos - Test Suite
 
-Suíte completa de testes automatizados para o GatePro Gateway.
+Suíte completa de testes automatizados para o Vector Pagamentos Gateway.
 
 ## 📊 Cobertura de Testes
 

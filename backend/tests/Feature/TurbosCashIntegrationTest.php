@@ -96,7 +96,7 @@ function createTestCharge(string $accountId, int $amountCents = 500): Charge
         'description'     => 'Teste PIX TurbosCash',
         'idempotency_key' => Str::random(32),
         'customer'        => [
-            'name'     => 'Teste GatePro',
+            'name'     => 'Teste Vector Pagamentos',
             'email'    => 'teste@wazerpay.com',
             'document' => '12345678909',
         ],
