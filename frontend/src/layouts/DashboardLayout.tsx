@@ -310,9 +310,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
               <div className="ml-auto flex items-center gap-2 sm:gap-3">
                 <Menu as="div" className="relative">
-                  <Menu.Button className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-2 py-1.5 text-zinc-200 transition-colors hover:bg-white/10">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-700 font-bold text-white">
+                  <Menu.Button className="group flex items-center gap-3 rounded-2xl border border-white/15 bg-gradient-to-br from-white/[0.09] to-white/[0.02] px-2.5 py-2 text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-all hover:border-green-400/40 hover:from-green-500/15 hover:to-white/[0.04]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-green-700 font-bold text-white shadow-[0_8px_24px_rgba(22,163,74,0.3)]">
                       {(user?.name || 'G')[0].toUpperCase()}
+                    </div>
+                    <div className="hidden min-w-0 text-left sm:block">
+                      <p className="truncate text-sm font-semibold leading-4 text-zinc-100">{user?.name || 'Seller'}</p>
+                      <p className="mt-0.5 truncate text-xs text-zinc-400">{user?.email || 'seller@vectorpagamentos.com'}</p>
                     </div>
                   </Menu.Button>
 

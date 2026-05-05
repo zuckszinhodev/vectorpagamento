@@ -389,8 +389,14 @@ function SidebarContent({
     <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-white/10 bg-slate-950 px-6 pb-4">
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center">
-        <Link to="/admin" className="flex items-center">
-          <span className="text-lg font-bold text-white">Vector Pagamentos</span>
+        <Link to="/admin" className="flex items-center gap-3">
+          <img
+            src="/img/logo.png"
+            alt="Vector Pagamentos"
+            className="h-9 w-auto"
+            loading="eager"
+          />
+          <span className="text-lg font-bold leading-tight text-white">Vector Pagamentos</span>
           <span className="ml-2 rounded bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-300">
             Admin
           </span>

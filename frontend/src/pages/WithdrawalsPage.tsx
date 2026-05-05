@@ -534,7 +534,7 @@ export default function WithdrawalsPage() {
  Taxa personalizada
  </span>
  )}
- <span>Mín. saque: <strong className="text-tx-secondary">{formatCurrency(minWithdrawal)}</strong></span>
+ <span>Mín. saque: <strong className="text-tx-secondary">{minWithdrawal <= 0 ? 'Sem mínimo' : formatCurrency(minWithdrawal)}</strong></span>
  <span className="hidden sm:inline text-tx-muted">|</span>
  <span>PIX: <strong className="text-tx-secondary">{(settings?.standard_withdrawal_fee_pix ?? 0) === 0 ? 'Grátis' : formatCurrency(settings?.standard_withdrawal_fee_pix ?? 0)}</strong></span>
  <span className="hidden sm:inline text-tx-muted">|</span>
@@ -605,7 +605,7 @@ export default function WithdrawalsPage() {
  }
  setIsWithdrawModalOpen(true);
  }}
- disabled={createWithdrawalMutation.isPending || !withdrawalsEnabled || availableBalance < minWithdrawal}
+ disabled={createWithdrawalMutation.isPending || !withdrawalsEnabled || availableBalance <= 0 || availableBalance < minWithdrawal}
  className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-2.5 w-full sm:w-auto"
  >
  <ArrowDownTrayIcon className="h-5 w-5" />

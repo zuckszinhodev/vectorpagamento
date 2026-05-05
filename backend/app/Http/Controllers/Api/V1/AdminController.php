@@ -189,6 +189,10 @@ class AdminController extends Controller
             // Count active users (exclude demo)
             $totalCustomers = User::when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))->count();
 
+            $acquirerConfigs = AcquirerConfig::query()
+                ->get()
+                ->keyBy(fn (AcquirerConfig $config) => $this->normalizeAcquirer((string) $config->acquirer_key));
+
             // Count active sellers (users with at least 1 approved charge)
             $activeSellers = Account::whereHas('charges', function ($q) {
                 $q->where('status', 'approved');
@@ -201,20 +205,21 @@ class AdminController extends Controller
 
             // ===== FINANCIAL METRICS =====
             // Total revenue (all approved charges, exclude demo)
-            $totalRevenue = Charge::where('status', 'approved')
+            $approvedChargesQuery = Charge::where('status', 'approved')
                 ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
-                ->sum('amount');
+                ;
 
-            // Gateway profit = sum of all transaction fees + all withdrawal fees
-            $chargeFees = Charge::where('status', 'approved')
-                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
-                ->sum('fee_amount') ?? 0;
+            $totalRevenue = (clone $approvedChargesQuery)->sum('amount');
+
+            // Gateway profit = fees charged to sellers - acquirer costs + withdrawal fees
+            $chargeFees = (clone $approvedChargesQuery)->sum('fee_amount') ?? 0;
+            $chargeAcquirerCosts = $this->estimateChargeAcquirerCosts((clone $approvedChargesQuery), $acquirerConfigs);
 
             $withdrawalFees = \App\Models\Withdrawal::whereNotIn('status', ['failed', 'cancelled'])
                 ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
                 ->sum('fee') ?? 0;
 
-            $gatewayProfit = $chargeFees + $withdrawalFees;
+            $gatewayProfit = ($chargeFees - $chargeAcquirerCosts) + $withdrawalFees;
             $totalFees = $chargeFees;
 
             // Seller payout = total net amount withdrawn by sellers (completed withdrawals)
@@ -246,44 +251,42 @@ class AdminController extends Controller
 
             // ===== GROWTH METRICS =====
             // Revenue growth (compare this month vs last month, exclude demo)
-            $thisMonthRevenue = Charge::where('created_at', '>=', $thisMonthStart)
+            $thisMonthApprovedChargesQuery = Charge::where('created_at', '>=', $thisMonthStart)
                 ->where('status', 'approved')
-                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
-                ->sum('amount');
+                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds));
 
-            $lastMonthRevenue = Charge::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
+            $thisMonthRevenue = (clone $thisMonthApprovedChargesQuery)->sum('amount');
+
+            $lastMonthApprovedChargesQuery = Charge::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
                 ->where('status', 'approved')
-                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
-                ->sum('amount');
+                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds));
+
+            $lastMonthRevenue = (clone $lastMonthApprovedChargesQuery)->sum('amount');
 
             $revenueGrowth = $lastMonthRevenue > 0
                 ? round((($thisMonthRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100, 1)
                 : ($thisMonthRevenue > 0 ? 100 : 0);
 
             // Gateway profit growth (include both charge and withdrawal fees)
-            $thisMonthChargeProfit = Charge::where('created_at', '>=', $thisMonthStart)
-                ->where('status', 'approved')
-                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
-                ->sum('fee_amount') ?? 0;
+            $thisMonthChargeProfit = (clone $thisMonthApprovedChargesQuery)->sum('fee_amount') ?? 0;
+            $thisMonthChargeAcquirerCosts = $this->estimateChargeAcquirerCosts((clone $thisMonthApprovedChargesQuery), $acquirerConfigs);
 
             $thisMonthWithdrawalProfit = \App\Models\Withdrawal::whereNotIn('status', ['failed', 'cancelled'])
                 ->where('created_at', '>=', $thisMonthStart)
                 ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
                 ->sum('fee') ?? 0;
 
-            $thisMonthProfit = $thisMonthChargeProfit + $thisMonthWithdrawalProfit;
+            $thisMonthProfit = ($thisMonthChargeProfit - $thisMonthChargeAcquirerCosts) + $thisMonthWithdrawalProfit;
 
-            $lastMonthChargeProfit = Charge::whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
-                ->where('status', 'approved')
-                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
-                ->sum('fee_amount') ?? 0;
+            $lastMonthChargeProfit = (clone $lastMonthApprovedChargesQuery)->sum('fee_amount') ?? 0;
+            $lastMonthChargeAcquirerCosts = $this->estimateChargeAcquirerCosts((clone $lastMonthApprovedChargesQuery), $acquirerConfigs);
 
             $lastMonthWithdrawalProfit = \App\Models\Withdrawal::whereNotIn('status', ['failed', 'cancelled'])
                 ->whereBetween('created_at', [$lastMonthStart, $lastMonthEnd])
                 ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
                 ->sum('fee') ?? 0;
 
-            $lastMonthProfit = $lastMonthChargeProfit + $lastMonthWithdrawalProfit;
+            $lastMonthProfit = ($lastMonthChargeProfit - $lastMonthChargeAcquirerCosts) + $lastMonthWithdrawalProfit;
 
             $profitGrowth = $lastMonthProfit > 0
                 ? round((($thisMonthProfit - $lastMonthProfit) / $lastMonthProfit) * 100, 1)
@@ -1639,6 +1642,38 @@ class AdminController extends Controller
     {
         $normalized = strtolower(trim($acquirer));
         return $normalized !== '' ? $normalized : 'unknown';
+    }
+
+    /**
+     * Estimate acquirer costs for a set of charges using configured acquirer rates.
+     */
+    private function estimateChargeAcquirerCosts($chargesQuery, $acquirerConfigs): int
+    {
+        $grouped = $chargesQuery
+            ->selectRaw('acquirer, COUNT(*) as tx_count, COALESCE(SUM(amount), 0) as total_amount')
+            ->groupBy('acquirer')
+            ->get();
+
+        $totalCosts = 0;
+
+        foreach ($grouped as $row) {
+            $acquirerKey = $this->normalizeAcquirer((string) ($row->acquirer ?? ''));
+            $config = $acquirerConfigs->get($acquirerKey);
+
+            if (!$config) {
+                continue;
+            }
+
+            $amountCents = (int) ($row->total_amount ?? 0);
+            $txCount = (int) ($row->tx_count ?? 0);
+
+            $percentageCost = (int) round($amountCents * ((float) $config->acquirer_fee_percentage / 100));
+            $fixedCost = ((int) round((float) $config->acquirer_fee_fixed * 100)) * $txCount;
+
+            $totalCosts += max(0, $percentageCost + $fixedCost);
+        }
+
+        return $totalCosts;
     }
 
     private function normalizePaymentMethod(string $paymentMethod): string
