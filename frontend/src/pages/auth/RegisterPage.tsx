@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { useGoogleLogin } from '@react-oauth/google';
 import {
   EyeIcon,
   EyeSlashIcon,
@@ -53,9 +52,8 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
 
-  const { register: registerUser, googleLogin } = useAuthStore();
+  const { register: registerUser } = useAuthStore();
   const navigate = useNavigate();
 
   const {
@@ -81,25 +79,6 @@ export default function RegisterPage() {
     }
   };
 
-  const handleGoogleRegister = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setGoogleLoading(true);
-      try {
-        await googleLogin(tokenResponse.access_token);
-        toast.success('Conta criada com sucesso!');
-        navigate('/dashboard');
-      } catch (error: any) {
-        const message = error.response?.data?.error?.message || 'Erro ao criar conta com Google.';
-        toast.error(message);
-      } finally {
-        setGoogleLoading(false);
-      }
-    },
-    onError: () => {
-      toast.error('Erro ao criar conta com Google. Tente novamente.');
-    },
-  });
-
   return (
     <div className="w-full">
       <AuthTabs active="register" />
@@ -107,25 +86,7 @@ export default function RegisterPage() {
       <h1 className="text-3xl font-bold tracking-tight text-white">Crie sua conta</h1>
       <p className="mt-1 text-base text-zinc-400">Comece agora na GatePro com e-mail e senha</p>
 
-      <div className="mt-4 space-y-2.5">
-        <button
-          type="button"
-          disabled={googleLoading}
-          onClick={() => handleGoogleRegister()}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.03] text-base font-semibold text-zinc-100 transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <span className="text-xl">G</span>
-          Continuar com Google
-        </button>
-      </div>
-
-      <div className="my-4 flex items-center gap-3">
-        <span className="h-px flex-1 bg-white/15" />
-        <span className="text-sm text-zinc-500">ou continue com e-mail</span>
-        <span className="h-px flex-1 bg-white/15" />
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-3">
         <div>
           <label className="mb-1 block text-sm font-medium text-zinc-200">Nome completo</label>
           <div className="relative">

@@ -17,7 +17,6 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   verifyAdminMfa: (code: string) => Promise<void>;
   resetAdminMfaVerification: () => void;
-  googleLogin: (credential: string) => Promise<void>;
   verifyMfa: (code: string) => Promise<void>;
   cancelMfa: () => void;
   register: (data: RegisterData) => Promise<void>;
@@ -66,37 +65,6 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, password: string) => {
         try {
           const response = await authService.login({ email, password });
-
-          if (response.data.requires_mfa && response.data.mfa_token) {
-            set({
-              mfaPending: { mfaToken: response.data.mfa_token },
-              isLoading: false,
-            });
-            return;
-          }
-
-          const { user, token: tokenData } = response.data;
-          const accessToken = tokenData!.access_token;
-
-          authService.setToken(accessToken);
-
-          set({
-            user: user!,
-            token: accessToken,
-            isAuthenticated: true,
-            isLoading: false,
-            mfaPending: null,
-            adminMfaVerified: false,
-          });
-        } catch (error) {
-          set({ isLoading: false });
-          throw error;
-        }
-      },
-
-      googleLogin: async (credential: string) => {
-        try {
-          const response = await authService.googleAuth(credential);
 
           if (response.data.requires_mfa && response.data.mfa_token) {
             set({

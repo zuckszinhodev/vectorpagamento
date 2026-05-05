@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { useGoogleLogin } from '@react-oauth/google';
 import {
   ArrowLeftIcon,
   ArrowRightOnRectangleIcon,
@@ -53,10 +52,9 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [mfaCode, setMfaCode] = useState(['', '', '', '', '', '']);
   const [mfaLoading, setMfaLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const mfaInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const { login, verifyMfa, cancelMfa, mfaPending, googleLogin } = useAuthStore();
+  const { login, verifyMfa, cancelMfa, mfaPending } = useAuthStore();
   const navigate = useNavigate();
 
   const {
@@ -145,31 +143,6 @@ export default function LoginPage() {
     setMfaCode(['', '', '', '', '', '']);
   };
 
-  const handleGoogleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setGoogleLoading(true);
-      try {
-        await googleLogin(tokenResponse.access_token);
-        const state = useAuthStore.getState();
-
-        if (state.mfaPending) {
-          return;
-        }
-
-        toast.success('Login realizado com sucesso!');
-        navigate('/dashboard');
-      } catch (error: any) {
-        const message = error.response?.data?.error?.message || 'Erro ao fazer login com Google.';
-        toast.error(message);
-      } finally {
-        setGoogleLoading(false);
-      }
-    },
-    onError: () => {
-      toast.error('Erro ao fazer login com Google. Tente novamente.');
-    },
-  });
-
   return (
     <>
       <SEO title="Login" description="Acesse sua conta GatePro e gerencie seus pagamentos, produtos e afiliados" url="/login" />
@@ -222,27 +195,9 @@ export default function LoginPage() {
         ) : (
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white">Bem-vindo de volta</h1>
-            <p className="mt-1 text-base text-zinc-400">Continue com Google ou use e-mail e senha</p>
+            <p className="mt-1 text-base text-zinc-400">Faça login com seu e-mail e senha</p>
 
-            <div className="mt-4 space-y-2.5">
-              <button
-                type="button"
-                disabled={googleLoading}
-                onClick={() => handleGoogleLogin()}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.03] text-base font-semibold text-zinc-100 transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <span className="text-xl">G</span>
-                Continuar com Google
-              </button>
-            </div>
-
-            <div className="my-4 flex items-center gap-3">
-              <span className="h-px flex-1 bg-white/15" />
-              <span className="text-sm text-zinc-500">ou continue com e-mail</span>
-              <span className="h-px flex-1 bg-white/15" />
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+            <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-3">
               <div>
                 <label className="mb-1 block text-sm font-medium text-zinc-200">E-mail</label>
                 <div className="relative">
