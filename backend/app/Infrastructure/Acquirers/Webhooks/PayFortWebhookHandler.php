@@ -67,8 +67,9 @@ class PayFortWebhookHandler
         $this->paymentService = $paymentService;
         // Resolve acquirer lazily; may be null in test/dev if not configured
         try {
-            $this->payfortAcquirer = app(PayFortAcquirer::class);
-        } catch (\Throwable) {
+            $this->payfortAcquirer = \App\Services\AcquirerFactory::instance()->payfort();
+        } catch (\Throwable $e) {
+            Log::warning('PayFort webhook: failed to initialize acquirer', ['error' => $e->getMessage()]);
             $this->payfortAcquirer = null;
         }
     }
@@ -159,10 +160,10 @@ class PayFortWebhookHandler
      */
     private function handleTransactionEvent(array $payload): JsonResponse
     {
-        $event = $payload['event'] ?? null;
+        $event = strtolower((string) ($payload['event'] ?? ''));
         $transaction = $payload['transaction'] ?? [];
         $transactionId = $transaction['id'] ?? $payload['id'] ?? null;
-        $status = $transaction['status'] ?? null;
+        $status = strtolower((string) ($transaction['status'] ?? $this->mapTransactionEventToStatus($event)));
         $amount = $transaction['amount'] ?? null;
 
         Log::info('PayFort transaction event', [
@@ -177,7 +178,7 @@ class PayFortWebhookHandler
         // API directly to get the authoritative status before processing any payment.
         $webhookSecret = config('acquirers.payfort.webhook_secret');
 
-        if (empty($webhookSecret) && in_array($status, ['paid', 'approved'], true)) {
+        if (empty($webhookSecret) && $this->mapTransactionStatus($status) === 'paid') {
             if (!$transactionId) {
                 Log::warning('PayFort verify-on-receive skipped: no transaction_id in payload', ['payload' => $payload]);
                 return response()->json(['status' => 'error', 'message' => 'Missing transaction id'], 400);
@@ -198,7 +199,7 @@ class PayFortWebhookHandler
                 return response()->json(['status' => 'error', 'message' => 'Could not verify transaction'], 502);
             }
 
-            $verifiedStatus = $apiResult['status'] ?? 'unknown';
+            $verifiedStatus = strtolower((string) ($apiResult['status'] ?? 'unknown'));
             $verifiedAmount = $apiResult['amount'] ?? null;
 
             Log::info('PayFort verify-on-receive result', [
@@ -210,7 +211,7 @@ class PayFortWebhookHandler
             ]);
 
             // Reject if the API says the transaction is NOT paid
-            if (!in_array($verifiedStatus, ['paid', 'approved', 'completed'], true)) {
+            if ($this->mapTransactionStatus($verifiedStatus) !== 'paid') {
                 Log::warning('PayFort verify-on-receive: webhook claimed paid but API returned different status — ignoring', [
                     'transaction_id'  => $transactionId,
                     'webhook_status'  => $status,
@@ -224,6 +225,7 @@ class PayFortWebhookHandler
 
             // Overwrite transaction data with API-verified values
             $transaction['status'] = $verifiedStatus;
+            $status = $verifiedStatus;
             $transaction['amount'] = $amount;
             if (isset($apiResult['data']['pix'])) {
                 $transaction['pix'] = $apiResult['data']['pix'];
@@ -299,10 +301,10 @@ class PayFortWebhookHandler
      */
     private function handleTransferEvent(array $payload): JsonResponse
     {
-        $event = $payload['event'] ?? null;
+        $event = strtolower((string) ($payload['event'] ?? ''));
         $transfer = $payload['transfer'] ?? [];
         $transferId = $transfer['id'] ?? $payload['id'] ?? null;
-        $status = $transfer['status'] ?? null;
+        $status = strtolower((string) ($transfer['status'] ?? $this->mapTransferEventToStatus($event)));
 
         Log::info('PayFort transfer event', [
             'event' => $event,
@@ -426,6 +428,22 @@ class PayFortWebhookHandler
     }
 
     /**
+     * Map PayFort event name to fallback transaction status.
+     */
+    private function mapTransactionEventToStatus(string $event): string
+    {
+        return match (strtolower($event)) {
+            'transaction_paid', 'transaction_approved' => 'paid',
+            'transaction_refunded' => 'refunded',
+            'transaction_refused', 'transaction_declined', 'transaction_failed' => 'failed',
+            'transaction_canceled', 'transaction_cancelled' => 'canceled',
+            'transaction_infraction', 'infraction', 'transaction_chargeback', 'transaction_chargedback' => 'chargedback',
+            'transaction_expired' => 'expired',
+            default => 'waiting_payment',
+        };
+    }
+
+    /**
      * Get or create the PayFort acquirer ID for transaction records.
      */
     private function getPayFortAcquirerId(): string
@@ -454,11 +472,25 @@ class PayFortWebhookHandler
      */
     private function mapTransferStatus(string $status): string
     {
-        return match ($status) {
-            'completed' => 'paid',
-            'queued', 'processing' => 'pending',
+        return match (strtolower($status)) {
+            'completed', 'paid', 'approved', 'settled' => 'paid',
+            'queued', 'processing', 'pending', 'created', 'updated' => 'pending',
+            'failed', 'refused', 'error' => 'failed',
             'canceled', 'cancelled' => 'canceled',
             default => 'pending',
+        };
+    }
+
+    /**
+     * Map PayFort event name to fallback transfer status.
+     */
+    private function mapTransferEventToStatus(string $event): string
+    {
+        return match (strtolower($event)) {
+            'transfer_completed', 'transfer_paid', 'transfer_approved' => 'completed',
+            'transfer_canceled', 'transfer_cancelled' => 'canceled',
+            'transfer_failed', 'transfer_refused' => 'failed',
+            default => 'processing',
         };
     }
 }
