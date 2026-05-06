@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster, toast, ToastBar } from 'react-hot-toast';
@@ -17,39 +18,6 @@ const queryClient = new QueryClient({
   },
 });
 
-<<<<<<< HEAD
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true,
-          }}
-        >
-          <App />
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#1f2937',
-                color: '#f9fafb',
-                cursor: 'pointer',
-              },
-            }}
-          >
-            {(t) => (
-              <div onClick={() => toast.dismiss(t.id)} style={{ cursor: 'pointer' }}>
-                <ToastBar toast={t} />
-              </div>
-            )}
-          </Toaster>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </HelmetProvider>
-=======
 const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
 
 const app = (
@@ -91,6 +59,5 @@ const appWithGoogle = googleClientId ? (
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <HelmetProvider>{appWithGoogle}</HelmetProvider>
->>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
   </React.StrictMode>
 );

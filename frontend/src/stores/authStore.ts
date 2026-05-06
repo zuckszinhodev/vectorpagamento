@@ -15,6 +15,7 @@ interface AuthState {
   adminMfaVerified: boolean;
   isImpersonating: boolean;
   login: (email: string, password: string) => Promise<void>;
+  googleLogin: (accessToken: string) => Promise<void>;
   verifyAdminMfa: (code: string) => Promise<void>;
   resetAdminMfaVerification: () => void;
   verifyMfa: (code: string) => Promise<void>;
@@ -82,6 +83,41 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: user!,
             token: accessToken,
+            isAuthenticated: true,
+            isLoading: false,
+            mfaPending: null,
+            adminMfaVerified: false,
+          });
+        } catch (error) {
+          set({ isLoading: false });
+          throw error;
+        }
+      },
+
+      googleLogin: async (accessToken: string) => {
+        try {
+          const response = await authService.googleAuth(accessToken);
+
+          if (response.data.requires_mfa && response.data.mfa_token) {
+            set({
+              mfaPending: { mfaToken: response.data.mfa_token },
+              isLoading: false,
+            });
+            return;
+          }
+
+          const { user, token: tokenData } = response.data;
+          const token = tokenData?.access_token;
+
+          if (!token || !user) {
+            throw new Error('Resposta de autenticação Google inválida');
+          }
+
+          authService.setToken(token);
+
+          set({
+            user,
+            token,
             isAuthenticated: true,
             isLoading: false,
             mfaPending: null,

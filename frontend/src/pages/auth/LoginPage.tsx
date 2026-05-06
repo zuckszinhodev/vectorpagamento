@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { useGoogleLogin } from '@react-oauth/google';
 import {
   ArrowLeftIcon,
   ArrowRightOnRectangleIcon,
@@ -87,15 +88,12 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [mfaCode, setMfaCode] = useState(['', '', '', '', '', '']);
   const [mfaLoading, setMfaLoading] = useState(false);
-<<<<<<< HEAD
-=======
   const [googleLoading, setGoogleLoading] = useState(false);
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
   const isGoogleEnabled = Boolean(googleClientId);
->>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
   const mfaInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const { login, verifyMfa, cancelMfa, mfaPending } = useAuthStore();
+  const { login, googleLogin, verifyMfa, cancelMfa, mfaPending } = useAuthStore();
   const navigate = useNavigate();
 
   const {
@@ -184,8 +182,6 @@ export default function LoginPage() {
     setMfaCode(['', '', '', '', '', '']);
   };
 
-<<<<<<< HEAD
-=======
   const handleGoogleToken = async (accessToken: string) => {
     try {
       await googleLogin(accessToken);
@@ -206,8 +202,6 @@ export default function LoginPage() {
   const handleGoogleAuthError = () => {
     toast.error('Erro ao fazer login com Google. Tente novamente.');
   };
-
->>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
   return (
     <>
       <SEO title="Login" description="Acesse sua conta Vector Pagamentos e gerencie seus pagamentos, produtos e afiliados" url="/login" />
@@ -260,11 +254,6 @@ export default function LoginPage() {
         ) : (
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-white">Bem-vindo de volta</h1>
-<<<<<<< HEAD
-            <p className="mt-1 text-base text-zinc-400">Faça login com seu e-mail e senha</p>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-3">
-=======
             <p className="mt-1 text-base text-zinc-400">
               {isGoogleEnabled ? 'Continue com Google ou use e-mail e senha' : 'Use e-mail e senha para continuar'}
             </p>
@@ -289,7 +278,6 @@ export default function LoginPage() {
             )}
 
             <form onSubmit={handleSubmit(onSubmit)} className={isGoogleEnabled ? 'space-y-3' : 'mt-4 space-y-3'}>
->>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
               <div>
                 <label className="mb-1 block text-sm font-medium text-zinc-200">E-mail</label>
                 <div className="relative">

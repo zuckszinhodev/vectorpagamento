@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import { useGoogleLogin } from '@react-oauth/google';
 import {
   EyeIcon,
   EyeSlashIcon,
@@ -87,14 +88,11 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
-<<<<<<< HEAD
-=======
   const [googleLoading, setGoogleLoading] = useState(false);
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim();
   const isGoogleEnabled = Boolean(googleClientId);
->>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
 
-  const { register: registerUser } = useAuthStore();
+  const { register: registerUser, googleLogin } = useAuthStore();
   const navigate = useNavigate();
 
   const {
@@ -120,8 +118,6 @@ export default function RegisterPage() {
     }
   };
 
-<<<<<<< HEAD
-=======
   const handleGoogleToken = async (accessToken: string) => {
     try {
       await googleLogin(accessToken);
@@ -136,8 +132,6 @@ export default function RegisterPage() {
   const handleGoogleAuthError = () => {
     toast.error('Erro ao criar conta com Google. Tente novamente.');
   };
-
->>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
   return (
     <div className="w-full">
       <AuthTabs active="register" />
@@ -147,9 +141,6 @@ export default function RegisterPage() {
         {isGoogleEnabled ? 'Continue com Google ou use e-mail e senha' : 'Use e-mail e senha para criar sua conta'}
       </p>
 
-<<<<<<< HEAD
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-3">
-=======
       {isGoogleEnabled && (
         <>
           <div className="mt-4 space-y-2.5">
@@ -170,7 +161,6 @@ export default function RegisterPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className={isGoogleEnabled ? 'space-y-3' : 'mt-4 space-y-3'}>
->>>>>>> 93dd7220d812b8a5f7177d7b771c8dcb25b2eb1c
         <div>
           <label className="mb-1 block text-sm font-medium text-zinc-200">Nome completo</label>
           <div className="relative">
