@@ -409,6 +409,7 @@ class AuthController extends Controller
             cache()->put('mfa_token:' . $mfaToken, [
                 'user_id' => $user->id,
                 'ip' => $this->getClientIp($request),
+                'ua_hash' => $this->buildUserAgentHash($request),
             ], 300);
             
             return response()->json([
@@ -474,8 +475,8 @@ class AuthController extends Controller
     public function verifyMfa(Request $request): JsonResponse
     {
         try {
-        $mfaToken = $request->input('mfa_token');
-        $code = $request->input('code');
+        $mfaToken = (string) $request->input('mfa_token');
+        $code = preg_replace('/\D/', '', (string) $request->input('code', ''));
 
         $mfaData = cache()->get('mfa_token:' . $mfaToken);
 
@@ -483,21 +484,35 @@ class AuthController extends Controller
         if (is_array($mfaData)) {
             $userId = $mfaData['user_id'];
             $boundIp = $mfaData['ip'] ?? null;
+            $boundUaHash = isset($mfaData['ua_hash']) && is_string($mfaData['ua_hash'])
+                ? $mfaData['ua_hash']
+                : null;
+            $currentUaHash = $this->buildUserAgentHash($request);
+            $requestIp = $this->getClientIp($request);
 
             // Verify MFA token is used from the same IP that initiated login
-            if ($boundIp && $boundIp !== $this->getClientIp($request)) {
-                Log::warning('MFA token used from different IP', [
+            if ($boundIp && $boundIp !== $requestIp) {
+                $sameUserAgent = $boundUaHash !== null && hash_equals($boundUaHash, $currentUaHash);
+
+                if (!$sameUserAgent) {
+                    Log::warning('MFA token used from different client fingerprint', [
+                        'bound_ip' => $boundIp,
+                        'request_ip' => $requestIp,
+                    ]);
+                    cache()->forget('mfa_token:' . $mfaToken);
+                    return response()->json([
+                        'success' => false,
+                        'error' => [
+                            'code' => 'mfa_ip_mismatch',
+                            'message' => 'Sessão MFA inválida. Faça login novamente.',
+                        ],
+                    ], 401);
+                }
+
+                Log::notice('MFA token IP changed but user-agent fingerprint matched; allowing verification', [
                     'bound_ip' => $boundIp,
-                    'request_ip' => $this->getClientIp($request),
+                    'request_ip' => $requestIp,
                 ]);
-                cache()->forget('mfa_token:' . $mfaToken);
-                return response()->json([
-                    'success' => false,
-                    'error' => [
-                        'code' => 'mfa_ip_mismatch',
-                        'message' => 'Sessão MFA inválida. Faça login novamente.',
-                    ],
-                ], 401);
             }
         } else {
             $userId = $mfaData;
@@ -1275,5 +1290,10 @@ class AuthController extends Controller
     {
         // Use Laravel's request->ip() which respects TrustProxies middleware
         return $request->ip();
+    }
+
+    protected function buildUserAgentHash(Request $request): string
+    {
+        return hash('sha256', (string) ($request->userAgent() ?? ''));
     }
 }

@@ -188,6 +188,122 @@ it('requires mfa and returns mfa_enabled after verifyMfa for MFA users', functio
         ->assertJsonPath('data.user.mfa_enabled', true);
 });
 
+it('allows verifyMfa when IP changes but user agent remains the same', function () {
+    $account = Account::create([
+        'id'            => Str::uuid()->toString(),
+        'name'          => 'Test Account',
+        'document'      => '12345678900',
+        'document_type' => 'cpf',
+        'email'         => 'mfa-ip-change@example.com',
+        'status'        => 'active',
+    ]);
+
+    $google2fa = new \PragmaRX\Google2FA\Google2FA();
+    $secret = $google2fa->generateSecretKey();
+
+    $user = User::create([
+        'id'         => Str::uuid()->toString(),
+        'account_id' => $account->id,
+        'email'      => 'mfa-ip-change@example.com',
+        'password'   => Hash::make('password123'),
+        'name'       => 'MFA IP Change User',
+        'status'     => 'active',
+    ]);
+
+    $user->forceFill([
+        'mfa_enabled' => true,
+        'mfa_secret' => $secret,
+    ])->save();
+
+    $userAgent = 'Mozilla/5.0 (AuthTest)';
+
+    $loginResponse = $this
+        ->withServerVariables([
+            'REMOTE_ADDR' => '203.0.113.10',
+            'HTTP_USER_AGENT' => $userAgent,
+        ])
+        ->postJson('/api/v1/auth/login', [
+            'email'    => 'mfa-ip-change@example.com',
+            'password' => 'password123',
+        ]);
+
+    $loginResponse->assertStatus(200)
+        ->assertJsonPath('data.requires_mfa', true);
+
+    $mfaToken = $loginResponse->json('data.mfa_token');
+    $code = $google2fa->getCurrentOtp($secret);
+
+    $verifyResponse = $this
+        ->withServerVariables([
+            'REMOTE_ADDR' => '203.0.113.11',
+            'HTTP_USER_AGENT' => $userAgent,
+        ])
+        ->postJson('/api/v1/auth/mfa/verify', [
+            'mfa_token' => $mfaToken,
+            'code' => $code,
+        ]);
+
+    $verifyResponse->assertStatus(200)
+        ->assertJsonPath('data.user.mfa_enabled', true);
+});
+
+it('rejects verifyMfa when client fingerprint changes', function () {
+    $account = Account::create([
+        'id'            => Str::uuid()->toString(),
+        'name'          => 'Test Account',
+        'document'      => '12345678900',
+        'document_type' => 'cpf',
+        'email'         => 'mfa-fingerprint@example.com',
+        'status'        => 'active',
+    ]);
+
+    $google2fa = new \PragmaRX\Google2FA\Google2FA();
+    $secret = $google2fa->generateSecretKey();
+
+    $user = User::create([
+        'id'         => Str::uuid()->toString(),
+        'account_id' => $account->id,
+        'email'      => 'mfa-fingerprint@example.com',
+        'password'   => Hash::make('password123'),
+        'name'       => 'MFA Fingerprint User',
+        'status'     => 'active',
+    ]);
+
+    $user->forceFill([
+        'mfa_enabled' => true,
+        'mfa_secret' => $secret,
+    ])->save();
+
+    $loginResponse = $this
+        ->withServerVariables([
+            'REMOTE_ADDR' => '198.51.100.10',
+            'HTTP_USER_AGENT' => 'Mozilla/5.0 (AuthTest-A)',
+        ])
+        ->postJson('/api/v1/auth/login', [
+            'email'    => 'mfa-fingerprint@example.com',
+            'password' => 'password123',
+        ]);
+
+    $loginResponse->assertStatus(200)
+        ->assertJsonPath('data.requires_mfa', true);
+
+    $mfaToken = $loginResponse->json('data.mfa_token');
+    $code = $google2fa->getCurrentOtp($secret);
+
+    $verifyResponse = $this
+        ->withServerVariables([
+            'REMOTE_ADDR' => '198.51.100.11',
+            'HTTP_USER_AGENT' => 'Mozilla/5.0 (AuthTest-B)',
+        ])
+        ->postJson('/api/v1/auth/mfa/verify', [
+            'mfa_token' => $mfaToken,
+            'code' => $code,
+        ]);
+
+    $verifyResponse->assertStatus(401)
+        ->assertJsonPath('error.code', 'mfa_ip_mismatch');
+});
+
 it('rejects login with wrong password', function () {
     $account = Account::create([
         'id'            => Str::uuid()->toString(),
