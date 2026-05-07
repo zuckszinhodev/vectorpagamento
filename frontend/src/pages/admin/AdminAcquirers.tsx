@@ -25,6 +25,7 @@ interface Acquirer {
   is_primary: boolean;
   priority: number;
   supports_pix: boolean;
+  supports_pix_out: boolean;
   supports_credit_card: boolean;
   supports_boleto: boolean;
   acquirer_fee_percentage: number;
@@ -229,8 +230,12 @@ export default function AdminAcquirers() {
     };
 
     const supportsMethod = (acquirer: Acquirer, method: RotationMethod): boolean => {
-      if (method === 'pix' || method === 'pix_out') {
+      if (method === 'pix') {
         return acquirer.supports_pix;
+      }
+
+      if (method === 'pix_out') {
+        return acquirer.supports_pix_out;
       }
 
       if (method === 'credit_card') {
@@ -525,6 +530,9 @@ export default function AdminAcquirers() {
                 {acquirer.supports_pix && (
                   <span className="rounded bg-emerald-500/10 px-2 py-1 text-xs text-emerald-500">PIX</span>
                 )}
+                {acquirer.supports_pix_out && (
+                  <span className="rounded bg-cyan-500/10 px-2 py-1 text-xs text-cyan-500">PIX OUT</span>
+                )}
                 {acquirer.supports_credit_card && (
                   <span className="rounded bg-blue-500/10 px-2 py-1 text-xs text-blue-500">Cartão</span>
                 )}
@@ -641,6 +649,7 @@ function EditAcquirerModal({
     gateway_fee_fixed: acquirer.gateway_fee_fixed || 0,
     sandbox_mode: acquirer.sandbox_mode,
     supports_pix: acquirer.supports_pix,
+    supports_pix_out: acquirer.supports_pix_out,
     supports_credit_card: acquirer.supports_credit_card,
     supports_boleto: acquirer.supports_boleto,
   });
@@ -749,6 +758,15 @@ function EditAcquirerModal({
                   className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
                 />
                 <span className="text-sm text-tx-primary">PIX</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.supports_pix_out}
+                  onChange={(e) => setForm({ ...form, supports_pix_out: e.target.checked })}
+                  className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+                />
+                <span className="text-sm text-tx-primary">PIX OUT (Saque)</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input

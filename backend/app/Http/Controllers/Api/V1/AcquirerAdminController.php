@@ -62,6 +62,7 @@ class AcquirerAdminController extends Controller
                     'is_primary' => $config->id === $primaryId,
                     'priority' => $config->priority,
                     'supports_pix' => in_array('pix', $supportedMethods),
+                    'supports_pix_out' => in_array('pix_out', $supportedMethods),
                     'supports_credit_card' => in_array('credit_card', $supportedMethods) || in_array('card', $supportedMethods),
                     'supports_boleto' => in_array('boleto', $supportedMethods),
                     'fee_pix' => (float) $config->gateway_fee_percentage,
@@ -294,6 +295,7 @@ class AcquirerAdminController extends Controller
             'fee_credit_card' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'fee_boleto' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'supports_pix' => ['sometimes', 'boolean'],
+            'supports_pix_out' => ['sometimes', 'boolean'],
             'supports_credit_card' => ['sometimes', 'boolean'],
             'supports_boleto' => ['sometimes', 'boolean'],
             'sandbox_mode' => ['sometimes', 'boolean'],
@@ -339,6 +341,13 @@ class AcquirerAdminController extends Controller
                 $supportedMethods = array_filter($supportedMethods, fn($m) => $m !== 'pix');
             }
         }
+        if (isset($validated['supports_pix_out'])) {
+            if ($validated['supports_pix_out'] && !in_array('pix_out', $supportedMethods)) {
+                $supportedMethods[] = 'pix_out';
+            } elseif (!$validated['supports_pix_out']) {
+                $supportedMethods = array_filter($supportedMethods, fn($m) => $m !== 'pix_out');
+            }
+        }
         if (isset($validated['supports_credit_card'])) {
             if ($validated['supports_credit_card'] && !in_array('credit_card', $supportedMethods)) {
                 $supportedMethods[] = 'credit_card';
@@ -353,7 +362,7 @@ class AcquirerAdminController extends Controller
                 $supportedMethods = array_filter($supportedMethods, fn($m) => $m !== 'boleto');
             }
         }
-        $config->supported_methods = array_values($supportedMethods);
+        $config->supported_methods = array_values(array_unique($supportedMethods));
 
         // Handle sandbox mode in settings
         $settings = $config->settings ?? [];
@@ -422,6 +431,7 @@ class AcquirerAdminController extends Controller
                 'is_primary' => $config->priority === 0,
                 'priority' => $config->priority,
                 'supports_pix' => in_array('pix', $supportedMethods),
+                'supports_pix_out' => in_array('pix_out', $supportedMethods),
                 'supports_credit_card' => in_array('credit_card', $supportedMethods) || in_array('card', $supportedMethods),
                 'supports_boleto' => in_array('boleto', $supportedMethods),
                 'fee_pix' => $config->gateway_fee_percentage ?? 0,
@@ -702,16 +712,40 @@ class AcquirerAdminController extends Controller
      */
     private function resolveCandidatesForMethod(string $method): array
     {
-        $supportedMethod = $method === 'pix_out' ? 'pix' : $method;
+        $lookupMethods = [$method];
 
         $query = AcquirerConfig::where('enabled', true)
-            ->where(function ($builder) use ($supportedMethod) {
-                $builder->whereJsonContains('supported_methods', strtolower($supportedMethod))
-                    ->orWhereJsonContains('supported_methods', strtoupper($supportedMethod));
+            ->where(function ($builder) use ($lookupMethods) {
+                foreach ($lookupMethods as $index => $supportedMethod) {
+                    if ($index === 0) {
+                        $builder->where(function ($nested) use ($supportedMethod) {
+                            $nested->whereJsonContains('supported_methods', strtolower($supportedMethod))
+                                ->orWhereJsonContains('supported_methods', strtoupper($supportedMethod));
+                        });
+                        continue;
+                    }
+
+                    $builder->orWhere(function ($nested) use ($supportedMethod) {
+                        $nested->whereJsonContains('supported_methods', strtolower($supportedMethod))
+                            ->orWhereJsonContains('supported_methods', strtoupper($supportedMethod));
+                    });
+                }
             })
             ->orderBy('priority', 'asc');
 
         $configs = $query->pluck('acquirer_key')->toArray();
+
+        // Backward compatibility with older records that only had PIX support.
+        if (empty($configs) && $method === 'pix_out') {
+            $configs = AcquirerConfig::where('enabled', true)
+                ->where(function ($builder) {
+                    $builder->whereJsonContains('supported_methods', 'pix')
+                        ->orWhereJsonContains('supported_methods', 'PIX');
+                })
+                ->orderBy('priority', 'asc')
+                ->pluck('acquirer_key')
+                ->toArray();
+        }
 
         if (empty($configs)) {
             $configs = AcquirerConfig::where('enabled', true)

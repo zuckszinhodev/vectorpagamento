@@ -239,21 +239,45 @@ class AcquirerFactory
     private function listConfiguredAcquirerKeys(?string $paymentMethod = null): array
     {
         $normalizedMethod = $this->normalizePaymentMethod($paymentMethod);
-        $methodForSupportedMethods = $normalizedMethod === 'pix_out' ? 'pix' : $normalizedMethod;
+        $lookupMethods = $normalizedMethod !== '' ? [$normalizedMethod] : [];
 
         $keys = [];
 
         try {
             $query = AcquirerConfig::where('enabled', true);
 
-            if ($methodForSupportedMethods !== '') {
-                $query->where(function ($builder) use ($methodForSupportedMethods) {
-                    $builder->whereJsonContains('supported_methods', strtolower($methodForSupportedMethods))
-                        ->orWhereJsonContains('supported_methods', strtoupper($methodForSupportedMethods));
+            if ($lookupMethods !== []) {
+                $query->where(function ($builder) use ($lookupMethods) {
+                    foreach ($lookupMethods as $index => $method) {
+                        if ($index === 0) {
+                            $builder->where(function ($nested) use ($method) {
+                                $nested->whereJsonContains('supported_methods', strtolower($method))
+                                    ->orWhereJsonContains('supported_methods', strtoupper($method));
+                            });
+                            continue;
+                        }
+
+                        $builder->orWhere(function ($nested) use ($method) {
+                            $nested->whereJsonContains('supported_methods', strtolower($method))
+                                ->orWhereJsonContains('supported_methods', strtoupper($method));
+                        });
+                    }
                 });
             }
 
             $acquirers = $query->orderBy('priority', 'asc')->get();
+
+            // Backward compatibility: PIX OUT used to be inferred from PIX.
+            // If no gateway is explicitly marked with pix_out, use legacy pix support.
+            if ($acquirers->isEmpty() && $normalizedMethod === 'pix_out') {
+                $acquirers = AcquirerConfig::where('enabled', true)
+                    ->where(function ($builder) {
+                        $builder->whereJsonContains('supported_methods', 'pix')
+                            ->orWhereJsonContains('supported_methods', 'PIX');
+                    })
+                    ->orderBy('priority', 'asc')
+                    ->get();
+            }
 
             if ($acquirers->isEmpty() && $paymentMethod !== null) {
                 $acquirers = AcquirerConfig::where('enabled', true)
