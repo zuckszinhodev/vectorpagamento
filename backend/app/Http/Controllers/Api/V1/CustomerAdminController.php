@@ -195,7 +195,7 @@ class CustomerAdminController extends Controller
                 'account_id' => $accountId ?? null,
                 'trace' => $e->getTraceAsString(),
             ]);
-            return response()->json(['success' => false, 'message' => 'Erro ao excluir usuário: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Erro ao excluir usuário'], 500);
         }
     }
 

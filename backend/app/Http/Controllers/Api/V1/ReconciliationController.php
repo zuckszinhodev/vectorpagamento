@@ -119,7 +119,7 @@ class ReconciliationController extends Controller
             ], 201);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('ReconciliationController::store error', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'Erro ao executar reconciliação: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Erro ao executar reconciliação'], 500);
         }
     }
 

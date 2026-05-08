@@ -773,10 +773,10 @@ class WebhookController extends Controller
                 $this->updateChargeStatus($chargeId, $mappedStatus);
             }
 
-            return response()->json(['status' => 'success']);
+            return response()->json(['status' => 'error', 'message' => 'Erro interno ao processar webhook'], 500);
         } catch (\Exception $e) {
             Log::error('Custom webhook error', ['error' => $e->getMessage()]);
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            return response()->json(['status' => 'error', 'message' => 'Erro interno ao processar webhook'], 500);
         }
     }
 
@@ -999,7 +999,7 @@ class WebhookController extends Controller
                 'integration_id' => $integrationId,
                 'error' => $e->getMessage(),
             ]);
-            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+            return response()->json(['status' => 'error', 'message' => 'Erro interno ao processar webhook'], 500);
         }
     }
 

@@ -306,21 +306,31 @@ class AcquirerFactory
     }
 
     /**
-     * Add ENV-configured acquirers that are not present in DB list.
+     * Add acquirers that are enabled in DB but missing from the current list.
+     * Only adds acquirers that are both enabled in acquirer_configs AND have valid credentials.
      *
      * @param array<int, string> $keys
      * @return array<int, string>
      */
     private function appendConfiguredFallbacks(array $keys): array
     {
-        foreach (['payfort', 'blupay', 'enki', 'babylon', 'witetec', 'asaas', 'huntersub'] as $name) {
-            if (in_array($name, $keys, true)) {
-                continue;
-            }
+        try {
+            $enabledInDb = \App\Models\AcquirerConfig::where('enabled', true)
+                ->orderBy('priority', 'asc')
+                ->pluck('acquirer_key')
+                ->toArray();
 
-            if ($this->isAcquirerAvailable($name)) {
-                $keys[] = $name;
+            foreach ($enabledInDb as $name) {
+                if (in_array($name, $keys, true)) {
+                    continue;
+                }
+
+                if ($this->isAcquirerAvailable($name)) {
+                    $keys[] = $name;
+                }
             }
+        } catch (\Throwable $e) {
+            Log::warning('appendConfiguredFallbacks: DB lookup failed', ['error' => $e->getMessage()]);
         }
 
         return $keys;
@@ -348,6 +358,11 @@ class AcquirerFactory
 
     public static function isBluPayConfigured(): bool
     {
+        $config = AcquirerConfig::where('acquirer_key', 'blupay')->first();
+        if (!$config || !$config->enabled) {
+            return false;
+        }
+
         if (config('acquirers.blupay.enabled', false)
             && !empty(config('acquirers.blupay.secret_key'))
             && !empty(config('acquirers.blupay.public_key'))) {
@@ -372,6 +387,11 @@ class AcquirerFactory
 
     public static function isEnkiConfigured(): bool
     {
+        $config = AcquirerConfig::where('acquirer_key', 'enki')->first();
+        if (!$config || !$config->enabled) {
+            return false;
+        }
+
         if (config('acquirers.enki.enabled', false)
             && !empty(config('acquirers.enki.public_key'))
             && !empty(config('acquirers.enki.secret_key'))) {
@@ -384,6 +404,11 @@ class AcquirerFactory
 
     public static function isAsaasConfigured(): bool
     {
+        $config = AcquirerConfig::where('acquirer_key', 'asaas')->first();
+        if (!$config || !$config->enabled) {
+            return false;
+        }
+
         if (config('acquirers.asaas.enabled', false)
             && !empty(config('acquirers.asaas.api_key'))) {
             return true;
@@ -413,6 +438,11 @@ class AcquirerFactory
 
     public static function isWitetecConfigured(): bool
     {
+        $config = AcquirerConfig::where('acquirer_key', 'witetec')->first();
+        if (!$config || !$config->enabled) {
+            return false;
+        }
+
         if (config('acquirers.witetec.enabled', false)
             && !empty(config('acquirers.witetec.api_key'))) {
             return true;
@@ -424,6 +454,11 @@ class AcquirerFactory
 
     public static function isTurbosConfigured(): bool
     {
+        $config = AcquirerConfig::where('acquirer_key', 'turbos')->first();
+        if (!$config || !$config->enabled) {
+            return false;
+        }
+
         if (config('acquirers.turbos.enabled', false)
             && !empty(config('acquirers.turbos.public_key'))
             && !empty(config('acquirers.turbos.secret_key'))) {
@@ -863,15 +898,57 @@ class AcquirerFactory
 
     /**
      * Get the active acquirer name for a specific account.
-     * Checks account_acquirers table first. Falls back to global config.
+     * If the account has an active acquirer assigned in account_acquirers, use it.
+     * Falls back to global admin priority.
      */
     public function getActiveAcquirerNameForAccount(?string $accountId, string $paymentMethod = 'pix'): string
     {
         if ($accountId) {
-            Log::info('Ignoring account-specific acquirer selection; using global admin priority', [
-                'account_id' => $accountId,
-                'payment_method' => $paymentMethod,
-            ]);
+            try {
+                $normalizedMethod = $this->normalizePaymentMethod($paymentMethod);
+
+                // Look for an account-specific acquirer assignment ordered by priority
+                $accountAcquirer = \App\Models\AccountAcquirer::where('account_id', $accountId)
+                    ->where('is_active', true)
+                    ->join('acquirers', 'acquirers.id', '=', 'account_acquirers.acquirer_id')
+                    ->select('account_acquirers.*', 'acquirers.slug as acquirer_slug')
+                    ->orderBy('account_acquirers.priority', 'asc')
+                    ->get();
+
+                foreach ($accountAcquirer as $aa) {
+                    $slug = $aa->acquirer_slug;
+                    if (!$slug) {
+                        continue;
+                    }
+
+                    // Check that the global acquirer config is enabled for this acquirer
+                    $globalConfig = \App\Models\AcquirerConfig::where('acquirer_key', $slug)->first();
+                    if (!$globalConfig || !$globalConfig->enabled) {
+                        continue;
+                    }
+
+                    // Check that this acquirer supports the payment method
+                    $supportedMethods = array_map('strtolower', $globalConfig->supported_methods ?? []);
+                    if (!empty($supportedMethods) && !in_array($normalizedMethod, $supportedMethods, true)) {
+                        continue;
+                    }
+
+                    // Check that the acquirer instance is actually available
+                    if ($this->isAcquirerAvailable($slug, $globalConfig)) {
+                        Log::info('Using account-specific acquirer', [
+                            'account_id' => $accountId,
+                            'acquirer' => $slug,
+                            'payment_method' => $normalizedMethod,
+                        ]);
+                        return $slug;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to resolve account-specific acquirer, falling back to global', [
+                    'account_id' => $accountId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return $this->getActiveAcquirerName($paymentMethod);
@@ -884,10 +961,54 @@ class AcquirerFactory
     public function getPixAcquirerOrderForAccount(?string $accountId, string $primary): array
     {
         if ($accountId) {
-            Log::info('Ignoring account-specific PIX order; using global admin priority', [
-                'account_id' => $accountId,
-                'primary' => $primary,
-            ]);
+            try {
+                $accountAcquirers = \App\Models\AccountAcquirer::where('account_id', $accountId)
+                    ->where('is_active', true)
+                    ->join('acquirers', 'acquirers.id', '=', 'account_acquirers.acquirer_id')
+                    ->select('account_acquirers.*', 'acquirers.slug as acquirer_slug')
+                    ->orderBy('account_acquirers.priority', 'asc')
+                    ->get();
+
+                $accountKeys = [];
+                foreach ($accountAcquirers as $aa) {
+                    $slug = $aa->acquirer_slug;
+                    if (!$slug) {
+                        continue;
+                    }
+
+                    $globalConfig = \App\Models\AcquirerConfig::where('acquirer_key', $slug)->first();
+                    if (!$globalConfig || !$globalConfig->enabled) {
+                        continue;
+                    }
+
+                    $supportedMethods = array_map('strtolower', $globalConfig->supported_methods ?? []);
+                    if (!empty($supportedMethods) && !in_array('pix', $supportedMethods, true)) {
+                        continue;
+                    }
+
+                    if ($this->isAcquirerAvailable($slug, $globalConfig)) {
+                        $accountKeys[] = $slug;
+                    }
+                }
+
+                if (!empty($accountKeys)) {
+                    Log::info('Using account-specific PIX acquirer order', [
+                        'account_id' => $accountId,
+                        'order' => $accountKeys,
+                    ]);
+                    // Put preferred primary first if it's in the list
+                    if (in_array($primary, $accountKeys, true)) {
+                        $accountKeys = array_values(array_diff($accountKeys, [$primary]));
+                        array_unshift($accountKeys, $primary);
+                    }
+                    return $accountKeys;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to resolve account-specific PIX order, falling back to global', [
+                    'account_id' => $accountId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         return $this->getPixAcquirerOrder($primary);

@@ -213,6 +213,7 @@ class AcquirerAdminController extends Controller
             });
 
             AcquirerConfig::clearCache();
+            \App\Services\AcquirerFactory::reset();
 
             return response()->json([
                 'success' => true,
@@ -409,6 +410,9 @@ class AcquirerAdminController extends Controller
 
         $config->save();
 
+        // Reset the AcquirerFactory singleton so the next request picks up the new config
+        \App\Services\AcquirerFactory::reset();
+
         $hasCredentials = false;
         try {
             $hasCredentials = $config->hasValidCredentials();
@@ -534,7 +538,7 @@ class AcquirerAdminController extends Controller
                 'trace' => $e->getTraceAsString(),
                 'acquirer_id' => $acquirerId,
             ]);
-            return response()->json(['success' => false, 'message' => 'Erro ao alterar status do adquirente: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Erro ao alterar status do adquirente'], 500);
         }
     }
 

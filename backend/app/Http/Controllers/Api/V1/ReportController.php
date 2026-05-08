@@ -20,8 +20,25 @@ class ReportController extends Controller
     /**
      * Format date column in a DB-agnostic way (MySQL + PostgreSQL).
      */
+    private const ALLOWED_DATE_COLUMNS = ['paid_at', 'created_at', 'updated_at'];
+
+    private const ALLOWED_DATE_FORMATS = [
+        'YYYY-MM-DD HH24:00',
+        'YYYY-MM-DD',
+        'IYYY-IW',
+        'YYYY-MM',
+    ];
+
     private function dateFormat(string $column, string $format): string
     {
+        // Whitelist column and format to prevent SQL injection
+        if (!in_array($column, self::ALLOWED_DATE_COLUMNS, true)) {
+            $column = 'paid_at';
+        }
+        if (!in_array($format, self::ALLOWED_DATE_FORMATS, true)) {
+            $format = 'YYYY-MM-DD';
+        }
+
         $driver = config('database.default');
         $connection = config("database.connections.{$driver}.driver", 'mysql');
 
@@ -29,14 +46,11 @@ class ReportController extends Controller
             return "to_char({$column}, '{$format}')";
         }
 
-        // MySQL DATE_FORMAT equivalents
         $mysqlFormat = str_replace(
             ['YYYY', 'MM', 'DD', 'HH24', 'IYYY', 'IW'],
             ['%Y', '%m', '%d', '%H', '%x', '%v'],
             $format
         );
-        // Handle ':00' literal
-        $mysqlFormat = str_replace(':00', ':00', $mysqlFormat);
 
         return "DATE_FORMAT({$column}, '{$mysqlFormat}')";
     }

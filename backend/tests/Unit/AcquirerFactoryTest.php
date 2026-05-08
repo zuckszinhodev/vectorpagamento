@@ -63,149 +63,250 @@ it('returns pix acquirer order as array', function () {
     expect($order)->toBeArray();
 });
 
-it('falls back to global enki when account acquirer points to a disabled payfort', function () {
+// ── Helper to disable all acquirers in config ────────────────────────────────
+function disableAllAcquirersInConfig(): void
+{
     config([
-        'acquirers.default' => 'enki',
-        'acquirers.enki.enabled' => true,
-        'acquirers.enki.public_key' => 'pk_test_enki',
-        'acquirers.enki.secret_key' => 'sk_test_enki',
-        'acquirers.payfort.enabled' => false,
-        'acquirers.blupay.enabled' => false,
-        'acquirers.babylon.enabled' => false,
-        'acquirers.witetec.enabled' => false,
-        'acquirers.asaas.enabled' => false,
+        'acquirers.payfort.enabled'   => false,
+        'acquirers.blupay.enabled'    => false,
+        'acquirers.enki.enabled'      => false,
+        'acquirers.babylon.enabled'   => false,
+        'acquirers.witetec.enabled'   => false,
+        'acquirers.asaas.enabled'     => false,
         'acquirers.huntersub.enabled' => false,
+        'acquirers.turbos.enabled'    => false,
     ]);
+}
 
-    $account = Account::create([
-        'id' => Str::uuid()->toString(),
-        'name' => 'Seller Test',
-        'document' => '12345678900',
-        'document_type' => 'cpf',
-        'email' => 'seller@test.com',
-        'status' => 'active',
+// ── Bug 1: isXConfigured() must respect DB enabled flag ──────────────────────
+
+it('isEnkiConfigured returns false when DB config is disabled even if env has credentials', function () {
+    config([
+        'acquirers.enki.enabled'    => true,
+        'acquirers.enki.public_key' => 'pk_test',
+        'acquirers.enki.secret_key' => 'sk_test',
     ]);
-
-    $payfort = Acquirer::firstOrCreate(
-        ['slug' => 'payfort'],
-        [
-            'name' => 'PayFort Bank',
-            'is_active' => true,
-            'supported_methods' => ['pix'],
-            'settings' => [],
-        ]
-    );
-
-    AcquirerConfig::updateOrCreate(
-        ['acquirer_key' => 'payfort'],
-        [
-            'display_name' => 'PayFort Bank',
-            'type' => 'gateway',
-            'enabled' => false,
-            'supported_methods' => ['pix'],
-            'priority' => 1,
-            'settings' => [],
-        ]
-    );
 
     AcquirerConfig::updateOrCreate(
         ['acquirer_key' => 'enki'],
-        [
-            'display_name' => 'Enki Bank',
-            'type' => 'gateway',
-            'enabled' => true,
-            'supported_methods' => ['pix'],
-            'priority' => 0,
-            'settings' => [],
-        ]
+        ['display_name' => 'Enki', 'type' => 'gateway', 'enabled' => false,
+         'supported_methods' => ['pix'], 'priority' => 0, 'settings' => []]
     );
 
-    AccountAcquirer::create([
-        'account_id' => $account->id,
-        'acquirer_id' => $payfort->id,
-        'credentials' => encrypt(json_encode([])),
-        'priority' => 0,
-        'is_active' => true,
-        'settings' => [],
-    ]);
-
     AcquirerFactory::reset();
-    $factory = AcquirerFactory::instance();
-
-    expect($factory->getActiveAcquirerNameForAccount($account->id, 'pix'))->toBe('enki');
-    expect($factory->getPixAcquirerOrderForAccount($account->id, 'enki'))->toBe(['enki']);
+    expect(AcquirerFactory::isEnkiConfigured())->toBeFalse();
 });
 
-it('uses the global admin priority even when the account links another active pix acquirer', function () {
+it('isBluPayConfigured returns false when DB config is disabled even if env has credentials', function () {
     config([
-        'acquirers.enki.enabled' => true,
+        'acquirers.blupay.enabled'    => true,
+        'acquirers.blupay.secret_key' => 'sk_test',
+        'acquirers.blupay.public_key' => 'pk_test',
+    ]);
+
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'blupay'],
+        ['display_name' => 'BluPay', 'type' => 'gateway', 'enabled' => false,
+         'supported_methods' => ['pix'], 'priority' => 0, 'settings' => []]
+    );
+
+    AcquirerFactory::reset();
+    expect(AcquirerFactory::isBluPayConfigured())->toBeFalse();
+});
+
+it('isAsaasConfigured returns false when DB config is disabled even if env has credentials', function () {
+    config([
+        'acquirers.asaas.enabled' => true,
+        'acquirers.asaas.api_key' => 'api_test',
+    ]);
+
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'asaas'],
+        ['display_name' => 'Asaas', 'type' => 'gateway', 'enabled' => false,
+         'supported_methods' => ['pix'], 'priority' => 0, 'settings' => []]
+    );
+
+    AcquirerFactory::reset();
+    expect(AcquirerFactory::isAsaasConfigured())->toBeFalse();
+});
+
+it('isWitetecConfigured returns false when DB config is disabled even if env has credentials', function () {
+    config([
+        'acquirers.witetec.enabled' => true,
+        'acquirers.witetec.api_key' => 'api_test',
+    ]);
+
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'witetec'],
+        ['display_name' => 'Witetec', 'type' => 'gateway', 'enabled' => false,
+         'supported_methods' => ['pix'], 'priority' => 0, 'settings' => []]
+    );
+
+    AcquirerFactory::reset();
+    expect(AcquirerFactory::isWitetecConfigured())->toBeFalse();
+});
+
+// ── Bug 2: appendConfiguredFallbacks must not add disabled acquirers ──────────
+
+it('getActiveAcquirerName does not include disabled acquirers as fallback', function () {
+    disableAllAcquirersInConfig();
+    config([
+        'acquirers.enki.enabled'    => true,
+        'acquirers.enki.public_key' => 'pk_test',
+        'acquirers.enki.secret_key' => 'sk_test',
+    ]);
+
+    // Only enki enabled in DB
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'enki'],
+        ['display_name' => 'Enki', 'type' => 'gateway', 'enabled' => true,
+         'supported_methods' => ['pix'], 'priority' => 0, 'settings' => []]
+    );
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'payfort'],
+        ['display_name' => 'PayFort', 'type' => 'gateway', 'enabled' => false,
+         'supported_methods' => ['pix'], 'priority' => 1, 'settings' => []]
+    );
+
+    AcquirerFactory::reset();
+    $order = AcquirerFactory::instance()->getPixAcquirerOrder('enki');
+
+    expect($order)->not->toContain('payfort');
+});
+
+it('returns mock when all acquirers are disabled in DB', function () {
+    disableAllAcquirersInConfig();
+
+    foreach (['enki', 'payfort', 'blupay', 'asaas', 'witetec', 'huntersub', 'babylon'] as $key) {
+        AcquirerConfig::updateOrCreate(
+            ['acquirer_key' => $key],
+            ['display_name' => $key, 'type' => 'gateway', 'enabled' => false,
+             'supported_methods' => ['pix'], 'priority' => 0, 'settings' => []]
+        );
+    }
+
+    AcquirerFactory::reset();
+    $name = AcquirerFactory::instance()->getActiveAcquirerName('pix');
+
+    // Should fall back to 'mock' since nothing is available
+    expect($name)->toBe('mock');
+});
+
+// ── Bug 3: account-specific acquirer must be respected ───────────────────────
+
+it('falls back to global enki when account acquirer points to a disabled payfort', function () {
+    disableAllAcquirersInConfig();
+    config([
+        'acquirers.enki.enabled'    => true,
         'acquirers.enki.public_key' => 'pk_test_enki',
         'acquirers.enki.secret_key' => 'sk_test_enki',
-        'acquirers.payfort.enabled' => true,
-        'acquirers.payfort.api_key' => 'pk_test_payfort',
-        'acquirers.payfort.api_secret' => 'sk_test_payfort',
-        'acquirers.blupay.enabled' => false,
-        'acquirers.babylon.enabled' => false,
-        'acquirers.witetec.enabled' => false,
-        'acquirers.asaas.enabled' => false,
-        'acquirers.huntersub.enabled' => false,
     ]);
 
     $account = Account::create([
-        'id' => Str::uuid()->toString(),
-        'name' => 'Seller Global Priority',
-        'document' => '12345678900',
-        'document_type' => 'cpf',
-        'email' => 'seller-global@test.com',
-        'status' => 'active',
+        'id' => Str::uuid()->toString(), 'name' => 'Seller Test',
+        'document' => '12345678900', 'document_type' => 'cpf',
+        'email' => 'seller@test.com', 'status' => 'active',
     ]);
 
     $payfort = Acquirer::firstOrCreate(
         ['slug' => 'payfort'],
-        [
-            'name' => 'PayFort Bank',
-            'is_active' => true,
-            'supported_methods' => ['pix'],
-            'settings' => [],
-        ]
+        ['name' => 'PayFort Bank', 'is_active' => true, 'supported_methods' => ['pix'], 'settings' => []]
     );
 
     AcquirerConfig::updateOrCreate(
         ['acquirer_key' => 'payfort'],
-        [
-            'display_name' => 'PayFort Bank',
-            'type' => 'gateway',
-            'enabled' => true,
-            'supported_methods' => ['pix'],
-            'priority' => 1,
-            'settings' => [],
-        ]
+        ['display_name' => 'PayFort', 'type' => 'gateway', 'enabled' => false,
+         'supported_methods' => ['pix'], 'priority' => 1, 'settings' => []]
     );
-
     AcquirerConfig::updateOrCreate(
         ['acquirer_key' => 'enki'],
-        [
-            'display_name' => 'Enki Bank',
-            'type' => 'gateway',
-            'enabled' => true,
-            'supported_methods' => ['pix'],
-            'priority' => 0,
-            'settings' => [],
-        ]
+        ['display_name' => 'Enki', 'type' => 'gateway', 'enabled' => true,
+         'supported_methods' => ['pix'], 'priority' => 0, 'settings' => []]
     );
 
     AccountAcquirer::create([
-        'account_id' => $account->id,
-        'acquirer_id' => $payfort->id,
-        'credentials' => encrypt(json_encode(['api_key' => 'account-payfort', 'api_secret' => 'account-secret'])),
-        'priority' => 0,
-        'is_active' => true,
-        'settings' => [],
+        'account_id' => $account->id, 'acquirer_id' => $payfort->id,
+        'credentials' => encrypt(json_encode([])), 'priority' => 0,
+        'is_active' => true, 'settings' => [],
     ]);
 
     AcquirerFactory::reset();
     $factory = AcquirerFactory::instance();
 
+    // payfort is disabled globally → should fall back to enki
     expect($factory->getActiveAcquirerNameForAccount($account->id, 'pix'))->toBe('enki');
-    expect(array_slice($factory->getPixAcquirerOrderForAccount($account->id, 'enki'), 0, 2))->toBe(['enki', 'payfort']);
+});
+
+it('uses account-specific acquirer when it is enabled globally', function () {
+    disableAllAcquirersInConfig();
+    config([
+        'acquirers.enki.enabled'          => true,
+        'acquirers.enki.public_key'       => 'pk_test_enki',
+        'acquirers.enki.secret_key'       => 'sk_test_enki',
+        'acquirers.payfort.enabled'       => true,
+        'acquirers.payfort.api_key'       => 'pk_test_payfort',
+        'acquirers.payfort.api_secret'    => 'sk_test_payfort',
+    ]);
+
+    $account = Account::create([
+        'id' => Str::uuid()->toString(), 'name' => 'Seller Account Priority',
+        'document' => '98765432100', 'document_type' => 'cpf',
+        'email' => 'seller-acct@test.com', 'status' => 'active',
+    ]);
+
+    $payfort = Acquirer::firstOrCreate(
+        ['slug' => 'payfort'],
+        ['name' => 'PayFort Bank', 'is_active' => true, 'supported_methods' => ['pix'], 'settings' => []]
+    );
+
+    // Global: enki has higher priority (0), payfort lower (1)
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'enki'],
+        ['display_name' => 'Enki', 'type' => 'gateway', 'enabled' => true,
+         'supported_methods' => ['pix'], 'priority' => 0, 'settings' => []]
+    );
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'payfort'],
+        ['display_name' => 'PayFort', 'type' => 'gateway', 'enabled' => true,
+         'supported_methods' => ['pix'], 'priority' => 1, 'settings' => []]
+    );
+
+    // Account is specifically assigned to payfort
+    AccountAcquirer::create([
+        'account_id' => $account->id, 'acquirer_id' => $payfort->id,
+        'credentials' => encrypt(json_encode(['api_key' => 'acct-key', 'api_secret' => 'acct-secret'])),
+        'priority' => 0, 'is_active' => true, 'settings' => [],
+    ]);
+
+    AcquirerFactory::reset();
+    $factory = AcquirerFactory::instance();
+
+    // Account-specific payfort should win over global enki priority
+    expect($factory->getActiveAcquirerNameForAccount($account->id, 'pix'))->toBe('payfort');
+});
+
+it('falls back to global priority when account has no acquirer assigned', function () {
+    disableAllAcquirersInConfig();
+    config([
+        'acquirers.enki.enabled'    => true,
+        'acquirers.enki.public_key' => 'pk_test_enki',
+        'acquirers.enki.secret_key' => 'sk_test_enki',
+    ]);
+
+    $account = Account::create([
+        'id' => Str::uuid()->toString(), 'name' => 'Seller No Acquirer',
+        'document' => '11122233344', 'document_type' => 'cpf',
+        'email' => 'seller-none@test.com', 'status' => 'active',
+    ]);
+
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'enki'],
+        ['display_name' => 'Enki', 'type' => 'gateway', 'enabled' => true,
+         'supported_methods' => ['pix'], 'priority' => 0, 'settings' => []]
+    );
+
+    AcquirerFactory::reset();
+    $factory = AcquirerFactory::instance();
+
+    expect($factory->getActiveAcquirerNameForAccount($account->id, 'pix'))->toBe('enki');
 });
