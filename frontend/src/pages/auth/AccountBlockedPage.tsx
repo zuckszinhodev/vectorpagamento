@@ -12,7 +12,7 @@ export default function AccountBlockedPage() {
         {/* Logo */}
         <div className="mb-8">
           <span className="text-3xl font-bold">
-            <span className="text-emerald-400">Wazer</span>
+            <span className="text-green-400">Wazer</span>
             <span className="text-white">Pay</span>
           </span>
         </div>
@@ -50,10 +50,10 @@ export default function AccountBlockedPage() {
             Se você acredita que isso foi um erro, entre em contato com nossa equipe de suporte:
           </p>
           <a
-            href="mailto:suporte@Vector Pagamentos.com"
-            className="inline-flex items-center gap-2 text-emerald-400 hover:text-emerald-300 font-medium text-sm transition-colors"
+            href="mailto:suporte@vectorpagamentos.com"
+            className="inline-flex items-center gap-2 text-green-400 hover:text-green-300 font-medium text-sm transition-colors"
           >
-            suporte@Vector Pagamentos.com
+            suporte@vectorpagamentos.com
           </a>
         </div>
 
@@ -68,3 +68,5 @@ export default function AccountBlockedPage() {
     </div>
   );
 }
+
+
