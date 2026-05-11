@@ -639,6 +639,17 @@ class CustomerAdminController extends Controller
             $query->where('status', $status);
         }
 
+        if ($request->filled('search')) {
+            $search = addcslashes($request->input('search'), '%_\\');
+            $query->where(function ($q) use ($search) {
+                $q->where('id', 'ilike', "%{$search}%")
+                  ->orWhere('customer->name', 'ilike', "%{$search}%")
+                  ->orWhere('customer->nome', 'ilike', "%{$search}%")
+                  ->orWhere('customer->email', 'ilike', "%{$search}%")
+                  ->orWhere('description', 'ilike', "%{$search}%");
+            });
+        }
+
         $charges = $query->paginate($perPage);
 
         $data = $charges->map(function ($charge) {

@@ -181,11 +181,25 @@ class ChargeService
         $acquirer = $this->routingService->selectAcquirer('pix', $charge);
         $pixData = $acquirer->generatePixQrCode($charge);
 
+        if (empty($pixData['success'])) {
+            $charge->update(['status' => 'failed']);
+            throw new \Exception($pixData['error'] ?? 'Falha ao gerar cobrança PIX na adquirente');
+        }
+
+        $qrCode = $pixData['pix_qr_code'] ?? null;
+        $copyPaste = $pixData['pix_copy_paste'] ?? $qrCode;
+
+        if (empty($qrCode) && empty($copyPaste)) {
+            $charge->update(['status' => 'failed']);
+            throw new \Exception('Adquirente não retornou dados do PIX');
+        }
+
         $charge->update([
             'status' => 'waiting_payment',
             'acquirer' => $this->getAcquirerName($acquirer),
-            'pix_qr_code' => $pixData['qr_code'],
-            'pix_code' => $pixData['qr_code_text'],
+            'pix_qr_code' => $qrCode,
+            'pix_copy_paste' => $copyPaste,
+            'pix_qr_code_url' => $pixData['pix_qr_code_url'] ?? null,
         ]);
 
         return $charge;

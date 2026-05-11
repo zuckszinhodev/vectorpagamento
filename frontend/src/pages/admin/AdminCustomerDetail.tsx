@@ -19,6 +19,7 @@ import {
   EyeIcon,
   IdentificationIcon,
   KeyIcon,
+  MagnifyingGlassIcon,
   ShieldCheckIcon,
   SignalIcon,
   UserCircleIcon,
@@ -191,6 +192,7 @@ export default function AdminCustomerDetail() {
   const [activeTab, setActiveTab] = useState<Tab>('info');
   const [chargesPage, setChargesPage] = useState(1);
   const [chargesStatus, setChargesStatus] = useState('all');
+  const [chargesSearch, setChargesSearch] = useState('');
   const [withdrawalsPage, setWithdrawalsPage] = useState(1);
   const [logsPage, setLogsPage] = useState(1);
 
@@ -206,12 +208,13 @@ export default function AdminCustomerDetail() {
 
   // Fetch charges
   const { data: chargesData, isLoading: chargesLoading } = useQuery({
-    queryKey: ['admin-customer-charges', customerId, chargesPage, chargesStatus],
+    queryKey: ['admin-customer-charges', customerId, chargesPage, chargesStatus, chargesSearch],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('page', chargesPage.toString());
       params.append('per_page', '15');
       if (chargesStatus !== 'all') params.append('status', chargesStatus);
+      if (chargesSearch) params.append('search', chargesSearch);
       const response = await api.get(`/admin/customers/${customerId}/charges?${params.toString()}`);
       return response.data;
     },
@@ -514,6 +517,8 @@ export default function AdminCustomerDetail() {
           setPage={setChargesPage}
           statusFilter={chargesStatus}
           setStatusFilter={(s) => { setChargesStatus(s); setChargesPage(1); }}
+          searchQuery={chargesSearch}
+          setSearchQuery={(s) => { setChargesSearch(s); setChargesPage(1); }}
           getStatusBadge={getChargeStatusBadge}
           onChargeStatusChanged={() => {
             queryClient.invalidateQueries({ queryKey: ['admin-customer-charges', customerId] });
@@ -796,6 +801,8 @@ function ChargesTab({
   setPage,
   statusFilter,
   setStatusFilter,
+  searchQuery,
+  setSearchQuery,
   getStatusBadge,
   onChargeStatusChanged,
 }: {
@@ -807,6 +814,8 @@ function ChargesTab({
   setPage: (p: number) => void;
   statusFilter: string;
   setStatusFilter: (s: string) => void;
+  searchQuery: string;
+  setSearchQuery: (s: string) => void;
   getStatusBadge: (status: string) => JSX.Element;
   onChargeStatusChanged: () => void;
 }) {
@@ -874,7 +883,17 @@ function ChargesTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
+          <input
+            type="text"
+            placeholder="Buscar por ID, nome, email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-9 pr-4 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+          />
+        </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}

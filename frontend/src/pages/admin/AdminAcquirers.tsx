@@ -20,6 +20,7 @@ interface Acquirer {
   name: string;
   slug: string;
   display_name: string;
+  nominal_name?: string;
   logo_url?: string;
   is_active: boolean;
   is_primary: boolean;
@@ -30,8 +31,12 @@ interface Acquirer {
   supports_boleto: boolean;
   acquirer_fee_percentage: number;
   acquirer_fee_fixed: number;
+  acquirer_fee_pix_out_percentage: number;
+  acquirer_fee_pix_out_fixed: number;
   gateway_fee_percentage: number;
   gateway_fee_fixed: number;
+  gateway_fee_pix_out_percentage: number;
+  gateway_fee_pix_out_fixed: number;
   sandbox_mode: boolean;
   last_health_check?: string;
   health_status?: 'healthy' | 'degraded' | 'down';
@@ -499,6 +504,9 @@ export default function AdminAcquirers() {
                   <div>
                     <h3 className="font-semibold text-tx-primary">{acquirer.display_name}</h3>
                     <p className="text-xs text-tx-muted">{acquirer.slug}</p>
+                    {acquirer.nominal_name && (
+                      <p className="text-xs text-green-500 font-medium">Nominal: {acquirer.nominal_name}</p>
+                    )}
                   </div>
                 </div>
                 <button
@@ -544,17 +552,31 @@ export default function AdminAcquirers() {
               {/* Fees */}
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <div className="rounded-lg bg-surface-page p-2 text-center">
-                  <p className="text-xs text-tx-muted">Taxa Adquirente</p>
+                  <p className="text-xs text-tx-muted">Taxa Cashin</p>
                   <p className="text-sm font-medium text-tx-primary">
                     {acquirer.acquirer_fee_percentage ? `${acquirer.acquirer_fee_percentage}%` : '-'}
                     {acquirer.acquirer_fee_fixed ? ` + R$${acquirer.acquirer_fee_fixed}` : ''}
                   </p>
                 </div>
                 <div className="rounded-lg bg-surface-page p-2 text-center">
-                  <p className="text-xs text-tx-muted">Taxa Plataforma</p>
+                  <p className="text-xs text-tx-muted">Taxa Cashout</p>
+                  <p className="text-sm font-medium text-tx-primary">
+                    {acquirer.acquirer_fee_pix_out_percentage ? `${acquirer.acquirer_fee_pix_out_percentage}%` : '-'}
+                    {acquirer.acquirer_fee_pix_out_fixed ? ` + R$${acquirer.acquirer_fee_pix_out_fixed}` : ''}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-surface-page p-2 text-center">
+                  <p className="text-xs text-tx-muted">Plataforma Cashin</p>
                   <p className="text-sm font-medium text-green-500">
                     {acquirer.gateway_fee_percentage ? `${acquirer.gateway_fee_percentage}%` : '-'}
                     {acquirer.gateway_fee_fixed ? ` + R$${acquirer.gateway_fee_fixed}` : ''}
+                  </p>
+                </div>
+                <div className="rounded-lg bg-surface-page p-2 text-center">
+                  <p className="text-xs text-tx-muted">Plataforma Cashout</p>
+                  <p className="text-sm font-medium text-green-500">
+                    {acquirer.gateway_fee_pix_out_percentage ? `${acquirer.gateway_fee_pix_out_percentage}%` : '-'}
+                    {acquirer.gateway_fee_pix_out_fixed ? ` + R$${acquirer.gateway_fee_pix_out_fixed}` : ''}
                   </p>
                 </div>
               </div>
@@ -642,11 +664,16 @@ function EditAcquirerModal({
 }) {
   const [form, setForm] = useState({
     display_name: acquirer.display_name,
+    nominal_name: acquirer.nominal_name || '',
     priority: acquirer.priority,
     acquirer_fee_percentage: acquirer.acquirer_fee_percentage || 0,
     acquirer_fee_fixed: acquirer.acquirer_fee_fixed || 0,
+    acquirer_fee_pix_out_percentage: acquirer.acquirer_fee_pix_out_percentage || 0,
+    acquirer_fee_pix_out_fixed: acquirer.acquirer_fee_pix_out_fixed || 0,
     gateway_fee_percentage: acquirer.gateway_fee_percentage || 0,
     gateway_fee_fixed: acquirer.gateway_fee_fixed || 0,
+    gateway_fee_pix_out_percentage: acquirer.gateway_fee_pix_out_percentage || 0,
+    gateway_fee_pix_out_fixed: acquirer.gateway_fee_pix_out_fixed || 0,
     sandbox_mode: acquirer.sandbox_mode,
     supports_pix: acquirer.supports_pix,
     supports_pix_out: acquirer.supports_pix_out,
@@ -679,6 +706,16 @@ function EditAcquirerModal({
                 />
               </div>
               <div>
+                <label className="block text-sm text-tx-muted mb-1">Nome Nominal</label>
+                <input
+                  type="text"
+                  value={form.nominal_name}
+                  onChange={(e) => setForm({ ...form, nominal_name: e.target.value })}
+                  placeholder="Nome exibido nas cobranças"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                />
+              </div>
+              <div>
                 <label className="block text-sm text-tx-muted mb-1">Prioridade</label>
                 <input
                   type="number"
@@ -690,10 +727,10 @@ function EditAcquirerModal({
             </div>
           </div>
 
-          {/* Acquirer Fees */}
+          {/* Acquirer Fees - Cashin */}
           <div>
-            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa do Adquirente</h3>
-            <p className="text-xs text-tx-muted mb-3">Custo que o adquirente cobra por transação</p>
+            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa do Adquirente (Cashin)</h3>
+            <p className="text-xs text-tx-muted mb-3">Custo que o adquirente cobra por transação de entrada</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm text-tx-muted mb-1">Percentual (%)</label>
@@ -718,10 +755,38 @@ function EditAcquirerModal({
             </div>
           </div>
 
-          {/* Gateway/Platform Fees */}
+          {/* Acquirer Fees - Cashout */}
           <div>
-            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa da Plataforma (Vector Pagamentos)</h3>
-            <p className="text-xs text-tx-muted mb-3">Taxa que cobramos do vendedor por transação</p>
+            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa do Adquirente (Cashout / PIX OUT)</h3>
+            <p className="text-xs text-tx-muted mb-3">Custo que o adquirente cobra por saque/transferência</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm text-tx-muted mb-1">Percentual (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.acquirer_fee_pix_out_percentage}
+                  onChange={(e) => setForm({ ...form, acquirer_fee_pix_out_percentage: parseFloat(e.target.value) || 0 })}
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-tx-muted mb-1">Fixa (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.acquirer_fee_pix_out_fixed}
+                  onChange={(e) => setForm({ ...form, acquirer_fee_pix_out_fixed: parseFloat(e.target.value) || 0 })}
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Gateway/Platform Fees - Cashin */}
+          <div>
+            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa da Plataforma - Cashin (Vector Pagamentos)</h3>
+            <p className="text-xs text-tx-muted mb-3">Taxa que cobramos do vendedor por transação de entrada</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm text-tx-muted mb-1">Percentual (%)</label>
@@ -740,6 +805,34 @@ function EditAcquirerModal({
                   step="0.01"
                   value={form.gateway_fee_fixed}
                   onChange={(e) => setForm({ ...form, gateway_fee_fixed: parseFloat(e.target.value) || 0 })}
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Gateway/Platform Fees - Cashout */}
+          <div>
+            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa da Plataforma - Cashout (Vector Pagamentos)</h3>
+            <p className="text-xs text-tx-muted mb-3">Taxa que cobramos do vendedor por saque/transferência</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm text-tx-muted mb-1">Percentual (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.gateway_fee_pix_out_percentage}
+                  onChange={(e) => setForm({ ...form, gateway_fee_pix_out_percentage: parseFloat(e.target.value) || 0 })}
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-tx-muted mb-1">Fixa (R$)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={form.gateway_fee_pix_out_fixed}
+                  onChange={(e) => setForm({ ...form, gateway_fee_pix_out_fixed: parseFloat(e.target.value) || 0 })}
                   className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                 />
               </div>

@@ -82,6 +82,9 @@ export default function AdminFinance() {
   const [activeMainTab, setActiveMainTab] = useState<'withdrawals' | 'transactions'>('transactions');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('pending');
+  const [methodFilter, setMethodFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -101,7 +104,7 @@ export default function AdminFinance() {
 
   // Fetch withdrawals
   const { data: withdrawalsData, isLoading, refetch } = useQuery({
-    queryKey: ['admin-withdrawals', search, statusFilter, page],
+    queryKey: ['admin-withdrawals', search, statusFilter, methodFilter, dateFrom, dateTo, page],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('page', page.toString());
@@ -110,6 +113,9 @@ export default function AdminFinance() {
       if (statusFilter !== 'all') {
         params.append('status', statusFilter === 'rejected' ? 'cancelled' : statusFilter);
       }
+      if (methodFilter !== 'all') params.append('method', methodFilter);
+      if (dateFrom) params.append('date_from', dateFrom);
+      if (dateTo) params.append('date_to', dateTo);
 
       const response = await api.get(`/admin/withdrawals?${params.toString()}`);
       return response.data;
@@ -457,46 +463,99 @@ export default function AdminFinance() {
 
       {/* Filters */}
       <div className="rounded-2xl bg-surface-card p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-          <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
-            <input
-              type="text"
-              placeholder="Buscar por nome ou email..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-            />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="relative flex-1">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
+              <input
+                type="text"
+                placeholder="Buscar por nome, email ou ID..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <FunnelIcon className="h-4 w-4 text-tx-muted" />
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              >
+                <option value="all">Todos os status</option>
+                <option value="pending">Pendentes</option>
+                <option value="processing">Processando</option>
+                <option value="completed">Concluídos</option>
+                <option value="cancelled">Cancelados</option>
+              </select>
+
+              <select
+                value={methodFilter}
+                onChange={(e) => {
+                  setMethodFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              >
+                <option value="all">Todos os métodos</option>
+                <option value="pix">PIX</option>
+                <option value="bank_transfer">TED</option>
+              </select>
+
+              <button
+                onClick={() => refetch()}
+                className="flex items-center gap-2 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-secondary hover:bg-border-DEFAULT transition-colors"
+              >
+                <ArrowPathIcon className="h-4 w-4" />
+                Atualizar
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <FunnelIcon className="h-4 w-4 text-tx-muted" />
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
-            >
-              <option value="all">Todos os status</option>
-              <option value="pending">Pendentes</option>
-              <option value="processing">Processando</option>
-              <option value="completed">Concluídos</option>
-              <option value="cancelled">Cancelados</option>
-            </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <CalendarDaysIcon className="h-4 w-4 text-tx-muted" />
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              />
+              <span className="text-sm text-tx-muted">até</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              />
+            </div>
+            {(search || statusFilter !== 'all' || methodFilter !== 'all' || dateFrom || dateTo) && (
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('pending');
+                  setMethodFilter('all');
+                  setDateFrom('');
+                  setDateTo('');
+                  setPage(1);
+                }}
+                className="flex items-center gap-1 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/20 transition-colors"
+              >
+                <XMarkIcon className="h-3.5 w-3.5" />
+                Limpar filtros
+              </button>
+            )}
+            <span className="text-xs text-tx-muted ml-auto">
+              {pagination.total} saques encontrados
+            </span>
           </div>
-
-          <button
-            onClick={() => refetch()}
-            className="flex items-center gap-2 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-secondary hover:bg-border-DEFAULT transition-colors"
-          >
-            <ArrowPathIcon className="h-4 w-4" />
-            Atualizar
-          </button>
         </div>
       </div>
 
@@ -588,6 +647,16 @@ export default function AdminFinance() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedWithdrawal(withdrawal);
+                              setShowDetailModal(true);
+                            }}
+                            className="rounded-lg bg-surface-hover p-1.5 text-tx-muted hover:text-tx-primary transition-colors"
+                            title="Ver detalhes"
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                          </button>
                           {withdrawal.status === 'pending' && (
                             <>
                               <button
@@ -599,6 +668,7 @@ export default function AdminFinance() {
                               <button
                                 onClick={() => {
                                   setSelectedWithdrawal(withdrawal);
+                                  setRejectReason('');
                                   setShowDetailModal(true);
                                 }}
                                 className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600 transition-colors"
@@ -1089,10 +1159,10 @@ export default function AdminFinance() {
 
       {/* Reject Modal */}
       {showDetailModal && selectedWithdrawal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-surface-card p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl bg-surface-card p-6 shadow-xl my-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-tx-primary">Rejeitar Saque</h2>
+              <h2 className="text-lg font-bold text-tx-primary">Detalhes do Saque</h2>
               <button
                 onClick={() => {
                   setShowDetailModal(false);
@@ -1106,50 +1176,138 @@ export default function AdminFinance() {
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs text-tx-muted mb-1">Cliente</p>
-                <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.customer_name}</p>
-              </div>
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs text-tx-muted mb-1">Valor</p>
-                <p className="text-lg font-bold text-tx-primary">{formatCurrency(selectedWithdrawal.amount)}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-tx-secondary mb-2">
-                  Motivo da rejeição
-                </label>
-                <textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Informe o motivo..."
-                  rows={3}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Cliente</p>
+                  <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.customer_name}</p>
+                  {selectedWithdrawal.customer_email && (
+                    <p className="text-xs text-tx-muted">{selectedWithdrawal.customer_email}</p>
+                  )}
+                </div>
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Status</p>
+                  {getStatusBadge(selectedWithdrawal.status)}
+                </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => {
-                    setShowDetailModal(false);
-                    setRejectReason('');
-                  }}
-                  className="flex-1 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => processMutation.mutate({
-                    withdrawalId: selectedWithdrawal.id,
-                    action: 'reject',
-                    notes: rejectReason,
-                  })}
-                  disabled={processMutation.isPending}
-                  className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
-                >
-                  {processMutation.isPending ? 'Rejeitando...' : 'Confirmar Rejeição'}
-                </button>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Valor</p>
+                  <p className="text-sm font-bold text-tx-primary">{formatCurrency(selectedWithdrawal.amount)}</p>
+                </div>
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Taxa</p>
+                  <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.fee ? formatCurrency(selectedWithdrawal.fee) : 'R$ 0'}</p>
+                </div>
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Líquido</p>
+                  <p className="text-sm font-bold text-emerald-600">{formatCurrency(selectedWithdrawal.net_amount || (selectedWithdrawal.amount - (selectedWithdrawal.fee || 0)))}</p>
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Método</p>
+                  <p className="text-sm font-medium text-tx-primary">
+                    {selectedWithdrawal.method === 'pix' ? 'PIX' : 'TED'}
+                    {selectedWithdrawal.is_instant && ' (Instantâneo)'}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Data</p>
+                  <p className="text-sm font-medium text-tx-primary">{formatDate(selectedWithdrawal.requested_at)}</p>
+                </div>
+              </div>
+
+              {selectedWithdrawal.pix_key && (
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Chave PIX</p>
+                  <p className="text-sm font-mono text-tx-primary">{selectedWithdrawal.pix_key}</p>
+                </div>
+              )}
+
+              {selectedWithdrawal.bank_name && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-surface-page p-3">
+                    <p className="text-xs text-tx-muted mb-0.5">Banco</p>
+                    <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.bank_name}</p>
+                  </div>
+                  <div className="rounded-xl bg-surface-page p-3">
+                    <p className="text-xs text-tx-muted mb-0.5">Conta</p>
+                    <p className="text-sm font-mono text-tx-primary">{selectedWithdrawal.bank_agency} / {selectedWithdrawal.bank_account}</p>
+                  </div>
+                </div>
+              )}
+
+              {(selectedWithdrawal.failure_reason || selectedWithdrawal.notes || selectedWithdrawal.cancel_reason) && (
+                <div className="rounded-xl bg-red-500/5 border border-red-500/20 p-3">
+                  <p className="text-xs text-red-500 mb-0.5">Motivo</p>
+                  <p className="text-sm text-tx-primary">{selectedWithdrawal.failure_reason || selectedWithdrawal.notes || selectedWithdrawal.cancel_reason}</p>
+                </div>
+              )}
+
+              <div className="rounded-xl bg-surface-page p-3">
+                <p className="text-xs text-tx-muted mb-0.5">ID</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-mono text-tx-muted">{selectedWithdrawal.id}</p>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(selectedWithdrawal.id); toast.success('ID copiado'); }}
+                    className="text-green-500 hover:text-green-400"
+                  >
+                    <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {selectedWithdrawal.status === 'pending' && (
+                <>
+                  <hr className="border-border-DEFAULT" />
+                  <div>
+                    <label className="block text-sm font-medium text-tx-secondary mb-2">
+                      Motivo da rejeição
+                    </label>
+                    <textarea
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder="Informe o motivo..."
+                      rows={3}
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => processMutation.mutate({ withdrawalId: selectedWithdrawal.id, action: 'approve' })}
+                      disabled={processMutation.isPending}
+                      className="flex-1 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                    >
+                      {processMutation.isPending ? 'Processando...' : 'Aprovar'}
+                    </button>
+                    <button
+                      onClick={() => processMutation.mutate({
+                        withdrawalId: selectedWithdrawal.id,
+                        action: 'reject',
+                        notes: rejectReason,
+                      })}
+                      disabled={processMutation.isPending || !rejectReason.trim()}
+                      className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                    >
+                      {processMutation.isPending ? 'Rejeitando...' : 'Rejeitar'}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {selectedWithdrawal.status !== 'pending' && (
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => { setShowDetailModal(false); setSelectedWithdrawal(null); }}
+                    className="rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

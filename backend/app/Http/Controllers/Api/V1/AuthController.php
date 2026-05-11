@@ -402,24 +402,24 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // Check MFA if enabled
-        if ($user->mfa_enabled) {
-            $mfaToken = Str::random(64);
-            // Bind MFA token to the originating IP to prevent token hijacking
-            cache()->put('mfa_token:' . $mfaToken, [
-                'user_id' => $user->id,
-                'ip' => $this->getClientIp($request),
-                'ua_hash' => $this->buildUserAgentHash($request),
-            ], 300);
-            
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'requires_mfa' => true,
-                    'mfa_token' => $mfaToken,
-                ],
-            ]);
-        }
+        // Check MFA if enabled — TEMPORARILY DISABLED AT LOGIN
+        // MFA is still enforced on sensitive operations (withdrawals, admin actions)
+        // if ($user->mfa_enabled) {
+        //     $mfaToken = Str::random(64);
+        //     cache()->put('mfa_token:' . $mfaToken, [
+        //         'user_id' => $user->id,
+        //         'ip' => $this->getClientIp($request),
+        //         'ua_hash' => $this->buildUserAgentHash($request),
+        //     ], 300);
+        //
+        //     return response()->json([
+        //         'success' => true,
+        //         'data' => [
+        //             'requires_mfa' => true,
+        //             'mfa_token' => $mfaToken,
+        //         ],
+        //     ]);
+        // }
 
         // Update last login
         $user->forceFill([

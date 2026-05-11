@@ -901,10 +901,25 @@ class WithdrawalController extends Controller
             // Search by customer name or email
             if ($request->filled('search')) {
                 $search = addcslashes($request->input('search'), '%_\\');
-                $query->whereHas('account.users', function ($q) use ($search) {
-                    $q->where('name', 'ilike', "%{$search}%")
-                      ->orWhere('email', 'ilike', "%{$search}%");
+                $query->where(function ($q) use ($search) {
+                    $q->where('id', 'ilike', "%{$search}%")
+                      ->orWhereHas('account.users', function ($sub) use ($search) {
+                          $sub->where('name', 'ilike', "%{$search}%")
+                              ->orWhere('email', 'ilike', "%{$search}%");
+                      });
                 });
+            }
+
+            if ($request->filled('method')) {
+                $query->where('method', $request->input('method'));
+            }
+
+            if ($request->filled('date_from')) {
+                $query->whereDate('created_at', '>=', $request->input('date_from'));
+            }
+
+            if ($request->filled('date_to')) {
+                $query->whereDate('created_at', '<=', $request->input('date_to'));
             }
 
             $withdrawals = $query->orderBy('created_at', 'desc')->paginate($perPage);
@@ -924,6 +939,8 @@ class WithdrawalController extends Controller
                     'is_instant' => (bool) $withdrawal->is_instant,
                     'pix_key' => $withdrawal->destination['pix_key'] ?? null,
                     'bank_name' => $withdrawal->destination['bank_name'] ?? null,
+                    'bank_account' => $withdrawal->destination['account_number'] ?? null,
+                    'bank_agency' => $withdrawal->destination['agency'] ?? null,
                     'status' => $withdrawal->status,
                     'failure_reason' => $withdrawal->failure_reason,
                     'notes' => $withdrawal->notes,

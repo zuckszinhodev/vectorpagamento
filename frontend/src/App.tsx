@@ -68,6 +68,7 @@ const PublicCheckoutPage = lazy(() => import('@/pages/public/CheckoutPage'));
 const DomainLandingPage = lazy(() => import('@/pages/public/DomainLandingPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
+const ApiDocsPage = lazy(() => import('@/pages/ApiDocsPage'));
 
 // Member Area Pages (lazy)
 const MemberLoginPage = lazy(() => import('@/pages/members/MemberLoginPage'));
@@ -432,6 +433,7 @@ function App() {
         <Route path="/splits" element={<SplitManagement />} />
         <Route path="/webhook-logs" element={<WebhookLogsPage />} />
         <Route path="/wazer-ia" element={<WazerIAPage />} />
+        <Route path="/api-docs" element={<ApiDocsPage />} />
       </Route>
 
       {/* Admin Routes - Full screen with dedicated layout */}
@@ -509,6 +511,9 @@ function App() {
       {/* Legal Pages */}
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+
+      {/* API Documentation (public) */}
+      <Route path="/docs" element={<ApiDocsPage />} />
 
       {/* Member Area - Student facing pages */}
       <Route path="/members/login" element={<MemberLoginPage />} />

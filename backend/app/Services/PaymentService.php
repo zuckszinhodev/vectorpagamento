@@ -406,17 +406,30 @@ class PaymentService
             };
 
             if ($result && ($result['success'] ?? false)) {
-                $cb?->recordSuccess();
-                $this->rotationService?->markSuccess('pix', $acquirerName);
+                $qrCode = $result['pix_qr_code'] ?? null;
+                $copyPaste = $result['pix_copy_paste'] ?? $qrCode;
 
-                if ($acquirerName !== $primaryAcquirer) {
-                    Log::warning('PIX fallback succeeded', [
+                if (empty($qrCode) && empty($copyPaste)) {
+                    Log::error('PIX acquirer returned success but no QR code data', [
                         'charge_id' => $charge->id,
-                        'primary' => $primaryAcquirer,
-                        'fallback_used' => $acquirerName,
+                        'acquirer' => $acquirerName,
                     ]);
+                    $result = ['success' => false, 'error' => 'Adquirente não retornou dados do PIX'];
+                } else {
+                    $charge->update(['status' => 'waiting_payment']);
+
+                    $cb?->recordSuccess();
+                    $this->rotationService?->markSuccess('pix', $acquirerName);
+
+                    if ($acquirerName !== $primaryAcquirer) {
+                        Log::warning('PIX fallback succeeded', [
+                            'charge_id' => $charge->id,
+                            'primary' => $primaryAcquirer,
+                            'fallback_used' => $acquirerName,
+                        ]);
+                    }
+                    return $result;
                 }
-                return $result;
             }
 
             // Record failure in circuit breaker
@@ -870,7 +883,10 @@ class PaymentService
     public function generatePix(Charge $charge): array
     {
         if (!$this->isConfigured()) {
-            return $this->generateMockPaymentData($charge);
+            return [
+                'success' => false,
+                'error' => 'Nenhuma adquirente configurada para processar PIX. Configure as credenciais no painel admin.',
+            ];
         }
 
         try {
@@ -1221,7 +1237,10 @@ class PaymentService
     public function processCard(Charge $charge, array $cardData): array
     {
         if (!$this->isConfigured()) {
-            return $this->generateMockPaymentData($charge);
+            return [
+                'success' => false,
+                'error' => 'Nenhuma adquirente configurada para processar cartão. Configure as credenciais no painel admin.',
+            ];
         }
 
         try {
@@ -1984,59 +2003,6 @@ class PaymentService
             'expired' => 'expired',
             default => 'pending',
         };
-    }
-
-    /**
-     * Generate mock payment data (fallback when Babylon is not configured)
-     */
-    private function generateMockPaymentData(Charge $charge): array
-    {
-        switch ($charge->payment_method) {
-            case 'pix':
-                $pixCode = '00020126580014br.gov.bcb.pix0136' . Str::uuid()->toString();
-                $defaultPixExpirationAt = $this->defaultPixExpirationAt();
-                $charge->update([
-                    'pix_qr_code' => $pixCode,
-                    'pix_copy_paste' => $pixCode,
-                    'expires_at' => $defaultPixExpirationAt,
-                ]);
-                return [
-                    'success' => true,
-                    'mock' => true,
-                    'pix_qr_code' => $pixCode,
-                    'pix_copy_paste' => $pixCode,
-                    'expires_at' => $defaultPixExpirationAt->toIso8601String(),
-                ];
-
-            case 'boleto':
-                $boletoUrl = 'https://boleto.example.com/' . $charge->id;
-                $barcode = '23793.38128 60800.000003 00000.000400 1 ' . rand(10000000000000, 99999999999999);
-                $charge->update([
-                    'boleto_url' => $boletoUrl,
-                    'boleto_barcode' => $barcode,
-                    'expires_at' => now()->addDays(3),
-                ]);
-                return [
-                    'success' => true,
-                    'mock' => true,
-                    'boleto_url' => $boletoUrl,
-                    'boleto_barcode' => $barcode,
-                    'expires_at' => now()->addDays(3)->toIso8601String(),
-                ];
-
-            case 'credit_card':
-                $charge->update([
-                    'payment_url' => url('/checkout/' . $charge->id),
-                ]);
-                return [
-                    'success' => true,
-                    'mock' => true,
-                    'payment_url' => url('/checkout/' . $charge->id),
-                ];
-
-            default:
-                return ['success' => false, 'error' => 'Método não suportado'];
-        }
     }
 
     private function defaultPixExpirationAt(): \Illuminate\Support\Carbon

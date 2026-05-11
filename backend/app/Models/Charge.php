@@ -76,6 +76,8 @@ class Charge extends Model
         'cancelled_at' => 'datetime',
     ];
 
+    protected $appends = ['acquirer_name'];
+
     /**
      * Status constants
      */
@@ -154,6 +156,16 @@ class Charge extends Model
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
+    }
+
+    public function getAcquirerNameAttribute(): ?string
+    {
+        if (!$this->acquirer) {
+            return null;
+        }
+
+        $config = AcquirerConfig::findByKey($this->acquirer);
+        return $config->nominal_name ?? $config->display_name ?? $this->acquirer;
     }
 
     public function product(): BelongsTo

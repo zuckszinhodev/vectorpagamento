@@ -70,8 +70,13 @@ class AcquirerAdminController extends Controller
                     'fee_boleto' => (float) $config->gateway_fee_percentage,
                     'acquirer_fee_percentage' => (float) ($config->acquirer_fee_percentage ?? 0),
                     'acquirer_fee_fixed' => (float) ($config->acquirer_fee_fixed ?? 0),
+                    'acquirer_fee_pix_out_percentage' => (float) ($config->acquirer_fee_pix_out_percentage ?? 0),
+                    'acquirer_fee_pix_out_fixed' => (float) ($config->acquirer_fee_pix_out_fixed ?? 0),
                     'gateway_fee_percentage' => (float) ($config->gateway_fee_percentage ?? 0),
                     'gateway_fee_fixed' => (float) ($config->gateway_fee_fixed ?? 0),
+                    'gateway_fee_pix_out_percentage' => (float) ($config->gateway_fee_pix_out_percentage ?? 0),
+                    'gateway_fee_pix_out_fixed' => (float) ($config->gateway_fee_pix_out_fixed ?? 0),
+                    'nominal_name' => $config->nominal_name ?? null,
                     'sandbox_mode' => (bool) ($config->settings['sandbox'] ?? false),
                     'health_status' => $config->settings['health_status'] ?? null,
                     'last_health_check' => $config->settings['last_health_check'] ?? null,
@@ -307,8 +312,13 @@ class AcquirerAdminController extends Controller
             'credentials' => ['sometimes', 'array'],
             'acquirer_fee_percentage' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'acquirer_fee_fixed' => ['sometimes', 'numeric', 'min:0'],
+            'acquirer_fee_pix_out_percentage' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'acquirer_fee_pix_out_fixed' => ['sometimes', 'numeric', 'min:0'],
             'gateway_fee_percentage' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'gateway_fee_fixed' => ['sometimes', 'numeric', 'min:0'],
+            'gateway_fee_pix_out_percentage' => ['sometimes', 'numeric', 'min:0', 'max:100'],
+            'gateway_fee_pix_out_fixed' => ['sometimes', 'numeric', 'min:0'],
+            'nominal_name' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
         // Handle display_name
@@ -401,11 +411,26 @@ class AcquirerAdminController extends Controller
         if (isset($validated['acquirer_fee_fixed'])) {
             $config->acquirer_fee_fixed = $validated['acquirer_fee_fixed'];
         }
+        if (isset($validated['acquirer_fee_pix_out_percentage'])) {
+            $config->acquirer_fee_pix_out_percentage = $validated['acquirer_fee_pix_out_percentage'];
+        }
+        if (isset($validated['acquirer_fee_pix_out_fixed'])) {
+            $config->acquirer_fee_pix_out_fixed = $validated['acquirer_fee_pix_out_fixed'];
+        }
         if (isset($validated['gateway_fee_percentage'])) {
             $config->gateway_fee_percentage = $validated['gateway_fee_percentage'];
         }
         if (isset($validated['gateway_fee_fixed'])) {
             $config->gateway_fee_fixed = $validated['gateway_fee_fixed'];
+        }
+        if (isset($validated['gateway_fee_pix_out_percentage'])) {
+            $config->gateway_fee_pix_out_percentage = $validated['gateway_fee_pix_out_percentage'];
+        }
+        if (isset($validated['gateway_fee_pix_out_fixed'])) {
+            $config->gateway_fee_pix_out_fixed = $validated['gateway_fee_pix_out_fixed'];
+        }
+        if (array_key_exists('nominal_name', $validated)) {
+            $config->nominal_name = $validated['nominal_name'];
         }
 
         $config->save();

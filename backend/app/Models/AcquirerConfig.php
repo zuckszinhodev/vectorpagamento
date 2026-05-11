@@ -66,14 +66,19 @@ class AcquirerConfig extends Model
     protected $fillable = [
         'acquirer_key',
         'display_name',
+        'nominal_name',
         'type',
         'enabled',
         'credentials',
         'supported_methods',
         'acquirer_fee_percentage',
         'acquirer_fee_fixed',
+        'acquirer_fee_pix_out_percentage',
+        'acquirer_fee_pix_out_fixed',
         'gateway_fee_percentage',
         'gateway_fee_fixed',
+        'gateway_fee_pix_out_percentage',
+        'gateway_fee_pix_out_fixed',
         'priority',
         'settings',
     ];
@@ -84,8 +89,12 @@ class AcquirerConfig extends Model
         'settings' => 'array',
         'acquirer_fee_percentage' => 'decimal:2',
         'acquirer_fee_fixed' => 'decimal:2',
+        'acquirer_fee_pix_out_percentage' => 'decimal:2',
+        'acquirer_fee_pix_out_fixed' => 'decimal:2',
         'gateway_fee_percentage' => 'decimal:2',
         'gateway_fee_fixed' => 'decimal:2',
+        'gateway_fee_pix_out_percentage' => 'decimal:2',
+        'gateway_fee_pix_out_fixed' => 'decimal:2',
     ];
 
     protected $hidden = [

@@ -457,7 +457,6 @@ export default function WithdrawalsPage() {
  ? withdrawals
  : withdrawals.filter(w => w.status === selectedStatus);
 
- const getWithdrawalReason = (withdrawal: Withdrawal) => withdrawal.failure_reason || withdrawal.notes;
 
  return (
  <div className="space-y-6">
@@ -657,7 +656,6 @@ export default function WithdrawalsPage() {
  filteredWithdrawals.map((withdrawal) => {
  const config = statusConfig[withdrawal.status];
  const StatusIcon = config.icon;
- const withdrawalReason = getWithdrawalReason(withdrawal);
 
  return (
  <tr key={withdrawal.id} className="hover:bg-surface-page/50 transition-colors">
@@ -734,11 +732,6 @@ export default function WithdrawalsPage() {
  <StatusIcon className="h-3.5 w-3.5" />
  {config.label}
  </span>
- {withdrawalReason && (
- <p className="mt-2 text-xs leading-5 text-tx-muted whitespace-pre-line break-words">
- Motivo: {withdrawalReason}
- </p>
- )}
  </div>
  </div>
  </td>
