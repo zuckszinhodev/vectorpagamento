@@ -1,8 +1,8 @@
-# Como Testar o SEO do WazerPay
+# Como Testar o SEO do Vector Pagamentos
 
 ## ✅ Configuração Atual
 
-O sistema está configurado para usar o domínio: **app.wazerpay.com.br**
+O sistema está configurado para usar o domínio: **app.vectorpagamentos.com**
 
 Banner social: `/img/bannersocial.png` (1200x630px)
 
@@ -14,12 +14,12 @@ Banner social: `/img/bannersocial.png` (1200x630px)
 
 **Passos:**
 1. Acesse o link acima
-2. Cole a URL: `https://app.wazerpay.com.br`
+2. Cole a URL: `https://app.vectorpagamentos.com`
 3. Clique em "Fetch new information" ou "Depurar"
 4. Verifique se o banner aparece corretamente
 
 **O que você deve ver:**
-- ✅ Título: "WazerPay - Gateway de Pagamento Completo"
+- ✅ Título: "Vector Pagamentos - Gateway de Pagamento Completo"
 - ✅ Descrição: "Plataforma completa de pagamentos..."
 - ✅ Imagem: Banner social (1200x630px)
 
@@ -33,7 +33,7 @@ Banner social: `/img/bannersocial.png` (1200x630px)
 
 **Passos:**
 1. Acesse o link acima
-2. Cole a URL: `https://app.wazerpay.com.br`
+2. Cole a URL: `https://app.vectorpagamentos.com`
 3. Clique em "Preview card"
 
 **O que você deve ver:**
@@ -47,7 +47,7 @@ Banner social: `/img/bannersocial.png` (1200x630px)
 
 **Passos:**
 1. Acesse o link acima
-2. Cole a URL: `https://app.wazerpay.com.br`
+2. Cole a URL: `https://app.vectorpagamentos.com`
 3. Clique em "Inspect"
 
 **O que você deve ver:**
@@ -58,7 +58,7 @@ Banner social: `/img/bannersocial.png` (1200x630px)
 
 **Passos:**
 1. Abra o WhatsApp Web ou App
-2. Envie a URL para você mesmo: `https://app.wazerpay.com.br`
+2. Envie a URL para você mesmo: `https://app.vectorpagamentos.com`
 3. Aguarde o preview carregar
 
 **O que você deve ver:**
@@ -77,7 +77,7 @@ Banner social: `/img/bannersocial.png` (1200x630px)
 
 **No navegador:**
 ```
-https://app.wazerpay.com.br/img/bannersocial.png
+https://app.vectorpagamentos.com/img/bannersocial.png
 ```
 
 **Localmente:**
@@ -105,7 +105,7 @@ Abra `http://localhost:5173` e pressione `Ctrl+U` (ou `Cmd+U` no Mac)
 
 Procure por:
 ```html
-<meta property="og:image" content="https://app.wazerpay.com.br/img/bannersocial.png" />
+<meta property="og:image" content="https://app.vectorpagamentos.com/img/bannersocial.png" />
 ```
 
 ## 📱 Testando em Diferentes Redes Sociais
@@ -158,7 +158,7 @@ Antes de compartilhar nas redes sociais:
 - [ ] Testado no Facebook Debugger
 - [ ] Testado no Twitter Card Validator
 - [ ] Testado no LinkedIn Post Inspector
-- [ ] URL `app.wazerpay.com.br` está acessível
+- [ ] URL `app.vectorpagamentos.com` está acessível
 - [ ] HTTPS está funcionando
 - [ ] Imagem carrega sem erros
 
@@ -167,7 +167,7 @@ Antes de compartilhar nas redes sociais:
 Após publicar, monitore:
 
 1. **Google Search Console**
-   - Submeta o sitemap: `https://app.wazerpay.com.br/sitemap.xml`
+   - Submeta o sitemap: `https://app.vectorpagamentos.com/sitemap.xml`
    - Verifique indexação
 
 2. **Analytics**
@@ -218,4 +218,4 @@ Se o banner não aparecer após seguir todos os passos:
 ---
 
 **Última atualização:** 24/02/2026
-**Domínio configurado:** app.wazerpay.com.br
+**Domínio configurado:** app.vectorpagamentos.com

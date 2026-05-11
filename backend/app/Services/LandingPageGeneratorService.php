@@ -51,7 +51,7 @@ class LandingPageGeneratorService
         // Generate page structure with AI
         $pageStructure = $this->generateWithAI($prompt, $context, $template);
         
-        // Image generation disabled — skip generateProductImages
+        // Image generation disabled â€” skip generateProductImages
         // Remove any image fields from generated sections
         $pageStructure = $this->stripImageFields($pageStructure);
         
@@ -124,7 +124,7 @@ class LandingPageGeneratorService
                 'Authorization' => "Bearer {$this->openrouterApiKey}",
                 'Content-Type' => 'application/json',
                 'HTTP-Referer' => config('app.url', 'http://localhost:8000'),
-                'X-Title' => 'GatePro Image Generator',
+                'X-Title' => 'Vector Pagamentos Image Generator',
             ])->withoutVerifying()->timeout(60)->post('https://openrouter.ai/api/v1/chat/completions', [
                 'model' => $this->defaultModel,
                 'messages' => [
@@ -168,7 +168,7 @@ Sua tarefa \u{00E9} criar prompts em INGL\u{00CA}S para gerar imagens profission
 REGRAS:
 1. Prompts devem ser em INGL\u{00CA}S (melhor qualidade de imagem)
 2. Prompts devem ser descritivos, profissionais e focados em marketing/vendas
-3. N\u{00E3}o inclua texto nas imagens (sem letras, palavras ou n\u{00FA}meros visíveis)
+3. N\u{00E3}o inclua texto nas imagens (sem letras, palavras ou n\u{00FA}meros visÃ­veis)
 4. Use estilos modernos: ilumina\u{00E7}\u{00E3}o profissional, cores vibrantes, alta qualidade
 5. Para produtos digitais (cursos, ebooks): use mockups, telas, ambientes de estudo/trabalho
 6. Para produtos f\u{00ED}sicos: use fotos realistas com fundo clean
@@ -482,7 +482,7 @@ PROMPT;
                 'Authorization' => "Bearer {$this->openrouterApiKey}",
                 'Content-Type' => 'application/json',
                 'HTTP-Referer' => config('app.url', 'http://localhost:8000'),
-                'X-Title' => 'GatePro Landing Page Generator',
+                'X-Title' => 'Vector Pagamentos Landing Page Generator',
             ])->withoutVerifying()->timeout(120)->post('https://openrouter.ai/api/v1/chat/completions', [
                 'model' => $this->defaultModel,
                 'messages' => [
@@ -532,39 +532,39 @@ PROMPT;
         $randomSeed = mt_rand(1000, 9999);
         
         return <<<PROMPT
-Você é um designer web e copywriter de elite. Sua especialidade é criar páginas de vendas que parecem ter sido criadas artesanalmente por uma agência premium — NUNCA com cara de "feita por IA" ou "template genérico".
+VocÃª Ã© um designer web e copywriter de elite. Sua especialidade Ã© criar pÃ¡ginas de vendas que parecem ter sido criadas artesanalmente por uma agÃªncia premium â€” NUNCA com cara de "feita por IA" ou "template genÃ©rico".
 
-MISSÃO: Criar uma landing page ÚNICA, MEMORÁVEL e de ALTA CONVERSÃO.
+MISSÃƒO: Criar uma landing page ÃšNICA, MEMORÃVEL e de ALTA CONVERSÃƒO.
 
-PRINCÍPIOS DE DESIGN (obrigatórios):
-- Cada página deve parecer um projeto exclusivo de R$ 15.000+
-- NUNCA use frases genéricas como "Transforme sua vida" ou "A solução definitiva" — seja ESPECÍFICO ao produto
-- Headlines devem ser provocativas, curiosas e impossíveis de ignorar
-- Use números ímpares e dados específicos (ex: "127 alunos já aplicaram", "Em 23 minutos")
-- Subtítulos devem resolver uma objeção ou ampliar a curiosidade
-- CTAs devem ser conversacionais e urgentes, nunca genéricos (nada de "Saiba mais" ou "Comprar")
-- Benefícios com exemplos concretos e tangíveis, não abstrações
-- Depoimentos que pareçam REAIS — com detalhes específicos, incertezas iniciais, resultados mensuráveis
+PRINCÃPIOS DE DESIGN (obrigatÃ³rios):
+- Cada pÃ¡gina deve parecer um projeto exclusivo de R$ 15.000+
+- NUNCA use frases genÃ©ricas como "Transforme sua vida" ou "A soluÃ§Ã£o definitiva" â€” seja ESPECÃFICO ao produto
+- Headlines devem ser provocativas, curiosas e impossÃ­veis de ignorar
+- Use nÃºmeros Ã­mpares e dados especÃ­ficos (ex: "127 alunos jÃ¡ aplicaram", "Em 23 minutos")
+- SubtÃ­tulos devem resolver uma objeÃ§Ã£o ou ampliar a curiosidade
+- CTAs devem ser conversacionais e urgentes, nunca genÃ©ricos (nada de "Saiba mais" ou "Comprar")
+- BenefÃ­cios com exemplos concretos e tangÃ­veis, nÃ£o abstraÃ§Ãµes
+- Depoimentos que pareÃ§am REAIS â€” com detalhes especÃ­ficos, incertezas iniciais, resultados mensurÃ¡veis
 - Use humor sutil, empatia e storytelling quando apropriado
 
-SEMENTE CRIATIVA: {$randomSeed} (use para variar abordagens — cada página deve ser diferente)
+SEMENTE CRIATIVA: {$randomSeed} (use para variar abordagens â€” cada pÃ¡gina deve ser diferente)
 
 {$templateGuide}
 
 {$toneGuide}
 
-REGRAS TÉCNICAS:
+REGRAS TÃ‰CNICAS:
 1. Linguagem: {$language}
-2. RESPONDA APENAS COM JSON PURO — sem markdown, sem backticks, sem comentários
-3. NUNCA inclua HTML nos valores (sem <span>, <b>, etc.) — apenas texto puro
-4. Gere entre 7-10 seções para uma página completa e rica
-5. Ícones válidos: rocket, shield-check, users, star, lightning, chart-bar, clock, heart, fire, target, trophy, diamond, zap, crown, gift, lock, check-circle, arrow-right, sparkles, globe
-6. imagePrompt DEVE ser em INGLÊS, descritivo e profissional
+2. RESPONDA APENAS COM JSON PURO â€” sem markdown, sem backticks, sem comentÃ¡rios
+3. NUNCA inclua HTML nos valores (sem <span>, <b>, etc.) â€” apenas texto puro
+4. Gere entre 7-10 seÃ§Ãµes para uma pÃ¡gina completa e rica
+5. Ãcones vÃ¡lidos: rocket, shield-check, users, star, lightning, chart-bar, clock, heart, fire, target, trophy, diamond, zap, crown, gift, lock, check-circle, arrow-right, sparkles, globe
+6. imagePrompt DEVE ser em INGLÃŠS, descritivo e profissional
 
 ESTRUTURA JSON:
 {
   "meta": {
-    "title": "Título SEO otimizado (50-60 chars)",
+    "title": "TÃ­tulo SEO otimizado (50-60 chars)",
     "description": "Meta description persuasiva (120-155 chars)",
     "keywords": ["keyword1", "keyword2", "keyword3"]
   },
@@ -594,53 +594,53 @@ ESTRUTURA JSON:
   ]
 }
 
-TIPOS DE SEÇÃO:
+TIPOS DE SEÃ‡ÃƒO:
 
 1. hero:
 {
-  "headline": "Headline provocativa e impossível de ignorar",
-  "subheadline": "Expande a curiosidade ou resolve objeção principal",
-  "description": "Parágrafo que cria conexão emocional — não venda, converse",
+  "headline": "Headline provocativa e impossÃ­vel de ignorar",
+  "subheadline": "Expande a curiosidade ou resolve objeÃ§Ã£o principal",
+  "description": "ParÃ¡grafo que cria conexÃ£o emocional â€” nÃ£o venda, converse",
   "ctaText": "CTA urgente e conversacional (ex: Quero meu acesso agora)",
-  "ctaSecondary": "Micro-compromisso (ex: Cancele quando quiser • Sem taxas ocultas)",
+  "ctaSecondary": "Micro-compromisso (ex: Cancele quando quiser â€¢ Sem taxas ocultas)",
   "image": null,
   "imagePrompt": "English prompt: professional, cinematic, no text in image",
   "badge": "Texto curto destacado (ex: VAGAS LIMITADAS ou NOVO ou 70% OFF HOJE)",
-  "videoUrl": "URL do vídeo (apenas para template VSL)"
+  "videoUrl": "URL do vÃ­deo (apenas para template VSL)"
 }
 
 2. stats:
 {
   "items": [
     { "value": "12.847+", "label": "Clientes satisfeitos" },
-    { "value": "4.9/5", "label": "Avaliação média" },
-    { "value": "97%", "label": "Taxa de aprovação" },
-    { "value": "24h", "label": "Suporte disponível" }
+    { "value": "4.9/5", "label": "AvaliaÃ§Ã£o mÃ©dia" },
+    { "value": "97%", "label": "Taxa de aprovaÃ§Ã£o" },
+    { "value": "24h", "label": "Suporte disponÃ­vel" }
   ]
 }
 
 3. benefits:
 {
-  "title": "Título que gera identificação",
-  "subtitle": "Subtítulo com empatia",
+  "title": "TÃ­tulo que gera identificaÃ§Ã£o",
+  "subtitle": "SubtÃ­tulo com empatia",
   "items": [
     {
       "icon": "nome-do-icone",
-      "title": "Benefício específico e tangível",
-      "description": "Explicação com exemplo real ou número concreto"
+      "title": "BenefÃ­cio especÃ­fico e tangÃ­vel",
+      "description": "ExplicaÃ§Ã£o com exemplo real ou nÃºmero concreto"
     }
   ]
 }
 
 4. features:
 {
-  "title": "O que está incluso",
-  "subtitle": "Subtítulo",
+  "title": "O que estÃ¡ incluso",
+  "subtitle": "SubtÃ­tulo",
   "items": [
     {
       "icon": "icone",
       "title": "Feature concreta",
-      "description": "Descrição com valor percebido"
+      "description": "DescriÃ§Ã£o com valor percebido"
     }
   ]
 }
@@ -648,13 +648,13 @@ TIPOS DE SEÇÃO:
 5. testimonials:
 {
   "title": "Resultados reais de pessoas reais",
-  "subtitle": "Subtítulo",
+  "subtitle": "SubtÃ­tulo",
   "items": [
     {
       "name": "Nome brasileiro realista",
       "photo": null,
-      "role": "Profissão/Cidade específica",
-      "text": "Depoimento com: 1) incerteza inicial, 2) momento de virada, 3) resultado específico. Minimize 50 palavras.",
+      "role": "ProfissÃ£o/Cidade especÃ­fica",
+      "text": "Depoimento com: 1) incerteza inicial, 2) momento de virada, 3) resultado especÃ­fico. Minimize 50 palavras.",
       "rating": 5
     }
   ]
@@ -662,24 +662,24 @@ TIPOS DE SEÇÃO:
 
 6. pricing:
 {
-  "title": "Headline sobre valor, não preço",
-  "subtitle": "Ancoragem de preço inteligente",
+  "title": "Headline sobre valor, nÃ£o preÃ§o",
+  "subtitle": "Ancoragem de preÃ§o inteligente",
   "originalPrice": "R$ X.XXX",
   "currentPrice": "R$ XXX",
   "discount": "XX% OFF",
   "installments": "ou 12x de R$ XX,XX sem juros",
-  "features": ["item com check incluído", "outro item valioso"],
+  "features": ["item com check incluÃ­do", "outro item valioso"],
   "ctaText": "CTA URGENTE E CLARO",
-  "urgency": "Mensagem de escassez autêntica"
+  "urgency": "Mensagem de escassez autÃªntica"
 }
 
 7. faq:
 {
-  "title": "Suas dúvidas, respondidas",
+  "title": "Suas dÃºvidas, respondidas",
   "items": [
     {
       "question": "Pergunta que o cliente realmente faria?",
-      "answer": "Resposta honesta, direta e que supera a objeção"
+      "answer": "Resposta honesta, direta e que supera a objeÃ§Ã£o"
     }
   ]
 }
@@ -693,7 +693,7 @@ TIPOS DE SEÇÃO:
 
 9. countdown:
 {
-  "title": "Headline de urgência",
+  "title": "Headline de urgÃªncia",
   "endDate": "data-futura",
   "urgencyText": "Mensagem de escassez"
 }
@@ -701,14 +701,14 @@ TIPOS DE SEÇÃO:
 10. cta:
 {
   "title": "Headline final que fecha o ciclo emocional",
-  "description": "Último argumento — fale com quem ainda tem dúvida",
+  "description": "Ãšltimo argumento â€” fale com quem ainda tem dÃºvida",
   "buttonText": "CTA FINAL PODEROSO",
-  "buttonSecondary": "Garantia + segurança"
+  "buttonSecondary": "Garantia + seguranÃ§a"
 }
 
 11. logos (prova social):
 {
-  "title": "Já usado por profissionais de",
+  "title": "JÃ¡ usado por profissionais de",
   "items": ["Empresa 1", "Empresa 2", "Empresa 3", "Empresa 4", "Empresa 5"]
 }
 PROMPT;
@@ -722,68 +722,68 @@ PROMPT;
         $guides = [
             'modern' => <<<GUIDE
 TEMPLATE: MODERNO
-Filosofia: Design limpo, sofisticado e atual — inspirado em sites como Linear, Vercel, Stripe.
-Cores: Use tons de indigo/violet como primário com backgrounds brancos e off-whites. Acentos em verde ou cyan.
-Tipografia: Clean, sem serif, peso bold nos títulos e light nos textos.
-Layout: Generoso em espaço branco. Hero com layout split (texto esquerda, imagem direita). Cards com bordas suaves (rounded-2xl), sombras sutis.
-Detalhes: Gradient text nos títulos principais. Micro-sombras nos cards. Badges com backgrounds suaves. CTAs com gradiente sutil.
-Seções obrigatórias: hero (layout split), stats, benefits, features, testimonials, pricing, guarantee, faq, cta.
-Animações: Fade-up suave ao scroll. Cards com hover elevation.
+Filosofia: Design limpo, sofisticado e atual â€” inspirado em sites como Linear, Vercel, Stripe.
+Cores: Use tons de indigo/violet como primÃ¡rio com backgrounds brancos e off-whites. Acentos em verde ou cyan.
+Tipografia: Clean, sem serif, peso bold nos tÃ­tulos e light nos textos.
+Layout: Generoso em espaÃ§o branco. Hero com layout split (texto esquerda, imagem direita). Cards com bordas suaves (rounded-2xl), sombras sutis.
+Detalhes: Gradient text nos tÃ­tulos principais. Micro-sombras nos cards. Badges com backgrounds suaves. CTAs com gradiente sutil.
+SeÃ§Ãµes obrigatÃ³rias: hero (layout split), stats, benefits, features, testimonials, pricing, guarantee, faq, cta.
+AnimaÃ§Ãµes: Fade-up suave ao scroll. Cards com hover elevation.
 Paleta sugerida: primary #6366f1, secondary #8b5cf6, bg #ffffff, text #0f172a, accent #10b981
 GUIDE,
             'bold' => <<<GUIDE
 TEMPLATE: IMPACTANTE
-Filosofia: Audacioso, energético, impossível de ignorar — inspirado em páginas de lançamento digital, estilo guru americano.
-Cores: Vermelho/laranja como primário, amarelo como acento. Backgrounds claros com seções em cores fortes.
-Tipografia: BOLD e GRANDE. Títulos enormes, uppercase quando apropriado. Números XXL.
-Layout: Full-width hero. Seções com backgrounds alternando entre branco e cores vibrantes. Pricing com destaque máximo.
-Detalhes: Badges chamativos, emojis nos benefícios, urgência real. Countdown section obrigatório. Múltiplos CTAs.
-Seções obrigatórias: hero (centered, grande), stats, benefits (com emojis), testimonials, pricing (destacado), countdown, guarantee, faq, cta.
-Animações: Slide-up rápido, pulse nos CTAs, shake na urgência.
+Filosofia: Audacioso, energÃ©tico, impossÃ­vel de ignorar â€” inspirado em pÃ¡ginas de lanÃ§amento digital, estilo guru americano.
+Cores: Vermelho/laranja como primÃ¡rio, amarelo como acento. Backgrounds claros com seÃ§Ãµes em cores fortes.
+Tipografia: BOLD e GRANDE. TÃ­tulos enormes, uppercase quando apropriado. NÃºmeros XXL.
+Layout: Full-width hero. SeÃ§Ãµes com backgrounds alternando entre branco e cores vibrantes. Pricing com destaque mÃ¡ximo.
+Detalhes: Badges chamativos, emojis nos benefÃ­cios, urgÃªncia real. Countdown section obrigatÃ³rio. MÃºltiplos CTAs.
+SeÃ§Ãµes obrigatÃ³rias: hero (centered, grande), stats, benefits (com emojis), testimonials, pricing (destacado), countdown, guarantee, faq, cta.
+AnimaÃ§Ãµes: Slide-up rÃ¡pido, pulse nos CTAs, shake na urgÃªncia.
 Paleta sugerida: primary #dc2626, secondary #ea580c, bg #fafafa, text #171717, accent #eab308
 GUIDE,
             'minimal' => <<<GUIDE
 TEMPLATE: MINIMALISTA
-Filosofia: Menos é mais — elegância através da simplicidade. Inspirado em Apple, Muji, design japonês.
-Cores: Preto e branco predominantes. Máximo 2 cores. Acentos mínimos e pontuais.
-Tipografia: Leve, espaçosa. Tamanhos modestos. Muito espaço entre letras. Lowercase preferível.
-Layout: Abundância de espaço branco. Hero centralizado sem imagem (ou com imagem sutil). Grid simples. Zero decoração desnecessária.
-Detalhes: Bordas finas. Sem sombras pesadas. Ícones line-style mínimos. CTAs com outline ou com fundo sólido mínimo.
-Seções obrigatórias: hero (centered, clean), benefits (grid simples), testimonials (citação minimalista), pricing (clean), faq, cta.
-Animações: Fade-in lento e suave. Sem exageros. Blur-in para textos.
+Filosofia: Menos Ã© mais â€” elegÃ¢ncia atravÃ©s da simplicidade. Inspirado em Apple, Muji, design japonÃªs.
+Cores: Preto e branco predominantes. MÃ¡ximo 2 cores. Acentos mÃ­nimos e pontuais.
+Tipografia: Leve, espaÃ§osa. Tamanhos modestos. Muito espaÃ§o entre letras. Lowercase preferÃ­vel.
+Layout: AbundÃ¢ncia de espaÃ§o branco. Hero centralizado sem imagem (ou com imagem sutil). Grid simples. Zero decoraÃ§Ã£o desnecessÃ¡ria.
+Detalhes: Bordas finas. Sem sombras pesadas. Ãcones line-style mÃ­nimos. CTAs com outline ou com fundo sÃ³lido mÃ­nimo.
+SeÃ§Ãµes obrigatÃ³rias: hero (centered, clean), benefits (grid simples), testimonials (citaÃ§Ã£o minimalista), pricing (clean), faq, cta.
+AnimaÃ§Ãµes: Fade-in lento e suave. Sem exageros. Blur-in para textos.
 Paleta sugerida: primary #18181b, secondary #3f3f46, bg #ffffff, text #27272a, accent #6366f1
 GUIDE,
             'dark' => <<<GUIDE
 TEMPLATE: DARK MODE
-Filosofia: Profissional, tecnológico, premium — inspirado em sites de SaaS, cripto, tech. Fundo escuro com elementos que brilham.
-Cores: Background #0a0a0f ou próximo. Primário em roxo/violeta neon. Acentos em cyan/teal que brilham.
+Filosofia: Profissional, tecnolÃ³gico, premium â€” inspirado em sites de SaaS, cripto, tech. Fundo escuro com elementos que brilham.
+Cores: Background #0a0a0f ou prÃ³ximo. PrimÃ¡rio em roxo/violeta neon. Acentos em cyan/teal que brilham.
 Tipografia: Branca/clara. Titulos com glow sutil. Contraste alto.
 Layout: Hero com gradientes sutis no background. Cards com backgrounds semi-transparentes e borders luminosos. Efeito glassmorphism.
-Detalhes: Bordas que brilham (border com opacity). Gradientes nos ícones. Cards com backdrop-blur. Efeito glow nos botões.
-Seções obrigatórias: hero (centered com glow), stats (números brilhantes), benefits (cards glass), testimonials, pricing (card com borda glow), guarantee, faq, cta (com gradiente).
-Animações: Fade-up com glow. Zoom-in suave. Hover com brilho.
+Detalhes: Bordas que brilham (border com opacity). Gradientes nos Ã­cones. Cards com backdrop-blur. Efeito glow nos botÃµes.
+SeÃ§Ãµes obrigatÃ³rias: hero (centered com glow), stats (nÃºmeros brilhantes), benefits (cards glass), testimonials, pricing (card com borda glow), guarantee, faq, cta (com gradiente).
+AnimaÃ§Ãµes: Fade-up com glow. Zoom-in suave. Hover com brilho.
 Paleta sugerida: primary #8b5cf6, secondary #a855f7, bg #0a0a0f, text #f1f5f9, accent #22d3ee
 GUIDE,
             'gradient' => <<<GUIDE
 TEMPLATE: GRADIENTE
-Filosofia: Moderno e vibrante — inspirado em Instagram, Figma, designs contemporâneos. Gradientes como elemento central.
-Cores: Gradientes primários (pink→purple ou blue→cyan). Background claro ou levemente colorido. Sections com gradient backgrounds.
-Tipografia: Semi-bold, cores vibrantes. Títulos com gradient text. Subtítulos com cores complementares.
-Layout: Hero com background gradient grande. Cards com gradient borders. Ícones com gradient backgrounds. Formas orgânicas.
-Detalhes: Gradient text extensivo. Blobs decorativos com blur como background. Cards com gradient border (1px). Botões com gradient animado.
-Seções obrigatórias: hero (centered, gradient bg), stats, benefits (gradient icon bg), testimonials (gradient avatars), pricing (gradient header), guarantee, faq, cta (gradient section).
-Animações: Slide-up fluido. Gradient shift animation nos botões. Blob floating.
+Filosofia: Moderno e vibrante â€” inspirado em Instagram, Figma, designs contemporÃ¢neos. Gradientes como elemento central.
+Cores: Gradientes primÃ¡rios (pinkâ†’purple ou blueâ†’cyan). Background claro ou levemente colorido. Sections com gradient backgrounds.
+Tipografia: Semi-bold, cores vibrantes. TÃ­tulos com gradient text. SubtÃ­tulos com cores complementares.
+Layout: Hero com background gradient grande. Cards com gradient borders. Ãcones com gradient backgrounds. Formas orgÃ¢nicas.
+Detalhes: Gradient text extensivo. Blobs decorativos com blur como background. Cards com gradient border (1px). BotÃµes com gradient animado.
+SeÃ§Ãµes obrigatÃ³rias: hero (centered, gradient bg), stats, benefits (gradient icon bg), testimonials (gradient avatars), pricing (gradient header), guarantee, faq, cta (gradient section).
+AnimaÃ§Ãµes: Slide-up fluido. Gradient shift animation nos botÃµes. Blob floating.
 Paleta sugerida: primary #ec4899, secondary #8b5cf6, bg #fdf4ff, text #1e1b4b, accent #06b6d4
 GUIDE,
             'video' => <<<GUIDE
 TEMPLATE: VSL (Video Sales Letter)
-Filosofia: A página inteira serve ao vídeo. O vídeo é o vendedor, a página é o suporte — inspirado em funnels de Russell Brunson, ClickFunnels.
-Cores: Fundo escuro para o vídeo ter destaque. Cores quentes e urgentes. Vermelho/laranja nos CTAs.
-Tipografia: Grande e impactante no hero. Restante discreto para não competir com o vídeo.
-Layout: Hero dominado por embed de vídeo (16:9) centralizado. Abaixo poucas seções de suporte. Pricing direto. Menos texto, mais visual.
-Detalhes: Player de vídeo destacado com sombra. Headline antes do vídeo (curiosidade). CTA logo abaixo do vídeo. Social proof mínimo mas impactante. Countdown se houver urgência.
-Seções obrigatórias: hero (com videoUrl e headline provocativa), stats (prova social rápida), benefits (resumido, 3-4 itens), pricing (direto e urgente), guarantee, cta.
-Animações: Fade-in no vídeo. Pulse no CTA abaixo do vídeo.
+Filosofia: A pÃ¡gina inteira serve ao vÃ­deo. O vÃ­deo Ã© o vendedor, a pÃ¡gina Ã© o suporte â€” inspirado em funnels de Russell Brunson, ClickFunnels.
+Cores: Fundo escuro para o vÃ­deo ter destaque. Cores quentes e urgentes. Vermelho/laranja nos CTAs.
+Tipografia: Grande e impactante no hero. Restante discreto para nÃ£o competir com o vÃ­deo.
+Layout: Hero dominado por embed de vÃ­deo (16:9) centralizado. Abaixo poucas seÃ§Ãµes de suporte. Pricing direto. Menos texto, mais visual.
+Detalhes: Player de vÃ­deo destacado com sombra. Headline antes do vÃ­deo (curiosidade). CTA logo abaixo do vÃ­deo. Social proof mÃ­nimo mas impactante. Countdown se houver urgÃªncia.
+SeÃ§Ãµes obrigatÃ³rias: hero (com videoUrl e headline provocativa), stats (prova social rÃ¡pida), benefits (resumido, 3-4 itens), pricing (direto e urgente), guarantee, cta.
+AnimaÃ§Ãµes: Fade-in no vÃ­deo. Pulse no CTA abaixo do vÃ­deo.
 Paleta sugerida: primary #dc2626, secondary #f97316, bg #111111, text #f5f5f5, accent #fbbf24
 GUIDE,
         ];
@@ -799,39 +799,39 @@ GUIDE,
         $guides = [
             'professional' => <<<TONE
 TOM: PROFISSIONAL
-- Linguagem clara, direta e confiável
-- Dados e evidências ao invés de emoção pura
-- Evite exclamações excessivas e caixa alta abusiva
-- Use termos técnicos do nicho quando relevante
-- Credibilidade antes de emoção
-- CTAs assertivos mas elegantes (ex: "Começar agora" vs "COMPRE JÁÁÁ")
+- Linguagem clara, direta e confiÃ¡vel
+- Dados e evidÃªncias ao invÃ©s de emoÃ§Ã£o pura
+- Evite exclamaÃ§Ãµes excessivas e caixa alta abusiva
+- Use termos tÃ©cnicos do nicho quando relevante
+- Credibilidade antes de emoÃ§Ã£o
+- CTAs assertivos mas elegantes (ex: "ComeÃ§ar agora" vs "COMPRE JÃÃÃ")
 TONE,
             'casual' => <<<TONE
-TOM: CASUAL E AMIGÁVEL
+TOM: CASUAL E AMIGÃVEL
 - Escreva como se estivesse conversando com um amigo
-- Use contrações e linguagem informal (mas não vulgar)
-- Humor leve e referências do dia a dia
-- Emojis com moderação nos badges e CTAs
-- Perguntas retóricas para engajar
-- CTAs descontraídos (ex: "Bora lá?" ou "Quero essa!")
+- Use contraÃ§Ãµes e linguagem informal (mas nÃ£o vulgar)
+- Humor leve e referÃªncias do dia a dia
+- Emojis com moderaÃ§Ã£o nos badges e CTAs
+- Perguntas retÃ³ricas para engajar
+- CTAs descontraÃ­dos (ex: "Bora lÃ¡?" ou "Quero essa!")
 TONE,
             'urgent' => <<<TONE
-TOM: URGÊNCIA E ESCASSEZ
-- Crie senso de oportunidade única
-- Use números decrescentes e prazos específicos
-- Palavras-chave: "últimas vagas", "oferta encerra", "apenas hoje", "restam poucas"
-- Countdown section é OBRIGATÓRIO
-- Destaque o que a pessoa PERDE se não agir agora
-- CTAs com urgência explícita (ex: "GARANTIR ANTES QUE ACABE")
-- Badge no hero DEVE ter urgência
+TOM: URGÃŠNCIA E ESCASSEZ
+- Crie senso de oportunidade Ãºnica
+- Use nÃºmeros decrescentes e prazos especÃ­ficos
+- Palavras-chave: "Ãºltimas vagas", "oferta encerra", "apenas hoje", "restam poucas"
+- Countdown section Ã© OBRIGATÃ“RIO
+- Destaque o que a pessoa PERDE se nÃ£o agir agora
+- CTAs com urgÃªncia explÃ­cita (ex: "GARANTIR ANTES QUE ACABE")
+- Badge no hero DEVE ter urgÃªncia
 TONE,
             'luxury' => <<<TONE
 TOM: LUXO E EXCLUSIVIDADE
 - Linguagem sofisticada e aspiracional
-- Menos é mais — cada palavra deve ter peso
+- Menos Ã© mais â€” cada palavra deve ter peso
 - Palavras-chave: "exclusivo", "seleto", "premium", "reservado", "curadoria"
-- NUNCA use "barato" ou "desconto" — use "investimento", "condição especial", "acesso antecipado"
-- Evite emojis e exclamações
+- NUNCA use "barato" ou "desconto" â€” use "investimento", "condiÃ§Ã£o especial", "acesso antecipado"
+- Evite emojis e exclamaÃ§Ãµes
 - CTAs elegantes (ex: "Solicitar acesso" ou "Reservar minha vaga")
 - Depoimentos de figuras de autoridade ou pessoas com cargos impressionantes
 TONE,
@@ -856,10 +856,10 @@ TONE,
             }
             $productInfo = <<<INFO
 
-INFORMAÇÕES DO PRODUTO:
+INFORMAÃ‡Ã•ES DO PRODUTO:
 - Nome: {$p['name']}
-- Descrição: {$p['description']}
-- Preço: {$priceInfo}
+- DescriÃ§Ã£o: {$p['description']}
+- PreÃ§o: {$priceInfo}
 - Tipo: {$p['type']}
 INFO;
             if (!empty($p['features'])) {
@@ -868,7 +868,7 @@ INFO;
             }
             if (!empty($p['benefits'])) {
                 $benefits = implode(', ', array_slice($p['benefits'], 0, 5));
-                $productInfo .= "\n- Benefícios: {$benefits}";
+                $productInfo .= "\n- BenefÃ­cios: {$benefits}";
             }
         }
 
@@ -877,27 +877,27 @@ INFO;
             $c = $context['checkout'];
             $checkoutInfo = "\n\nURL DO CHECKOUT: {$c['url']}";
             $methods = implode(', ', $c['payment_methods'] ?? ['pix', 'credit_card']);
-            $checkoutInfo .= "\nMétodos de pagamento: {$methods}";
+            $checkoutInfo .= "\nMÃ©todos de pagamento: {$methods}";
             if (isset($c['max_installments']) && $c['max_installments'] > 1) {
-                $checkoutInfo .= "\nParcelamento: até {$c['max_installments']}x";
+                $checkoutInfo .= "\nParcelamento: atÃ© {$c['max_installments']}x";
             }
         }
 
         return <<<USERPROMPT
-Crie uma landing page de vendas ÚNICA e de ALTA CONVERSÃO. Faça parecer que foi criada por uma agência de design premium — NÃO deve parecer genérica ou feita por IA.
+Crie uma landing page de vendas ÃšNICA e de ALTA CONVERSÃƒO. FaÃ§a parecer que foi criada por uma agÃªncia de design premium â€” NÃƒO deve parecer genÃ©rica ou feita por IA.
 
-DESCRIÇÃO DO USUÁRIO:
+DESCRIÃ‡ÃƒO DO USUÃRIO:
 {$prompt}
 {$productInfo}
 {$checkoutInfo}
 
-INSTRUÇÕES ESPECÍFICAS:
-1. A headline deve ser IMPOSSÍVEL DE IGNORAR — use curiosidade, dados específicos ou uma promessa ousada
-2. Gere 3 depoimentos REALISTAS com nomes brasileiros, profissões diversas e histórias com detalhes específicos
+INSTRUÃ‡Ã•ES ESPECÃFICAS:
+1. A headline deve ser IMPOSSÃVEL DE IGNORAR â€” use curiosidade, dados especÃ­ficos ou uma promessa ousada
+2. Gere 3 depoimentos REALISTAS com nomes brasileiros, profissÃµes diversas e histÃ³rias com detalhes especÃ­ficos
 3. Inclua pelo menos: hero, stats ou logos (prova social), benefits, testimonials, pricing, guarantee, faq (5+ perguntas) e cta final
-4. Os preços devem ser baseados nos dados reais do produto acima
-5. NÃO inclua imagens na página — deixe campos "image" e "photo" vazios (string vazia ""). O sistema não suporta imagens no momento
-6. Cada seção deve ter uma animation definida nos settings (fade-up, fade-left, fade-right, zoom-in, blur-in)
+4. Os preÃ§os devem ser baseados nos dados reais do produto acima
+5. NÃƒO inclua imagens na pÃ¡gina â€” deixe campos "image" e "photo" vazios (string vazia ""). O sistema nÃ£o suporta imagens no momento
+6. Cada seÃ§Ã£o deve ter uma animation definida nos settings (fade-up, fade-left, fade-right, zoom-in, blur-in)
 7. Use o theme.style do template escolhido para definir cores coerentes
 USERPROMPT;
     }
@@ -958,8 +958,8 @@ USERPROMPT;
         $checkout = $context['checkout'] ?? null;
         $tone = $context['tone'] ?? 'professional';
         
-        $productName = $product['name'] ?? 'Produto Incrível';
-        $productDescription = $product['description'] ?? 'A solução que você precisa';
+        $productName = $product['name'] ?? 'Produto IncrÃ­vel';
+        $productDescription = $product['description'] ?? 'A soluÃ§Ã£o que vocÃª precisa';
         $price = $product['price'] ?? 497;
         $originalPrice = $product['original_price'] ?? $price * 2;
         $checkoutUrl = $checkout['url'] ?? '#checkout';
@@ -1036,12 +1036,12 @@ USERPROMPT;
                     'animation' => 'fade-up',
                 ],
                 'content' => [
-                    'badge' => $tone === 'urgent' ? '⏰ ÚLTIMAS VAGAS' : ($tone === 'luxury' ? 'ACESSO EXCLUSIVO' : 'OFERTA ESPECIAL'),
+                    'badge' => $tone === 'urgent' ? 'â° ÃšLTIMAS VAGAS' : ($tone === 'luxury' ? 'ACESSO EXCLUSIVO' : 'OFERTA ESPECIAL'),
                     'headline' => $heroHeadline,
                     'subheadline' => $heroSubheadline,
                     'description' => $productDescription,
                     'ctaText' => $this->generateFallbackCTA($tone),
-                    'ctaSecondary' => '✓ Garantia de 7 dias • Pagamento 100% seguro',
+                    'ctaSecondary' => 'âœ“ Garantia de 7 dias â€¢ Pagamento 100% seguro',
                     'image' => null,
                     'imagePrompt' => "professional product showcase for {$productName}, modern clean design, studio lighting, commercial photography",
                 ],
@@ -1057,9 +1057,9 @@ USERPROMPT;
                 'content' => [
                     'items' => [
                         ['value' => '2.847+', 'label' => 'Clientes satisfeitos'],
-                        ['value' => '4.9/5', 'label' => 'Avaliação média'],
-                        ['value' => '97%', 'label' => 'Taxa de aprovação'],
-                        ['value' => '24h', 'label' => 'Suporte disponível'],
+                        ['value' => '4.9/5', 'label' => 'AvaliaÃ§Ã£o mÃ©dia'],
+                        ['value' => '97%', 'label' => 'Taxa de aprovaÃ§Ã£o'],
+                        ['value' => '24h', 'label' => 'Suporte disponÃ­vel'],
                     ],
                 ],
             ],
@@ -1077,13 +1077,13 @@ USERPROMPT;
                     'items' => [
                         [
                             'icon' => 'rocket',
-                            'title' => 'Resultados em até 7 dias',
-                            'description' => 'Nossos clientes relatam primeiros resultados visíveis já na primeira semana de uso.',
+                            'title' => 'Resultados em atÃ© 7 dias',
+                            'description' => 'Nossos clientes relatam primeiros resultados visÃ­veis jÃ¡ na primeira semana de uso.',
                         ],
                         [
                             'icon' => 'shield-check',
-                            'title' => 'Garantia total de satisfação',
-                            'description' => 'Se não funcionar para você, devolvemos 100% do valor. Sem perguntas, sem burocracia.',
+                            'title' => 'Garantia total de satisfaÃ§Ã£o',
+                            'description' => 'Se nÃ£o funcionar para vocÃª, devolvemos 100% do valor. Sem perguntas, sem burocracia.',
                         ],
                         [
                             'icon' => 'users',
@@ -1092,8 +1092,8 @@ USERPROMPT;
                         ],
                         [
                             'icon' => 'star',
-                            'title' => 'Atualizações constantes',
-                            'description' => 'Conteúdo atualizado mensalmente com as melhores práticas do mercado.',
+                            'title' => 'AtualizaÃ§Ãµes constantes',
+                            'description' => 'ConteÃºdo atualizado mensalmente com as melhores prÃ¡ticas do mercado.',
                         ],
                     ],
                 ],
@@ -1107,28 +1107,28 @@ USERPROMPT;
                     'animation' => 'fade-up',
                 ],
                 'content' => [
-                    'title' => 'Veja o que dizem quem já experimentou',
-                    'subtitle' => 'Histórias reais de transformação',
+                    'title' => 'Veja o que dizem quem jÃ¡ experimentou',
+                    'subtitle' => 'HistÃ³rias reais de transformaÃ§Ã£o',
                     'items' => [
                         [
                             'name' => 'Carla Mendes',
                             'photo' => null,
-                            'role' => 'Empresária • São Paulo, SP',
-                            'text' => "Confesso que estava cética no início — já tinha tentado outras soluções antes. Mas em 3 semanas usando {$productName}, meus resultados mudaram completamente. Já recomendei para 4 amigas.",
+                            'role' => 'EmpresÃ¡ria â€¢ SÃ£o Paulo, SP',
+                            'text' => "Confesso que estava cÃ©tica no inÃ­cio â€” jÃ¡ tinha tentado outras soluÃ§Ãµes antes. Mas em 3 semanas usando {$productName}, meus resultados mudaram completamente. JÃ¡ recomendei para 4 amigas.",
                             'rating' => 5,
                         ],
                         [
                             'name' => 'Rafael Oliveira',
                             'photo' => null,
-                            'role' => 'Analista de Marketing • BH, MG',
-                            'text' => "O que mais me impressionou foi a praticidade. Em menos de 15 minutos por dia, consegui implementar tudo. O suporte me ajudou nas dúvidas iniciais e hoje não largo mais.",
+                            'role' => 'Analista de Marketing â€¢ BH, MG',
+                            'text' => "O que mais me impressionou foi a praticidade. Em menos de 15 minutos por dia, consegui implementar tudo. O suporte me ajudou nas dÃºvidas iniciais e hoje nÃ£o largo mais.",
                             'rating' => 5,
                         ],
                         [
                             'name' => 'Amanda Costa',
                             'photo' => null,
-                            'role' => 'Estudante de Administração • Curitiba, PR',
-                            'text' => "Melhor investimento que fiz esse ano, sem exagero. O conteúdo é extremamente didático e os resultados apareceram antes do que eu esperava. Nota 10!",
+                            'role' => 'Estudante de AdministraÃ§Ã£o â€¢ Curitiba, PR',
+                            'text' => "Melhor investimento que fiz esse ano, sem exagero. O conteÃºdo Ã© extremamente didÃ¡tico e os resultados apareceram antes do que eu esperava. Nota 10!",
                             'rating' => 5,
                         ],
                     ],
@@ -1143,22 +1143,22 @@ USERPROMPT;
                         'animation' => 'zoom-in',
                     ],
                     'content' => [
-                        'title' => 'Invista no seu próximo nível',
-                        'subtitle' => 'Uma fração do que você gastaria sem a solução certa',
+                        'title' => 'Invista no seu prÃ³ximo nÃ­vel',
+                        'subtitle' => 'Uma fraÃ§Ã£o do que vocÃª gastaria sem a soluÃ§Ã£o certa',
                         'originalPrice' => 'R$ ' . number_format($originalPrice, 2, ',', '.'),
                         'currentPrice' => 'R$ ' . number_format($price, 2, ',', '.'),
                         'discount' => $discount . '% OFF',
                         'installments' => 'ou 12x de R$ ' . $installmentValue . ' sem juros',
                         'features' => [
                             'Acesso completo e imediato',
-                            'Suporte prioritário por email e chat',
-                            'Todas as atualizações futuras incluídas',
-                            'Bônus exclusivos para novos membros',
+                            'Suporte prioritÃ¡rio por email e chat',
+                            'Todas as atualizaÃ§Ãµes futuras incluÃ­das',
+                            'BÃ´nus exclusivos para novos membros',
                             'Comunidade VIP de networking',
-                            'Certificado de conclusão',
+                            'Certificado de conclusÃ£o',
                         ],
                         'ctaText' => $this->generateFallbackCTA($tone),
-                        'urgency' => $tone === 'urgent' ? '⏰ Apenas 23 vagas restantes nesta condição!' : 'Condição especial por tempo limitado',
+                        'urgency' => $tone === 'urgent' ? 'â° Apenas 23 vagas restantes nesta condiÃ§Ã£o!' : 'CondiÃ§Ã£o especial por tempo limitado',
                     ],
                 ],
                 [
@@ -1171,7 +1171,7 @@ USERPROMPT;
                     ],
                     'content' => [
                         'title' => 'Garantia incondicional de 7 dias',
-                        'description' => "Acreditamos tanto no {$productName} que oferecemos uma garantia completa. Se nos primeiros 7 dias você sentir que não é para você, basta enviar um email e devolvemos 100% do seu investimento. Sem letras miúdas, sem perguntas constrangedoras. O risco é todo nosso.",
+                        'description' => "Acreditamos tanto no {$productName} que oferecemos uma garantia completa. Se nos primeiros 7 dias vocÃª sentir que nÃ£o Ã© para vocÃª, basta enviar um email e devolvemos 100% do seu investimento. Sem letras miÃºdas, sem perguntas constrangedoras. O risco Ã© todo nosso.",
                         'icon' => 'shield-check',
                     ],
                 ],
@@ -1184,27 +1184,27 @@ USERPROMPT;
                         'animation' => 'fade-up',
                     ],
                     'content' => [
-                        'title' => 'Suas dúvidas, respondidas',
+                        'title' => 'Suas dÃºvidas, respondidas',
                         'items' => [
                             [
-                                'question' => "Para quem é o {$productName}?",
-                                'answer' => "É para qualquer pessoa que busca resultados reais e está disposta a dedicar pelo menos 15 minutos por dia. Não importa se você é iniciante ou avançado — o conteúdo se adapta ao seu nível.",
+                                'question' => "Para quem Ã© o {$productName}?",
+                                'answer' => "Ã‰ para qualquer pessoa que busca resultados reais e estÃ¡ disposta a dedicar pelo menos 15 minutos por dia. NÃ£o importa se vocÃª Ã© iniciante ou avanÃ§ado â€” o conteÃºdo se adapta ao seu nÃ­vel.",
                             ],
                             [
                                 'question' => 'Quanto tempo leva para ver resultados?',
-                                'answer' => 'A maioria dos nossos clientes relata primeiros resultados entre 5 e 14 dias. Claro, isso depende da sua dedicação e ponto de partida, mas o método foi desenhado para ser o mais rápido possível.',
+                                'answer' => 'A maioria dos nossos clientes relata primeiros resultados entre 5 e 14 dias. Claro, isso depende da sua dedicaÃ§Ã£o e ponto de partida, mas o mÃ©todo foi desenhado para ser o mais rÃ¡pido possÃ­vel.',
                             ],
                             [
-                                'question' => 'E se não funcionar para mim?',
-                                'answer' => 'Você tem 7 dias de garantia incondicional. Se por qualquer motivo não ficar satisfeito, devolvemos 100% do valor. Sem perguntas, sem burocracia.',
+                                'question' => 'E se nÃ£o funcionar para mim?',
+                                'answer' => 'VocÃª tem 7 dias de garantia incondicional. Se por qualquer motivo nÃ£o ficar satisfeito, devolvemos 100% do valor. Sem perguntas, sem burocracia.',
                             ],
                             [
-                                'question' => 'Quais formas de pagamento são aceitas?',
-                                'answer' => 'Aceitamos PIX (com aprovação instantânea), cartão de crédito em até 12x sem juros, e boleto bancário. Todos os pagamentos são processados com segurança total.',
+                                'question' => 'Quais formas de pagamento sÃ£o aceitas?',
+                                'answer' => 'Aceitamos PIX (com aprovaÃ§Ã£o instantÃ¢nea), cartÃ£o de crÃ©dito em atÃ© 12x sem juros, e boleto bancÃ¡rio. Todos os pagamentos sÃ£o processados com seguranÃ§a total.',
                             ],
                             [
                                 'question' => 'Por quanto tempo terei acesso?',
-                                'answer' => 'Seu acesso é vitalício. Uma vez adquirido, você pode acessar o conteúdo quando e onde quiser, pelo tempo que precisar. Inclui todas as atualizações futuras.',
+                                'answer' => 'Seu acesso Ã© vitalÃ­cio. Uma vez adquirido, vocÃª pode acessar o conteÃºdo quando e onde quiser, pelo tempo que precisar. Inclui todas as atualizaÃ§Ãµes futuras.',
                             ],
                         ],
                     ],
@@ -1219,9 +1219,9 @@ USERPROMPT;
                     ],
                     'content' => [
                         'title' => 'Chegou a sua vez',
-                        'description' => "Mais de 2.800 pessoas já deram esse passo com {$productName}. A única pergunta é: você vai continuar adiando ou vai começar hoje?",
+                        'description' => "Mais de 2.800 pessoas jÃ¡ deram esse passo com {$productName}. A Ãºnica pergunta Ã©: vocÃª vai continuar adiando ou vai comeÃ§ar hoje?",
                         'buttonText' => $this->generateFallbackCTA($tone),
-                        'buttonSecondary' => 'Garantia de 7 dias • Pagamento seguro • Acesso imediato',
+                        'buttonSecondary' => 'Garantia de 7 dias â€¢ Pagamento seguro â€¢ Acesso imediato',
                     ],
                 ],
         ];
@@ -1250,7 +1250,7 @@ USERPROMPT;
                 'content' => [
                     'title' => 'Esta oferta expira em:',
                     'endDate' => date('Y-m-d\T23:59:59', strtotime('+2 days')),
-                    'urgencyText' => 'Depois desse prazo, o preço volta ao normal!',
+                    'urgencyText' => 'Depois desse prazo, o preÃ§o volta ao normal!',
                 ],
             ];
             // Insert before pricing
@@ -1267,20 +1267,20 @@ USERPROMPT;
     {
         $headlines = match($tone) {
             'urgent' => [
-                "Últimas vagas: {$productName} com condição que não vai se repetir",
+                "Ãšltimas vagas: {$productName} com condiÃ§Ã£o que nÃ£o vai se repetir",
                 "{$productName}: oferta encerra em poucas horas",
             ],
             'luxury' => [
-                "{$productName}: acesso reservado para quem busca excelência",
-                "Apresentando {$productName} — a escolha de quem não aceita o ordinário",
+                "{$productName}: acesso reservado para quem busca excelÃªncia",
+                "Apresentando {$productName} â€” a escolha de quem nÃ£o aceita o ordinÃ¡rio",
             ],
             'casual' => [
-                "Já conhece o {$productName}? Você vai se surpreender",
-                "{$productName}: aquilo que faltava pra você dar o próximo passo",
+                "JÃ¡ conhece o {$productName}? VocÃª vai se surpreender",
+                "{$productName}: aquilo que faltava pra vocÃª dar o prÃ³ximo passo",
             ],
             default => [
-                "O método por trás de 2.847 resultados com {$productName}",
-                "{$productName}: o que ninguém te contou sobre resultados reais",
+                "O mÃ©todo por trÃ¡s de 2.847 resultados com {$productName}",
+                "{$productName}: o que ninguÃ©m te contou sobre resultados reais",
             ],
         };
 
@@ -1293,10 +1293,10 @@ USERPROMPT;
     private function generateFallbackSubheadline(string $productName, string $productType, string $tone): string
     {
         return match($tone) {
-            'urgent' => 'A condição especial é por tempo limitado — veja por que agir agora faz diferença',
-            'luxury' => 'Uma experiência premium desenvolvida para profissionais que valorizam qualidade',
-            'casual' => 'Sem enrolação, sem promessas vazias — só o que realmente funciona',
-            default => 'Descubra o passo a passo que já transformou a realidade de milhares de pessoas como você',
+            'urgent' => 'A condiÃ§Ã£o especial Ã© por tempo limitado â€” veja por que agir agora faz diferenÃ§a',
+            'luxury' => 'Uma experiÃªncia premium desenvolvida para profissionais que valorizam qualidade',
+            'casual' => 'Sem enrolaÃ§Ã£o, sem promessas vazias â€” sÃ³ o que realmente funciona',
+            default => 'Descubra o passo a passo que jÃ¡ transformou a realidade de milhares de pessoas como vocÃª',
         };
     }
 
@@ -1306,10 +1306,10 @@ USERPROMPT;
     private function generateFallbackCTA(string $tone): string
     {
         return match($tone) {
-            'urgent' => 'GARANTIR MINHA VAGA AGORA →',
+            'urgent' => 'GARANTIR MINHA VAGA AGORA â†’',
             'luxury' => 'Solicitar meu acesso',
-            'casual' => 'Quero começar agora! →',
-            default => 'Começar agora →',
+            'casual' => 'Quero comeÃ§ar agora! â†’',
+            default => 'ComeÃ§ar agora â†’',
         };
     }
 
@@ -1359,22 +1359,22 @@ USERPROMPT;
         $currentJson = json_encode($currentContent, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
         $systemPrompt = <<<PROMPT
-Você é um assistente especializado em edição de landing pages de vendas de alta conversão.
+VocÃª Ã© um assistente especializado em ediÃ§Ã£o de landing pages de vendas de alta conversÃ£o.
 
-O usuário vai pedir alterações na landing page dele. Você deve retornar o JSON COMPLETO da landing page com as alterações aplicadas.
+O usuÃ¡rio vai pedir alteraÃ§Ãµes na landing page dele. VocÃª deve retornar o JSON COMPLETO da landing page com as alteraÃ§Ãµes aplicadas.
 
 REGRAS:
-1. SEMPRE retorne o JSON completo da landing page (todas as seções, tema, meta, etc.)
-2. Aplique APENAS as alterações que o usuário pediu
-3. Mantenha todo o restante EXATAMENTE como está
-4. Se o usuário pedir para mudar cores, altere no "theme"
-5. Se pedir para mudar textos, altere na seção correspondente
-6. Se pedir para adicionar/remover seções, faça isso no array "sections"
-7. Se pedir sugestões, aplique as melhores práticas de copywriting
+1. SEMPRE retorne o JSON completo da landing page (todas as seÃ§Ãµes, tema, meta, etc.)
+2. Aplique APENAS as alteraÃ§Ãµes que o usuÃ¡rio pediu
+3. Mantenha todo o restante EXATAMENTE como estÃ¡
+4. Se o usuÃ¡rio pedir para mudar cores, altere no "theme"
+5. Se pedir para mudar textos, altere na seÃ§Ã£o correspondente
+6. Se pedir para adicionar/remover seÃ§Ãµes, faÃ§a isso no array "sections"
+7. Se pedir sugestÃµes, aplique as melhores prÃ¡ticas de copywriting
 8. RESPONDA APENAS COM JSON PURO, SEM markdown, sem ```json, sem texto explicativo
-9. Mantenha os mesmos IDs das seções existentes
+9. Mantenha os mesmos IDs das seÃ§Ãµes existentes
 10. NUNCA inclua HTML nos valores do JSON (sem <span>, <b>, <i>, etc.) - use APENAS texto puro
-11. NÃO inclua imagens na página. Remova ou deixe vazio campos como "image" no hero e "photo" nos depoimentos. O sistema não suporta imagens no momento.
+11. NÃƒO inclua imagens na pÃ¡gina. Remova ou deixe vazio campos como "image" no hero e "photo" nos depoimentos. O sistema nÃ£o suporta imagens no momento.
 
 ESTRUTURA ATUAL DA LANDING PAGE:
 {$currentJson}
@@ -1400,7 +1400,7 @@ PROMPT;
                 'Authorization' => "Bearer {$this->openrouterApiKey}",
                 'Content-Type' => 'application/json',
                 'HTTP-Referer' => config('app.url', 'http://localhost:8000'),
-                'X-Title' => 'GatePro Landing Page Editor',
+                'X-Title' => 'Vector Pagamentos Landing Page Editor',
             ])->withoutVerifying()->timeout(120)->post('https://openrouter.ai/api/v1/chat/completions', [
                 'model' => $this->defaultModel,
                 'messages' => $messages,
@@ -1415,7 +1415,7 @@ PROMPT;
                 if ($parsed !== null && isset($parsed['sections'])) {
                     Log::info('AI edited landing page successfully');
                     $sanitized = $this->sanitizeContent($parsed);
-                    // Image generation disabled — strip image fields instead of processing tokens
+                    // Image generation disabled â€” strip image fields instead of processing tokens
                     $sanitized = $this->stripImageFields($sanitized);
                     return $sanitized;
                 }
@@ -1423,13 +1423,13 @@ PROMPT;
                 Log::warning('AI edit response did not contain valid sections', [
                     'content_preview' => substr($content ?? '', 0, 500),
                 ]);
-                throw new \RuntimeException('A IA não retornou um JSON válido. Tente novamente.');
+                throw new \RuntimeException('A IA nÃ£o retornou um JSON vÃ¡lido. Tente novamente.');
             }
 
             throw new \RuntimeException('Erro na API da IA: ' . $response->status());
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            throw new \RuntimeException('Não foi possível conectar à IA. Tente novamente.');
+            throw new \RuntimeException('NÃ£o foi possÃ­vel conectar Ã  IA. Tente novamente.');
         }
     }
 
@@ -1473,11 +1473,11 @@ PROMPT;
         $templates = [
             'hero' => [
                 'headline' => 'Headline Impactante',
-                'subheadline' => 'Subtítulo que complementa',
-                'ctaText' => 'COMEÇAR AGORA',
+                'subheadline' => 'SubtÃ­tulo que complementa',
+                'ctaText' => 'COMEÃ‡AR AGORA',
             ],
             'benefits' => [
-                'title' => 'Benefícios',
+                'title' => 'BenefÃ­cios',
                 'items' => [],
             ],
             'testimonials' => [
@@ -1675,7 +1675,7 @@ PROMPT;
     {
         $trimmed = trim($value);
 
-        // Not a token — return as-is
+        // Not a token â€” return as-is
         if (!preg_match('/^\[IMG:(.+)\]$/i', $trimmed, $matches)) {
             // But still fix broken URLs (pollinations, placeholder, etc.)
             return $this->fixImageUrl($value, $width, $height);
@@ -1755,12 +1755,12 @@ PROMPT;
             return $trimmed;
         }
 
-        // Our own AI-generated images stored locally — keep as-is, they're good
+        // Our own AI-generated images stored locally â€” keep as-is, they're good
         if (strpos($trimmed, '/storage/lp-images/') !== false) {
             return $trimmed;
         }
 
-        // loremflickr.com — extract keywords from path  e.g. /800/600/hacker,cybersecurity
+        // loremflickr.com â€” extract keywords from path  e.g. /800/600/hacker,cybersecurity
         if (strpos($trimmed, 'loremflickr.com') !== false) {
             $path = parse_url($trimmed, PHP_URL_PATH) ?? '';
             // Path like /800/600/keyword1,keyword2
@@ -1770,7 +1770,7 @@ PROMPT;
             }
         }
 
-        // Pollinations.ai — extract prompt from path
+        // Pollinations.ai â€” extract prompt from path
         if (strpos($trimmed, 'image.pollinations.ai') !== false) {
             $path = parse_url($trimmed, PHP_URL_PATH) ?? '';
             $prompt = urldecode(trim($path, '/'));
@@ -1781,7 +1781,7 @@ PROMPT;
             }
         }
 
-        // unsplash.com — extract from URL
+        // unsplash.com â€” extract from URL
         if (strpos($trimmed, 'unsplash.com') !== false || strpos($trimmed, 'source.unsplash') !== false) {
             if (preg_match('/\?([^#]+)/', $trimmed, $m)) {
                 parse_str($m[1], $params);
@@ -1792,22 +1792,22 @@ PROMPT;
             return '[IMG:professional product]';
         }
 
-        // randomuser.me — it's an avatar
+        // randomuser.me â€” it's an avatar
         if (strpos($trimmed, 'randomuser.me') !== false) {
             return '[IMG:person portrait headshot]';
         }
 
-        // picsum.photos — random, no keywords recoverable
+        // picsum.photos â€” random, no keywords recoverable
         if (strpos($trimmed, 'picsum.photos') !== false) {
             return '[IMG:product technology]';
         }
 
-        // Any other URL — keep as generic
+        // Any other URL â€” keep as generic
         if (filter_var($trimmed, FILTER_VALIDATE_URL)) {
             return '[IMG:product]';
         }
 
-        // Not a URL — might already be a description, wrap it
+        // Not a URL â€” might already be a description, wrap it
         if (!empty($trimmed)) {
             return '[IMG:' . $trimmed . ']';
         }
@@ -2211,7 +2211,7 @@ PROMPT;
     <!-- Mobile Fixed CTA -->
     <div class="fixed bottom-0 left-0 right-0 px-4 pb-4 pt-3 backdrop-blur-md border-t lg:hidden z-50" style="background:{$mobileCta};border-color:var(--border);transform:translateY(100%);transition:transform 0.4s ease" id="mobile-cta">
         <a href="{$checkoutUrl}" class="btn-primary block w-full py-4 rounded-2xl text-white font-bold text-center text-lg tracking-wide">
-            GARANTIR MINHA VAGA →
+            GARANTIR MINHA VAGA â†’
         </a>
     </div>
 
@@ -2225,7 +2225,7 @@ PROMPT;
             entries.forEach(function(entry) {
                 if (entry.isIntersecting) {
                     entry.target.classList.add('visible');
-                    // Don't unobserve — keep for re-entry if needed
+                    // Don't unobserve â€” keep for re-entry if needed
                 }
             });
         }, observerOptions);
@@ -2442,7 +2442,7 @@ HTML;
 
         return match($template) {
             'modern' => <<<CSS
-/* Modern — clean lines, subtle shadows */
+/* Modern â€” clean lines, subtle shadows */
 .template-modern section { position: relative; }
 .template-modern .theme-card {
     border: 1px solid var(--border);
@@ -2456,7 +2456,7 @@ HTML;
 .template-modern h2 { letter-spacing: -0.02em; }
 CSS,
             'bold' => <<<CSS
-/* Bold — impactful, energetic */
+/* Bold â€” impactful, energetic */
 .template-bold section { position: relative; }
 .template-bold h1 {
     letter-spacing: -0.04em;
@@ -2482,7 +2482,7 @@ CSS,
 .template-bold .urgency-text { animation: shake 0.5s ease-in-out infinite; }
 CSS,
             'minimal' => <<<CSS
-/* Minimal — clean, spacious, zen */
+/* Minimal â€” clean, spacious, zen */
 .template-minimal section { position: relative; }
 .template-minimal h1 {
     font-weight: 500;
@@ -2507,7 +2507,7 @@ CSS,
 .template-minimal p { line-height: 1.8; }
 CSS,
             'dark' => <<<CSS
-/* Dark — glowing, techy, premium */
+/* Dark â€” glowing, techy, premium */
 .template-dark section { position: relative; }
 .template-dark .theme-card {
     background: rgba(255,255,255,0.03);
@@ -2551,7 +2551,7 @@ CSS,
 }
 CSS,
             'gradient' => <<<CSS
-/* Gradient — vibrant, colorful, fluid */
+/* Gradient â€” vibrant, colorful, fluid */
 .template-gradient section { position: relative; overflow: hidden; }
 .template-gradient .gradient-text {
     background: linear-gradient(135deg, {$primary}, {$secondary}, {$accent});
@@ -2592,7 +2592,7 @@ CSS,
 }
 CSS,
             'video' => <<<CSS
-/* VSL — video-centric, focused */
+/* VSL â€” video-centric, focused */
 .template-video section { position: relative; }
 .template-video .video-container {
     aspect-ratio: 16/9;
@@ -2715,7 +2715,7 @@ HTML;
         $headline = $content['headline'] ?? '';
         $subheadline = $content['subheadline'] ?? '';
         $description = $content['description'] ?? '';
-        $ctaText = $content['ctaText'] ?? 'Começar Agora';
+        $ctaText = $content['ctaText'] ?? 'ComeÃ§ar Agora';
         $ctaSecondary = $content['ctaSecondary'] ?? '';
         $image = $content['image'] ?? null;
         $videoUrl = $content['videoUrl'] ?? null;
@@ -2776,7 +2776,7 @@ HTML;
 HTML;
         }
 
-        // Dark template — centered with glow
+        // Dark template â€” centered with glow
         if ($template === 'dark') {
             return <<<HTML
 <div class="text-center py-12 lg:py-24">
@@ -2796,7 +2796,7 @@ HTML;
 HTML;
         }
 
-        // Minimal template — clean centered
+        // Minimal template â€” clean centered
         if ($template === 'minimal') {
             return <<<HTML
 <div class="text-center py-16 lg:py-28">
@@ -2915,7 +2915,7 @@ HTML;
      */
     private function renderBenefitsSection(array $content, string $checkoutUrl, array $theme, string $template = 'modern'): string
     {
-        $title = $content['title'] ?? 'Benefícios';
+        $title = $content['title'] ?? 'BenefÃ­cios';
         $subtitle = $content['subtitle'] ?? '';
         $items = $content['items'] ?? [];
         $primaryColor = $theme['primaryColor'] ?? '#6366f1';
@@ -3002,7 +3002,7 @@ HTML;
             $rating = $item['rating'] ?? 5;
             $photo = $item['photo'] ?? null;
             
-            $stars = str_repeat('★', $rating);
+            $stars = str_repeat('â˜…', $rating);
             $nameAttr = htmlspecialchars(strip_tags($name), ENT_QUOTES, 'UTF-8');
             $photoAttr = $photo ? htmlspecialchars($photo, ENT_QUOTES, 'UTF-8') : '';
             $initial = mb_substr(strip_tags($name), 0, 1);
@@ -3087,7 +3087,7 @@ HTML;
      */
     private function renderPricingSection(array $content, string $checkoutUrl, array $theme, string $template = 'modern'): string
     {
-        $title = $content['title'] ?? 'Preços';
+        $title = $content['title'] ?? 'PreÃ§os';
         $subtitle = $content['subtitle'] ?? '';
         $originalPrice = $content['originalPrice'] ?? '';
         $currentPrice = $content['currentPrice'] ?? '';
@@ -3276,7 +3276,7 @@ HTML;
      */
     private function renderCtaSection(array $content, string $checkoutUrl, array $theme, string $template = 'modern'): string
     {
-        $title = $content['title'] ?? 'Não perca!';
+        $title = $content['title'] ?? 'NÃ£o perca!';
         $description = $content['description'] ?? '';
         $buttonText = $content['buttonText'] ?? 'Comprar Agora';
         $buttonSecondary = $content['buttonSecondary'] ?? '';
@@ -3303,7 +3303,7 @@ HTML;
         $description = $content['description'] ?? '';
 
         if (empty($videoUrl)) {
-            return '<div class="text-center theme-muted py-8">Vídeo não configurado</div>';
+            return '<div class="text-center theme-muted py-8">VÃ­deo nÃ£o configurado</div>';
         }
 
         $embedUrl = $this->getVideoEmbedUrl($videoUrl);

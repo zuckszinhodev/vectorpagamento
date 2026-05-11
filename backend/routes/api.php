@@ -89,7 +89,6 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         Route::post('/reset-password', [\App\Http\Controllers\Api\V1\AuthController::class, 'resetPassword']);
         Route::post('/logout', [\App\Http\Controllers\Api\V1\AuthController::class, 'logout']);
         Route::post('/refresh', [\App\Http\Controllers\Api\V1\AuthController::class, 'refresh']);
-        Route::post('/google', [\App\Http\Controllers\Api\V1\AuthController::class, 'googleAuth']);
     });
 
     // Public Checkout (rate limited to prevent abuse)
@@ -104,7 +103,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         Route::post('/charge/{chargeId}/upsell/{upsellId}/decline', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'declineUpsell']);
     });
 
-    // Custom Domain Checkout (para domínios personalizados)
+    // Custom Domain Checkout (para domÃ­nios personalizados)
     // Acessado via: https://pay.seudominio.com/api/v1/pay/{slug?}
     Route::prefix('pay')->middleware('resolve.domain')->group(function () {
         Route::get('/{slug?}', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'showByDomain']);
@@ -126,20 +125,20 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
     });
 
     // Webhook Unificado (no auth, signature verification inside handler)
-    // Use este único endpoint em todas as adquirentes:
-    //   POST https://api.wazerpay.com.br/api/v1/webhook
+    // Use este Ãºnico endpoint em todas as adquirentes:
+    //   POST https://api.vectorpagamentos.com/api/v1/webhook
     Route::post('webhook', [\App\Http\Controllers\Api\V1\WebhookController::class, 'unified'])
         ->middleware('throttle:120,1');
 
     // Webhooks por adquirente (legado/compatibilidade)
     Route::prefix('webhooks')->middleware('throttle:120,1')->group(function () {
 
-        // ── Endpoints ativos (PayFort e HunterSub) ───────
+        // â”€â”€ Endpoints ativos (PayFort e HunterSub) â”€â”€â”€â”€â”€â”€â”€
         Route::post('/payfort', [\App\Http\Controllers\Api\V1\WebhookController::class, 'payfort']);
         Route::post('/huntersub', [\App\Http\Controllers\Api\V1\WebhookController::class, 'huntersub']);
         Route::post('/enki', [\App\Http\Controllers\Api\V1\WebhookController::class, 'enki']);
         
-        // ── Endpoints customizados ───────
+        // â”€â”€ Endpoints customizados â”€â”€â”€â”€â”€â”€â”€
         Route::post('/custom/{integrationId}', [\App\Http\Controllers\Api\V1\WebhookController::class, 'custom']);
         Route::post('/n8n/{integrationId}', [\App\Http\Controllers\Api\V1\WebhookController::class, 'n8n']);
     });
@@ -548,9 +547,9 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::get('/{logId}', [\App\Http\Controllers\Api\V1\N8nDeliveryLogController::class, 'show']);
         });
 
-        // ═══════════════════════════════════════════════════════════════════
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // Admin: Security Monitoring - FULL SECURITY MANAGEMENT
-        // ═══════════════════════════════════════════════════════════════════
+        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         Route::prefix('admin/security')->middleware(['role:admin,owner,support,financial,antifraud', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
             // Stats & Threats (SecurityAdminController)
             Route::get('/stats', [\App\Http\Controllers\Api\V1\SecurityAdminController::class, 'stats']);
@@ -725,8 +724,8 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::post('/{id}/set-domain', [\App\Http\Controllers\Api\V1\LandingPageController::class, 'setDomain']);
         });
 
-        // WazerAI Assistant
-        Route::prefix('wazer-ai')->group(function () {
+        // Vector IA Assistant
+        Route::prefix('vector-ia')->group(function () {
             Route::post('/chat', [\App\Http\Controllers\Api\V1\WazerAIController::class, 'chat']);
             Route::get('/suggestions', [\App\Http\Controllers\Api\V1\WazerAIController::class, 'suggestions']);
             Route::post('/action', [\App\Http\Controllers\Api\V1\WazerAIController::class, 'executeAction']);

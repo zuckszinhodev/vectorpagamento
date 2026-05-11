@@ -1,11 +1,11 @@
-# WazerPay - Guia de Segurança do Servidor
+# Vector Pagamentos - Guia de Segurança do Servidor
 
 ## Instalação Rápida
 
 No servidor, execute:
 
 ```bash
-cd /var/www/wazerpay-gateway
+cd /var/www/vectorpagamentos-gateway
 chmod +x server-security-setup.sh
 sudo bash server-security-setup.sh
 ```
@@ -37,7 +37,7 @@ Bloqueia automaticamente IPs que tentam ataques de força bruta.
 | sshd | SSH | 3 | 2 horas |
 | nginx-http-auth | Nginx auth | 3 | 1 hora |
 | nginx-limit-req | Rate limit | 10 | 1 hora |
-| wazerpay-api | API auth (401/403) | 10 | 1 hora |
+| vectorpagamentos-api | API auth (401/403) | 10 | 1 hora |
 | portscan | Port scanning | 3 | 24 horas |
 
 ```bash
@@ -143,7 +143,7 @@ ausearch -k permission_changes --start today
 
 Execute a qualquer momento:
 ```bash
-wazerpay-security-check
+vectorpagamentos-security-check
 ```
 
 Mostra: Firewall, Fail2Ban, CrowdSec, conexões, recursos, Docker, logins.
@@ -154,7 +154,7 @@ Mostra: Firewall, Fail2Ban, CrowdSec, conexões, recursos, Docker, logins.
 
 ### Diário (1 min)
 ```bash
-wazerpay-security-check
+vectorpagamentos-security-check
 ```
 
 ### Semanal (5 min)

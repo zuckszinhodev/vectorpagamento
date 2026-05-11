@@ -213,7 +213,7 @@ class LandingPage extends Model
         }
 
         if ($this->subdomain) {
-            return "https://{$this->subdomain}.wazerpay.com";
+            return "https://{$this->subdomain}.vectorpagamentos.com";
         }
 
         return url("/lp/{$this->slug}");
@@ -250,7 +250,7 @@ class LandingPage extends Model
         return [
             'modern' => [
                 'name' => 'Moderno',
-                'description' => 'Design limpo e moderno com foco em conversão',
+                'description' => 'Design limpo e moderno com foco em conversÃ£o',
                 'preview' => '/templates/modern-preview.png',
             ],
             'bold' => [
@@ -275,7 +275,7 @@ class LandingPage extends Model
             ],
             'video' => [
                 'name' => 'Video Sales Letter',
-                'description' => 'Otimizado para VSL com vídeo hero',
+                'description' => 'Otimizado para VSL com vÃ­deo hero',
                 'preview' => '/templates/video-preview.png',
             ],
         ];
@@ -289,12 +289,12 @@ class LandingPage extends Model
         return [
             'hero' => [
                 'name' => 'Hero Section',
-                'description' => 'Seção principal com título e CTA',
+                'description' => 'SeÃ§Ã£o principal com tÃ­tulo e CTA',
                 'icon' => 'rectangle-stack',
             ],
             'benefits' => [
-                'name' => 'Benefícios',
-                'description' => 'Lista de benefícios do produto',
+                'name' => 'BenefÃ­cios',
+                'description' => 'Lista de benefÃ­cios do produto',
                 'icon' => 'check-badge',
             ],
             'features' => [
@@ -308,8 +308,8 @@ class LandingPage extends Model
                 'icon' => 'chat-bubble-left-right',
             ],
             'pricing' => [
-                'name' => 'Preços',
-                'description' => 'Tabela de preços ou oferta',
+                'name' => 'PreÃ§os',
+                'description' => 'Tabela de preÃ§os ou oferta',
                 'icon' => 'currency-dollar',
             ],
             'faq' => [
@@ -318,13 +318,13 @@ class LandingPage extends Model
                 'icon' => 'question-mark-circle',
             ],
             'video' => [
-                'name' => 'Vídeo',
-                'description' => 'Seção de vídeo/VSL',
+                'name' => 'VÃ­deo',
+                'description' => 'SeÃ§Ã£o de vÃ­deo/VSL',
                 'icon' => 'play-circle',
             ],
             'guarantee' => [
                 'name' => 'Garantia',
-                'description' => 'Seção de garantia',
+                'description' => 'SeÃ§Ã£o de garantia',
                 'icon' => 'shield-check',
             ],
             'about' => [
@@ -334,17 +334,17 @@ class LandingPage extends Model
             ],
             'countdown' => [
                 'name' => 'Contador',
-                'description' => 'Timer de urgência',
+                'description' => 'Timer de urgÃªncia',
                 'icon' => 'clock',
             ],
             'cta' => [
                 'name' => 'Call to Action',
-                'description' => 'Botão de ação',
+                'description' => 'BotÃ£o de aÃ§Ã£o',
                 'icon' => 'cursor-arrow-rays',
             ],
             'custom' => [
                 'name' => 'Personalizado',
-                'description' => 'HTML/conteúdo customizado',
+                'description' => 'HTML/conteÃºdo customizado',
                 'icon' => 'code-bracket',
             ],
         ];

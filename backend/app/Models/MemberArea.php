@@ -73,7 +73,7 @@ class MemberArea extends Model
         }
         
         if ($this->subdomain) {
-            return 'https://' . $this->subdomain . '.' . config('app.member_area_domain', 'members.wazerpay.com');
+            return 'https://' . $this->subdomain . '.' . config('app.member_area_domain', 'members.vectorpagamentos.com');
         }
         
         return '';

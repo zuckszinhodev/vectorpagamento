@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 /**
- * System Configuration Management — extracted from AdminController
+ * System Configuration Management â€” extracted from AdminController
  *
  * Covers: branding/appearance, API settings, withdrawal config, global webhooks.
  */
@@ -33,7 +33,7 @@ class SystemConfigAdminController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'platform_name' => $appearance['platform_name'] ?? config('app.name', 'GatePro'),
+                    'platform_name' => $this->normalizePlatformName($appearance['platform_name'] ?? config('app.name', 'Vector Pagamentos')),
                     'primary_color' => $appearance['primary_color'] ?? '#9333ea',
                     'logo_url' => $appearance['logo_url'] ?? '',
                 ],
@@ -57,7 +57,7 @@ class SystemConfigAdminController extends Controller
                 'success' => true,
                 'data' => [
                     'appearance' => [
-                        'platform_name' => $appearance['platform_name'] ?? config('app.name', 'GatePro'),
+                        'platform_name' => $this->normalizePlatformName($appearance['platform_name'] ?? config('app.name', 'Vector Pagamentos')),
                         'primary_color' => $appearance['primary_color'] ?? '#9333ea',
                         'logo_url' => $appearance['logo_url'] ?? '',
                     ],
@@ -96,7 +96,7 @@ class SystemConfigAdminController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $validated,
-                'message' => 'Configurações atualizadas com sucesso',
+                'message' => 'ConfiguraÃ§Ãµes atualizadas com sucesso',
             ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('SystemConfigAdminController::updateSystemConfig error', ['error' => $e->getMessage()]);
@@ -104,7 +104,7 @@ class SystemConfigAdminController extends Controller
         }
     }
 
-    // ── Withdrawal Config ────────────────────────────────────────
+    // â”€â”€ Withdrawal Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public function getWithdrawalConfig(): JsonResponse
     {
@@ -114,12 +114,12 @@ class SystemConfigAdminController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    // Taxas padrão
+                    // Taxas padrÃ£o
                     'fee_percentage' => (float) ($settings['fee_percentage'] ?? 0),
                     'fee_fixed' => (int) ($settings['fee_fixed'] ?? 0),
                     'standard_withdrawal_fee_pix' => (int) ($settings['standard_withdrawal_fee_pix'] ?? 0),
                     'standard_withdrawal_fee_bank' => (int) ($settings['standard_withdrawal_fee_bank'] ?? 200),
-                    // Saque instantâneo
+                    // Saque instantÃ¢neo
                     'instant_withdrawal_enabled' => $settings['instant_withdrawal_enabled'] ?? false,
                     'instant_withdrawal_fee_type' => $settings['instant_withdrawal_fee_type'] ?? 'percentage',
                     'instant_withdrawal_fee_value' => (float) ($settings['instant_withdrawal_fee_value'] ?? 2.5),
@@ -135,11 +135,11 @@ class SystemConfigAdminController extends Controller
                     'large_withdrawal_threshold' => (int) ($settings['large_withdrawal_threshold'] ?? 1000000),
                     'withdrawal_cooldown_seconds' => (int) ($settings['withdrawal_cooldown_seconds'] ?? 60),
                     'max_pending_withdrawals_per_account' => (int) ($settings['max_pending_withdrawals_per_account'] ?? 10),
-                    // Liquidação
+                    // LiquidaÃ§Ã£o
                     'settlement_days_pix' => (int) ($settings['settlement_days_pix'] ?? 1),
                     'settlement_days_ted' => (int) ($settings['settlement_days_ted'] ?? 3),
                     'processing_days' => (int) ($settings['processing_days'] ?? 1),
-                    // Saque automático
+                    // Saque automÃ¡tico
                     'auto_withdrawal_enabled' => (bool) ($settings['auto_withdrawal_enabled'] ?? false),
                     'auto_withdrawal_schedule' => $settings['auto_withdrawal_schedule'] ?? 'manual',
                     'auto_withdrawal_min_amount' => (int) ($settings['auto_withdrawal_min_amount'] ?? 5000),
@@ -216,7 +216,7 @@ class SystemConfigAdminController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $validated,
-                'message' => 'Configurações de saque atualizadas com sucesso',
+                'message' => 'ConfiguraÃ§Ãµes de saque atualizadas com sucesso',
             ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('SystemConfigAdminController::updateWithdrawalConfig error', ['error' => $e->getMessage()]);
@@ -224,7 +224,7 @@ class SystemConfigAdminController extends Controller
         }
     }
 
-    // ── Global Webhooks ──────────────────────────────────────────
+    // â”€â”€ Global Webhooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public function listGlobalWebhooks(): JsonResponse
     {
@@ -281,7 +281,7 @@ class SystemConfigAdminController extends Controller
         try {
             $webhook = GlobalWebhook::find($webhookId);
             if (!$webhook) {
-                return response()->json(['success' => false, 'message' => 'Webhook não encontrado'], 404);
+                return response()->json(['success' => false, 'message' => 'Webhook nÃ£o encontrado'], 404);
             }
 
             $validated = $request->validate([
@@ -310,7 +310,7 @@ class SystemConfigAdminController extends Controller
         try {
             $webhook = GlobalWebhook::find($webhookId);
             if (!$webhook) {
-                return response()->json(['success' => false, 'message' => 'Webhook não encontrado'], 404);
+                return response()->json(['success' => false, 'message' => 'Webhook nÃ£o encontrado'], 404);
             }
 
             $webhook->delete();
@@ -326,7 +326,7 @@ class SystemConfigAdminController extends Controller
         try {
             $webhook = GlobalWebhook::find($webhookId);
             if (!$webhook) {
-                return response()->json(['success' => false, 'message' => 'Webhook não encontrado'], 404);
+                return response()->json(['success' => false, 'message' => 'Webhook nÃ£o encontrado'], 404);
             }
 
             $newSecret = Str::random(32);
@@ -341,5 +341,12 @@ class SystemConfigAdminController extends Controller
             \Illuminate\Support\Facades\Log::error('SystemConfigAdminController::regenerateWebhookSecret error', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Erro interno do servidor'], 500);
         }
+    }
+
+    private function normalizePlatformName(mixed $name): string
+    {
+        $value = trim((string) $name);
+
+        return $value === '' ? 'Vector Pagamentos' : $value;
     }
 }

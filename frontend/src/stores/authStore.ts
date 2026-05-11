@@ -311,7 +311,7 @@ export const useAuthStore = create<AuthState>()(
     };
     },
     {
-      name: 'wazerpay-auth',
+      name: 'vectorpagamentos-auth',
       partialize: (state) => ({ token: state.token }),
       onRehydrateStorage: () => (state) => {
         // After hydration, sync token to localStorage and validate auth

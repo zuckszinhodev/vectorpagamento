@@ -193,7 +193,7 @@ private function buildDashboardData(string $accountId, string $period, Carbon $d
             ->groupBy('payment_method')
             ->get();
 
-        // Checkout-only revenue (sales through GatePro checkout)
+        // Checkout-only revenue (sales through Vector Pagamentos checkout)
         $checkoutStats = Charge::where('account_id', $accountId)
             ->whereNotNull('checkout_id')
             ->where('status', 'approved')

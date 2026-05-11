@@ -195,7 +195,7 @@ class XtrackyService
         $url = self::BASE_URL . '/' . $apiToken;
 
         try {
-            $orderId = 'wazerpay-test-' . now()->timestamp;
+            $orderId = 'vectorpagamentos-test-' . now()->timestamp;
             $payload = [
                 'orderId'    => $orderId,
                 'amount'     => 100,

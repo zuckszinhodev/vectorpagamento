@@ -347,7 +347,7 @@ function CheckoutModal({
  Nome do Checkout
  </label>
  <input
- {...register('name', { required: 'Nome é obrigatório' })}
+ {...register('name', { required: 'Nome Ã© obrigatÃ³rio' })}
  type="text"
  className="input mt-1"
  placeholder="Ex: Checkout Principal"
@@ -463,16 +463,16 @@ function CheckoutModal({
 
  {/* Domain Selection */}
  <div className="rounded-element border border-border-DEFAULT p-4">
- <h4 className="font-medium text-tx-primary">Domínio</h4>
+ <h4 className="font-medium text-tx-primary">DomÃ­nio</h4>
  <div className="mt-3">
  <label className="block text-sm font-medium text-tx-secondary">
- Domínio do Checkout
+ DomÃ­nio do Checkout
  </label>
  <select
  {...register('domain_id')}
  className="input mt-1"
  >
- <option value="">Domínio Padrão (pay.wazerpay.com)</option>
+ <option value="">DomÃ­nio PadrÃ£o (pay.vectorpagamentos.com)</option>
  {allDomains.map((domain: any) => (
  <option
  key={domain.id}
@@ -481,13 +481,13 @@ function CheckoutModal({
  >
  {domain.domain}
  {domain.is_primary ? ' (Principal)' : ''}
- {domain.status === 'pending' ? ' ⏳ Pendente' : ''}
- {domain.status === 'failed' ? ' ❌ Falhou' : ''}
+ {domain.status === 'pending' ? ' â³ Pendente' : ''}
+ {domain.status === 'failed' ? ' âŒ Falhou' : ''}
  </option>
  ))}
  </select>
  <p className="mt-1 text-xs text-tx-muted">
- <Link to="/domains" className="text-accent-primary hover:underline">Gerenciar domínios personalizados</Link>
+ <Link to="/domains" className="text-accent-primary hover:underline">Gerenciar domÃ­nios personalizados</Link>
  </p>
  </div>
  </div>
@@ -502,7 +502,7 @@ function CheckoutModal({
  </div>
  <div>
  <h4 className="font-semibold text-tx-primary">Coleta de Dados</h4>
- <p className="text-xs text-tx-muted">Configure quais informações serão solicitadas</p>
+ <p className="text-xs text-tx-muted">Configure quais informaÃ§Ãµes serÃ£o solicitadas</p>
  </div>
  </div>
  <div className="space-y-4">
@@ -543,8 +543,8 @@ function CheckoutModal({
  </svg>
  </div>
  <div>
- <span className="text-sm font-medium text-tx-primary">Endereço completo</span>
- <p className="text-xs text-tx-muted">CEP, rua, número e complemento</p>
+ <span className="text-sm font-medium text-tx-primary">EndereÃ§o completo</span>
+ <p className="text-xs text-tx-muted">CEP, rua, nÃºmero e complemento</p>
  </div>
  </div>
  <Switch
@@ -572,7 +572,7 @@ function CheckoutModal({
  </div>
  <div>
  <span className="text-sm font-medium text-tx-primary">Telefone</span>
- <p className="text-xs text-tx-muted">Número de contato com DDD</p>
+ <p className="text-xs text-tx-muted">NÃºmero de contato com DDD</p>
  </div>
  </div>
  <Switch
@@ -599,7 +599,7 @@ function CheckoutModal({
  <h4 className="font-medium text-tx-primary">Pagamento</h4>
  <div className="mt-3">
  <label className="block text-sm font-medium text-tx-secondary">
- Máximo de parcelas
+ MÃ¡ximo de parcelas
  </label>
  <select
  {...register('settings.max_installments')}
@@ -819,7 +819,7 @@ export default function CheckoutsPage() {
  </p>
  </div>
  <div className="text-right">
- <p className="text-xs text-tx-muted">Conversão</p>
+ <p className="text-xs text-tx-muted">ConversÃ£o</p>
  <div className="flex items-center gap-2">
  <span className="text-sm font-semibold text-tx-primary">
  {conversionRate(checkout)}%
@@ -857,13 +857,13 @@ export default function CheckoutsPage() {
  Views
  </th>
  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-tx-muted">
- Conversão
+ ConversÃ£o
  </th>
  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-tx-muted">
  Criado em
  </th>
  <th className="relative px-6 py-3">
- <span className="sr-only">Ações</span>
+ <span className="sr-only">AÃ§Ãµes</span>
  </th>
  </tr>
  </thead>

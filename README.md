@@ -1,13 +1,13 @@
-# WazerPay - Gateway de Pagamento by zuckszinho
+# Vector Pagamentos - Gateway de Pagamento by zuckszinho
 
-![WazerPay](https://img.shields.io/badge/WazerPay-Gateway-purple)
+![Vector Pagamentos](https://img.shields.io/badge/Vector Pagamentos-Gateway-purple)
 ![Laravel](https://img.shields.io/badge/Laravel-10+-red)
 ![React](https://img.shields.io/badge/React-18+-blue)
 ![License](https://img.shields.io/badge/License-Proprietary-green)
 
 ## 📋 Visão Geral
 
-WazerPay é um gateway de pagamento SaaS enterprise-grade que oferece:
+Vector Pagamentos é um gateway de pagamento SaaS enterprise-grade que oferece:
 
 - ✅ **Checkout Builder** - Checkout altamente personalizável
 - ✅ **Multiadquirente** - Roteamento inteligente com fallback automático
@@ -85,7 +85,7 @@ WazerPay é um gateway de pagamento SaaS enterprise-grade que oferece:
 ## 📂 Estrutura do Projeto
 
 ```
-wazerpay/
+vectorpagamentos/
 ├── backend/                    # Laravel API
 │   ├── app/
 │   │   ├── Domain/            # Entidades, VOs, Domain Services
@@ -125,7 +125,7 @@ wazerpay/
 
 ```bash
 # Clone o repositório
-git clone https://github.com/wazerpay/gateway.git
+git clone https://github.com/vectorpagamentos/gateway.git
 cd gateway
 
 # Backend
@@ -151,7 +151,7 @@ npm run dev
 
 ## 🔐 Segurança
 
-WazerPay implementa segurança de nível fintech:
+Vector Pagamentos implementa segurança de nível fintech:
 
 - JWT + Refresh Token com rotação
 - API Keys com permissões granulares
@@ -165,4 +165,4 @@ WazerPay implementa segurança de nível fintech:
 
 ## 📄 Licença
 
-Proprietary - WazerPay © 2024
+Proprietary - Vector Pagamentos © 2024

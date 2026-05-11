@@ -48,7 +48,7 @@ class MemberDomainController extends Controller
                 }
             }
 
-            // 2. Fallback: try subdomain (e.g., school-name.members.wazerpay.com.br)
+            // 2. Fallback: try subdomain (e.g., school-name.members.vectorpagamentos.com)
             $subdomain = $this->extractSubdomain($domain);
             if ($subdomain) {
                 $memberArea = MemberArea::where('subdomain', $subdomain)
@@ -78,7 +78,7 @@ class MemberDomainController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Área de membros não encontrada',
+                'message' => 'Ãrea de membros nÃ£o encontrada',
             ], 404);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('MemberDomainController::resolve error', [
@@ -109,7 +109,7 @@ class MemberDomainController extends Controller
             if (!$memberArea || !$memberArea->custom_domain) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Nenhum domínio personalizado configurado',
+                    'message' => 'Nenhum domÃ­nio personalizado configurado',
                 ], 400);
             }
 
@@ -137,7 +137,7 @@ class MemberDomainController extends Controller
                         'domain' => $domain,
                         'domain_verified' => true,
                         'ssl_enabled' => true,
-                        'message' => 'Domínio verificado via página de Domínios',
+                        'message' => 'DomÃ­nio verificado via pÃ¡gina de DomÃ­nios',
                     ],
                 ]);
             }
@@ -154,8 +154,8 @@ class MemberDomainController extends Controller
                     'domain_verified' => false,
                     'ssl_enabled' => false,
                     'message' => $pendingDomain
-                        ? 'Domínio encontrado mas ainda não verificado. Verifique os DNS na página de Domínios.'
-                        : 'Domínio não encontrado. Adicione-o primeiro na página de Domínios.',
+                        ? 'DomÃ­nio encontrado mas ainda nÃ£o verificado. Verifique os DNS na pÃ¡gina de DomÃ­nios.'
+                        : 'DomÃ­nio nÃ£o encontrado. Adicione-o primeiro na pÃ¡gina de DomÃ­nios.',
                     'needs_domain_page' => true,
                 ],
             ]);
@@ -181,7 +181,7 @@ class MemberDomainController extends Controller
         try {
             return response()->json([
                 'success' => false,
-                'message' => 'Use a página de Domínios para gerenciar verificação DNS. Os domínios verificados ficam automaticamente disponíveis para a Área de Membros.',
+                'message' => 'Use a pÃ¡gina de DomÃ­nios para gerenciar verificaÃ§Ã£o DNS. Os domÃ­nios verificados ficam automaticamente disponÃ­veis para a Ãrea de Membros.',
                 'redirect' => '/domains',
             ], 400);
         } catch (\Throwable $e) {
@@ -228,7 +228,7 @@ class MemberDomainController extends Controller
      */
     private function extractSubdomain(string $domain): ?string
     {
-        $memberDomain = config('app.member_area_domain', 'members.wazerpay.com.br');
+        $memberDomain = config('app.member_area_domain', 'members.vectorpagamentos.com');
 
         if (str_ends_with($domain, '.' . $memberDomain)) {
             return str_replace('.' . $memberDomain, '', $domain);

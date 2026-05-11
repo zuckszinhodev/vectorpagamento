@@ -1,4 +1,4 @@
-# 🏗️ Arquitetura WazerPay
+# 🏗️ Arquitetura Vector Pagamentos
 
 ## Clean Architecture + Domain-Driven Design
 

@@ -197,7 +197,7 @@ class MessagingController extends Controller
     /**
      * POST /api/v1/messaging/providers/auto-setup
      * Auto-creates providers using the platform's built-in services.
-     * Supports: whatsapp (Evolution API) and sms (GatePro SMS).
+     * Supports: whatsapp (Evolution API) and sms (Vector Pagamentos SMS).
      */
     public function autoSetupProvider(Request $request): JsonResponse
     {
@@ -218,13 +218,13 @@ class MessagingController extends Controller
             if (!$this->evolutionApi->isConfigured()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Evolution API não está configurada no servidor.',
+                    'message' => 'Evolution API nÃ£o estÃ¡ configurada no servidor.',
                 ], 422);
             }
 
             $evolutionUrl = config('services.evolution.url', env('EVOLUTION_API_URL', 'http://evolution-api:8080'));
             $evolutionKey = config('services.evolution.key', env('EVOLUTION_API_KEY', ''));
-            $instanceName = $request->input('instance_name', 'wazerpay');
+            $instanceName = $request->input('instance_name', 'vectorpagamentos');
 
             $existing = MessagingProvider::forAccount($accountId)
                 ->where('provider_name', MessagingProvider::PROVIDER_EVOLUTION_API)
@@ -275,7 +275,7 @@ class MessagingController extends Controller
             }
         }
 
-        // SMS via GatePro built-in
+        // SMS via Vector Pagamentos built-in
         if (in_array($channel, ['sms', 'both'])) {
             $existing = MessagingProvider::forAccount($accountId)
                 ->where('provider_name', MessagingProvider::PROVIDER_GATEPRO)
@@ -284,9 +284,9 @@ class MessagingController extends Controller
             if ($existing) {
                 $created[] = $this->formatProvider($existing);
             } else {
-                $smsUrl = config('services.wazerpay_sms.url', env('GATEPRO_SMS_URL', ''));
-                $smsKey = config('services.wazerpay_sms.key', env('GATEPRO_SMS_KEY', ''));
-                $smsSender = config('services.wazerpay_sms.sender', env('GATEPRO_SMS_SENDER', 'GatePro'));
+                $smsUrl = config('services.vectorpagamentos_sms.url', env('VECTORPAGAMENTOS_SMS_URL', ''));
+                $smsKey = config('services.vectorpagamentos_sms.key', env('VECTORPAGAMENTOS_SMS_KEY', ''));
+                $smsSender = config('services.vectorpagamentos_sms.sender', env('VECTORPAGAMENTOS_SMS_SENDER', 'Vector Pagamentos'));
 
                 $provider = MessagingProvider::create([
                     'account_id' => $accountId,
@@ -299,7 +299,7 @@ class MessagingController extends Controller
                 ]);
                 $created[] = $this->formatProvider($provider);
 
-                Log::info('GatePro SMS provider auto-setup', [
+                Log::info('Vector Pagamentos SMS provider auto-setup', [
                     'account_id' => $accountId,
                     'provider_id' => $provider->id,
                 ]);
@@ -308,7 +308,7 @@ class MessagingController extends Controller
 
         $responseData = [
             'success' => count($created) > 0,
-            'message' => count($created) > 0 ? 'Provedores configurados com sucesso!' : 'Nenhum provedor disponível no servidor.',
+            'message' => count($created) > 0 ? 'Provedores configurados com sucesso!' : 'Nenhum provedor disponÃ­vel no servidor.',
             'data' => $created,
         ];
 
@@ -354,7 +354,7 @@ class MessagingController extends Controller
             ], 404);
         }
 
-        $instanceName = $provider->instance_name ?? 'wazerpay';
+        $instanceName = $provider->instance_name ?? 'vectorpagamentos';
 
         try {
             $result = $this->evolutionApi->getQrCode($instanceName);
@@ -408,12 +408,12 @@ class MessagingController extends Controller
                     'configured' => false,
                     'state' => 'not_configured',
                     'connected' => false,
-                    'message' => 'WhatsApp não configurado',
+                    'message' => 'WhatsApp nÃ£o configurado',
                 ],
             ]);
         }
 
-        $instanceName = $provider->instance_name ?? 'wazerpay';
+        $instanceName = $provider->instance_name ?? 'vectorpagamentos';
         $state = $this->evolutionApi->getConnectionState($instanceName);
         $info = [];
 
@@ -463,7 +463,7 @@ class MessagingController extends Controller
             ], 404);
         }
 
-        $instanceName = $provider->instance_name ?? 'wazerpay';
+        $instanceName = $provider->instance_name ?? 'vectorpagamentos';
         $result = $this->evolutionApi->logout($instanceName);
 
         Log::info('WhatsApp disconnected', [
@@ -508,12 +508,12 @@ class MessagingController extends Controller
             ], 404);
         }
 
-        $instanceName = $provider->instance_name ?? 'wazerpay';
+        $instanceName = $provider->instance_name ?? 'vectorpagamentos';
         $result = $this->evolutionApi->restartInstance($instanceName);
 
         return response()->json([
             'success' => $result['success'] ?? false,
-            'message' => $result['message'] ?? 'Instância reiniciada',
+            'message' => $result['message'] ?? 'InstÃ¢ncia reiniciada',
         ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('MessagingController::whatsappRestart error', [
@@ -573,7 +573,7 @@ class MessagingController extends Controller
         if (!$provider->is_active) {
             return response()->json([
                 'success' => false,
-                'error' => ['code' => 'provider_inactive', 'message' => 'Provedor está desativado'],
+                'error' => ['code' => 'provider_inactive', 'message' => 'Provedor estÃ¡ desativado'],
             ], 400);
         }
 
@@ -809,10 +809,10 @@ class MessagingController extends Controller
             ['value' => 'payment.approved', 'label' => 'Pagamento Aprovado'],
             ['value' => 'payment.refused', 'label' => 'Pagamento Recusado'],
             ['value' => 'payment.expired', 'label' => 'Pagamento Expirado'],
-            ['value' => 'charge.created', 'label' => 'Cobrança Criada'],
+            ['value' => 'charge.created', 'label' => 'CobranÃ§a Criada'],
             ['value' => 'pix.generated', 'label' => 'PIX Gerado'],
             ['value' => 'boleto.generated', 'label' => 'Boleto Gerado'],
-            ['value' => 'refund.completed', 'label' => 'Reembolso Concluído'],
+            ['value' => 'refund.completed', 'label' => 'Reembolso ConcluÃ­do'],
             ['value' => 'chargeback.created', 'label' => 'Chargeback Criado'],
             ['value' => 'checkout.abandoned', 'label' => 'Checkout Abandonado'],
             ['value' => 'pix.expired', 'label' => 'PIX Expirado'],

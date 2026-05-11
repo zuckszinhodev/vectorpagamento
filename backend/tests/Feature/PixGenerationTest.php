@@ -40,14 +40,14 @@ function setupPixTestData(): array
         'name'          => 'PIX Test Account',
         'document'      => '12345678901',
         'document_type' => 'cpf',
-        'email'         => 'pix-test@wazerpay.com',
+        'email'         => 'pix-test@vectorpagamentos.com',
         'status'        => 'active',
     ]);
 
     $user = User::create([
         'id'         => Str::uuid()->toString(),
         'account_id' => $account->id,
-        'email'      => 'pix-test@wazerpay.com',
+        'email'      => 'pix-test@vectorpagamentos.com',
         'password'   => bcrypt('password123'),
         'name'       => 'PIX Test User',
         'status'     => 'active',
@@ -661,7 +661,7 @@ describe('Integração Real — PIX via API Externa', function () {
             'payment_method' => 'pix',
             'customer'       => [
                 'name'     => 'Teste Integração PIX',
-                'email'    => 'teste-pix-real@wazerpay.com',
+                'email'    => 'teste-pix-real@vectorpagamentos.com',
                 'document' => '52998224725',
                 'phone'    => '11999998888',
             ],
@@ -723,7 +723,7 @@ describe('Integração Real — PIX via API Externa', function () {
             'payment_method' => 'pix',
             'customer'       => [
                 'name'     => 'Comprador PIX Real',
-                'email'    => 'comprador-real@wazerpay.com',
+                'email'    => 'comprador-real@vectorpagamentos.com',
                 'document' => '52998224725',
                 'phone'    => '11988887777',
             ],
@@ -775,7 +775,7 @@ describe('Integração Real — PIX via API Externa', function () {
             'payment_method' => 'pix',
             'customer'       => [
                 'name'     => 'Validação Formato PIX',
-                'email'    => 'formato-pix@wazerpay.com',
+                'email'    => 'formato-pix@vectorpagamentos.com',
                 'document' => '52998224725',
             ],
         ]);
@@ -824,7 +824,7 @@ describe('Integração Real — PIX via API Externa', function () {
             'payment_method' => 'pix',
             'customer'       => [
                 'name'     => 'Idempotência PIX',
-                'email'    => 'idem@wazerpay.com',
+                'email'    => 'idem@vectorpagamentos.com',
                 'document' => '52998224725',
             ],
         ];

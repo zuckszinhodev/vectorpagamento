@@ -25,7 +25,7 @@ class CheckApiPermission
     {
         $user = $request->user();
 
-        // JWT users (dashboard) have full access — no restrictions
+        // JWT users (dashboard) have full access â€” no restrictions
         if ($user && !isset($user->type)) {
             return $next($request);
         }
@@ -39,7 +39,7 @@ class CheckApiPermission
                     'success' => false,
                     'error' => [
                         'code' => 'insufficient_permissions',
-                        'message' => 'Permissões insuficientes. Esta chave API não tem acesso a este recurso.',
+                        'message' => 'PermissÃµes insuficientes. Esta chave API nÃ£o tem acesso a este recurso.',
                     ],
                 ], 403);
             }
@@ -63,8 +63,8 @@ class CheckApiPermission
                 $keyType = $apiKey->type ?? 'public';
 
                 $message = $isWriteOp && $keyType === 'public'
-                    ? "Permissões insuficientes. Chaves públicas (pk_live_/pk_test_) não podem realizar operações de escrita. Use uma chave secreta (sk_live_/sk_test_) gerada em Configurações > API Keys."
-                    : "Permissões insuficientes. Esta chave API não tem a permissão '{$permission}'.";
+                    ? "PermissÃµes insuficientes. Chaves pÃºblicas (pk_live_/pk_test_) nÃ£o podem realizar operaÃ§Ãµes de escrita. Use uma chave secreta (sk_live_/sk_test_) gerada em ConfiguraÃ§Ãµes > API Keys."
+                    : "PermissÃµes insuficientes. Esta chave API nÃ£o tem a permissÃ£o '{$permission}'.";
 
                 return response()->json([
                     'success' => false,
@@ -74,7 +74,7 @@ class CheckApiPermission
                         'required_permission' => $permission,
                         'key_type' => $keyType,
                         'hint' => $isWriteOp
-                            ? 'Para operações de escrita (criar cobranças, checkouts, etc), gere uma chave secreta (sk_live_) em https://app.wazerpay.com.br/settings na aba API Keys.'
+                            ? 'Para operaÃ§Ãµes de escrita (criar cobranÃ§as, checkouts, etc), gere uma chave secreta (sk_live_) em https://app.vectorpagamentos.com/settings na aba API Keys.'
                             : null,
                     ],
                 ], 403);

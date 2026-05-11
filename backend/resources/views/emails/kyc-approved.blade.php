@@ -11,7 +11,7 @@
 
 <p><a href="{{ $dashboardUrl }}">{{ $dashboardUrl }}</a></p>
 
-<p>Atenciosamente,<br>Equipe GatePro</p>
+<p>Atenciosamente,<br>Equipe Vector Pagamentos</p>
 
 </body>
 </html>

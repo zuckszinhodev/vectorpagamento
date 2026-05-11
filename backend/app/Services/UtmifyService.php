@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Log;
 class UtmifyService
 {
     public const ENDPOINT = 'https://api.utmify.com.br/api-credentials/orders';
-    public const PLATFORM = 'GatePro';
+    public const PLATFORM = 'Vector Pagamentos';
 
     /**
      * Map internal charge statuses to UTMify statuses.
@@ -64,7 +64,7 @@ class UtmifyService
             ->first();
 
         if (!$integration) {
-            Log::info('UTMify dispatch skipped – no active integration', [
+            Log::info('UTMify dispatch skipped â€“ no active integration', [
                 'account_id' => $charge->account_id,
                 'charge_id'  => $charge->id,
             ]);
@@ -97,7 +97,7 @@ class UtmifyService
             ->first();
 
         if (!$integration) {
-            Log::info('UTMify dispatchSync skipped – no active integration', [
+            Log::info('UTMify dispatchSync skipped â€“ no active integration', [
                 'account_id' => $charge->account_id,
                 'charge_id'  => $charge->id,
             ]);
@@ -207,7 +207,7 @@ class UtmifyService
     public function testToken(string $apiToken): array
     {
         try {
-            $orderId = 'wazerpay-test-' . now()->timestamp;
+            $orderId = 'vectorpagamentos-test-' . now()->timestamp;
             $payload = [
                 'orderId'       => $orderId,
                 'platform'      => self::PLATFORM,
@@ -217,8 +217,8 @@ class UtmifyService
                 'approvedDate'  => now()->utc()->format('Y-m-d H:i:s'),
                 'refundedAt'    => null,
                 'customer' => [
-                    'name'     => 'Teste GatePro',
-                    'email'    => 'teste@wazerpay.com.br',
+                    'name'     => 'Teste Vector Pagamentos',
+                    'email'    => 'teste@vectorpagamentos.com',
                     'phone'    => null,
                     'document' => null,
                     'country'  => 'BR',

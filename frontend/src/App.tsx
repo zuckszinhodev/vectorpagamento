@@ -432,7 +432,7 @@ function App() {
         <Route path="/support" element={<SupportPage />} />
         <Route path="/splits" element={<SplitManagement />} />
         <Route path="/webhook-logs" element={<WebhookLogsPage />} />
-        <Route path="/wazer-ia" element={<WazerIAPage />} />
+        <Route path="/vector-ia" element={<WazerIAPage />} />
         <Route path="/api-docs" element={<ApiDocsPage />} />
       </Route>
 

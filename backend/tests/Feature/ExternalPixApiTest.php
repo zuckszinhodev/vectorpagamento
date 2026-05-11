@@ -5,7 +5,7 @@ declare(strict_types=1);
 /**
  * Teste de Integração Real — PIX via API Externa Vector Pagamentos
  *
- * Chama a API de produção em https://api.wazerpay.com.br/api/v1/external/charges
+ * Chama a API de produção em https://api.vectorpagamentos.com/api/v1/external/charges
  * usando a API Key (sk_live_*) para gerar cobranças PIX reais.
  *
  * Para rodar:
@@ -15,7 +15,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 
-$baseUrl = rtrim((string) env('EXTERNAL_PIX_API_BASE_URL', 'https://api.wazerpay.com.br/api/v1/external'), '/');
+$baseUrl = rtrim((string) env('EXTERNAL_PIX_API_BASE_URL', 'https://api.vectorpagamentos.com/api/v1/external'), '/');
 $apiKey  = (string) env('EXTERNAL_PIX_API_KEY', '');
 $runExternalPixTests = filter_var(env('RUN_EXTERNAL_PIX_TESTS', false), FILTER_VALIDATE_BOOL);
 
@@ -48,7 +48,7 @@ it('gera cobrança PIX real via API externa e retorna QR code', function () use 
         'payment_method' => 'pix',
         'customer'       => [
             'name'     => 'Teste Integração PIX',
-            'email'    => 'teste-pix@wazerpay.com',
+            'email'    => 'teste-pix@vectorpagamentos.com',
             'document' => '52998224725',
             'phone'    => '11999998888',
         ],
@@ -139,7 +139,7 @@ it('consulta detalhes de uma cobrança PIX criada', function () use ($baseUrl, $
         'payment_method' => 'pix',
         'customer'       => [
             'name'     => 'Consulta PIX Test',
-            'email'    => 'consulta@wazerpay.com',
+            'email'    => 'consulta@vectorpagamentos.com',
             'document' => '52998224725',
         ],
     ]);

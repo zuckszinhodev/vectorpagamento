@@ -1447,7 +1447,7 @@ function SettingsTab({ whatsappStatus, providers }: { whatsappStatus?: WhatsAppS
               </div>
               <div>
                 <label className="block text-sm font-medium text-tx-secondary mb-1">Nome da Instância</label>
-                <input type="text" value={setupForm.instance_name} onChange={e => setSetupForm(p => ({ ...p, instance_name: e.target.value }))} placeholder="wazerpay-whatsapp" className="w-full px-4 py-2.5 rounded-xl bg-surface-page border border-border-DEFAULT text-tx-primary placeholder-tx-muted focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none" />
+                <input type="text" value={setupForm.instance_name} onChange={e => setSetupForm(p => ({ ...p, instance_name: e.target.value }))} placeholder="vectorpagamentos-whatsapp" className="w-full px-4 py-2.5 rounded-xl bg-surface-page border border-border-DEFAULT text-tx-primary placeholder-tx-muted focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-tx-secondary mb-1">Token da Instância</label>

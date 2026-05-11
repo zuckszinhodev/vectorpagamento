@@ -37,7 +37,7 @@ if ($mode === 'charge') {
         'description' => 'Teste Enki via script',
         'customer' => [
             'name' => 'Teste Enki Cliente',
-            'email' => 'teste-enki@wazerpay.com',
+            'email' => 'teste-enki@vectorpagamentos.com',
             'document' => '52998224725',
             'phone' => '11999998888',
         ],
@@ -62,7 +62,7 @@ if ($mode === 'charge-raw') {
     $payload = [
         'amount' => 500,
         'payment_method' => 'PIX',
-        'postback_url' => 'https://app.wazerpay.com.br/api/v1/webhooks/enki',
+        'postback_url' => 'https://app.vectorpagamentos.com/api/v1/webhooks/enki',
         'items' => [[
             'title' => 'Teste Enki via script',
             'unit_price' => 500,
@@ -72,7 +72,7 @@ if ($mode === 'charge-raw') {
         ]],
         'customer' => [
             'name' => 'Teste Enki Cliente',
-            'email' => 'teste-enki@wazerpay.com',
+            'email' => 'teste-enki@vectorpagamentos.com',
             'phone' => '11999998888',
             'document' => [
                 'number' => '52998224725',
@@ -99,7 +99,7 @@ if ($mode === 'charge-raw-expires-in' || $mode === 'charge-raw-expires-at') {
     $payload = [
         'amount' => 500,
         'payment_method' => 'PIX',
-        'postback_url' => 'https://app.wazerpay.com.br/api/v1/webhooks/enki',
+        'postback_url' => 'https://app.vectorpagamentos.com/api/v1/webhooks/enki',
         'items' => [[
             'title' => 'Teste Enki exp probe',
             'unit_price' => 500,
@@ -109,7 +109,7 @@ if ($mode === 'charge-raw-expires-in' || $mode === 'charge-raw-expires-at') {
         ]],
         'customer' => [
             'name' => 'Teste Enki Cliente',
-            'email' => 'teste-enki@wazerpay.com',
+            'email' => 'teste-enki@vectorpagamentos.com',
             'phone' => '11999998888',
             'document' => [
                 'number' => '52998224725',
@@ -148,7 +148,7 @@ if ($mode === 'charge-raw-pix-expires-in' || $mode === 'charge-raw-pix-expires-a
     $payload = [
         'amount' => 500,
         'payment_method' => 'PIX',
-        'postback_url' => 'https://app.wazerpay.com.br/api/v1/webhooks/enki',
+        'postback_url' => 'https://app.vectorpagamentos.com/api/v1/webhooks/enki',
         'items' => [[
             'title' => 'Teste Enki pix exp probe',
             'unit_price' => 500,
@@ -158,7 +158,7 @@ if ($mode === 'charge-raw-pix-expires-in' || $mode === 'charge-raw-pix-expires-a
         ]],
         'customer' => [
             'name' => 'Teste Enki Cliente',
-            'email' => 'teste-enki@wazerpay.com',
+            'email' => 'teste-enki@vectorpagamentos.com',
             'phone' => '11999998888',
             'document' => [
                 'number' => '52998224725',

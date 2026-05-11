@@ -52,7 +52,7 @@ class MessagingProvider extends Model
     const PROVIDER_ZAPI = 'z-api';
     const PROVIDER_TWILIO = 'twilio';
     const PROVIDER_VONAGE = 'vonage';
-    const PROVIDER_GATEPRO = 'wazerpay';
+    const PROVIDER_GATEPRO = 'vectorpagamentos';
     const PROVIDER_CUSTOM = 'custom';
 
     // ---- relationships ----

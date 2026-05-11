@@ -68,7 +68,7 @@ const pageTitles: Record<string, string> = {
   '/messaging': 'Mensagens',
   '/support': 'Backlog',
   '/splits': 'Afiliados',
-  '/wazer-ia': 'Vector Pagamentos IA',
+  '/vector-ia': 'Vector Pagamentos IA',
   '/admin': 'Administração',
 };
 

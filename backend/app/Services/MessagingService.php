@@ -133,10 +133,10 @@ class MessagingService
                 MessagingProvider::PROVIDER_TWILIO => $this->testTwilio($provider),
                 MessagingProvider::PROVIDER_VONAGE => $this->testVonage($provider),
                 MessagingProvider::PROVIDER_GATEPRO => $this->testGatePro($provider),
-                default => ['valid' => true, 'message' => 'Provider configurado (sem teste disponível)'],
+                default => ['valid' => true, 'message' => 'Provider configurado (sem teste disponÃ­vel)'],
             };
         } catch (\Exception $e) {
-            return ['valid' => false, 'message' => 'Erro ao testar conexão: ' . $e->getMessage()];
+            return ['valid' => false, 'message' => 'Erro ao testar conexÃ£o: ' . $e->getMessage()];
         }
     }
 
@@ -180,11 +180,11 @@ class MessagingService
             $state = $data['instance']['state'] ?? $data['state'] ?? 'unknown';
             return [
                 'valid' => $state === 'open',
-                'message' => $state === 'open' ? 'Instância conectada!' : "Instância em estado: {$state}",
+                'message' => $state === 'open' ? 'InstÃ¢ncia conectada!' : "InstÃ¢ncia em estado: {$state}",
             ];
         }
 
-        return ['valid' => false, 'message' => 'Não foi possível conectar à Evolution API'];
+        return ['valid' => false, 'message' => 'NÃ£o foi possÃ­vel conectar Ã  Evolution API'];
     }
 
     // ---- Z-API (WhatsApp) ----
@@ -228,7 +228,7 @@ class MessagingService
             ];
         }
 
-        return ['valid' => false, 'message' => 'Não foi possível conectar à Z-API'];
+        return ['valid' => false, 'message' => 'NÃ£o foi possÃ­vel conectar Ã  Z-API'];
     }
 
     // ---- Twilio (SMS) ----
@@ -270,7 +270,7 @@ class MessagingService
 
         return [
             'valid' => $response->successful(),
-            'message' => $response->successful() ? 'Conta Twilio válida!' : 'Credenciais inválidas',
+            'message' => $response->successful() ? 'Conta Twilio vÃ¡lida!' : 'Credenciais invÃ¡lidas',
         ];
     }
 
@@ -285,7 +285,7 @@ class MessagingService
             'api_key' => $provider->api_key,
             'api_secret' => $apiSecret,
             'to' => $this->formatPhone($phone),
-            'from' => $provider->sender_number ?? 'GatePro',
+            'from' => $provider->sender_number ?? 'Vector Pagamentos',
             'text' => $message,
         ]);
 
@@ -317,20 +317,20 @@ class MessagingService
 
         return [
             'valid' => $response->successful(),
-            'message' => $response->successful() ? 'Conta Vonage válida!' : 'Credenciais inválidas',
+            'message' => $response->successful() ? 'Conta Vonage vÃ¡lida!' : 'Credenciais invÃ¡lidas',
         ];
     }
 
-    // ---- GatePro SMS (built-in) ----
+    // ---- Vector Pagamentos SMS (built-in) ----
 
     private function sendViaGatePro(MessagingProvider $provider, string $phone, string $message): array
     {
-        $smsUrl = config('services.wazerpay_sms.url', env('GATEPRO_SMS_URL', ''));
-        $smsKey = config('services.wazerpay_sms.key', env('GATEPRO_SMS_KEY', ''));
-        $smsSender = $provider->sender_number ?? config('services.wazerpay_sms.sender', env('GATEPRO_SMS_SENDER', 'GatePro'));
+        $smsUrl = config('services.vectorpagamentos_sms.url', env('VECTORPAGAMENTOS_SMS_URL', ''));
+        $smsKey = config('services.vectorpagamentos_sms.key', env('VECTORPAGAMENTOS_SMS_KEY', ''));
+        $smsSender = $provider->sender_number ?? config('services.vectorpagamentos_sms.sender', env('VECTORPAGAMENTOS_SMS_SENDER', 'Vector Pagamentos'));
 
         if (!$smsUrl) {
-            throw new \Exception('GatePro SMS: URL do gateway SMS não configurada (GATEPRO_SMS_URL)');
+            throw new \Exception('Vector Pagamentos SMS: URL do gateway SMS nÃ£o configurada (VECTORPAGAMENTOS_SMS_URL)');
         }
 
         $formattedPhone = $this->formatPhoneInternational($phone);
@@ -345,7 +345,7 @@ class MessagingService
         ]);
 
         if (!$response->successful()) {
-            throw new \Exception('GatePro SMS error: ' . $response->body());
+            throw new \Exception('Vector Pagamentos SMS error: ' . $response->body());
         }
 
         $data = $response->json();
@@ -357,11 +357,11 @@ class MessagingService
 
     private function testGatePro(MessagingProvider $provider): array
     {
-        $smsUrl = config('services.wazerpay_sms.url', env('GATEPRO_SMS_URL', ''));
-        $smsKey = config('services.wazerpay_sms.key', env('GATEPRO_SMS_KEY', ''));
+        $smsUrl = config('services.vectorpagamentos_sms.url', env('VECTORPAGAMENTOS_SMS_URL', ''));
+        $smsKey = config('services.vectorpagamentos_sms.key', env('VECTORPAGAMENTOS_SMS_KEY', ''));
 
         if (!$smsUrl) {
-            return ['valid' => false, 'message' => 'URL do gateway SMS não configurada'];
+            return ['valid' => false, 'message' => 'URL do gateway SMS nÃ£o configurada'];
         }
 
         try {
@@ -371,7 +371,7 @@ class MessagingService
 
             return [
                 'valid' => $response->successful(),
-                'message' => $response->successful() ? 'GatePro SMS ativo!' : 'Serviço SMS indisponível',
+                'message' => $response->successful() ? 'Vector Pagamentos SMS ativo!' : 'ServiÃ§o SMS indisponÃ­vel',
             ];
         } catch (\Exception $e) {
             return ['valid' => false, 'message' => 'Erro ao conectar: ' . $e->getMessage()];
@@ -384,7 +384,7 @@ class MessagingService
     {
         $baseUrl = rtrim($provider->api_url ?? '', '/');
         if (!$baseUrl) {
-            throw new \Exception('URL da API não configurada');
+            throw new \Exception('URL da API nÃ£o configurada');
         }
 
         $headers = ['Content-Type' => 'application/json'];

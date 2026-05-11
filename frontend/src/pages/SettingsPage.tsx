@@ -1339,7 +1339,7 @@ export default function SettingsPage() {
  </div>
  <div className="flex items-center gap-2 sm:gap-3">
  <a
- href="https://wazerpay.readme.io/"
+ href="https://vectorpagamentos.com/docs"
  target="_blank"
  rel="noopener noreferrer"
  className="btn-secondary inline-flex items-center text-xs sm:text-sm"

@@ -46,7 +46,7 @@ class DomainController extends Controller
         try {
             $type = $request->input('type', 'custom');
 
-            if ($type === 'wazerpay') {
+            if ($type === 'vectorpagamentos') {
                 return $this->storeGateProSubdomain($request);
             }
 
@@ -61,9 +61,9 @@ class DomainController extends Controller
                 'use_for' => ['sometimes', 'array'],
                 'use_for.*' => ['string', 'in:checkout,members'],
             ], [
-                'domain.required' => 'O domínio é obrigatório',
-                'domain.regex' => 'Formato de domínio inválido',
-                'domain.unique' => 'Este domínio já está em uso',
+                'domain.required' => 'O domÃ­nio Ã© obrigatÃ³rio',
+                'domain.regex' => 'Formato de domÃ­nio invÃ¡lido',
+                'domain.unique' => 'Este domÃ­nio jÃ¡ estÃ¡ em uso',
             ]);
 
             // Check domain limit per account (e.g., 5 domains)
@@ -73,19 +73,19 @@ class DomainController extends Controller
                     'success' => false,
                     'error' => [
                         'code' => 'domain_limit_reached',
-                        'message' => 'Você atingiu o limite máximo de domínios (5)',
+                        'message' => 'VocÃª atingiu o limite mÃ¡ximo de domÃ­nios (5)',
                     ],
                 ], 400);
             }
 
-            // Block registration of wazerpay.com.br subdomains as custom domains
+            // Block registration of vectorpagamentos.com subdomains as custom domains
             $domainValue = strtolower($request->input('domain'));
             if (str_ends_with($domainValue, '.' . CustomDomain::getGateProBaseDomain())) {
                 return response()->json([
                     'success' => false,
                     'error' => [
                         'code' => 'invalid_domain',
-                        'message' => 'Subdomínios GatePro devem ser criados usando a opção "Subdomínio GatePro"',
+                        'message' => 'SubdomÃ­nios Vector Pagamentos devem ser criados usando a opÃ§Ã£o "SubdomÃ­nio Vector Pagamentos"',
                     ],
                 ], 400);
             }
@@ -104,18 +104,18 @@ class DomainController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $this->formatDomain($domain, true),
-                'message' => 'Domínio adicionado. Configure os registros DNS para verificar.',
+                'message' => 'DomÃ­nio adicionado. Configure os registros DNS para verificar.',
             ], 201);
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Throwable $e) {
             Log::error('DomainController::store failed', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'error' => ['code' => 'internal_error', 'message' => 'Erro ao criar domínio']], 500);
+            return response()->json(['success' => false, 'error' => ['code' => 'internal_error', 'message' => 'Erro ao criar domÃ­nio']], 500);
         }
     }
 
     /**
-     * Create a GatePro subdomain (e.g., meusite.wazerpay.com.br).
+     * Create a Vector Pagamentos subdomain (e.g., meusite.vectorpagamentos.com).
      * Auto-verified, no DNS configuration needed.
      */
     protected function storeGateProSubdomain(Request $request): JsonResponse
@@ -132,11 +132,11 @@ class DomainController extends Controller
             'use_for' => ['sometimes', 'array'],
             'use_for.*' => ['string', 'in:checkout,members'],
         ], [
-            'subdomain.required' => 'O subdomínio é obrigatório',
-            'subdomain.min' => 'O subdomínio deve ter pelo menos 3 caracteres',
-            'subdomain.max' => 'O subdomínio deve ter no máximo 40 caracteres',
-            'subdomain.regex' => 'Apenas letras minúsculas, números e hífens. Não pode começar ou terminar com hífen.',
-            'subdomain.unique' => 'Este subdomínio já está em uso',
+            'subdomain.required' => 'O subdomÃ­nio Ã© obrigatÃ³rio',
+            'subdomain.min' => 'O subdomÃ­nio deve ter pelo menos 3 caracteres',
+            'subdomain.max' => 'O subdomÃ­nio deve ter no mÃ¡ximo 40 caracteres',
+            'subdomain.regex' => 'Apenas letras minÃºsculas, nÃºmeros e hÃ­fens. NÃ£o pode comeÃ§ar ou terminar com hÃ­fen.',
+            'subdomain.unique' => 'Este subdomÃ­nio jÃ¡ estÃ¡ em uso',
         ]);
 
         $slug = strtolower($request->input('subdomain'));
@@ -148,7 +148,7 @@ class DomainController extends Controller
                 'success' => false,
                 'error' => [
                     'code' => 'subdomain_reserved',
-                    'message' => 'Este subdomínio é reservado e não pode ser usado',
+                    'message' => 'Este subdomÃ­nio Ã© reservado e nÃ£o pode ser usado',
                 ],
             ], 400);
         }
@@ -160,7 +160,7 @@ class DomainController extends Controller
                 'success' => false,
                 'error' => [
                     'code' => 'domain_limit_reached',
-                    'message' => 'Você atingiu o limite máximo de domínios (5)',
+                    'message' => 'VocÃª atingiu o limite mÃ¡ximo de domÃ­nios (5)',
                 ],
             ], 400);
         }
@@ -184,7 +184,7 @@ class DomainController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->formatDomain($domain),
-            'message' => 'Subdomínio GatePro criado e ativado automaticamente!',
+            'message' => 'SubdomÃ­nio Vector Pagamentos criado e ativado automaticamente!',
         ], 201);
     }
 
@@ -225,7 +225,7 @@ class DomainController extends Controller
             ->where('id', $id)
             ->firstOrFail();
 
-        // GatePro subdomains are always verified
+        // Vector Pagamentos subdomains are always verified
         if ($domain->isGateProSubdomain()) {
             if (!$domain->isVerified()) {
                 $domain->markAsVerified();
@@ -233,7 +233,7 @@ class DomainController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $this->formatDomain($domain),
-                'message' => 'Subdomínio GatePro está verificado automaticamente.',
+                'message' => 'SubdomÃ­nio Vector Pagamentos estÃ¡ verificado automaticamente.',
             ]);
         }
 
@@ -246,7 +246,7 @@ class DomainController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $this->formatDomain($domain),
-                'message' => 'Domínio verificado com sucesso!',
+                'message' => 'DomÃ­nio verificado com sucesso!',
             ]);
         }
 
@@ -260,7 +260,7 @@ class DomainController extends Controller
             'success' => false,
             'error' => [
                 'code' => 'verification_failed',
-                'message' => 'Verificação DNS falhou',
+                'message' => 'VerificaÃ§Ã£o DNS falhou',
                 'details' => $result['errors'],
             ],
             'data' => [
@@ -296,7 +296,7 @@ class DomainController extends Controller
                 'success' => false,
                 'error' => [
                     'code' => 'domain_not_verified',
-                    'message' => 'Apenas domínios verificados podem ser definidos como principal',
+                    'message' => 'Apenas domÃ­nios verificados podem ser definidos como principal',
                 ],
             ], 400);
         }
@@ -306,7 +306,7 @@ class DomainController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->formatDomain($domain),
-            'message' => 'Domínio definido como principal',
+            'message' => 'DomÃ­nio definido como principal',
         ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('DomainController::setPrimary error', [
@@ -343,7 +343,7 @@ class DomainController extends Controller
                 'success' => false,
                 'error' => [
                     'code' => 'domain_has_linked_pages',
-                    'message' => 'Não é possível excluir este domínio. Existem páginas de vendas vinculadas a ele. Remova o domínio das seguintes páginas antes de excluí-lo: ' . $pageNames,
+                    'message' => 'NÃ£o Ã© possÃ­vel excluir este domÃ­nio. Existem pÃ¡ginas de vendas vinculadas a ele. Remova o domÃ­nio das seguintes pÃ¡ginas antes de excluÃ­-lo: ' . $pageNames,
                     'linked_pages' => $linkedPages->toArray(),
                 ],
             ], 422);
@@ -365,7 +365,7 @@ class DomainController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Domínio removido com sucesso',
+            'message' => 'DomÃ­nio removido com sucesso',
         ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('DomainController::destroy error', [
@@ -390,8 +390,8 @@ class DomainController extends Controller
             'use_for' => ['required', 'array', 'min:1'],
             'use_for.*' => ['string', 'in:checkout,members'],
         ], [
-            'use_for.required' => 'Selecione pelo menos um uso para o domínio',
-            'use_for.min' => 'Selecione pelo menos um uso para o domínio',
+            'use_for.required' => 'Selecione pelo menos um uso para o domÃ­nio',
+            'use_for.min' => 'Selecione pelo menos um uso para o domÃ­nio',
         ]);
 
         $domain = CustomDomain::where('account_id', $request->user()->account_id)
@@ -405,7 +405,7 @@ class DomainController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->formatDomain($domain),
-            'message' => 'Uso do domínio atualizado',
+            'message' => 'Uso do domÃ­nio atualizado',
         ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('DomainController::updateUseFor error', [
@@ -450,7 +450,7 @@ class DomainController extends Controller
                     ],
                     [
                         'step' => 2,
-                        'title' => 'Adicione o TXT de verificação',
+                        'title' => 'Adicione o TXT de verificaÃ§Ã£o',
                         'description' => 'Adicione um registro TXT para verificar a propriedade',
                         'record' => [
                             'type' => 'TXT',
@@ -461,8 +461,8 @@ class DomainController extends Controller
                     ],
                     [
                         'step' => 3,
-                        'title' => 'Verifique o domínio',
-                        'description' => 'Após configurar os registros, clique em verificar. A propagação DNS pode levar até 48 horas.',
+                        'title' => 'Verifique o domÃ­nio',
+                        'description' => 'ApÃ³s configurar os registros, clique em verificar. A propagaÃ§Ã£o DNS pode levar atÃ© 48 horas.',
                     ],
                 ],
             ],

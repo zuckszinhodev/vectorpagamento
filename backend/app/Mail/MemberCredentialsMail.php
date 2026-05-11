@@ -25,7 +25,7 @@ class MemberCredentialsMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "Acesso liberado: {$this->courseName} - GatePro",
+            subject: "Acesso liberado: {$this->courseName} - Vector Pagamentos",
         );
     }
 

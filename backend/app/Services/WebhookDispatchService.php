@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Dispatches webhook events to per-account webhook URLs
  * 
- * Fires notifications to URLs configured by users in the Integrações → Webhook section
+ * Fires notifications to URLs configured by users in the IntegraÃ§Ãµes â†’ Webhook section
  */
 class WebhookDispatchService
 {
@@ -97,14 +97,14 @@ class WebhookDispatchService
             $headers = [
                 'Content-Type' => 'application/json',
                 'X-Webhook-Event' => $event,
-                'User-Agent' => 'GatePro-Webhook/1.0',
+                'User-Agent' => 'Vector Pagamentos-Webhook/1.0',
             ];
 
             // Only sign if the webhook has a secret configured
             if (!empty($webhook->secret)) {
                 $signature = hash_hmac('sha256', $body, $webhook->secret);
                 $headers['X-Webhook-Signature'] = $signature;
-                $headers['X-GatePro-Signature'] = $signature;
+                $headers['X-Vector-Signature'] = $signature;
             }
 
             $response = Http::timeout(10)

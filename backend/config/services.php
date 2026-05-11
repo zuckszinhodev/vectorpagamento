@@ -104,7 +104,7 @@ return [
 
     'utmify' => [
         'endpoint' => env('UTMIFY_ENDPOINT', 'https://api.utmify.com.br/api-credentials/orders'),
-        'platform' => env('UTMIFY_PLATFORM', 'GatePro'),
+        'platform' => env('UTMIFY_PLATFORM', 'Vector Pagamentos'),
         'timeout'  => (int) env('UTMIFY_TIMEOUT', 15),
     ],
 

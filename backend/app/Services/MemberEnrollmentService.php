@@ -137,7 +137,7 @@ class MemberEnrollmentService
     private function sendCredentialsEmail(string $email, string $name, string $password, string $courseName): void
     {
         try {
-            $memberAreaUrl = config('app.frontend_url', 'https://app.wazerpay.com.br') . '/members/login';
+            $memberAreaUrl = config('app.frontend_url', 'https://app.vectorpagamentos.com') . '/members/login';
             
             Mail::to($email)->queue(new \App\Mail\MemberCredentialsMail(
                 $name,

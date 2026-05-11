@@ -8,7 +8,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: wazerpay-backend
+    container_name: vectorpagamentos-backend
     restart: unless-stopped
     env_file: ./backend/.env.production
     environment:
@@ -21,7 +21,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - wazerpay-network
+      - vectorpagamentos-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
       interval: 30s
@@ -37,20 +37,20 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-https://api.wazerpay.com.br/api}
-    container_name: wazerpay-frontend
+        VITE_API_URL: ${VITE_API_URL:-https://api.vectorpagamentos.com/api/v1}
+    container_name: vectorpagamentos-frontend
     restart: unless-stopped
     depends_on:
       - backend
     networks:
-      - wazerpay-network
+      - vectorpagamentos-network
 
   # ===========================================
   # Redis (Cache + Queue)
   # ===========================================
   redis:
     image: redis:7-alpine
-    container_name: wazerpay-redis
+    container_name: vectorpagamentos-redis
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD env var is required} --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
@@ -58,7 +58,7 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
     networks:
-      - wazerpay-network
+      - vectorpagamentos-network
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 10s
@@ -70,7 +70,7 @@ services:
   # ===========================================
   nginx:
     image: nginx:alpine
-    container_name: wazerpay-nginx
+    container_name: vectorpagamentos-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -83,17 +83,17 @@ services:
       - backend
       - frontend
     networks:
-      - wazerpay-network
+      - vectorpagamentos-network
 
   # ===========================================
   # Evolution API (WhatsApp)
   # ===========================================
   evolution-api:
     image: atendai/evolution-api:latest
-    container_name: wazerpay-evolution
+    container_name: vectorpagamentos-evolution
     restart: unless-stopped
     environment:
-      - SERVER_URL=${EVOLUTION_API_URL:-https://evolution.wazerpay.com.br}
+      - SERVER_URL=${EVOLUTION_API_URL:-https://evolution.vectorpagamentos.com}
       - AUTHENTICATION_TYPE=apikey
       - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY:-change-me-in-production}
       - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
@@ -111,7 +111,7 @@ services:
       - DEL_INSTANCE=false
       - WEBHOOK_GLOBAL_ENABLED=false
       - WEBHOOK_GLOBAL_URL=
-      - CONFIG_SESSION_PHONE_CLIENT=WazerPay
+      - CONFIG_SESSION_PHONE_CLIENT=Vector Pagamentos
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
@@ -122,14 +122,14 @@ services:
       evolution-db:
         condition: service_healthy
     networks:
-      - wazerpay-network
+      - vectorpagamentos-network
 
   # ===========================================
   # PostgreSQL for Evolution API
   # ===========================================
   evolution-db:
     image: postgres:15-alpine
-    container_name: wazerpay-evolution-db
+    container_name: vectorpagamentos-evolution-db
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${EVOLUTION_DB_USER:-postgres}
@@ -138,7 +138,7 @@ services:
     volumes:
       - evolution-db-data:/var/lib/postgresql/data
     networks:
-      - wazerpay-network
+      - vectorpagamentos-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${EVOLUTION_DB_USER:-postgres}"]
       interval: 10s
@@ -158,5 +158,5 @@ volumes:
     driver: local
 
 networks:
-  wazerpay-network:
+  vectorpagamentos-network:
     driver: bridge

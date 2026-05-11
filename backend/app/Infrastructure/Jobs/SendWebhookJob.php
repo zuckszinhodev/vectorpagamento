@@ -48,7 +48,7 @@ class SendWebhookJob implements ShouldQueue
 
             $headers = [
                 'Content-Type' => 'application/json',
-                'User-Agent' => 'GatePro-Webhook/1.0',
+                'User-Agent' => 'Vector Pagamentos-Webhook/1.0',
                 'X-Webhook-Event' => $this->event,
                 'X-Webhook-ID' => $this->webhookId,
                 'X-Webhook-Timestamp' => now()->toIso8601String(),

@@ -9,5 +9,5 @@ it('returns 200 when all services are healthy', function () {
 
     $response->assertStatus(200)
         ->assertJsonStructure(['status', 'database', 'cache', 'timestamp', 'service'])
-        ->assertJson(['service' => 'wazerpay-api']);
+        ->assertJson(['service' => 'vectorpagamentos-api']);
 });

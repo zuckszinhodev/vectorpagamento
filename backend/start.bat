@@ -1,6 +1,6 @@
 @echo off
 echo ========================================
-echo    GatePro Gateway - Start Backend
+echo    Vector Pagamentos - Start Backend
 echo ========================================
 echo.
 
@@ -20,13 +20,21 @@ if not exist "vendor" (
     composer install --no-interaction --prefer-dist --ignore-platform-req=php
 )
 
-echo [3/5] Verificando PostgreSQL local (127.0.0.1:5432)...
-powershell -NoProfile -Command "if (-not (Test-NetConnection -ComputerName 127.0.0.1 -Port 5432 -WarningAction SilentlyContinue).TcpTestSucceeded) { exit 1 }"
+for /f "tokens=1,* delims==" %%A in ('findstr /b "DB_HOST=" .env') do set DB_HOST=%%B
+for /f "tokens=1,* delims==" %%A in ('findstr /b "DB_PORT=" .env') do set DB_PORT=%%B
+if "%DB_HOST%"=="" set DB_HOST=127.0.0.1
+if "%DB_PORT%"=="" set DB_PORT=5432
+
+echo [3/5] Verificando PostgreSQL (%DB_HOST%:%DB_PORT%)...
+powershell -NoProfile -Command "if (-not (Test-NetConnection -ComputerName '%DB_HOST%' -Port %DB_PORT% -WarningAction SilentlyContinue).TcpTestSucceeded) { exit 1 }"
 if %ERRORLEVEL% NEQ 0 (
-    echo ERRO: PostgreSQL nao esta acessivel em 127.0.0.1:5432
+    echo ERRO: PostgreSQL nao esta acessivel em %DB_HOST%:%DB_PORT%
     echo.
-    echo Inicie o servico do PostgreSQL e tente novamente.
-    echo Exemplo: net start postgresql-x64-16
+    echo Se estiver usando Supabase, use a Connection String do Connection Pooler.
+    echo No painel Supabase: Project Settings > Database > Connection Pooling.
+    echo Copie host, porta, usuario e senha para DB_HOST, DB_PORT, DB_USERNAME e DB_PASSWORD.
+    echo.
+    echo Observacao: alguns hosts diretos db.*.supabase.co resolvem apenas IPv6 e podem falhar no Windows/rede atual.
     echo.
     pause
     exit /b 1

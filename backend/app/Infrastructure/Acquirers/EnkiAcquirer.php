@@ -37,7 +37,7 @@ class EnkiAcquirer implements AcquirerInterface
     {
         return [
             'success' => false,
-            'error' => 'Enki Bank suporta apenas pagamentos via PIX nesta integração.',
+            'error' => 'Enki Bank suporta apenas pagamentos via PIX nesta integraÃ§Ã£o.',
         ];
     }
 
@@ -45,7 +45,7 @@ class EnkiAcquirer implements AcquirerInterface
     {
         return [
             'success' => false,
-            'error' => 'Reembolso da Enki não está exposto nesta integração.',
+            'error' => 'Reembolso da Enki nÃ£o estÃ¡ exposto nesta integraÃ§Ã£o.',
         ];
     }
 
@@ -118,7 +118,7 @@ class EnkiAcquirer implements AcquirerInterface
     {
         return [
             'success' => false,
-            'error' => 'Enki Bank não suporta boleto nesta integração.',
+            'error' => 'Enki Bank nÃ£o suporta boleto nesta integraÃ§Ã£o.',
         ];
     }
 
@@ -130,7 +130,7 @@ class EnkiAcquirer implements AcquirerInterface
             if (!$response->successful()) {
                 return [
                     'success' => false,
-                    'error' => 'Consulta de transação Enki retornou ' . $response->status(),
+                    'error' => 'Consulta de transaÃ§Ã£o Enki retornou ' . $response->status(),
                 ];
             }
 
@@ -197,7 +197,7 @@ class EnkiAcquirer implements AcquirerInterface
         if ($this->withdrawalKey === '') {
             return [
                 'success' => false,
-                'error' => 'ENKI_WITHDRAWAL_KEY não configurada.',
+                'error' => 'ENKI_WITHDRAWAL_KEY nÃ£o configurada.',
             ];
         }
 
@@ -355,7 +355,7 @@ class EnkiAcquirer implements AcquirerInterface
         $phone = $this->resolveCustomerPhone($charge, $customer);
 
         return [
-            'name' => $this->normalizeCustomerName((string) ($customer['name'] ?? 'Cliente GatePro')),
+            'name' => $this->normalizeCustomerName((string) ($customer['name'] ?? 'Cliente Vector Pagamentos')),
             'email' => (string) ($customer['email'] ?? 'cliente@example.com'),
             'phone' => $phone,
             'document' => [
@@ -423,7 +423,7 @@ class EnkiAcquirer implements AcquirerInterface
         $trimmed = trim(preg_replace('/\s+/', ' ', $name));
 
         if ($trimmed === '') {
-            return 'Cliente GatePro';
+            return 'Cliente Vector Pagamentos';
         }
 
         if (str_contains($trimmed, ' ')) {

@@ -1,13 +1,13 @@
 @extends('emails.layout')
 
-@section('title', 'Nova venda aprovada - GatePro')
+@section('title', 'Nova venda aprovada - Vector Pagamentos')
 
 @section('content')
     <h1 style="font-size: 22px; color: #1a1a2e; margin: 0 0 16px;">Nova venda aprovada</h1>
 
     <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">Ola, <strong>{{ $merchantName }}</strong>!</p>
 
-    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">Voce recebeu um novo pagamento na sua conta GatePro.</p>
+    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">Voce recebeu um novo pagamento na sua conta Vector Pagamentos.</p>
 
     <p style="font-size: 28px; font-weight: 800; color: #27ae60; text-align: center; margin: 16px 0;">
         R$ {{ $amount }}
@@ -57,7 +57,7 @@
     <hr style="border: none; height: 1px; background-color: #eeeeee; margin: 24px 0;">
 
     <p style="font-size: 13px; color: #999999; margin: 0;">
-        O valor sera creditado na sua carteira GatePro automaticamente
+        O valor sera creditado na sua carteira Vector Pagamentos automaticamente
         (descontadas as taxas aplicaveis).
     </p>
 @endsection

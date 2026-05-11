@@ -15,7 +15,8 @@ class CustomDomain extends Model
     public $incrementing = false;
 
     public const TYPE_CUSTOM = 'custom';
-    public const TYPE_GATEPRO = 'wazerpay';
+    public const TYPE_VECTOR = 'vectorpagamentos';
+    public const TYPE_GATEPRO = self::TYPE_VECTOR;
 
     protected $fillable = [
         'id',
@@ -88,7 +89,7 @@ class CustomDomain extends Model
      */
     public function getCnameTarget(): string
     {
-        return config('app.checkout_domain', 'checkout.wazerpay.com');
+        return config('app.checkout_domain', 'checkout.vectorpagamentos.com');
     }
 
     /**
@@ -96,7 +97,7 @@ class CustomDomain extends Model
      */
     public function getTxtRecordName(): string
     {
-        return '_wazerpay-verification.' . $this->domain;
+        return '_vector-verification.' . $this->domain;
     }
 
     /**
@@ -104,7 +105,7 @@ class CustomDomain extends Model
      */
     public function getTxtRecordValue(): string
     {
-        return 'wazerpay-verify=' . $this->verification_token;
+        return 'vector-verify=' . $this->verification_token;
     }
 
     /**
@@ -122,7 +123,7 @@ class CustomDomain extends Model
         $cnameRecords = @dns_get_record($this->domain, DNS_CNAME);
         if ($cnameRecords && count($cnameRecords) > 0) {
             foreach ($cnameRecords as $record) {
-                if (isset($record['target']) && str_contains($record['target'], 'wazerpay')) {
+                if (isset($record['target']) && str_contains($record['target'], 'vectorpagamentos')) {
                     $result['cname_valid'] = true;
                     break;
                 }
@@ -144,7 +145,7 @@ class CustomDomain extends Model
         }
 
         if (!$result['cname_valid']) {
-            $result['errors'][] = 'CNAME ou A record não encontrado ou inválido';
+            $result['errors'][] = 'CNAME ou A record nÃ£o encontrado ou invÃ¡lido';
         }
 
         // Check TXT record for verification
@@ -159,7 +160,7 @@ class CustomDomain extends Model
         }
 
         if (!$result['txt_valid']) {
-            $result['errors'][] = 'TXT de verificação não encontrado';
+            $result['errors'][] = 'TXT de verificaÃ§Ã£o nÃ£o encontrado';
         }
 
         return $result;
@@ -229,11 +230,11 @@ class CustomDomain extends Model
     }
 
     /**
-     * Check if this is a GatePro subdomain.
+     * Check if this is a Vector Pagamentos subdomain.
      */
     public function isGateProSubdomain(): bool
     {
-        return $this->type === self::TYPE_GATEPRO;
+        return $this->type === self::TYPE_VECTOR;
     }
 
     /**
@@ -245,11 +246,11 @@ class CustomDomain extends Model
     }
 
     /**
-     * Get the GatePro base domain for subdomains.
+     * Get the Vector Pagamentos base domain for subdomains.
      */
     public static function getGateProBaseDomain(): string
     {
-        return config('app.wazerpay_subdomain_base', 'wazerpay.com.br');
+        return config('app.vectorpagamentos_subdomain_base', 'vectorpagamentos.com');
     }
 
     /**
@@ -261,11 +262,11 @@ class CustomDomain extends Model
     }
 
     /**
-     * Scope: GatePro subdomains only.
+     * Scope: Vector Pagamentos subdomains only.
      */
     public function scopeGateProSubdomains($query)
     {
-        return $query->where('type', self::TYPE_GATEPRO);
+        return $query->where('type', self::TYPE_VECTOR);
     }
 
     /**

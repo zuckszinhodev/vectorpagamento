@@ -4,11 +4,11 @@ use Illuminate\Support\Str;
 
 return [
 
-    'name' => env('APP_NAME', 'GatePro Gateway'),
+    'name' => env('APP_NAME', 'Vector Pagamentos'),
     'env' => env('APP_ENV', 'production'),
     'debug' => (bool) env('APP_DEBUG', false),
     'url' => env('APP_URL', 'http://localhost'),
-    'frontend_url' => env('FRONTEND_URL', 'https://app.wazerpay.com.br'),
+    'frontend_url' => env('FRONTEND_URL', 'https://app.vectorpagamentos.com'),
     'api_rate_limit' => (int) env('API_RATE_LIMIT_PER_MINUTE', 60),
     'trusted_proxies' => env('TRUSTED_PROXIES', ''),
     'asset_url' => env('ASSET_URL'),
@@ -20,11 +20,11 @@ return [
     'cipher' => 'AES-256-CBC',
 
     // Custom Domain Configuration
-    'checkout_domain' => env('CHECKOUT_DOMAIN', 'checkout.wazerpay.com.br'),
+    'checkout_domain' => env('CHECKOUT_DOMAIN', 'checkout.vectorpagamentos.com'),
     'checkout_ips' => env('CHECKOUT_IPS', ''),
-    'member_area_domain' => env('MEMBER_AREA_DOMAIN', 'members.wazerpay.com.br'),
-    'member_area_cname' => env('MEMBER_AREA_CNAME', 'members.wazerpay.com.br'),
-    'wazerpay_subdomain_base' => env('GATEPRO_SUBDOMAIN_BASE', 'wazerpay.com.br'),
+    'member_area_domain' => env('MEMBER_AREA_DOMAIN', 'members.vectorpagamentos.com'),
+    'member_area_cname' => env('MEMBER_AREA_CNAME', 'members.vectorpagamentos.com'),
+    'vectorpagamentos_subdomain_base' => env('VECTORPAGAMENTOS_SUBDOMAIN_BASE', 'vectorpagamentos.com'),
 
     'providers' => [
         Illuminate\Auth\AuthServiceProvider::class,

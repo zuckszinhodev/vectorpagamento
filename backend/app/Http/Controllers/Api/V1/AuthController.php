@@ -1159,7 +1159,7 @@ class AuthController extends Controller
         cache()->put("mfa_setup:{$user->id}", $secret, 600);
 
         $qrCodeUrl = $google2fa->getQRCodeUrl(
-            'GatePro',
+            config('app.name', 'Vector Pagamentos'),
             $user->email,
             $secret,
         );

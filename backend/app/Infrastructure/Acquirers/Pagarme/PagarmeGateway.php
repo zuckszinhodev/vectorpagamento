@@ -106,7 +106,7 @@ class PagarmeGateway implements AcquirerGatewayInterface
                         'payment_method' => 'credit_card',
                         'credit_card' => [
                             'installments' => $installments,
-                            'statement_descriptor' => 'GATEPRO',
+                            'statement_descriptor' => 'VECTOR',
                             'card' => [
                                 'number' => $cardData->getNumber(),
                                 'holder_name' => $cardData->getHolderName(),

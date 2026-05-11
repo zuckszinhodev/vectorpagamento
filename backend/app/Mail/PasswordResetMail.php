@@ -23,13 +23,13 @@ class PasswordResetMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Redefinir sua senha - GatePro',
+            subject: 'Redefinir sua senha - Vector Pagamentos',
         );
     }
 
     public function content(): Content
     {
-        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'https://app.wazerpay.com.br'));
+        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'https://app.vectorpagamentos.com'));
 
         return new Content(
             view: 'emails.password-reset',

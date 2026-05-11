@@ -11,15 +11,15 @@ const SYSTEM_HOSTS = [
   'vectorpagamentos.com',
   'www.vectorpagamentos.com',
   'api.vectorpagamentos.com',
-  'app.wazerpay.com.br',
-  'wazerpay.com.br',
-  'www.wazerpay.com.br',
-  'api.wazerpay.com.br',
+  'app.vectorpagamentos.com',
+  'vectorpagamentos.com',
+  'www.vectorpagamentos.com',
+  'api.vectorpagamentos.com',
 ];
 
 const SYSTEM_SUBDOMAINS = ['api', 'app', 'www', 'checkout', 'pay', 'members', 'mail', 'ftp', 'admin'];
 
-const VECTOR_BASES = ['vectorpagamentos.com', 'wazerpay.com.br'];
+const VECTOR_BASES = ['vectorpagamentos.com', 'vectorpagamentos.com'];
 
 /**
  * Returns true if the current host is a custom domain or Vector Pagamentos subdomain
@@ -28,31 +28,31 @@ const VECTOR_BASES = ['vectorpagamentos.com', 'wazerpay.com.br'];
 export function isCustomDomain(): boolean {
   const host = window.location.hostname.toLowerCase();
 
-  // System hosts → not custom
+  // System hosts â†’ not custom
   if (SYSTEM_HOSTS.includes(host)) return false;
 
-  // Localhost with port → not custom
+  // Localhost with port â†’ not custom
   if (host === 'localhost' || host === '127.0.0.1') return false;
 
   // Check if it's a Vector Pagamentos subdomain
   for (const base of VECTOR_BASES) {
     if (host.endsWith('.' + base)) {
       const sub = host.slice(0, -(base.length + 1));
-      // System subdomains → not custom
+      // System subdomains â†’ not custom
       if (SYSTEM_SUBDOMAINS.includes(sub) || sub.includes('.')) return false;
-      // User subdomain → custom!
+      // User subdomain â†’ custom!
       return true;
     }
   }
 
-  // Any other domain → custom domain
+  // Any other domain â†’ custom domain
   return true;
 }
 
 /**
  * Extracts the Vector Pagamentos subdomain slug if applicable.
  * Returns null if not a Vector Pagamentos subdomain.
- * e.g., "teste.vectorpagamentos.com" → "teste"
+ * e.g., "teste.vectorpagamentos.com" â†’ "teste"
  */
 export function getSubdomainSlug(): string | null {
   const host = window.location.hostname.toLowerCase();

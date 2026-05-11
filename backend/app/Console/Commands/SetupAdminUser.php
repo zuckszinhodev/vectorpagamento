@@ -22,7 +22,7 @@ class SetupAdminUser extends Command
             return 1;
         }
 
-        $this->info("User found: {$user->name} ({$user->email}) — ID: {$user->id}");
+        $this->info("User found: {$user->name} ({$user->email}) â€” ID: {$user->id}");
 
         // Activate KYC
         $user->forceFill([
@@ -50,7 +50,7 @@ class SetupAdminUser extends Command
 
             // Generate QR code URL for convenience
             $qrUrl = $google2fa->getQRCodeUrl(
-                config('app.name', 'GatePro'),
+                config('app.name', 'Vector Pagamentos'),
                 $user->email,
                 $secret
             );

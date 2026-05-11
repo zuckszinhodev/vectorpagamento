@@ -1,4 +1,4 @@
-﻿$wid = '7d76ffec-df82-4247-91d1-8c9c07ccad21';
+$wid = '7d76ffec-df82-4247-91d1-8c9c07ccad21';
 $tid = 'e0866abd-ca9d-49cb-bb14-e134c8a65654';
 $w = \App\Models\Withdrawal::find($wid);
 $tx = app(\App\Services\AcquirerFactory::class)->enki()->getTransaction($tid);

@@ -12,15 +12,15 @@
 </head>
 <body>
     <div class="container">
-        <h2>Olá, {{ $userName }}!</h2>
-        <p>Obrigado por se cadastrar na GatePro. Para completar seu registro, confirme seu e-mail clicando no botão abaixo:</p>
+        <h2>OlÃ¡, {{ $userName }}!</h2>
+        <p>Obrigado por se cadastrar na Vector Pagamentos. Para completar seu registro, confirme seu e-mail clicando no botÃ£o abaixo:</p>
         <p style="text-align:center">
             <a href="{{ $verificationUrl }}" class="btn">Verificar E-mail</a>
         </p>
-        <p>Se você não criou uma conta na GatePro, ignore este e-mail.</p>
+        <p>Se vocÃª nÃ£o criou uma conta na Vector Pagamentos, ignore este e-mail.</p>
         <p>Este link expira em <strong>24 horas</strong>.</p>
         <div class="footer">
-            <p>Se o botão não funcionar, copie e cole o link abaixo no seu navegador:</p>
+            <p>Se o botÃ£o nÃ£o funcionar, copie e cole o link abaixo no seu navegador:</p>
             <p>{{ $verificationUrl }}</p>
         </div>
     </div>

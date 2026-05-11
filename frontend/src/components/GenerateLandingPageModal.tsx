@@ -32,13 +32,13 @@ const templates = [
   { id: 'minimal', name: 'Minimalista', description: 'Simples e elegante', icon: Squares2X2Icon },
   { id: 'dark', name: 'Dark Mode', description: 'Design escuro profissional', icon: MoonIcon },
   { id: 'gradient', name: 'Gradiente', description: 'Gradientes modernos', icon: SunIcon },
-  { id: 'video', name: 'VSL', description: 'Otimizado para vídeo', icon: VideoCameraIcon },
+  { id: 'video', name: 'VSL', description: 'Otimizado para vÃ­deo', icon: VideoCameraIcon },
 ];
 
 const tones = [
-  { id: 'professional', name: 'Profissional', description: 'Tom corporativo e sério', icon: BriefcaseIcon },
-  { id: 'casual', name: 'Casual', description: 'Descontraído e amigável', icon: ChatBubbleBottomCenterTextIcon },
-  { id: 'urgent', name: 'Urgente', description: 'Escassez e urgência', icon: ClockIcon },
+  { id: 'professional', name: 'Profissional', description: 'Tom corporativo e sÃ©rio', icon: BriefcaseIcon },
+  { id: 'casual', name: 'Casual', description: 'DescontraÃ­do e amigÃ¡vel', icon: ChatBubbleBottomCenterTextIcon },
+  { id: 'urgent', name: 'Urgente', description: 'Escassez e urgÃªncia', icon: ClockIcon },
   { id: 'luxury', name: 'Luxo', description: 'Premium e exclusivo', icon: StarIcon },
 ];
 
@@ -123,7 +123,7 @@ export default function GenerateLandingPageModal({
 
   const handleGenerate = () => {
     if (!prompt.trim()) {
-      toast.error('Digite uma descrição para sua página');
+      toast.error('Digite uma descriÃ§Ã£o para sua pÃ¡gina');
       return;
     }
 
@@ -222,7 +222,7 @@ export default function GenerateLandingPageModal({
                     </div>
                     <div>
                       <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Gerar Página de Vendas com IA
+                        Gerar PÃ¡gina de Vendas com IA
                       </Dialog.Title>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Passo {step} de {totalSteps}
@@ -243,8 +243,8 @@ export default function GenerateLandingPageModal({
                     {[
                       { num: 1, label: 'Produto' },
                       { num: 2, label: 'Template' },
-                      { num: 3, label: 'Domínio' },
-                      { num: 4, label: 'Descrição' },
+                      { num: 3, label: 'DomÃ­nio' },
+                      { num: 4, label: 'DescriÃ§Ã£o' },
                     ].map((s, index) => (
                       <div key={s.num} className="flex items-center">
                         <div className="flex flex-col items-center">
@@ -290,7 +290,7 @@ export default function GenerateLandingPageModal({
                             <p className="font-medium text-gray-900 dark:text-white text-sm">
                               Sem produto
                             </p>
-                            <p className="text-xs text-gray-500">Página genérica</p>
+                            <p className="text-xs text-gray-500">PÃ¡gina genÃ©rica</p>
                           </button>
                           {products.map((product: any) => (
                             <button
@@ -389,7 +389,7 @@ export default function GenerateLandingPageModal({
 
                       <div>
                         <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                          Tom da Comunicação
+                          Tom da ComunicaÃ§Ã£o
                         </h3>
                         <div className="grid grid-cols-2 gap-3">
                           {tones.map((tone) => (
@@ -423,7 +423,7 @@ export default function GenerateLandingPageModal({
                   {step === 3 && (
                     <div className="space-y-4">
                       <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                        Escolha o Domínio
+                        Escolha o DomÃ­nio
                       </h3>
 
                       {/* Default domain */}
@@ -441,9 +441,9 @@ export default function GenerateLandingPageModal({
                             : 'text-gray-400'
                         }`} />
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-white text-sm">Domínio Padrão</p>
+                          <p className="font-medium text-gray-900 dark:text-white text-sm">DomÃ­nio PadrÃ£o</p>
                           <p className="text-xs text-gray-500 mt-0.5">
-                            Sua página será acessível pelo subdomínio wazerpay.com
+                            Sua pÃ¡gina serÃ¡ acessÃ­vel pelo subdomÃ­nio vectorpagamentos.com
                           </p>
                         </div>
                       </button>
@@ -452,7 +452,7 @@ export default function GenerateLandingPageModal({
                       {verifiedDomains.length > 0 && (
                         <div>
                           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                            Domínios Personalizados
+                            DomÃ­nios Personalizados
                           </p>
                           <div className="space-y-2">
                             {verifiedDomains.map((domain: CustomDomain) => (
@@ -485,8 +485,8 @@ export default function GenerateLandingPageModal({
                       {verifiedDomains.length === 0 && (
                         <div className="bg-gray-50 dark:bg-[rgb(30,30,30)] rounded-lg p-4 border border-dashed border-gray-300 dark:border-[rgb(50,50,50)]">
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Você ainda não possui domínios personalizados verificados.
-                            Configure seus domínios na aba <span className="font-medium text-green-600 dark:text-green-400">Domínios</span>.
+                            VocÃª ainda nÃ£o possui domÃ­nios personalizados verificados.
+                            Configure seus domÃ­nios na aba <span className="font-medium text-green-600 dark:text-green-400">DomÃ­nios</span>.
                           </p>
                         </div>
                       )}
@@ -503,24 +503,24 @@ export default function GenerateLandingPageModal({
                           type="text"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          placeholder="Ex: Página de Vendas - Curso Marketing"
+                          placeholder="Ex: PÃ¡gina de Vendas - Curso Marketing"
                           className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[rgb(50,50,50)] bg-white dark:bg-[rgb(30,30,30)] text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                          Descreva o que você quer na página *
+                          Descreva o que vocÃª quer na pÃ¡gina *
                         </label>
                         <textarea
                           value={prompt}
                           onChange={(e) => setPrompt(e.target.value)}
                           rows={5}
-                          placeholder="Descreva sua página de vendas. Exemplo: Quero uma página para meu curso de marketing digital, focada em empreendedores iniciantes. Destaque aulas práticas, suporte por 1 ano e comunidade exclusiva. Oferta de 70% de desconto por 24 horas."
+                          placeholder="Descreva sua pÃ¡gina de vendas. Exemplo: Quero uma pÃ¡gina para meu curso de marketing digital, focada em empreendedores iniciantes. Destaque aulas prÃ¡ticas, suporte por 1 ano e comunidade exclusiva. Oferta de 70% de desconto por 24 horas."
                           className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[rgb(50,50,50)] bg-white dark:bg-[rgb(30,30,30)] text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         />
                         <p className="mt-1.5 text-xs text-gray-500">
-                          Quanto mais detalhes você fornecer, melhor será o resultado
+                          Quanto mais detalhes vocÃª fornecer, melhor serÃ¡ o resultado
                         </p>
                       </div>
 
@@ -555,9 +555,9 @@ export default function GenerateLandingPageModal({
                             </p>
                           </div>
                           <div>
-                            <span className="text-gray-500 dark:text-gray-400">Domínio:</span>
+                            <span className="text-gray-500 dark:text-gray-400">DomÃ­nio:</span>
                             <p className="text-gray-900 dark:text-white font-medium">
-                              {selectedDomain === 'default' ? 'Padrão (wazerpay.com)' : selectedDomain}
+                              {selectedDomain === 'default' ? 'PadrÃ£o (vectorpagamentos.com)' : selectedDomain}
                             </p>
                           </div>
                         </div>
@@ -580,7 +580,7 @@ export default function GenerateLandingPageModal({
                       onClick={() => setStep(step + 1)}
                       className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
                     >
-                      Próximo
+                      PrÃ³ximo
                     </button>
                   ) : (
                     <button
@@ -599,7 +599,7 @@ export default function GenerateLandingPageModal({
                       ) : (
                         <>
                           <SparklesIcon className="h-4 w-4" />
-                          Gerar Página de Vendas
+                          Gerar PÃ¡gina de Vendas
                         </>
                       )}
                     </button>

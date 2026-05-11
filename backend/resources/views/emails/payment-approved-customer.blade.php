@@ -1,6 +1,6 @@
 @extends('emails.layout')
 
-@section('title', 'Pagamento confirmado - GatePro')
+@section('title', 'Pagamento confirmado - Vector Pagamentos')
 
 @section('content')
     <h1 style="font-size: 22px; color: #1a1a2e; margin: 0 0 16px;">Pagamento confirmado</h1>
@@ -45,6 +45,6 @@
     <hr style="border: none; height: 1px; background-color: #eeeeee; margin: 24px 0;">
 
     <p style="font-size: 13px; color: #999999; margin: 0;">
-        Este e um recibo automatico do seu pagamento processado pela GatePro.
+        Este e um recibo automatico do seu pagamento processado pela Vector Pagamentos.
     </p>
 @endsection

@@ -31,7 +31,7 @@ class HealthController extends Controller
         }
 
         $checks['timestamp'] = now()->toIso8601String();
-        $checks['service'] = 'wazerpay-api';
+        $checks['service'] = 'vectorpagamentos-api';
 
         $httpStatus = $checks['status'] === 'ok' ? 200 : 503;
         return response()->json($checks, $httpStatus);
@@ -40,7 +40,7 @@ class HealthController extends Controller
     public function index(): JsonResponse
     {
         return response()->json([
-            'name' => 'GatePro Gateway',
+            'name' => 'Vector Pagamentos',
             'version' => '1.0.0',
             'status' => 'online',
         ]);

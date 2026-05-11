@@ -44,7 +44,7 @@ class PaymentApprovedMerchantMail extends Mailable
                 'customerEmail' => $customer['email'] ?? 'N/A',
                 'productDescription' => $this->charge->description ?? 'N/A',
                 'paidAt' => $this->charge->paid_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i'),
-                'dashboardUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://app.wazerpay.com.br')) . '/dashboard',
+                'dashboardUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://app.vectorpagamentos.com')) . '/dashboard',
             ],
         );
     }
@@ -53,7 +53,7 @@ class PaymentApprovedMerchantMail extends Mailable
     {
         return match ($method) {
             'pix' => 'PIX',
-            'credit_card' => 'Cartão de Crédito',
+            'credit_card' => 'CartÃ£o de CrÃ©dito',
             'boleto' => 'Boleto',
             default => $method ?? 'N/A',
         };

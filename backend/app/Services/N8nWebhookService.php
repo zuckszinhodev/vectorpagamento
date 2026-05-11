@@ -159,7 +159,7 @@ class N8nWebhookService
             'event' => $event,
             'timestamp' => now()->toIso8601String(),
             'id' => \Illuminate\Support\Str::uuid()->toString(),
-            'source' => 'wazerpay-gateway',
+            'source' => 'vectorpagamentos-gateway',
             'version' => '1.0',
             'integration_id' => $integration->id,
             'account_id' => $integration->account_id,
@@ -191,8 +191,8 @@ class N8nWebhookService
         $headers = [
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-            'User-Agent' => 'GatePro-Gateway/1.0',
-            'X-Webhook-Source' => 'wazerpay',
+            'User-Agent' => 'Vector Pagamentos-Gateway/1.0',
+            'X-Webhook-Source' => 'vectorpagamentos',
             'X-Webhook-Event' => $payload['event'],
             'X-Webhook-Timestamp' => (string) $timestamp,
             'X-Webhook-Signature' => "sha256={$signature}",
@@ -214,7 +214,7 @@ class N8nWebhookService
     {
         $testPayload = [
             'test' => true,
-            'message' => 'Este é um teste de conexão do GatePro Gateway',
+            'message' => 'Este Ã© um teste de conexÃ£o do Vector Pagamentos',
             'integration_id' => $integration->id,
             'integration_name' => $integration->name,
             'timestamp' => now()->toIso8601String(),

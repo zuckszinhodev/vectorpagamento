@@ -66,8 +66,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'noreply@wazerpay.com.br'),
-        'name' => env('MAIL_FROM_NAME', 'GatePro'),
+        'address' => env('MAIL_FROM_ADDRESS', 'noreply@vectorpagamentos.com'),
+        'name' => env('MAIL_FROM_NAME', 'Vector Pagamentos'),
     ],
 
 ];

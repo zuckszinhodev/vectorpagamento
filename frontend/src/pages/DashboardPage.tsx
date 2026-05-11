@@ -44,7 +44,7 @@ function getDefaultGoalMilestoneState(): GoalMilestoneState {
 }
 
 function getGoalMilestoneStorageKey(userId: string): string {
-  return `wazerpay.goal-milestone.${userId}`;
+  return `vectorpagamentos.goal-milestone.${userId}`;
 }
 
 function normalizeGoalMilestoneState(value: Partial<GoalMilestoneState> | null | undefined): GoalMilestoneState {
@@ -186,7 +186,7 @@ function DashboardRevenueHeroSkeleton() {
   );
 }
 
-// Componente de Calendário
+// Componente de CalendÃ¡rio
 function DateRangePicker({ 
   startDate, 
   endDate, 
@@ -289,7 +289,7 @@ function DateRangePicker({
       >
         <CalendarIcon className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-tx-muted flex-shrink-0" />
         <span className="sm:hidden">{formatDateShort(startDate)} - {formatDateShort(endDate)}</span>
-        <span className="hidden sm:inline">{formatDate(startDate)} até {formatDate(endDate)}</span>
+        <span className="hidden sm:inline">{formatDate(startDate)} atÃ© {formatDate(endDate)}</span>
       </button>
 
       {isOpen && (
@@ -318,21 +318,21 @@ function DateRangePicker({
 
           {/* Dias da semana */}
           <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-2">
-            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b'].map((day) => (
               <div key={day} className="text-center text-[10px] sm:text-xs font-medium text-tx-muted py-1.5 sm:py-2">
                 {day}
               </div>
             ))}
           </div>
 
-          {/* Dias do mês */}
+          {/* Dias do mÃªs */}
           <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
-            {/* Espaços vazios antes do primeiro dia */}
+            {/* EspaÃ§os vazios antes do primeiro dia */}
             {Array.from({ length: startingDayOfWeek }).map((_, i) => (
               <div key={`empty-${i}`} />
             ))}
             
-            {/* Dias do mês */}
+            {/* Dias do mÃªs */}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
               const date = new Date(year, month, day);
@@ -460,7 +460,7 @@ export default function DashboardPage() {
     },
     refetchInterval: 30000,
     staleTime: 15000,
-    gcTime: 0, // Não manter cache antigo
+    gcTime: 0, // NÃ£o manter cache antigo
   });
 
   const dashboardData = dashboardResponse?.summary || {};
@@ -554,19 +554,19 @@ export default function DashboardPage() {
 
   const supportWhatsAppUrl = useMemo(() => {
     const message = user?.name
-      ? `Olá! Sou ${user.name} e bati minha meta de faturamento na WazerPay. Gostaria de falar com o suporte.`
-      : 'Olá! Bati minha meta de faturamento na WazerPay e gostaria de falar com o suporte.';
+      ? `OlÃ¡! Sou ${user.name} e bati minha meta de faturamento na Vector Pagamentos. Gostaria de falar com o suporte.`
+      : 'OlÃ¡! Bati minha meta de faturamento na Vector Pagamentos e gostaria de falar com o suporte.';
 
     return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   }, [user?.name]);
 
-  // Memoriza os dados do gráfico - preenche todas as horas/dias com 0 para mostrar variação
+  // Memoriza os dados do grÃ¡fico - preenche todas as horas/dias com 0 para mostrar variaÃ§Ã£o
   const chartData = useMemo(() => {
     const startDateObj = new Date(startDate + 'T00:00:00');
     const endDateObj = new Date(endDate + 'T23:59:59');
     const diffDays = Math.ceil((endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Se período <= 3 dias, usa visão por hora (mostra todas as horas)
+    // Se perÃ­odo <= 3 dias, usa visÃ£o por hora (mostra todas as horas)
     if (diffDays <= 3) {
       const labels: string[] = [];
       const data: number[] = [];
@@ -581,7 +581,7 @@ export default function DashboardPage() {
         });
       }
 
-      // Preenche TODAS as horas do período (as sem venda ficam com 0)
+      // Preenche TODAS as horas do perÃ­odo (as sem venda ficam com 0)
       const cursor = new Date(startDateObj);
       const finalHour = new Date(endDateObj);
       // Limita a hora final ao momento atual se for hoje
@@ -607,7 +607,7 @@ export default function DashboardPage() {
       if (labels.length > 0) return { labels, data };
     }
 
-    // Para períodos maiores, usa visão diária (mostra todos os dias)
+    // Para perÃ­odos maiores, usa visÃ£o diÃ¡ria (mostra todos os dias)
     {
       const labels: string[] = [];
       const data: number[] = [];
@@ -620,7 +620,7 @@ export default function DashboardPage() {
         });
       }
 
-      // Preenche TODOS os dias do período (os sem venda ficam com 0)
+      // Preenche TODOS os dias do perÃ­odo (os sem venda ficam com 0)
       const cursor = new Date(startDateObj);
       const finalDay = new Date(endDateObj);
 
@@ -650,10 +650,10 @@ export default function DashboardPage() {
           <ShieldExclamationIcon className="h-4 w-4 sm:h-6 sm:w-6 text-green-500 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs sm:text-sm font-medium text-green-800 dark:text-green-200">
-              Você está logado como <strong>{user?.name}</strong> (modo impersonação)
+              VocÃª estÃ¡ logado como <strong>{user?.name}</strong> (modo impersonaÃ§Ã£o)
             </p>
             <p className="text-[10px] sm:text-xs text-green-600 dark:text-green-400 mt-0.5 hidden sm:block">
-              Todas as ações serão registradas no audit log.
+              Todas as aÃ§Ãµes serÃ£o registradas no audit log.
             </p>
           </div>
           <button
@@ -671,10 +671,10 @@ export default function DashboardPage() {
           <ShieldExclamationIcon className="h-4 w-4 sm:h-6 sm:w-6 text-amber-500 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs sm:text-sm font-medium text-amber-800 dark:text-amber-200">
-              Sua conta ainda não tem autenticação de dois fatores ativada.
+              Sua conta ainda nÃ£o tem autenticaÃ§Ã£o de dois fatores ativada.
             </p>
             <p className="text-[10px] sm:text-xs text-amber-600 dark:text-amber-400 mt-0.5 hidden sm:block">
-              Ative o 2FA para proteger sua conta contra acessos não autorizados.
+              Ative o 2FA para proteger sua conta contra acessos nÃ£o autorizados.
             </p>
           </div>
           <button
@@ -708,14 +708,14 @@ export default function DashboardPage() {
               <p className="relative text-2xl sm:text-3xl font-bold text-white">{formatCurrency(summary.total_revenue || 0)}</p>
             </div>
 
-            {/* Ticket médio */}
+            {/* Ticket mÃ©dio */}
             <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#11121a] via-[#0d0f16] to-[#0a0b12] p-3 sm:p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-400/40 hover:shadow-[0_10px_30px_rgba(245,158,11,0.12)]">
               <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-amber-500/10 blur-2xl" />
               <div className="relative flex items-center gap-2 mb-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 ring-1 ring-amber-500/20">
                   <TicketIcon className="h-5 w-5 text-amber-400" />
                 </div>
-                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">Ticket médio</span>
+                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">Ticket mÃ©dio</span>
               </div>
               <p className="relative text-2xl sm:text-3xl font-bold text-white">{formatCurrency(summary.average_ticket || 0)}</p>
             </div>
@@ -758,19 +758,19 @@ export default function DashboardPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20">
                   <PixIcon className="h-5 w-5 text-emerald-400" />
                 </div>
-                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">PIX nas últimas 24h</span>
+                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">PIX nas Ãºltimas 24h</span>
               </div>
               <p className="relative text-2xl sm:text-3xl font-bold text-emerald-400">{formatCurrency(pixRevenue24h)}</p>
             </div>
 
-            {/* Vendas cartão */}
+            {/* Vendas cartÃ£o */}
             <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#11141b] via-[#0d1116] to-[#0a0d12] p-3 sm:p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-sky-400/40 hover:shadow-[0_10px_30px_rgba(56,189,248,0.12)]">
               <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-sky-500/10 blur-2xl" />
               <div className="relative flex items-center gap-2 mb-2">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/10 ring-1 ring-sky-500/20">
                   <CreditCardIcon className="h-5 w-5 text-sky-400" />
                 </div>
-                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">Cartão nas últimas 24h</span>
+                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">CartÃ£o nas Ãºltimas 24h</span>
               </div>
               <p className="relative text-2xl sm:text-3xl font-bold text-sky-400">{formatCurrency(cardRevenue24h)}</p>
             </div>
@@ -782,7 +782,7 @@ export default function DashboardPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500/10 ring-1 ring-orange-500/20">
                   <DocumentTextIcon className="h-5 w-5 text-orange-400" />
                 </div>
-                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">Boleto nas últimas 24h</span>
+                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">Boleto nas Ãºltimas 24h</span>
               </div>
               <p className="relative text-2xl sm:text-3xl font-bold text-orange-400">{formatCurrency(boletoRevenue24h)}</p>
             </div>
@@ -792,7 +792,7 @@ export default function DashboardPage() {
 
       {/* Main Content: Chart */}
       <div className="space-y-3">
-        {/* Histórico de faturamento - Chart */}
+        {/* HistÃ³rico de faturamento - Chart */}
         <div className="bg-surface-card border border-border-DEFAULT rounded-xl p-3 sm:p-5 relative z-10">
           {showDashboardSkeleton ? (
             <DashboardChartSkeleton />
@@ -808,7 +808,7 @@ export default function DashboardPage() {
                         ? 'bg-accent-primary text-white border-accent-primary'
                         : 'bg-surface-card text-tx-primary border-border-DEFAULT hover:bg-surface-hover'
                       }`}
-                      aria-label={`Período ${option.label}`}
+                      aria-label={`PerÃ­odo ${option.label}`}
                     >
                       {option.label}
                     </button>
@@ -897,7 +897,7 @@ function StatCard({
                   {change >= 0 ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />}
                   {change >= 0 ? '+' : ''}{change}%
                 </span>
-                <span className="text-[11px] text-tx-muted">vs mês anterior</span>
+                <span className="text-[11px] text-tx-muted">vs mÃªs anterior</span>
               </div>
             )}
           </div>
@@ -910,7 +910,7 @@ function StatCard({
   );
 }
 
-// ═══ Mini Sparkline SVG ═══
+// â•â•â• Mini Sparkline SVG â•â•â•
 function MiniSparkline({ data, color }: { data: number[]; color: string }) {
   const width = 64;
   const height = 28;

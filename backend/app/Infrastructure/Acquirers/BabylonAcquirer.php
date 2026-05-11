@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Banco Babylon Acquirer Implementation
  * 
- * API Documentation: https://bancobabylon.readme.io/reference/introdução
+ * API Documentation: https://bancobabylon.readme.io/reference/introduÃ§Ã£o
  * 
  * This class implements the simplified AcquirerInterface.
  * For full gateway functionality, use BabylonGateway instead.
@@ -431,7 +431,7 @@ class BabylonAcquirer implements AcquirerInterface
                 'pixkeytype' => $pixKeyType,
                 'pixkey' => $withdrawalData['pix_key'] ?? '',
                 'requestedamount' => $amountCents,
-                'description' => $withdrawalData['description'] ?? 'Saque GatePro',
+                'description' => $withdrawalData['description'] ?? 'Saque Vector Pagamentos',
                 'isPix' => true,
                 'postbackUrl' => config('app.url') . '/api/v1/webhooks/babylon/withdrawal',
             ];

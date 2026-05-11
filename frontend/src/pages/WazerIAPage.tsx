@@ -11,9 +11,9 @@ interface ChatMessage extends WazerAIChatMessage {
 }
 
 const suggestions = [
-  'Resumo de vendas do mês',
+  'Resumo de vendas do mÃªs',
   'Como criar um produto?',
-  'Estratégias para vender mais',
+  'EstratÃ©gias para vender mais',
   'Como configurar um cupom?',
   'Analise meu site e gere um checkout pronto para baixar',
 ];
@@ -87,7 +87,7 @@ export default function WazerIAPage() {
         );
       }
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Erro de conexão. Verifique sua internet e tente novamente.';
+      const errorMsg = err?.response?.data?.error || 'Erro de conexÃ£o. Verifique sua internet e tente novamente.';
       setMessages(prev =>
         prev.map(m =>
           m.id === loadingMessage.id
@@ -107,7 +107,7 @@ export default function WazerIAPage() {
     }
   };
 
-  const firstName = user?.name?.split(' ')[0] || 'Usuário';
+  const firstName = user?.name?.split(' ')[0] || 'UsuÃ¡rio';
   const userInitial = firstName.charAt(0).toUpperCase() || 'U';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
@@ -118,7 +118,7 @@ export default function WazerIAPage() {
       <div className="flex items-center justify-between border-b border-border-DEFAULT px-6 py-3">
         <div>
           <div>
-            <h1 className="text-base font-semibold text-tx-primary">WazerIA</h1>
+            <h1 className="text-base font-semibold text-tx-primary">Vector IA</h1>
             <p className="text-[11px] text-emerald-600 dark:text-emerald-400">Online</p>
           </div>
         </div>
@@ -276,7 +276,7 @@ function ActionResultBadge({ actionResult }: { actionResult: WazerAIActionResult
       )}
       {previewUrl && (
         <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-lg bg-slate-500/20 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-500/30 transition-colors">
-          Ver página gerada
+          Ver pÃ¡gina gerada
         </a>
       )}
       {downloadUrl && (
@@ -319,7 +319,7 @@ function simpleMarkdown(text: string): string {
       .replace(/^### (.+)$/gm, '<h4 class="text-sm font-bold mt-3 mb-1">$1</h4>')
       .replace(/^## (.+)$/gm, '<h3 class="text-sm font-bold mt-3 mb-1">$1</h3>')
       .replace(/^# (.+)$/gm, '<h2 class="text-base font-bold mt-3 mb-1">$1</h2>')
-      .replace(/^[-•] (.+)$/gm, '<li class="ml-3">$1</li>')
+      .replace(/^[-â€¢] (.+)$/gm, '<li class="ml-3">$1</li>')
       .replace(/^\d+\. (.+)$/gm, '<li class="ml-3 list-decimal">$1</li>')
       .replace(/\n\n/g, '</p><p class="mt-2">')
       .replace(/\n/g, '<br/>');

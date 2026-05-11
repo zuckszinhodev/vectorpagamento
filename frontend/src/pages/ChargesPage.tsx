@@ -144,9 +144,9 @@ function NewPixChargeModal({
       setPaymentStatus(initialStatus);
       paymentConfirmedToastShown.current = isPaidChargeStatus(initialStatus);
       
-      // Usar PIX retornado pela API ou gerar código simulado como fallback
+      // Usar PIX retornado pela API ou gerar cÃ³digo simulado como fallback
       const pixCopyPaste = chargeData.pix_copy_paste || chargeData.pix_qr_code || 
-        `00020126580014br.gov.bcb.pix0136${chargeData.id}@wazerpay.com52040000530398654${(parseFloat(amount) * 100).toString().padStart(4, '0')}5802BR5913${customerName.substring(0, 13)}6009SAO PAULO62070503***6304`;
+        `00020126580014br.gov.bcb.pix0136${chargeData.id}@vectorpagamentos.com52040000530398654${(parseFloat(amount) * 100).toString().padStart(4, '0')}5802BR5913${customerName.substring(0, 13)}6009SAO PAULO62070503***6304`;
       
       setPixCode(pixCopyPaste);
       
@@ -172,11 +172,11 @@ function NewPixChargeModal({
         }
       }
       
-      toast.success('Cobrança PIX criada com sucesso!');
+      toast.success('CobranÃ§a PIX criada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['charges'] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error?.message || 'Erro ao criar cobrança');
+      toast.error(error.response?.data?.error?.message || 'Erro ao criar cobranÃ§a');
     },
   });
 
@@ -238,19 +238,19 @@ function NewPixChargeModal({
     e.preventDefault();
     
     if (!amount || !customerName || !customerEmail || !customerDocument) {
-      toast.error('Preencha todos os campos obrigatórios');
+      toast.error('Preencha todos os campos obrigatÃ³rios');
       return;
     }
 
     const cleanDoc = customerDocument.replace(/\D/g, '');
     if (cleanDoc.length !== 11 && cleanDoc.length !== 14) {
-      toast.error('CPF deve ter 11 dígitos ou CNPJ 14 dígitos');
+      toast.error('CPF deve ter 11 dÃ­gitos ou CNPJ 14 dÃ­gitos');
       return;
     }
 
     const amountValue = parseFloat(amount.replace(',', '.'));
     if (isNaN(amountValue) || amountValue <= 0) {
-      toast.error('Valor inválido');
+      toast.error('Valor invÃ¡lido');
       return;
     }
 
@@ -264,8 +264,8 @@ function NewPixChargeModal({
 
   const handleCopyPixCode = () => {
     navigator.clipboard.writeText(pixCode)
-      .then(() => toast.success('Código PIX copiado!'))
-      .catch(() => toast.error('Erro ao copiar código. Tente novamente.'));
+      .then(() => toast.success('CÃ³digo PIX copiado!'))
+      .catch(() => toast.error('Erro ao copiar cÃ³digo. Tente novamente.'));
   };
 
   const handleClose = () => {
@@ -311,7 +311,7 @@ function NewPixChargeModal({
               <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
                 <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4">
                   <Dialog.Title className="text-lg font-semibold text-tx-primary">
-                    {showQrCode ? 'PIX QR Code Gerado' : 'Nova Cobrança PIX'}
+                    {showQrCode ? 'PIX QR Code Gerado' : 'Nova CobranÃ§a PIX'}
                   </Dialog.Title>
                   <button
                     onClick={handleClose}
@@ -343,7 +343,7 @@ function NewPixChargeModal({
                         </label>
                         <input
                           type="text"
-                          placeholder="João Silva"
+                          placeholder="JoÃ£o Silva"
                           className="input"
                           value={customerName}
                           onChange={(e) => setCustomerName(e.target.value)}
@@ -425,7 +425,7 @@ function NewPixChargeModal({
                       
                       <div>
                         <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                          Código PIX Copia e Cola
+                          CÃ³digo PIX Copia e Cola
                         </label>
                         <div className="relative">
                           <textarea
@@ -437,7 +437,7 @@ function NewPixChargeModal({
                           <button
                             onClick={handleCopyPixCode}
                             className="absolute right-2 top-2 rounded p-2 hover:bg-surface-hover"
-                            title="Copiar código"
+                            title="Copiar cÃ³digo"
                           >
                             <ClipboardDocumentIcon className="h-5 w-5 text-tx-muted" />
                           </button>
@@ -452,19 +452,19 @@ function NewPixChargeModal({
                         <p className="mt-2 text-xs text-tx-muted">
                           {isPaidChargeStatus(paymentStatus)
                             ? 'Pagamento identificado e confirmado no gateway.'
-                            : 'Aguardando confirmação de pagamento. Atualização automática a cada 5 segundos.'}
+                            : 'Aguardando confirmaÃ§Ã£o de pagamento. AtualizaÃ§Ã£o automÃ¡tica a cada 5 segundos.'}
                         </p>
                       </div>
 
                       <div className="rounded-lg bg-accent-subtle p-4">
                         <p className="text-sm text-accent-primary">
-                          <strong>Instruções:</strong>
+                          <strong>InstruÃ§Ãµes:</strong>
                           <br />
                           1. Abra o app do seu banco
                           <br />
                           2. Escolha pagar via PIX QR Code ou Copia e Cola
                           <br />
-                          3. Escaneie o QR Code ou cole o código
+                          3. Escaneie o QR Code ou cole o cÃ³digo
                           <br />
                           4. Confirme o pagamento
                         </p>
@@ -546,7 +546,7 @@ function ChargeDetailModal({
               <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
                 <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4">
                   <Dialog.Title className="text-lg font-semibold text-tx-primary">
-                    Detalhes da Cobrança
+                    Detalhes da CobranÃ§a
                   </Dialog.Title>
                   <button
                     onClick={onClose}
@@ -562,10 +562,10 @@ function ChargeDetailModal({
                       <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
-                            ⚠️ EM DISPUTA
+                            âš ï¸ EM DISPUTA
                           </span>
                           <span className="text-sm font-medium text-amber-900">
-                            Esta cobrança possui um chargeback ativo
+                            Esta cobranÃ§a possui um chargeback ativo
                           </span>
                         </div>
                       </div>
@@ -585,7 +585,7 @@ function ChargeDetailModal({
                       <StatusBadge status={charge.status} />
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-tx-muted">Método</span>
+                      <span className="text-sm text-tx-muted">MÃ©todo</span>
                       <span className="text-sm text-tx-primary">{charge.payment_method}</span>
                     </div>
                     <div className="flex items-center justify-between">
@@ -800,7 +800,7 @@ function ChargeActionsDropdown({
           setIsOpen((current) => !current);
         }}
         className="rounded p-1 hover:bg-surface-hover"
-        aria-label="Abrir ações da cobrança"
+        aria-label="Abrir aÃ§Ãµes da cobranÃ§a"
       >
         <EllipsisVerticalIcon className="h-5 w-5 text-tx-muted" />
       </button>
@@ -842,7 +842,7 @@ export default function ChargesPage() {
       if (data.synced) {
         toast.success(data.message || 'Status sincronizado!');
       } else {
-        toast(data.message || 'Não foi possível sincronizar', { icon: 'ℹ️' });
+        toast(data.message || 'NÃ£o foi possÃ­vel sincronizar', { icon: 'â„¹ï¸' });
       }
       queryClient.invalidateQueries({ queryKey: ['charges'] });
     },
@@ -857,11 +857,11 @@ export default function ChargesPage() {
       return response.data;
     },
     onSuccess: (data) => {
-      toast.success(data.message || 'Sincronização concluída!');
+      toast.success(data.message || 'SincronizaÃ§Ã£o concluÃ­da!');
       queryClient.invalidateQueries({ queryKey: ['charges'] });
     },
     onError: () => {
-      toast.error('Erro ao sincronizar cobranças');
+      toast.error('Erro ao sincronizar cobranÃ§as');
     },
   });
 
@@ -898,9 +898,9 @@ export default function ChargesPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold text-tx-primary">Cobranças</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-tx-primary">CobranÃ§as</h1>
           <p className="text-xs lg:text-sm text-tx-muted mt-0.5 lg:mt-1">
-            Gerencie todas as suas cobranças e pagamentos
+            Gerencie todas as suas cobranÃ§as e pagamentos
           </p>
         </div>
         <button 
@@ -908,7 +908,7 @@ export default function ChargesPage() {
           className="btn-primary inline-flex items-center gap-2 text-sm"
         >
           <PlusIcon className="h-4 w-4" />
-          Nova Cobrança
+          Nova CobranÃ§a
         </button>
       </div>
 
@@ -944,8 +944,8 @@ export default function ChargesPage() {
               value={filters.payment_method || ''}
               onChange={(e) => setFilters({ ...filters, payment_method: e.target.value })}
             >
-              <option value="">Todos os métodos</option>
-              <option value="credit_card">Cartão</option>
+              <option value="">Todos os mÃ©todos</option>
+              <option value="credit_card">CartÃ£o</option>
               <option value="pix">PIX</option>
               <option value="boleto">Boleto</option>
               <option value="split">Split</option>
@@ -956,7 +956,7 @@ export default function ChargesPage() {
               onClick={() => syncAllMutation.mutate()}
               disabled={syncAllMutation.isPending}
               className="btn-secondary inline-flex items-center text-xs lg:text-sm flex-1 lg:flex-none justify-center"
-              title="Sincronizar todas as cobranças pendentes com o gateway"
+              title="Sincronizar todas as cobranÃ§as pendentes com o gateway"
             >
               <ArrowPathIcon className={`mr-1.5 lg:mr-2 h-4 w-4 lg:h-5 lg:w-5 ${syncAllMutation.isPending ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{syncAllMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}</span>
@@ -981,7 +981,7 @@ export default function ChargesPage() {
           </div>
         ) : charges.length === 0 ? (
           <div className="card p-8 text-center text-tx-muted">
-            Nenhuma cobrança encontrada
+            Nenhuma cobranÃ§a encontrada
           </div>
         ) : (
           charges.map((charge) => (
@@ -1018,7 +1018,7 @@ export default function ChargesPage() {
               </div>
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-border-DEFAULT">
                 <span className="text-xs text-tx-muted">
-                  {charge.payment_method === 'credit_card' ? 'Cartão' : charge.payment_method === 'pix' ? 'PIX' : charge.payment_method === 'boleto' ? 'Boleto' : charge.payment_method}
+                  {charge.payment_method === 'credit_card' ? 'CartÃ£o' : charge.payment_method === 'pix' ? 'PIX' : charge.payment_method === 'boleto' ? 'Boleto' : charge.payment_method}
                 </span>
                 <span className="text-xs text-tx-muted">{formatDate(charge.created_at)}</span>
               </div>
@@ -1043,13 +1043,13 @@ export default function ChargesPage() {
                   Status
                 </th>
                 <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">
-                  Método
+                  MÃ©todo
                 </th>
                 <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">
                   Data
                 </th>
                 <th className="relative px-6 py-3.5">
-                  <span className="sr-only">Ações</span>
+                  <span className="sr-only">AÃ§Ãµes</span>
                 </th>
               </tr>
             </thead>
@@ -1065,7 +1065,7 @@ export default function ChargesPage() {
               ) : charges.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-tx-muted">
-                    Nenhuma cobrança encontrada
+                    Nenhuma cobranÃ§a encontrada
                   </td>
                 </tr>
               ) : (
@@ -1103,7 +1103,7 @@ export default function ChargesPage() {
                         </div>
                         {charge.has_split && charge.split_amount > 0 && (
                           <p className="text-[11px] text-orange-600 dark:text-orange-400 mt-0.5">
-                            Split: -{formatCurrency(charge.split_amount)} → Líquido: {formatCurrency(charge.amount - charge.split_amount)}
+                            Split: -{formatCurrency(charge.split_amount)} â†’ LÃ­quido: {formatCurrency(charge.amount - charge.split_amount)}
                           </p>
                         )}
                       </div>
@@ -1120,7 +1120,7 @@ export default function ChargesPage() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-tx-muted">
                       {charge.payment_method === 'credit_card'
-                        ? 'Cartão'
+                        ? 'CartÃ£o'
                         : charge.payment_method === 'pix'
                         ? 'PIX'
                         : charge.payment_method === 'boleto'
@@ -1169,7 +1169,7 @@ export default function ChargesPage() {
               disabled={page >= (pagination.last_page || 1)}
               className="btn-secondary text-sm"
             >
-              Próximo
+              PrÃ³ximo
             </button>
           </div>
           <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-between">
@@ -1228,7 +1228,7 @@ export default function ChargesPage() {
                 disabled={page >= (pagination.last_page || 1)}
                 className="btn-secondary"
               >
-                Próximo
+                PrÃ³ximo
               </button>
             </div>
           </div>

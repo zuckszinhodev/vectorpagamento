@@ -1,4 +1,4 @@
-# 📊 Entity Relationship Diagram - WazerPay
+# 📊 Entity Relationship Diagram - Vector Pagamentos
 
 ## Diagrama Completo
 

@@ -91,7 +91,7 @@ class RegisterPayFortWebhook extends Command
         $this->info("Events: " . implode(', ', $events));
         $this->newLine();
 
-        $result = $acquirer->registerWebhook($webhookUrl, $events, 'GatePro Gateway');
+        $result = $acquirer->registerWebhook($webhookUrl, $events, 'Vector Pagamentos');
 
         if ($result['success']) {
             $this->info('Webhook registered successfully!');

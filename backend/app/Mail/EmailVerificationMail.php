@@ -21,14 +21,14 @@ class EmailVerificationMail extends Mailable
         public User $user,
         string $token,
     ) {
-        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'https://app.wazerpay.com.br'));
+        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'https://app.vectorpagamentos.com'));
         $this->verificationUrl = "{$frontendUrl}/verify-email?token={$token}";
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verifique seu e-mail — GatePro',
+            subject: 'Verifique seu e-mail â€” Vector Pagamentos',
         );
     }
 

@@ -8,7 +8,7 @@
 # ============================================================
 
 set -e
-cd /var/www/wazerpay-gateway/backend
+cd /var/www/vectorpagamentos-gateway/backend
 
 echo "🔧 Aplicando hotfixes..."
 
@@ -214,4 +214,4 @@ systemctl restart php8.2-fpm
 echo ""
 echo "✅ Hotfix aplicado com sucesso!"
 echo ""
-echo "Teste com: curl -s https://api.wazerpay.com.br/api/health | python3 -m json.tool"
+echo "Teste com: curl -s https://api.vectorpagamentos.com/api/health | python3 -m json.tool"

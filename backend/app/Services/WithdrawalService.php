@@ -20,9 +20,9 @@ use Illuminate\Support\Str;
  * Flow:
  * 1. Withdrawal created with status=pending
  * 2. processWithdrawal() sends PIX OUT via acquirer
- * 3. On handoff success → status=processing, acquirer_transfer_id saved
- * 4. Acquirer webhook (transfer_completed) → status=completed
- * 5. On failure → status=failed, funds returned to available_balance
+ * 3. On handoff success â†’ status=processing, acquirer_transfer_id saved
+ * 4. Acquirer webhook (transfer_completed) â†’ status=completed
+ * 5. On failure â†’ status=failed, funds returned to available_balance
  */
 class WithdrawalService
 {
@@ -58,7 +58,7 @@ class WithdrawalService
         if (!$processingEnabled) {
             return [
                 'success' => false,
-                'error' => 'Processamento de saques está temporariamente pausado pela administração',
+                'error' => 'Processamento de saques estÃ¡ temporariamente pausado pela administraÃ§Ã£o',
             ];
         }
 
@@ -79,7 +79,7 @@ class WithdrawalService
         $pixKey = $destination['pix_key'] ?? null;
 
         if (!$pixKey && $withdrawal->method === 'pix') {
-            $this->failWithdrawal($withdrawal, 'Chave PIX não configurada no destino');
+            $this->failWithdrawal($withdrawal, 'Chave PIX nÃ£o configurada no destino');
             return ['success' => false, 'error' => 'No PIX key in destination'];
         }
 
@@ -137,7 +137,7 @@ class WithdrawalService
             ];
         }
 
-        // PIX OUT failed — revert
+        // PIX OUT failed â€” revert
         $this->failWithdrawal($withdrawal, $result['error'] ?? 'Acquirer PIX OUT failed');
 
         return [
@@ -181,7 +181,7 @@ class WithdrawalService
             return true;
         }
 
-        // Still processing — nothing to do
+        // Still processing â€” nothing to do
         return true;
     }
 
@@ -263,7 +263,7 @@ class WithdrawalService
             return [
                 'success' => false,
                 'status' => 422,
-                'message' => "Saque não pode ser cancelado nesse estágio (status={$withdrawal->status})",
+                'message' => "Saque nÃ£o pode ser cancelado nesse estÃ¡gio (status={$withdrawal->status})",
                 'error_code' => 'withdrawal_not_cancellable',
             ];
         }
@@ -303,7 +303,7 @@ class WithdrawalService
             return [
                 'success' => true,
                 'withdrawal' => $withdrawal->fresh(),
-                'message' => 'Saque cancelado pela administração com devolução de saldo',
+                'message' => 'Saque cancelado pela administraÃ§Ã£o com devoluÃ§Ã£o de saldo',
             ];
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -339,8 +339,8 @@ class WithdrawalService
             'pix_key_type'         => strtoupper($destination['pix_type'] ?? 'CPF'),
             'amount'               => $netAmountCents / 100, // Reais for acquirer (they convert to centavos internally)
             'amount_cents'         => $netAmountCents,
-            'description'          => "Saque GatePro #{$withdrawal->id}",
-            'destination_name'     => $destination['holder_name'] ?? $account?->name ?? 'Destinatário',
+            'description'          => "Saque Vector Pagamentos #{$withdrawal->id}",
+            'destination_name'     => $destination['holder_name'] ?? $account?->name ?? 'DestinatÃ¡rio',
             'destination_document' => $destination['holder_document'] ?? $account?->document ?? '',
             'external_ref'         => $withdrawal->id,
             'idempotency_key'      => $withdrawal->id, // UUID ensures idempotency
@@ -365,7 +365,7 @@ class WithdrawalService
         if ($acquirerOrder === []) {
             return [
                 'success' => false,
-                'error' => 'Nenhuma adquirente global ativa está configurada para PIX OUT',
+                'error' => 'Nenhuma adquirente global ativa estÃ¡ configurada para PIX OUT',
             ];
         }
 
@@ -393,7 +393,7 @@ class WithdrawalService
             }
 
             if (!$instance || !method_exists($instance, 'sendPixTransfer')) {
-                $reason = "Adquirente {$name} indisponível ou sem suporte a PIX OUT";
+                $reason = "Adquirente {$name} indisponÃ­vel ou sem suporte a PIX OUT";
                 $skipReasons[$name] = $reason;
                 Log::warning("WithdrawalService: skipping {$name} PIX OUT", [
                     'withdrawal_id' => $withdrawalId !== '' ? $withdrawalId : null,
@@ -512,7 +512,7 @@ class WithdrawalService
 
             $withdrawal->markAsFailed($reason);
 
-            // Return funds: pending → available
+            // Return funds: pending â†’ available
             $wallet = AccountWallet::where('account_id', $withdrawal->account_id)->first();
             if ($wallet) {
                 $wallet->decrement('pending_balance', (int) $withdrawal->amount);
@@ -557,20 +557,20 @@ class WithdrawalService
             'payfort' => [
                 'success' => false,
                 'status' => 422,
-                'message' => "O saque já foi enviado ao PayFort (transferência {$transferId}). A API pública do adquirente não oferece cancelamento de PIX OUT. Cancele no painel do PayFort e aguarde o webhook de cancelamento para o estorno automático.",
+                'message' => "O saque jÃ¡ foi enviado ao PayFort (transferÃªncia {$transferId}). A API pÃºblica do adquirente nÃ£o oferece cancelamento de PIX OUT. Cancele no painel do PayFort e aguarde o webhook de cancelamento para o estorno automÃ¡tico.",
                 'error_code' => 'acquirer_api_cancellation_not_supported',
                 'data' => [
                     'acquirer' => 'payfort',
                     'acquirer_transfer_id' => $transferId,
                     'requires_external_cancellation' => true,
-                    'manual_action' => 'Cancelar a transferência no painel do PayFort e aguardar o webhook transfer_canceled/transfer_updated.',
+                    'manual_action' => 'Cancelar a transferÃªncia no painel do PayFort e aguardar o webhook transfer_canceled/transfer_updated.',
                     'documentation_url' => 'https://docs.payfortbank.com/openapi.yaml',
                 ],
             ],
             default => [
                 'success' => false,
                 'status' => 422,
-                'message' => "O saque já foi enviado ao adquirente {$acquirer} (transferência {$transferId}) e este fluxo não possui cancelamento automático via API neste projeto.",
+                'message' => "O saque jÃ¡ foi enviado ao adquirente {$acquirer} (transferÃªncia {$transferId}) e este fluxo nÃ£o possui cancelamento automÃ¡tico via API neste projeto.",
                 'error_code' => 'acquirer_api_cancellation_not_supported',
                 'data' => [
                     'acquirer' => $acquirer,

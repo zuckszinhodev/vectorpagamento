@@ -1,6 +1,6 @@
 @extends('emails.layout')
 
-@section('title', 'Redefinir senha - GatePro')
+@section('title', 'Redefinir senha - Vector Pagamentos')
 
 @section('content')
     <h1 style="font-size: 22px; color: #1a1a2e; margin: 0 0 16px;">Redefinicao de senha</h1>
@@ -9,7 +9,7 @@
 
     <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">
         Recebemos uma solicitacao para redefinir a senha da sua conta
-        na GatePro. Clique no botao abaixo para criar uma nova senha:
+        na Vector Pagamentos. Clique no botao abaixo para criar uma nova senha:
     </p>
 
     <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 20px auto;">

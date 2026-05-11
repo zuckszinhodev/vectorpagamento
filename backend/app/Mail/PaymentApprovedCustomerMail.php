@@ -22,7 +22,7 @@ class PaymentApprovedCustomerMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Pagamento confirmado - GatePro',
+            subject: 'Pagamento confirmado - Vector Pagamentos',
         );
     }
 
@@ -37,7 +37,7 @@ class PaymentApprovedCustomerMail extends Mailable
                 'chargeId' => $this->charge->id,
                 'amount' => number_format($this->charge->amount / 100, 2, ',', '.'),
                 'paymentMethod' => $this->formatPaymentMethod($this->charge->payment_method),
-                'productDescription' => $this->charge->description ?? 'Compra na GatePro',
+                'productDescription' => $this->charge->description ?? 'Compra na Vector Pagamentos',
                 'paidAt' => $this->charge->paid_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i'),
             ],
         );
@@ -47,7 +47,7 @@ class PaymentApprovedCustomerMail extends Mailable
     {
         return match ($method) {
             'pix' => 'PIX',
-            'credit_card' => 'Cartão de Crédito',
+            'credit_card' => 'CartÃ£o de CrÃ©dito',
             'boleto' => 'Boleto',
             default => $method ?? 'N/A',
         };

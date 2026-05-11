@@ -24,7 +24,7 @@ class PlatformSettingsAdminController extends Controller
             // Organize settings into categories
             $organized = [
                 'general' => [
-                    'platform_name' => $settings['platform_name'] ?? 'GatePro',
+                    'platform_name' => $this->normalizePlatformName($settings['platform_name'] ?? 'Vector Pagamentos'),
                     'support_email' => $settings['support_email'] ?? '',
                     'support_phone' => $settings['support_phone'] ?? '',
                     'default_currency' => $settings['default_currency'] ?? 'BRL',
@@ -44,7 +44,7 @@ class PlatformSettingsAdminController extends Controller
                     'smtp_username' => $settings['smtp_username'] ?? '',
                     'smtp_password' => $settings['smtp_password'] ?? '',
                     'smtp_encryption' => $settings['smtp_encryption'] ?? 'tls',
-                    'from_name' => $settings['mail_from_name'] ?? 'GatePro',
+                    'from_name' => $this->normalizePlatformName($settings['mail_from_name'] ?? 'Vector Pagamentos'),
                     'from_email' => $settings['mail_from_address'] ?? '',
                 ],
                 'payments' => [
@@ -83,7 +83,7 @@ class PlatformSettingsAdminController extends Controller
             Log::error('PlatformSettingsAdminController::index error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Erro ao carregar configurações',
+                'message' => 'Erro ao carregar configuraÃ§Ãµes',
             ], 500);
         }
     }
@@ -110,13 +110,13 @@ class PlatformSettingsAdminController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Configurações atualizadas com sucesso',
+                'message' => 'ConfiguraÃ§Ãµes atualizadas com sucesso',
             ]);
         } catch (\Throwable $e) {
             Log::error('PlatformSettingsAdminController::update error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Erro ao atualizar configurações',
+                'message' => 'Erro ao atualizar configuraÃ§Ãµes',
             ], 500);
         }
     }
@@ -194,7 +194,7 @@ class PlatformSettingsAdminController extends Controller
                     'type' => $apiKey->type,
                     'created_at' => $apiKey->created_at,
                 ],
-                'message' => 'API key criada com sucesso. Salve a chave, ela não será exibida novamente.',
+                'message' => 'API key criada com sucesso. Salve a chave, ela nÃ£o serÃ¡ exibida novamente.',
             ]);
         } catch (\Throwable $e) {
             Log::error('PlatformSettingsAdminController::createApiKey error', ['error' => $e->getMessage()]);
@@ -216,7 +216,7 @@ class PlatformSettingsAdminController extends Controller
             if (!$apiKey) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'API key não encontrada',
+                    'message' => 'API key nÃ£o encontrada',
                 ], 404);
             }
 
@@ -249,5 +249,12 @@ class PlatformSettingsAdminController extends Controller
             ['key' => $key],
             ['value' => (string) $value]
         );
+    }
+
+    private function normalizePlatformName(mixed $name): string
+    {
+        $value = trim((string) $name);
+
+        return $value === '' ? 'Vector Pagamentos' : $value;
     }
 }

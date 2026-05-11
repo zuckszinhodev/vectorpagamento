@@ -69,9 +69,9 @@ class ForceCorsHeaders
 
         return array_values(array_unique(array_filter([
             $frontendUrl,
-            'https://wazerpay.com.br',
-            'https://app.wazerpay.com.br',
-            'https://api.wazerpay.com.br',
+            'https://vectorpagamentos.com',
+            'https://app.vectorpagamentos.com',
+            'https://api.vectorpagamentos.com',
             ...$extraAllowedOrigins,
             ...($allowLocalOrigins ? [
                 'http://localhost:3000',

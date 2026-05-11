@@ -60,7 +60,7 @@ function createTestAccount(): array
         'name'          => 'TurbosCash Test Account',
         'document'      => '12345678000199',
         'document_type' => 'cnpj',
-        'email'         => 'turbos-test@wazerpay.com',
+        'email'         => 'turbos-test@vectorpagamentos.com',
         'status'        => 'active',
     ]);
 
@@ -97,7 +97,7 @@ function createTestCharge(string $accountId, int $amountCents = 500): Charge
         'idempotency_key' => Str::random(32),
         'customer'        => [
             'name'     => 'Teste Vector Pagamentos',
-            'email'    => 'teste@wazerpay.com',
+            'email'    => 'teste@vectorpagamentos.com',
             'document' => '12345678909',
         ],
     ]);
@@ -420,7 +420,7 @@ describe('API Charge Endpoint → TurbosCash (Real API)', function () {
             'payment_method' => 'pix',
             'customer'       => [
                 'name'     => 'Teste Real TurbosCash',
-                'email'    => 'teste.real@wazerpay.com',
+                'email'    => 'teste.real@vectorpagamentos.com',
                 'document' => '12345678909',
             ],
         ]);

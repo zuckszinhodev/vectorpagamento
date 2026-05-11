@@ -1,9 +1,9 @@
 @echo off
-REM GatePro Gateway - Backend Installation Script for Windows
+REM Vector Pagamentos - Backend Installation Script for Windows
 REM This script automates the backend setup process
 
 echo ================================================
-echo  GatePro Gateway Backend Installation
+echo  Vector Pagamentos Backend Installation
 echo ================================================
 echo.
 

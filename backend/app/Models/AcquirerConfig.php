@@ -405,7 +405,7 @@ class AcquirerConfig extends Model
 
     /**
      * Calculate the gateway fee for a given amount
-     * This is what we (GatePro) charge our customers
+     * This is what Vector Pagamentos charges customers
      * 
      * @param int $amountCents Amount in cents
      * @return int Fee in cents

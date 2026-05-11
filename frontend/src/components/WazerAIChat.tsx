@@ -55,7 +55,7 @@ export default function WazerAIChat() {
       wazerAIService.getSuggestions().then(res => {
         if (res.success) setSuggestions(res.data);
       }).catch((error) => {
-        console.error('Erro ao carregar sugestões:', error);
+        console.error('Erro ao carregar sugestÃµes:', error);
       });
     }
   }, [isOpen, messages.length]);
@@ -119,7 +119,7 @@ export default function WazerAIChat() {
         );
       }
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Erro de conexão. Verifique sua internet e tente novamente.';
+      const errorMsg = err?.response?.data?.error || 'Erro de conexÃ£o. Verifique sua internet e tente novamente.';
       setMessages(prev =>
         prev.map(m =>
           m.id === loadingMessage.id
@@ -145,11 +145,11 @@ export default function WazerAIChat() {
     wazerAIService.getSuggestions().then(res => {
       if (res.success) setSuggestions(res.data);
     }).catch((error) => {
-      console.error('Erro ao recarregar sugestões:', error);
+      console.error('Erro ao recarregar sugestÃµes:', error);
     });
   };
 
-  const firstName = user?.name?.split(' ')[0] || 'Usuário';
+  const firstName = user?.name?.split(' ')[0] || 'UsuÃ¡rio';
 
   return (
     <>
@@ -163,7 +163,7 @@ export default function WazerAIChat() {
             onClick={() => setIsOpen(true)}
             className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-lg shadow-green-500/40 hover:bg-green-500 hover:shadow-xl hover:shadow-green-500/50 transition-all hover:scale-105 active:scale-95"
             style={{ opacity: 1 }}
-            title="WazerAI"
+            title="Vector IA"
           >
             <ChatBubbleLeftRightIconSolid className="h-6 w-6" />
           </motion.button>
@@ -188,7 +188,7 @@ export default function WazerAIChat() {
                   <ChatBubbleLeftRightIconSolid className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">WazerAI</h3>
+                  <h3 className="text-sm font-bold text-white">Vector IA</h3>
                   <p className="text-[11px] text-white/70">Assistente inteligente</p>
                 </div>
               </div>
@@ -214,16 +214,16 @@ export default function WazerAIChat() {
               {messages.length === 0 && (
                 <div className="flex flex-col items-center pt-6 pb-4">
                   <h4 className="text-base font-bold text-tx-primary mb-1">
-                    Olá, {firstName}! 👋
+                    OlÃ¡, {firstName}! ðŸ‘‹
                   </h4>
                   <p className="text-xs text-tx-muted text-center max-w-[280px] mb-6">
-                    Sou a WazerAI, sua assistente inteligente. Posso te ajudar com vendas, métricas, estratégias e mais!
+                    Sou a Vector IA, sua assistente inteligente. Posso te ajudar com vendas, mÃ©tricas, estratÃ©gias e mais!
                   </p>
 
                   {/* Suggestions */}
                   {suggestions.length > 0 && (
                     <div className="w-full space-y-2">
-                      <p className="text-[11px] font-medium text-tx-muted uppercase tracking-wider px-1">Sugestões</p>
+                      <p className="text-[11px] font-medium text-tx-muted uppercase tracking-wider px-1">SugestÃµes</p>
                       <div className="grid grid-cols-1 gap-1.5">
                         {suggestions.slice(0, 10).map((s, i) => {
                           const IconComp = (s.icon && suggestionIcons[s.icon]) || QuestionMarkCircleIcon;
@@ -307,7 +307,7 @@ export default function WazerAIChat() {
                 </button>
               </div>
               <p className="mt-1.5 text-center text-[10px] text-tx-muted/60">
-                @Vector Pagamentos inteligência para o seu negócio.
+                @Vector Pagamentos inteligÃªncia para o seu negÃ³cio.
               </p>
             </div>
           </motion.div>
@@ -369,7 +369,7 @@ function ActionResultBadge({ actionResult }: { actionResult: WazerAIActionResult
           className="inline-flex items-center gap-1 rounded-lg bg-slate-500/20 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-500/30 transition-colors"
         >
           <LinkIcon className="h-3 w-3" />
-          Página
+          PÃ¡gina
         </a>
       )}
       {downloadUrl && (
@@ -421,7 +421,7 @@ function simpleMarkdown(text: string): string {
     .replace(/^## (.+)$/gm, '<h3 class="text-sm font-bold mt-3 mb-1">$1</h3>')
     .replace(/^# (.+)$/gm, '<h2 class="text-base font-bold mt-3 mb-1">$1</h2>')
     // Unordered lists
-    .replace(/^[-•] (.+)$/gm, '<li class="ml-3">$1</li>')
+    .replace(/^[-â€¢] (.+)$/gm, '<li class="ml-3">$1</li>')
     // Ordered lists
     .replace(/^\d+\. (.+)$/gm, '<li class="ml-3 list-decimal">$1</li>')
     // Line breaks (double newline = paragraph, single = <br>)

@@ -1,7 +1,7 @@
 {
-    "name": "wazerpay/gateway",
+    "name": "vectorpagamentos/gateway",
     "type": "project",
-    "description": "GatePro - Gateway de Pagamento Multiadquirente",
+    "description": "Vector Pagamentos - Gateway de Pagamento Multiadquirente",
     "keywords": ["payment", "gateway", "fintech", "laravel", "pix", "credit-card"],
     "license": "proprietary",
     "require": {

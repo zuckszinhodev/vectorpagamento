@@ -1,7 +1,7 @@
 import { api } from '@/lib/api';
 
 export type DomainPurpose = 'checkout' | 'members';
-export type DomainType = 'custom' | 'wazerpay';
+export type DomainType = 'custom' | 'vectorpagamentos';
 
 export interface CustomDomain {
   id: string;
@@ -60,10 +60,10 @@ export const domainsService = {
   },
 
   /**
-  * Create a Vector Pagamentos subdomain (e.g., meusite.wazerpay.com.br)
+  * Create a Vector Pagamentos subdomain (e.g., meusite.vectorpagamentos.com)
    */
   async createSubdomain(subdomain: string, useFor?: DomainPurpose[]): Promise<{ data: CustomDomain; message: string }> {
-    const response = await api.post('/domains', { subdomain, type: 'wazerpay', use_for: useFor || ['checkout', 'members'] });
+    const response = await api.post('/domains', { subdomain, type: 'vectorpagamentos', use_for: useFor || ['checkout', 'members'] });
     return response.data;
   },
 

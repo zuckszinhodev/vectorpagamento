@@ -98,14 +98,14 @@ function PreviewModal({
  </div>
  <div className="bg-surface-card rounded-element px-4 py-1 text-sm text-tx-secondary flex items-center gap-2">
  <GlobeAltIcon className="h-4 w-4" />
- {landingPage?.slug ? `wazerpay.com/lp/${landingPage.slug}` : 'Preview'}
+ {landingPage?.slug ? `vectorpagamentos.com/lp/${landingPage.slug}` : 'Preview'}
  </div>
  </div>
  <button
  onClick={onClose}
  className="text-tx-muted hover:text-tx-secondary"
  >
- ✕
+ âœ•
  </button>
  </div>
  
@@ -211,7 +211,7 @@ export default function LandingPagesPage() {
  queryClient.invalidateQueries({ queryKey: ['landing-pages'] });
  if (response.data.url) {
  navigator.clipboard.writeText(response.data.url);
- toast.success('URL copiada para a área de transferência');
+ toast.success('URL copiada para a Ã¡rea de transferÃªncia');
  }
  },
  onError: () => {
@@ -287,7 +287,7 @@ export default function LandingPagesPage() {
  Gerador de Landing Pages
  </h1>
  <p className="text-sm text-tx-muted mt-1">
- Crie páginas de vendas de alta conversão com inteligência artificial
+ Crie pÃ¡ginas de vendas de alta conversÃ£o com inteligÃªncia artificial
  </p>
  </div>
  <button
@@ -295,7 +295,7 @@ export default function LandingPagesPage() {
  className="btn-primary inline-flex items-center gap-2"
  >
  <SparklesIcon className="h-5 w-5" />
- Gerar Nova Página
+ Gerar Nova PÃ¡gina
  </button>
  </div>
 
@@ -346,14 +346,14 @@ export default function LandingPagesPage() {
  Nenhuma landing page ainda
  </h3>
  <p className="text-tx-muted mb-6">
- Crie sua primeira página de vendas com o poder da inteligência artificial
+ Crie sua primeira pÃ¡gina de vendas com o poder da inteligÃªncia artificial
  </p>
  <button
  onClick={() => setIsGeneratorOpen(true)}
  className="btn-primary inline-flex items-center gap-2"
  >
  <SparklesIcon className="h-5 w-5" />
- Gerar Minha Primeira Página
+ Gerar Minha Primeira PÃ¡gina
  </button>
  </div>
  ) : (

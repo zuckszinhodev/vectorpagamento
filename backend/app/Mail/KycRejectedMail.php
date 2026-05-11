@@ -23,7 +23,7 @@ class KycRejectedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verificação KYC - Ajustes necessários - GatePro',
+            subject: 'VerificaÃ§Ã£o KYC - Ajustes necessÃ¡rios - Vector Pagamentos',
         );
     }
 
@@ -34,7 +34,7 @@ class KycRejectedMail extends Mailable
             with: [
                 'userName' => $this->user->name,
                 'reason' => $this->reason,
-                'resubmitUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://app.wazerpay.com.br')) . '/kyc',
+                'resubmitUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://app.vectorpagamentos.com')) . '/kyc',
             ],
         );
     }

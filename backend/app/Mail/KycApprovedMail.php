@@ -22,7 +22,7 @@ class KycApprovedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Parabens, sua conta foi aprovada - GatePro',
+            subject: 'Parabens, sua conta foi aprovada - Vector Pagamentos',
         );
     }
 
@@ -32,7 +32,7 @@ class KycApprovedMail extends Mailable
             view: 'emails.kyc-approved',
             with: [
                 'userName' => $this->user->name,
-                'dashboardUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://app.wazerpay.com.br')) . '/dashboard',
+                'dashboardUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://app.vectorpagamentos.com')) . '/dashboard',
             ],
         );
     }
