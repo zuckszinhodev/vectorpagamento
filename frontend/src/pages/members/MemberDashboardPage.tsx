@@ -71,7 +71,7 @@ export default function MemberDashboardPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500" />
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500" />
       </div>
     );
   }
@@ -85,7 +85,7 @@ export default function MemberDashboardPage() {
             {/* Logo */}
             <div className="flex items-center gap-8">
               <Link to="/members/dashboard" className="text-2xl font-bold text-white">
-                <span className="bg-gradient-to-r from-green-400 to-pink-500 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-emerald-400 to-green-500 bg-clip-text text-transparent">
                   MemberArea
                 </span>
               </Link>
@@ -252,7 +252,7 @@ function HeroCourse({ enrollment }: { enrollment: Enrollment }) {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-green-900 to-gray-900" />
+          <div className="w-full h-full bg-gradient-to-br from-emerald-900 to-gray-900" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-gray-900 via-transparent to-transparent" />
@@ -326,7 +326,7 @@ function CourseRow({
           {enrollments.length > 5 && (
             <Link
               to="/members/courses"
-              className="text-sm text-green-400 hover:text-green-300 flex items-center gap-1"
+              className="text-sm text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
             >
               Ver todos
               <ChevronRightIcon className="h-4 w-4" />
@@ -375,7 +375,7 @@ function CourseCard({
           className="w-full h-full object-cover"
         />
       ) : (
-        <div className="w-full h-full bg-gradient-to-br from-green-800 to-gray-800 flex items-center justify-center">
+        <div className="w-full h-full bg-gradient-to-br from-emerald-800 to-gray-800 flex items-center justify-center">
           <BookOpenIcon className="h-12 w-12 text-tx-secondary" />
         </div>
       )}
@@ -418,5 +418,3 @@ function CourseCard({
     </Link>
   );
 }
-
-

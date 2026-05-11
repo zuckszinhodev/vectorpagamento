@@ -22,14 +22,14 @@ import {
 } from '@heroicons/react/24/outline';
 import { domainsService, CustomDomain, DomainPurpose, DomainType } from '@/services/api/domains.service';
 
-const VECTOR_BASE_DOMAIN = 'vectorpagamentos.com';
+const VECTOR_PAGAMENTOS_BASE_DOMAIN = 'vectorpagamentos.com.br';
 
 export default function DomainsPage() {
  const queryClient = useQueryClient();
  const [showAddModal, setShowAddModal] = useState(false);
  const [newDomain, setNewDomain] = useState('');
  const [newSubdomain, setNewSubdomain] = useState('');
- const [newDomainType, setNewDomainType] = useState<DomainType>('vectorpagamentos');
+ const [newDomainType, setNewDomainType] = useState<DomainType>('Vector Pagamentos');
  const [newUseFor, setNewUseFor] = useState<DomainPurpose[]>(['checkout', 'members']);
  const [selectedDomain, setSelectedDomain] = useState<CustomDomain | null>(null);
  const [showTutorial, setShowTutorial] = useState(false);
@@ -46,7 +46,7 @@ export default function DomainsPage() {
  const createMutation = useMutation({
  mutationFn: ({ domain, useFor }: { domain: string; useFor: DomainPurpose[] }) => domainsService.create(domain, useFor),
  onSuccess: (result) => {
- toast.success(result.message || 'DomÃ­nio adicionado');
+ toast.success(result.message || 'Domínio adicionado');
  queryClient.invalidateQueries({ queryKey: ['domains'] });
  closeAddModal();
  if (result.data) {
@@ -54,7 +54,7 @@ export default function DomainsPage() {
  }
  },
  onError: (err: any) => {
- toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Erro ao adicionar domÃ­nio');
+ toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Erro ao adicionar domínio');
  },
  });
 
@@ -62,12 +62,12 @@ export default function DomainsPage() {
  const createSubdomainMutation = useMutation({
  mutationFn: ({ subdomain, useFor }: { subdomain: string; useFor: DomainPurpose[] }) => domainsService.createSubdomain(subdomain, useFor),
  onSuccess: (result) => {
- toast.success(result.message || 'SubdomÃ­nio Vector Pagamentos criado!');
+ toast.success(result.message || 'Subdomínio Vector Pagamentos criado!');
  queryClient.invalidateQueries({ queryKey: ['domains'] });
  closeAddModal();
  },
  onError: (err: any) => {
- toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Erro ao criar subdomÃ­nio');
+ toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Erro ao criar subdomínio');
  },
  });
 
@@ -75,12 +75,12 @@ export default function DomainsPage() {
  setShowAddModal(false);
  setNewDomain('');
  setNewSubdomain('');
- setNewDomainType('vectorpagamentos');
+ setNewDomainType('Vector Pagamentos');
  setNewUseFor(['checkout', 'members']);
  };
 
  const handleCreate = () => {
- if (newDomainType === 'vectorpagamentos') {
+ if (newDomainType === 'Vector Pagamentos') {
  if (newSubdomain && newUseFor.length > 0) {
  createSubdomainMutation.mutate({ subdomain: newSubdomain, useFor: newUseFor });
  }
@@ -91,7 +91,7 @@ export default function DomainsPage() {
  }
  };
 
- const isCreateDisabled = newDomainType === 'vectorpagamentos'
+ const isCreateDisabled = newDomainType === 'Vector Pagamentos'
  ? !newSubdomain || newUseFor.length === 0 || createSubdomainMutation.isPending
  : !newDomain || newUseFor.length === 0 || createMutation.isPending;
 
@@ -102,9 +102,9 @@ export default function DomainsPage() {
  mutationFn: (id: string) => domainsService.verify(id),
  onSuccess: (result) => {
  if (result.success) {
- toast.success(result.message || 'DomÃ­nio verificado!');
+ toast.success(result.message || 'Domínio verificado!');
  } else {
- toast.error(result.error?.details?.join(', ') || 'VerificaÃ§Ã£o falhou');
+ toast.error(result.error?.details?.join(', ') || 'Verificação falhou');
  }
  queryClient.invalidateQueries({ queryKey: ['domains'] });
  },
@@ -113,7 +113,7 @@ export default function DomainsPage() {
  if (details && Array.isArray(details)) {
  toast.error(details.join('\n'));
  } else {
- toast.error(err.response?.data?.error?.message || 'Erro na verificaÃ§Ã£o');
+ toast.error(err.response?.data?.error?.message || 'Erro na verificação');
  }
  },
  });
@@ -122,7 +122,7 @@ export default function DomainsPage() {
  const setPrimaryMutation = useMutation({
  mutationFn: (id: string) => domainsService.setPrimary(id),
  onSuccess: () => {
- toast.success('DomÃ­nio definido como principal');
+ toast.success('Domínio definido como principal');
  queryClient.invalidateQueries({ queryKey: ['domains'] });
  },
  onError: (err: any) => {
@@ -134,7 +134,7 @@ export default function DomainsPage() {
  const deleteMutation = useMutation({
  mutationFn: (id: string) => domainsService.remove(id),
  onSuccess: () => {
- toast.success('DomÃ­nio removido');
+ toast.success('Domínio removido');
  queryClient.invalidateQueries({ queryKey: ['domains'] });
  setSelectedDomain(null);
  },
@@ -143,7 +143,7 @@ export default function DomainsPage() {
  if (errorData?.code === 'domain_has_linked_pages') {
  toast.error(errorData.message, { duration: 6000 });
  } else {
- toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Erro ao remover domÃ­nio');
+ toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Erro ao remover domínio');
  }
  },
  });
@@ -152,14 +152,14 @@ export default function DomainsPage() {
  const updateUseForMutation = useMutation({
  mutationFn: ({ id, useFor }: { id: string; useFor: DomainPurpose[] }) => domainsService.updateUseFor(id, useFor),
  onSuccess: (result) => {
- toast.success(result.message || 'Uso do domÃ­nio atualizado');
+ toast.success(result.message || 'Uso do domínio atualizado');
  queryClient.invalidateQueries({ queryKey: ['domains'] });
  if (selectedDomain && result.data) {
  setSelectedDomain(result.data);
  }
  },
  onError: (err: any) => {
- toast.error(err.response?.data?.error?.message || 'Erro ao atualizar uso do domÃ­nio');
+ toast.error(err.response?.data?.error?.message || 'Erro ao atualizar uso do domínio');
  },
  });
 
@@ -205,17 +205,17 @@ export default function DomainsPage() {
  {/* Header */}
  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
  <div>
- <h1 className="text-2xl font-bold text-tx-primary">DomÃ­nios Personalizados</h1>
+ <h1 className="text-2xl font-bold text-tx-primary">Domínios Personalizados</h1>
  <p className="text-sm text-tx-muted mt-1">
- Configure seus prÃ³prios domÃ­nios para checkouts, pÃ¡ginas de vendas e Ã¡rea de membros.
+ Configure seus próprios domínios para checkouts, páginas de vendas e área de membros.
  </p>
  </div>
  <button
  onClick={() => setShowAddModal(true)}
- className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-600 to-green-700 px-4 py-2.5 text-sm font-semibold text-white hover:from-green-700 hover:to-green-800 transition-all"
+ className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:from-emerald-700 hover:to-green-700 transition-all"
  >
  <PlusIcon className="h-5 w-5" />
- Adicionar DomÃ­nio
+ Adicionar Domínio
  </button>
  </div>
 
@@ -226,11 +226,11 @@ export default function DomainsPage() {
  className="w-full flex items-center justify-between p-4 hover:bg-surface-hover transition-colors"
  >
  <div className="flex items-center gap-3">
- <div className="rounded-lg bg-green-50 p-2">
- <BookOpenIcon className="h-5 w-5 text-green-600" />
+ <div className="rounded-lg bg-emerald-50 p-2">
+ <BookOpenIcon className="h-5 w-5 text-emerald-600" />
  </div>
  <div className="text-left">
- <p className="text-sm font-semibold text-tx-primary">Tutorial: Como configurar seu domÃ­nio personalizado</p>
+ <p className="text-sm font-semibold text-tx-primary">Tutorial: Como configurar seu domínio personalizado</p>
  <p className="text-xs text-tx-muted">Guia passo a passo com exemplos para Cloudflare, Hostinger, GoDaddy e outros</p>
  </div>
  </div>
@@ -246,34 +246,34 @@ export default function DomainsPage() {
  {/* Passo 1 */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-green-100 text-green-700 text-sm font-bold">1</span>
- <h3 className="text-base font-semibold text-tx-primary">Escolha seu domÃ­nio ou subdomÃ­nio</h3>
+ <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">1</span>
+ <h3 className="text-base font-semibold text-tx-primary">Escolha seu domínio ou subdomínio</h3>
  </div>
  <p className="text-sm text-tx-secondary ml-0 sm:ml-9">
- VocÃª pode usar um <strong>domÃ­nio raiz</strong> (ex: <code className="px-1.5 py-0.5 bg-surface-hover rounded text-xs font-mono">meusite.com.br</code>) ou um <strong>subdomÃ­nio</strong> (ex: <code className="px-1.5 py-0.5 bg-surface-hover rounded text-xs font-mono">pay.meusite.com.br</code>).
+ Você pode usar um <strong>domínio raiz</strong> (ex: <code className="px-1.5 py-0.5 bg-surface-hover rounded text-xs font-mono">meusite.com.br</code>) ou um <strong>subdomínio</strong> (ex: <code className="px-1.5 py-0.5 bg-surface-hover rounded text-xs font-mono">pay.meusite.com.br</code>).
  </p>
  <div className="ml-0 sm:ml-9 rounded-lg bg-surface-page border border-border-DEFAULT p-4">
  <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider mb-2">Exemplos comuns</p>
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
  <div className="flex items-center gap-2">
- <ShoppingCartIcon className="h-4 w-4 text-green-500" />
+ <ShoppingCartIcon className="h-4 w-4 text-emerald-500" />
  <code className="text-tx-primary font-mono text-xs">pay.meusite.com.br</code>
- <span className="text-tx-muted text-xs">â€” Checkout</span>
+ <span className="text-tx-muted text-xs">— Checkout</span>
  </div>
  <div className="flex items-center gap-2">
- <ShoppingCartIcon className="h-4 w-4 text-green-500" />
+ <ShoppingCartIcon className="h-4 w-4 text-emerald-500" />
  <code className="text-tx-primary font-mono text-xs">comprar.meusite.com.br</code>
- <span className="text-tx-muted text-xs">â€” Checkout</span>
+ <span className="text-tx-muted text-xs">— Checkout</span>
  </div>
  <div className="flex items-center gap-2">
  <AcademicCapIcon className="h-4 w-4 text-green-500" />
  <code className="text-tx-primary font-mono text-xs">alunos.meusite.com.br</code>
- <span className="text-tx-muted text-xs">â€” Membros</span>
+ <span className="text-tx-muted text-xs">— Membros</span>
  </div>
  <div className="flex items-center gap-2">
  <AcademicCapIcon className="h-4 w-4 text-green-500" />
  <code className="text-tx-primary font-mono text-xs">cursos.meusite.com.br</code>
- <span className="text-tx-muted text-xs">â€” Membros</span>
+ <span className="text-tx-muted text-xs">— Membros</span>
  </div>
  </div>
  </div>
@@ -282,18 +282,18 @@ export default function DomainsPage() {
  {/* Passo 2 */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-green-100 text-green-700 text-sm font-bold">2</span>
- <h3 className="text-base font-semibold text-tx-primary">Adicione o domÃ­nio na Vector Pagamentos</h3>
+ <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">2</span>
+ <h3 className="text-base font-semibold text-tx-primary">Adicione o domínio na Vector Pagamentos</h3>
  </div>
  <p className="text-sm text-tx-secondary ml-0 sm:ml-9">
- Clique em <strong>"Adicionar DomÃ­nio"</strong> acima, digite seu domÃ­nio e escolha se quer usar no Checkout, Ãrea de Membros ou ambos. ApÃ³s adicionar, o sistema vai gerar os registros DNS que vocÃª precisa configurar.
+ Clique em <strong>"Adicionar Domínio"</strong> acima, digite seu domínio e escolha se quer usar no Checkout, Área de Membros ou ambos. Após adicionar, o sistema vai gerar os registros DNS que você precisa configurar.
  </p>
  </div>
 
  {/* Passo 3 */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-green-100 text-green-700 text-sm font-bold">3</span>
+ <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">3</span>
  <h3 className="text-base font-semibold text-tx-primary">Configure os registros DNS</h3>
  </div>
  <p className="text-sm text-tx-secondary ml-0 sm:ml-9">
@@ -316,14 +316,14 @@ export default function DomainsPage() {
  <span className="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700">CNAME</span>
  </td>
  <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary">seu-subdominio</td>
- <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary">checkout.vectorpagamentos.com</td>
+ <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary">checkout.Vector Pagamentos.com.br</td>
  </tr>
  <tr className="bg-surface-card">
  <td className="px-3 sm:px-4 py-3">
  <span className="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700">TXT</span>
  </td>
- <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary break-all">_vector-verification.seudominio.com</td>
- <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary break-all">vector-verify=SEU_TOKEN</td>
+ <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary break-all">_Vector Pagamentos-verification.seudominio.com</td>
+ <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary break-all">Vector Pagamentos-verify=SEU_TOKEN</td>
  </tr>
  </tbody>
  </table>
@@ -331,7 +331,7 @@ export default function DomainsPage() {
 
  <div className="ml-0 sm:ml-9 rounded-lg bg-amber-50 border border-amber-200 p-3">
  <p className="text-xs text-amber-800">
- <strong>Importante:</strong> Os valores exatos (host e token) serÃ£o mostrados apÃ³s adicionar o domÃ­nio. A tabela acima Ã© apenas um exemplo.
+ <strong>Importante:</strong> Os valores exatos (host e token) serão mostrados após adicionar o domínio. A tabela acima é apenas um exemplo.
  </p>
  </div>
 
@@ -348,15 +348,15 @@ export default function DomainsPage() {
  </summary>
  <div className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-sm text-tx-secondary space-y-2">
  <ol className="list-decimal list-inside space-y-1.5 text-xs">
- <li>Acesse <strong>dash.cloudflare.com</strong> e selecione seu domÃ­nio</li>
- <li>VÃ¡ em <strong>DNS â†’ Records â†’ Add Record</strong></li>
- <li>Adicione o registro <strong>CNAME</strong>: Nome = seu subdomÃ­nio, Destino = <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.vectorpagamentos.com</code></li>
- <li><strong>Ative o proxy (nuvem laranja)</strong> â€” isso garante SSL automÃ¡tico</li>
- <li>Adicione o registro <strong>TXT</strong>: Nome = <code className="px-1 py-0.5 bg-surface-hover rounded">_vector-verification.seudominio.com</code>, ConteÃºdo = seu token</li>
+ <li>Acesse <strong>dash.cloudflare.com</strong> e selecione seu domínio</li>
+ <li>Vá em <strong>DNS → Records → Add Record</strong></li>
+ <li>Adicione o registro <strong>CNAME</strong>: Nome = seu subdomínio, Destino = <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.Vector Pagamentos.com.br</code></li>
+ <li><strong>Ative o proxy (nuvem laranja)</strong> — isso garante SSL automático</li>
+ <li>Adicione o registro <strong>TXT</strong>: Nome = <code className="px-1 py-0.5 bg-surface-hover rounded">_Vector Pagamentos-verification.seudominio.com</code>, Conteúdo = seu token</li>
  <li>Aguarde 1-5 minutos e clique em <strong>"Verificar"</strong> na Vector Pagamentos</li>
  </ol>
  <div className="mt-2 p-2 rounded bg-green-50 border border-green-200">
- <p className="text-xs text-green-700"><strong>Recomendado:</strong> Cloudflare Ã© o provedor ideal pois fornece SSL gratuito e CDN automaticamente. O proxy (nuvem laranja) DEVE estar ativo.</p>
+ <p className="text-xs text-green-700"><strong>Recomendado:</strong> Cloudflare é o provedor ideal pois fornece SSL gratuito e CDN automaticamente. O proxy (nuvem laranja) DEVE estar ativo.</p>
  </div>
  </div>
  </details>
@@ -364,17 +364,17 @@ export default function DomainsPage() {
  {/* Hostinger */}
  <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
  <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors">
- <span className="flex items-center justify-center h-5 w-5 rounded bg-green-600 text-white text-xs font-bold">H</span>
+ <span className="flex items-center justify-center h-5 w-5 rounded bg-emerald-600 text-white text-xs font-bold">H</span>
  <span className="text-sm font-medium text-tx-primary">Hostinger</span>
  <ChevronDownIcon className="h-4 w-4 text-tx-muted ml-auto group-open:rotate-180 transition-transform" />
  </summary>
  <div className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-sm text-tx-secondary space-y-2">
  <ol className="list-decimal list-inside space-y-1.5 text-xs">
- <li>Acesse o <strong>hPanel</strong> e vÃ¡ em <strong>DomÃ­nios â†’ Zona DNS</strong></li>
+ <li>Acesse o <strong>hPanel</strong> e vá em <strong>Domínios → Zona DNS</strong></li>
  <li>Em <strong>"Gerenciar registros DNS"</strong>, clique em <strong>"Adicionar registro"</strong></li>
  <li>Selecione tipo <strong>CNAME</strong>, preencha o nome e destino</li>
- <li>Adicione outro registro tipo <strong>TXT</strong> com o token de verificaÃ§Ã£o</li>
- <li>Salve e aguarde atÃ© 15 minutos para propagaÃ§Ã£o</li>
+ <li>Adicione outro registro tipo <strong>TXT</strong> com o token de verificação</li>
+ <li>Salve e aguarde até 15 minutos para propagação</li>
  <li>Volte na Vector Pagamentos e clique em <strong>"Verificar"</strong></li>
  </ol>
  </div>
@@ -389,12 +389,12 @@ export default function DomainsPage() {
  </summary>
  <div className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-sm text-tx-secondary space-y-2">
  <ol className="list-decimal list-inside space-y-1.5 text-xs">
- <li>Acesse <strong>dcc.godaddy.com</strong> e selecione seu domÃ­nio</li>
- <li>VÃ¡ em <strong>DNS â†’ DNS Records</strong></li>
+ <li>Acesse <strong>dcc.godaddy.com</strong> e selecione seu domínio</li>
+ <li>Vá em <strong>DNS → DNS Records</strong></li>
  <li>Clique em <strong>"Add New Record"</strong></li>
- <li>Tipo: <strong>CNAME</strong>, Nome: seu subdomÃ­nio, Valor: <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.vectorpagamentos.com</code></li>
+ <li>Tipo: <strong>CNAME</strong>, Nome: seu subdomínio, Valor: <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.Vector Pagamentos.com.br</code></li>
  <li>Adicione outro: Tipo: <strong>TXT</strong>, Nome e Valor conforme exibido na Vector Pagamentos</li>
- <li>Salve e aguarde entre 15-60 minutos para propagaÃ§Ã£o</li>
+ <li>Salve e aguarde entre 15-60 minutos para propagação</li>
  </ol>
  </div>
  </details>
@@ -408,13 +408,13 @@ export default function DomainsPage() {
  </summary>
  <div className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-sm text-tx-secondary space-y-2">
  <ol className="list-decimal list-inside space-y-1.5 text-xs">
- <li>Acesse <strong>registro.br</strong> e vÃ¡ em <strong>seus domÃ­nios</strong></li>
- <li>Clique no domÃ­nio e vÃ¡ em <strong>"DNS" â†’ "Editar zona"</strong></li>
+ <li>Acesse <strong>registro.br</strong> e vá em <strong>seus domínios</strong></li>
+ <li>Clique no domínio e vá em <strong>"DNS" → "Editar zona"</strong></li>
  <li>Clique em <strong>"Nova entrada"</strong> e adicione o CNAME e TXT</li>
- <li>Salve a zona e aguarde a propagaÃ§Ã£o (pode levar atÃ© 24h)</li>
+ <li>Salve a zona e aguarde a propagação (pode levar até 24h)</li>
  </ol>
  <div className="mt-2 p-2 rounded bg-blue-50 border border-blue-200">
- <p className="text-xs text-blue-700"><strong>Dica:</strong> Se seu domÃ­nio .com.br estÃ¡ no Registro.br mas o DNS estÃ¡ em outro lugar (ex: Cloudflare), configure lÃ¡ e nÃ£o no Registro.br.</p>
+ <p className="text-xs text-blue-700"><strong>Dica:</strong> Se seu domínio .com.br está no Registro.br mas o DNS está em outro lugar (ex: Cloudflare), configure lá e não no Registro.br.</p>
  </div>
  </div>
  </details>
@@ -427,13 +427,13 @@ export default function DomainsPage() {
  <ChevronDownIcon className="h-4 w-4 text-tx-muted ml-auto group-open:rotate-180 transition-transform" />
  </summary>
  <div className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-sm text-tx-secondary space-y-2">
- <p className="text-xs">O processo Ã© semelhante em qualquer provedor de DNS:</p>
+ <p className="text-xs">O processo é semelhante em qualquer provedor de DNS:</p>
  <ol className="list-decimal list-inside space-y-1.5 text-xs">
  <li>Acesse o painel de controle do DNS do seu provedor</li>
- <li>Encontre a seÃ§Ã£o de <strong>Registros DNS</strong> ou <strong>Zona DNS</strong></li>
- <li>Adicione um registro <strong>CNAME</strong> apontando para <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.vectorpagamentos.com</code></li>
- <li>Adicione um registro <strong>TXT</strong> com o token de verificaÃ§Ã£o</li>
- <li>Salve e aguarde a propagaÃ§Ã£o DNS (pode variar de minutos a 48h)</li>
+ <li>Encontre a seção de <strong>Registros DNS</strong> ou <strong>Zona DNS</strong></li>
+ <li>Adicione um registro <strong>CNAME</strong> apontando para <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.Vector Pagamentos.com.br</code></li>
+ <li>Adicione um registro <strong>TXT</strong> com o token de verificação</li>
+ <li>Salve e aguarde a propagação DNS (pode variar de minutos a 48h)</li>
  </ol>
  </div>
  </details>
@@ -443,18 +443,18 @@ export default function DomainsPage() {
  {/* Passo 4 */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-green-100 text-green-700 text-sm font-bold">4</span>
- <h3 className="text-base font-semibold text-tx-primary">Verifique o domÃ­nio</h3>
+ <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">4</span>
+ <h3 className="text-base font-semibold text-tx-primary">Verifique o domínio</h3>
  </div>
  <p className="text-sm text-tx-secondary ml-9">
- ApÃ³s configurar os DNS, volte aqui e clique no botÃ£o <strong>"Verificar"</strong> ao lado do domÃ­nio. O sistema vai consultar seus registros DNS em tempo real.
+ Após configurar os DNS, volte aqui e clique no botão <strong>"Verificar"</strong> ao lado do domínio. O sistema vai consultar seus registros DNS em tempo real.
  </p>
  <div className="ml-9 grid grid-cols-1 sm:grid-cols-2 gap-3">
  <div className="flex items-start gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
  <CheckCircleIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
  <div>
- <p className="text-xs font-semibold text-green-800">CNAME vÃ¡lido</p>
- <p className="text-xs text-green-700">Seu domÃ­nio aponta corretamente para a Vector Pagamentos</p>
+ <p className="text-xs font-semibold text-green-800">CNAME válido</p>
+ <p className="text-xs text-green-700">Seu domínio aponta corretamente para a Vector Pagamentos</p>
  </div>
  </div>
  <div className="flex items-start gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
@@ -471,21 +471,21 @@ export default function DomainsPage() {
  <div className="space-y-3">
  <div className="flex items-center gap-2">
  <span className="flex items-center justify-center h-7 w-7 rounded-full bg-green-100 text-green-700 text-sm font-bold">5</span>
- <h3 className="text-base font-semibold text-tx-primary">Pronto! DomÃ­nio ativo</h3>
+ <h3 className="text-base font-semibold text-tx-primary">Pronto! Domínio ativo</h3>
  </div>
  <p className="text-sm text-tx-secondary ml-9">
- ApÃ³s a verificaÃ§Ã£o, seu domÃ­nio ficarÃ¡ com status <strong>"Verificado"</strong> e estarÃ¡ automaticamente disponÃ­vel nos serviÃ§os selecionados (Checkout e/ou Ãrea de Membros).
+ Após a verificação, seu domínio ficará com status <strong>"Verificado"</strong> e estará automaticamente disponível nos serviços selecionados (Checkout e/ou Área de Membros).
  </p>
  <div className="ml-9 rounded-lg bg-surface-page border border-border-DEFAULT p-4 space-y-2">
- <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider">Onde seu domÃ­nio aparecerÃ¡</p>
+ <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider">Onde seu domínio aparecerá</p>
  <div className="flex flex-col sm:flex-row gap-3">
- <div className="flex items-center gap-2 p-2 rounded bg-green-50">
- <ShoppingCartIcon className="h-4 w-4 text-green-600" />
- <span className="text-xs text-green-800"><strong>Checkout:</strong> Seus clientes pagam via seu domÃ­nio</span>
+ <div className="flex items-center gap-2 p-2 rounded bg-emerald-50">
+ <ShoppingCartIcon className="h-4 w-4 text-emerald-600" />
+ <span className="text-xs text-emerald-800"><strong>Checkout:</strong> Seus clientes pagam via seu domínio</span>
  </div>
  <div className="flex items-center gap-2 p-2 rounded bg-green-50">
  <AcademicCapIcon className="h-4 w-4 text-green-600" />
- <span className="text-xs text-green-800"><strong>Membros:</strong> Selecione na configuraÃ§Ã£o da Ãrea de Membros</span>
+ <span className="text-xs text-green-800"><strong>Membros:</strong> Selecione na configuração da Área de Membros</span>
  </div>
  </div>
  </div>
@@ -497,7 +497,7 @@ export default function DomainsPage() {
  <div className="space-y-2">
  <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
  <summary className="px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors text-sm font-medium text-tx-primary">
- Quanto tempo leva a propagaÃ§Ã£o DNS?
+ Quanto tempo leva a propagação DNS?
  </summary>
  <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
  Com <strong>Cloudflare</strong>: 1-5 minutos. Com outros provedores: entre 15 minutos e 48 horas. Na maioria dos casos, funciona em menos de 1 hora.
@@ -508,31 +508,31 @@ export default function DomainsPage() {
  Preciso de SSL (HTTPS)?
  </summary>
  <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
- Sim, e o SSL Ã© fornecido automaticamente pelo <strong>Cloudflare</strong>. Se seu domÃ­nio passa pelo Cloudflare com o proxy ativado (nuvem laranja), o HTTPS funciona sem configuraÃ§Ã£o extra.
+ Sim, e o SSL é fornecido automaticamente pelo <strong>Cloudflare</strong>. Se seu domínio passa pelo Cloudflare com o proxy ativado (nuvem laranja), o HTTPS funciona sem configuração extra.
  </p>
  </details>
  <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
  <summary className="px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors text-sm font-medium text-tx-primary">
- Posso usar o mesmo domÃ­nio no Checkout e na Ãrea de Membros?
+ Posso usar o mesmo domínio no Checkout e na Área de Membros?
  </summary>
  <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
- Sim! Ao adicionar o domÃ­nio, marque ambas as opÃ§Ãµes. Recomendamos usar subdomÃ­nios diferentes para cada serviÃ§o (ex: <code className="px-1 py-0.5 bg-surface-hover rounded">pay.meusite.com</code> para checkout e <code className="px-1 py-0.5 bg-surface-hover rounded">alunos.meusite.com</code> para membros).
+ Sim! Ao adicionar o domínio, marque ambas as opções. Recomendamos usar subdomínios diferentes para cada serviço (ex: <code className="px-1 py-0.5 bg-surface-hover rounded">pay.meusite.com</code> para checkout e <code className="px-1 py-0.5 bg-surface-hover rounded">alunos.meusite.com</code> para membros).
  </p>
  </details>
  <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
  <summary className="px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors text-sm font-medium text-tx-primary">
- A verificaÃ§Ã£o falhou. O que fazer?
+ A verificação falhou. O que fazer?
  </summary>
  <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
- Verifique: 1) Se o registro CNAME aponta para <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.vectorpagamentos.com</code> corretamente. 2) Se o registro TXT foi criado com o nome e valor exatos mostrados aqui. 3) Aguarde a propagaÃ§Ã£o e tente novamente. Use <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline">dnschecker.org</a> para verificar se os registros jÃ¡ propagaram.
+ Verifique: 1) Se o registro CNAME aponta para <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.Vector Pagamentos.com.br</code> corretamente. 2) Se o registro TXT foi criado com o nome e valor exatos mostrados aqui. 3) Aguarde a propagação e tente novamente. Use <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline">dnschecker.org</a> para verificar se os registros já propagaram.
  </p>
  </details>
  <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
  <summary className="px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors text-sm font-medium text-tx-primary">
- Posso usar um domÃ­nio raiz (sem subdomÃ­nio)?
+ Posso usar um domínio raiz (sem subdomínio)?
  </summary>
  <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
- Tecnicamente sim, mas <strong>nÃ£o recomendamos</strong>. DomÃ­nios raiz (ex: <code className="px-1 py-0.5 bg-surface-hover rounded">meusite.com.br</code>) nÃ£o suportam CNAME em todos os provedores. Use subdomÃ­nios como <code className="px-1 py-0.5 bg-surface-hover rounded">pay.meusite.com.br</code> para melhor compatibilidade. Se usar Cloudflare, domÃ­nios raiz funcionam normalmente com CNAME flattening.
+ Tecnicamente sim, mas <strong>não recomendamos</strong>. Domínios raiz (ex: <code className="px-1 py-0.5 bg-surface-hover rounded">meusite.com.br</code>) não suportam CNAME em todos os provedores. Use subdomínios como <code className="px-1 py-0.5 bg-surface-hover rounded">pay.meusite.com.br</code> para melhor compatibilidade. Se usar Cloudflare, domínios raiz funcionam normalmente com CNAME flattening.
  </p>
  </details>
  </div>
@@ -550,9 +550,9 @@ export default function DomainsPage() {
  ) : domains.length === 0 ? (
  <div className="py-12 text-center">
  <GlobeAltIcon className="mx-auto h-12 w-12 text-tx-muted" />
- <p className="mt-4 text-tx-muted">Nenhum domÃ­nio configurado</p>
+ <p className="mt-4 text-tx-muted">Nenhum domínio configurado</p>
  <p className="mt-1 text-sm text-tx-muted">
- Adicione seu primeiro domÃ­nio personalizado para comeÃ§ar
+ Adicione seu primeiro domínio personalizado para começar
  </p>
  </div>
  ) : (
@@ -571,7 +571,7 @@ export default function DomainsPage() {
  <div className="min-w-0">
  <div className="flex items-center gap-2 flex-wrap">
  <span className="font-semibold text-tx-primary break-all">{domain.domain}</span>
- {domain.type === 'vectorpagamentos' && (
+ {domain.type === 'Vector Pagamentos' && (
  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">
  Vector Pagamentos
  </span>
@@ -584,18 +584,18 @@ export default function DomainsPage() {
  )}
  </div>
  <p className="text-sm text-tx-muted">
- {domain.type === 'vectorpagamentos'
- ? 'SubdomÃ­nio Vector Pagamentos â€¢ Verificado automaticamente'
+ {domain.type === 'Vector Pagamentos'
+ ? 'Subdomínio Vector Pagamentos • Verificado automaticamente'
  : domain.verified_at
  ? `Verificado em ${new Date(domain.verified_at).toLocaleDateString('pt-BR')}`
- : 'Aguardando verificaÃ§Ã£o DNS'}
+ : 'Aguardando verificação DNS'}
  </p>
  </div>
  </div>
  <div className="flex items-center gap-2 flex-wrap mt-3 sm:mt-0">
  {/* Use_for badges */}
  {domain.use_for?.includes('checkout') && (
- <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-50 text-green-700">
+ <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">
  <ShoppingCartIcon className="h-3 w-3" />
  Checkout
  </span>
@@ -607,7 +607,7 @@ export default function DomainsPage() {
  </span>
  )}
  {statusBadge(domain.status)}
- {domain.status !== 'verified' && domain.type !== 'vectorpagamentos' && (
+ {domain.status !== 'verified' && domain.type !== 'Vector Pagamentos' && (
  <button
  onClick={(e) => {
  e.stopPropagation();
@@ -636,7 +636,7 @@ export default function DomainsPage() {
  <button
  onClick={(e) => {
  e.stopPropagation();
- if (confirm('Tem certeza que deseja remover este domÃ­nio?')) {
+ if (confirm('Tem certeza que deseja remover este domínio?')) {
  deleteMutation.mutate(domain.id);
  }
  }}
@@ -648,10 +648,10 @@ export default function DomainsPage() {
  </div>
 
  {/* DNS Config (expandable) - only for custom domains */}
- {selectedDomain?.id === domain.id && domain.dns_config && selectedDomain.type !== 'vectorpagamentos' && (
+ {selectedDomain?.id === domain.id && domain.dns_config && domain.type !== 'Vector Pagamentos' && (
  <div className="mt-4 space-y-3 border-t border-border-DEFAULT pt-4">
  <p className="text-sm font-medium text-tx-secondary">
- ConfiguraÃ§Ã£o DNS necessÃ¡ria:
+ Configuração DNS necessária:
  </p>
 
  {/* CNAME Record */}
@@ -691,7 +691,7 @@ export default function DomainsPage() {
  <div className="rounded-element border border-border-DEFAULT p-3 bg-surface-page /50">
  <div className="flex items-center justify-between mb-2">
  <span className="text-xs font-semibold text-tx-muted uppercase tracking-wider">
- Registro TXT (VerificaÃ§Ã£o)
+ Registro TXT (Verificação)
  </span>
  <button
  onClick={(e) => {
@@ -721,7 +721,7 @@ export default function DomainsPage() {
  </div>
 
  <p className="text-xs text-tx-muted italic">
- A propagaÃ§Ã£o DNS pode levar atÃ© 48 horas. Aguarde e tente verificar novamente.
+ A propagação DNS pode levar até 48 horas. Aguarde e tente verificar novamente.
  </p>
  </div>
  )}
@@ -731,7 +731,7 @@ export default function DomainsPage() {
  <div className="mt-4 border-t border-border-DEFAULT pt-4">
  <div className="flex items-center gap-2 text-sm text-status-success">
  <ShieldCheckIcon className="h-5 w-5" />
- <span>DomÃ­nio verificado e pronto para uso no {domain.use_for?.join(' e ').replace('checkout', 'Checkout').replace('members', 'Ãrea de Membros') || 'Checkout e Ãrea de Membros'}.</span>
+ <span>Domínio verificado e pronto para uso no {domain.use_for?.join(' e ').replace('checkout', 'Checkout').replace('members', 'Área de Membros') || 'Checkout e Área de Membros'}.</span>
  </div>
 
  {/* Use_for toggles */}
@@ -748,11 +748,11 @@ export default function DomainsPage() {
  ? [...current, 'checkout' as DomainPurpose]
  : current.filter(u => u !== 'checkout');
  if (updated.length > 0) updateUseForMutation.mutate({ id: domain.id, useFor: updated });
- else toast.error('O domÃ­nio deve ter pelo menos um uso');
+ else toast.error('O domínio deve ter pelo menos um uso');
  }}
- className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+ className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
  />
- <ShoppingCartIcon className="h-4 w-4 text-green-600" />
+ <ShoppingCartIcon className="h-4 w-4 text-emerald-600" />
  <span className="text-sm text-tx-secondary">Checkout</span>
  </label>
  <label className="flex items-center gap-2 cursor-pointer" onClick={(e) => e.stopPropagation()}>
@@ -765,12 +765,12 @@ export default function DomainsPage() {
  ? [...current, 'members' as DomainPurpose]
  : current.filter(u => u !== 'members');
  if (updated.length > 0) updateUseForMutation.mutate({ id: domain.id, useFor: updated });
- else toast.error('O domÃ­nio deve ter pelo menos um uso');
+ else toast.error('O domínio deve ter pelo menos um uso');
  }}
  className="rounded border-gray-300 text-green-600 focus:ring-green-500"
  />
  <AcademicCapIcon className="h-4 w-4 text-green-600" />
- <span className="text-sm text-tx-secondary">Ãrea de Membros</span>
+ <span className="text-sm text-tx-secondary">Área de Membros</span>
  </label>
  </div>
  </div>
@@ -793,7 +793,7 @@ export default function DomainsPage() {
  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
  <div className="bg-surface-card rounded-2xl shadow-2xl w-full max-w-md p-6">
  <div className="flex items-center justify-between mb-6">
- <h2 className="text-lg font-bold text-tx-primary">Adicionar DomÃ­nio</h2>
+ <h2 className="text-lg font-bold text-tx-primary">Adicionar Domínio</h2>
  <button
  onClick={closeAddModal}
  className="text-tx-muted hover:text-tx-secondary"
@@ -806,14 +806,14 @@ export default function DomainsPage() {
  {/* Domain Type Tabs */}
  <div className="flex rounded-lg border border-border-DEFAULT overflow-hidden">
  <button
- onClick={() => setNewDomainType('vectorpagamentos')}
+ onClick={() => setNewDomainType('Vector Pagamentos')}
  className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
- newDomainType === 'vectorpagamentos'
+ newDomainType === 'Vector Pagamentos'
  ? 'bg-emerald-50 text-emerald-700 border-r border-border-DEFAULT'
  : 'bg-surface-page text-tx-muted hover:bg-surface-hover border-r border-border-DEFAULT'
  }`}
  >
- SubdomÃ­nio Vector Pagamentos
+ Subdomínio Vector Pagamentos
  </button>
  <button
  onClick={() => setNewDomainType('custom')}
@@ -823,15 +823,15 @@ export default function DomainsPage() {
  : 'bg-surface-page text-tx-muted hover:bg-surface-hover'
  }`}
  >
- DomÃ­nio PrÃ³prio
+ Domínio Próprio
  </button>
  </div>
 
  {/* Vector Pagamentos Subdomain Input */}
- {newDomainType === 'vectorpagamentos' && (
+ {newDomainType === 'Vector Pagamentos' && (
  <div>
  <label className="block text-sm font-medium text-tx-secondary mb-1">
- Escolha seu subdomÃ­nio
+ Escolha seu subdomínio
  </label>
  <div className="flex items-center gap-0">
  <input
@@ -842,20 +842,20 @@ export default function DomainsPage() {
  className="flex-1 rounded-l-element border border-r-0 border-border-DEFAULT bg-surface-card px-4 py-2.5 text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
  />
  <span className="inline-flex items-center px-3 py-2.5 border border-border-DEFAULT bg-surface-page rounded-r-element text-sm text-tx-muted">
- .{VECTOR_BASE_DOMAIN}
+ .{VECTOR_PAGAMENTOS_BASE_DOMAIN}
  </span>
  </div>
  {newSubdomain && (
  <p className="mt-1.5 text-xs text-emerald-600 font-medium">
- Seu endereÃ§o serÃ¡: <strong>{newSubdomain}.{VECTOR_BASE_DOMAIN}</strong>
+ Seu endereço será: <strong>{newSubdomain}.{VECTOR_PAGAMENTOS_BASE_DOMAIN}</strong>
  </p>
  )}
  <p className="mt-1 text-xs text-tx-muted">
- MÃ­nimo 3 caracteres. Apenas letras, nÃºmeros e hÃ­fens.
+ Mínimo 3 caracteres. Apenas letras, números e hífens.
  </p>
  <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-200 p-3">
  <p className="text-xs text-emerald-700">
- <strong>Gratuito e instantÃ¢neo!</strong> SubdomÃ­nios Vector Pagamentos sÃ£o verificados automaticamente, sem necessidade de configuraÃ§Ã£o DNS.
+ <strong>Gratuito e instantâneo!</strong> Subdomínios Vector Pagamentos são verificados automaticamente, sem necessidade de configuração DNS.
  </p>
  </div>
  </div>
@@ -865,7 +865,7 @@ export default function DomainsPage() {
  {newDomainType === 'custom' && (
  <div>
  <label className="block text-sm font-medium text-tx-secondary mb-1">
- DomÃ­nio ou subdomÃ­nio
+ Domínio ou subdomínio
  </label>
  <input
  type="text"
@@ -896,9 +896,9 @@ export default function DomainsPage() {
  : prev.filter(u => u !== 'checkout')
  );
  }}
- className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+ className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
  />
- <ShoppingCartIcon className="h-4 w-4 text-green-600" />
+ <ShoppingCartIcon className="h-4 w-4 text-emerald-600" />
  <span className="text-sm text-tx-secondary">Checkout</span>
  </label>
  <label className="flex items-center gap-2 cursor-pointer">
@@ -915,18 +915,18 @@ export default function DomainsPage() {
  className="rounded border-gray-300 text-green-600 focus:ring-green-500"
  />
  <AcademicCapIcon className="h-4 w-4 text-green-600" />
- <span className="text-sm text-tx-secondary">Ãrea de Membros</span>
+ <span className="text-sm text-tx-secondary">Área de Membros</span>
  </label>
  </div>
  <p className="mt-1.5 text-xs text-tx-muted">
- Por padrÃ£o, o domÃ­nio fica disponÃ­vel para ambos os serviÃ§os.
+ Por padrão, o domínio fica disponível para ambos os serviços.
  </p>
  </div>
 
  {newDomainType === 'custom' && (
  <div className="rounded-lg bg-status-warning-subtle border border-amber-200 p-3">
  <p className="text-xs text-status-warning">
- <strong>Importante:</strong> VocÃª precisarÃ¡ ter acesso ao painel DNS do seu domÃ­nio para configurar os registros CNAME e TXT.
+ <strong>Importante:</strong> Você precisará ter acesso ao painel DNS do seu domínio para configurar os registros CNAME e TXT.
  </p>
  </div>
  )}
@@ -942,12 +942,12 @@ export default function DomainsPage() {
  onClick={handleCreate}
  disabled={isCreateDisabled}
  className={`flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-element transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
- newDomainType === 'vectorpagamentos'
+ newDomainType === 'Vector Pagamentos'
  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700'
- : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+ : 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700'
  }`}
  >
- {isCreating ? 'Criando...' : newDomainType === 'vectorpagamentos' ? 'Criar SubdomÃ­nio' : 'Adicionar DomÃ­nio'}
+ {isCreating ? 'Criando...' : newDomainType === 'Vector Pagamentos' ? 'Criar Subdomínio' : 'Adicionar Domínio'}
  </button>
  </div>
  </div>
@@ -957,5 +957,3 @@ export default function DomainsPage() {
  </div>
  );
 }
-
-

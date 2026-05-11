@@ -53,7 +53,7 @@ class AsaasAcquirer implements AcquirerInterface
         return 'Asaas';
     }
 
-    // â”€â”€ HTTP Client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── HTTP Client ──────────────────────────────────────────────
 
     private function getHttpClient()
     {
@@ -116,7 +116,7 @@ class AsaasAcquirer implements AcquirerInterface
         }
     }
 
-    // â”€â”€ Customer Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Customer Management ──────────────────────────────────────
 
     /**
      * Find or create an Asaas customer for the charge.
@@ -170,7 +170,7 @@ class AsaasAcquirer implements AcquirerInterface
         return null;
     }
 
-    // â”€â”€ Payment Processing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Payment Processing ───────────────────────────────────────
 
     public function processPayment(Charge $charge, array $cardData): array
     {
@@ -191,7 +191,7 @@ class AsaasAcquirer implements AcquirerInterface
                 'billingType' => 'CREDIT_CARD',
                 'value' => $amountReais,
                 'dueDate' => now()->format('Y-m-d'),
-                'description' => $charge->description ?? "CobranÃ§a #{$charge->id}",
+                'description' => $charge->description ?? "Cobrança #{$charge->id}",
                 'externalReference' => $charge->id,
             ];
 
@@ -267,7 +267,7 @@ class AsaasAcquirer implements AcquirerInterface
         }
     }
 
-    // â”€â”€ PIX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── PIX ──────────────────────────────────────────────────────
 
     public function generatePixQrCode(Charge $charge): array
     {
@@ -287,7 +287,7 @@ class AsaasAcquirer implements AcquirerInterface
                 'billingType' => 'PIX',
                 'value' => $amountReais,
                 'dueDate' => now()->format('Y-m-d'),
-                'description' => $charge->description ?? "CobranÃ§a PIX #{$charge->id}",
+                'description' => $charge->description ?? "Cobrança PIX #{$charge->id}",
                 'externalReference' => $charge->id,
             ];
 
@@ -354,7 +354,7 @@ class AsaasAcquirer implements AcquirerInterface
         }
     }
 
-    // â”€â”€ Boleto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Boleto ───────────────────────────────────────────────────
 
     public function generateBoleto(Charge $charge): array
     {
@@ -376,7 +376,7 @@ class AsaasAcquirer implements AcquirerInterface
                 'billingType' => 'BOLETO',
                 'value' => $amountReais,
                 'dueDate' => now()->addDays((int) $daysToExpire)->format('Y-m-d'),
-                'description' => $charge->description ?? "CobranÃ§a Boleto #{$charge->id}",
+                'description' => $charge->description ?? "Cobrança Boleto #{$charge->id}",
                 'externalReference' => $charge->id,
             ];
 
@@ -437,7 +437,7 @@ class AsaasAcquirer implements AcquirerInterface
         }
     }
 
-    // â”€â”€ Refund â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Refund ───────────────────────────────────────────────────
 
     public function refund(Charge $charge, float $amount): array
     {
@@ -494,7 +494,7 @@ class AsaasAcquirer implements AcquirerInterface
         }
     }
 
-    // â”€â”€ Split â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Split ────────────────────────────────────────────────────
 
     /**
      * Build Asaas split payload from charge metadata.
@@ -535,7 +535,7 @@ class AsaasAcquirer implements AcquirerInterface
         return $asaasSplits;
     }
 
-    // â”€â”€ Status Mapping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Status Mapping ───────────────────────────────────────────
 
     /**
      * Map Asaas payment status to internal Charge status.
@@ -563,7 +563,7 @@ class AsaasAcquirer implements AcquirerInterface
         };
     }
 
-    // â”€â”€ Webhook Verification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Webhook Verification ─────────────────────────────────────
 
     /**
      * Verify Asaas webhook authenticity.
@@ -579,7 +579,7 @@ class AsaasAcquirer implements AcquirerInterface
         return hash_equals($expectedToken, $receivedToken);
     }
 
-    // â”€â”€ Retrieve Payment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Retrieve Payment ─────────────────────────────────────────
 
     /**
      * Retrieve payment details from Asaas.

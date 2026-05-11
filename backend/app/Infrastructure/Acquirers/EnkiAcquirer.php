@@ -37,7 +37,7 @@ class EnkiAcquirer implements AcquirerInterface
     {
         return [
             'success' => false,
-            'error' => 'Enki Bank suporta apenas pagamentos via PIX nesta integraÃ§Ã£o.',
+            'error' => 'Enki Bank suporta apenas pagamentos via PIX nesta integração.',
         ];
     }
 
@@ -45,7 +45,7 @@ class EnkiAcquirer implements AcquirerInterface
     {
         return [
             'success' => false,
-            'error' => 'Reembolso da Enki nÃ£o estÃ¡ exposto nesta integraÃ§Ã£o.',
+            'error' => 'Reembolso da Enki não está exposto nesta integração.',
         ];
     }
 
@@ -118,7 +118,7 @@ class EnkiAcquirer implements AcquirerInterface
     {
         return [
             'success' => false,
-            'error' => 'Enki Bank nÃ£o suporta boleto nesta integraÃ§Ã£o.',
+            'error' => 'Enki Bank não suporta boleto nesta integração.',
         ];
     }
 
@@ -130,7 +130,7 @@ class EnkiAcquirer implements AcquirerInterface
             if (!$response->successful()) {
                 return [
                     'success' => false,
-                    'error' => 'Consulta de transaÃ§Ã£o Enki retornou ' . $response->status(),
+                    'error' => 'Consulta de transação Enki retornou ' . $response->status(),
                 ];
             }
 
@@ -197,7 +197,7 @@ class EnkiAcquirer implements AcquirerInterface
         if ($this->withdrawalKey === '') {
             return [
                 'success' => false,
-                'error' => 'ENKI_WITHDRAWAL_KEY nÃ£o configurada.',
+                'error' => 'ENKI_WITHDRAWAL_KEY não configurada.',
             ];
         }
 

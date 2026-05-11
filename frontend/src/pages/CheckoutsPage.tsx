@@ -73,7 +73,7 @@ interface CheckoutForm {
 }
 
 const defaultSettings = {
- theme_color: '#16a34a',
+ theme_color: '#22c55e',
  collect_cpf: true,
  collect_address: true,
  collect_phone: true,
@@ -347,7 +347,7 @@ function CheckoutModal({
  Nome do Checkout
  </label>
  <input
- {...register('name', { required: 'Nome Ã© obrigatÃ³rio' })}
+ {...register('name', { required: 'Nome é obrigatório' })}
  type="text"
  className="input mt-1"
  placeholder="Ex: Checkout Principal"
@@ -463,16 +463,16 @@ function CheckoutModal({
 
  {/* Domain Selection */}
  <div className="rounded-element border border-border-DEFAULT p-4">
- <h4 className="font-medium text-tx-primary">DomÃ­nio</h4>
+ <h4 className="font-medium text-tx-primary">Domínio</h4>
  <div className="mt-3">
  <label className="block text-sm font-medium text-tx-secondary">
- DomÃ­nio do Checkout
+ Domínio do Checkout
  </label>
  <select
  {...register('domain_id')}
  className="input mt-1"
  >
- <option value="">DomÃ­nio PadrÃ£o (pay.vectorpagamentos.com)</option>
+ <option value="">Domínio Padrão (pay.Vector Pagamentos.com)</option>
  {allDomains.map((domain: any) => (
  <option
  key={domain.id}
@@ -481,13 +481,13 @@ function CheckoutModal({
  >
  {domain.domain}
  {domain.is_primary ? ' (Principal)' : ''}
- {domain.status === 'pending' ? ' â³ Pendente' : ''}
- {domain.status === 'failed' ? ' âŒ Falhou' : ''}
+ {domain.status === 'pending' ? ' ⏳ Pendente' : ''}
+ {domain.status === 'failed' ? ' ❌ Falhou' : ''}
  </option>
  ))}
  </select>
  <p className="mt-1 text-xs text-tx-muted">
- <Link to="/domains" className="text-accent-primary hover:underline">Gerenciar domÃ­nios personalizados</Link>
+ <Link to="/domains" className="text-accent-primary hover:underline">Gerenciar domínios personalizados</Link>
  </p>
  </div>
  </div>
@@ -502,7 +502,7 @@ function CheckoutModal({
  </div>
  <div>
  <h4 className="font-semibold text-tx-primary">Coleta de Dados</h4>
- <p className="text-xs text-tx-muted">Configure quais informaÃ§Ãµes serÃ£o solicitadas</p>
+ <p className="text-xs text-tx-muted">Configure quais informações serão solicitadas</p>
  </div>
  </div>
  <div className="space-y-4">
@@ -543,8 +543,8 @@ function CheckoutModal({
  </svg>
  </div>
  <div>
- <span className="text-sm font-medium text-tx-primary">EndereÃ§o completo</span>
- <p className="text-xs text-tx-muted">CEP, rua, nÃºmero e complemento</p>
+ <span className="text-sm font-medium text-tx-primary">Endereço completo</span>
+ <p className="text-xs text-tx-muted">CEP, rua, número e complemento</p>
  </div>
  </div>
  <Switch
@@ -565,14 +565,14 @@ function CheckoutModal({
  </div>
  <div className="flex items-center justify-between p-3 rounded-lg bg-surface-card hover:bg-surface-hover/50 transition-colors">
  <div className="flex items-center gap-3">
- <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500/10">
- <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+ <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+ <svg className="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
  </svg>
  </div>
  <div>
  <span className="text-sm font-medium text-tx-primary">Telefone</span>
- <p className="text-xs text-tx-muted">NÃºmero de contato com DDD</p>
+ <p className="text-xs text-tx-muted">Número de contato com DDD</p>
  </div>
  </div>
  <Switch
@@ -599,7 +599,7 @@ function CheckoutModal({
  <h4 className="font-medium text-tx-primary">Pagamento</h4>
  <div className="mt-3">
  <label className="block text-sm font-medium text-tx-secondary">
- MÃ¡ximo de parcelas
+ Máximo de parcelas
  </label>
  <select
  {...register('settings.max_installments')}
@@ -819,7 +819,7 @@ export default function CheckoutsPage() {
  </p>
  </div>
  <div className="text-right">
- <p className="text-xs text-tx-muted">ConversÃ£o</p>
+ <p className="text-xs text-tx-muted">Conversão</p>
  <div className="flex items-center gap-2">
  <span className="text-sm font-semibold text-tx-primary">
  {conversionRate(checkout)}%
@@ -857,13 +857,13 @@ export default function CheckoutsPage() {
  Views
  </th>
  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-tx-muted">
- ConversÃ£o
+ Conversão
  </th>
  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-tx-muted">
  Criado em
  </th>
  <th className="relative px-6 py-3">
- <span className="sr-only">AÃ§Ãµes</span>
+ <span className="sr-only">Ações</span>
  </th>
  </tr>
  </thead>
@@ -957,5 +957,3 @@ export default function CheckoutsPage() {
  </div>
  );
 }
-
-

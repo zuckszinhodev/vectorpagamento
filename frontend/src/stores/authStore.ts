@@ -15,9 +15,9 @@ interface AuthState {
   adminMfaVerified: boolean;
   isImpersonating: boolean;
   login: (email: string, password: string) => Promise<void>;
-  googleLogin: (accessToken: string) => Promise<void>;
   verifyAdminMfa: (code: string) => Promise<void>;
   resetAdminMfaVerification: () => void;
+  googleLogin: (credential: string) => Promise<void>;
   verifyMfa: (code: string) => Promise<void>;
   cancelMfa: () => void;
   register: (data: RegisterData) => Promise<void>;
@@ -94,9 +94,9 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      googleLogin: async (accessToken: string) => {
+      googleLogin: async (credential: string) => {
         try {
-          const response = await authService.googleAuth(accessToken);
+          const response = await authService.googleAuth(credential);
 
           if (response.data.requires_mfa && response.data.mfa_token) {
             set({
@@ -107,17 +107,13 @@ export const useAuthStore = create<AuthState>()(
           }
 
           const { user, token: tokenData } = response.data;
-          const token = tokenData?.access_token;
+          const accessToken = tokenData!.access_token;
 
-          if (!token || !user) {
-            throw new Error('Resposta de autenticação Google inválida');
-          }
-
-          authService.setToken(token);
+          authService.setToken(accessToken);
 
           set({
-            user,
-            token,
+            user: user!,
+            token: accessToken,
             isAuthenticated: true,
             isLoading: false,
             mfaPending: null,
@@ -311,7 +307,7 @@ export const useAuthStore = create<AuthState>()(
     };
     },
     {
-      name: 'vectorpagamentos-auth',
+      name: 'Vector Pagamentos-auth',
       partialize: (state) => ({ token: state.token }),
       onRehydrateStorage: () => (state) => {
         // After hydration, sync token to localStorage and validate auth
@@ -325,4 +321,3 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
-

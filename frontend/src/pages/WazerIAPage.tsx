@@ -11,14 +11,14 @@ interface ChatMessage extends WazerAIChatMessage {
 }
 
 const suggestions = [
-  'Resumo de vendas do mÃªs',
+  'Resumo de vendas do mês',
   'Como criar um produto?',
-  'EstratÃ©gias para vender mais',
+  'Estratégias para vender mais',
   'Como configurar um cupom?',
   'Analise meu site e gere um checkout pronto para baixar',
 ];
 
-export default function WazerIAPage() {
+export default function VectorIAPage() {
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -87,7 +87,7 @@ export default function WazerIAPage() {
         );
       }
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Erro de conexÃ£o. Verifique sua internet e tente novamente.';
+      const errorMsg = err?.response?.data?.error || 'Erro de conexão. Verifique sua internet e tente novamente.';
       setMessages(prev =>
         prev.map(m =>
           m.id === loadingMessage.id
@@ -107,7 +107,7 @@ export default function WazerIAPage() {
     }
   };
 
-  const firstName = user?.name?.split(' ')[0] || 'UsuÃ¡rio';
+  const firstName = user?.name?.split(' ')[0] || 'Usuário';
   const userInitial = firstName.charAt(0).toUpperCase() || 'U';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
@@ -118,7 +118,7 @@ export default function WazerIAPage() {
       <div className="flex items-center justify-between border-b border-border-DEFAULT px-6 py-3">
         <div>
           <div>
-            <h1 className="text-base font-semibold text-tx-primary">Vector IA</h1>
+            <h1 className="text-base font-semibold text-tx-primary">VectorIA</h1>
             <p className="text-[11px] text-emerald-600 dark:text-emerald-400">Online</p>
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function WazerIAPage() {
                   <button
                     key={i}
                     onClick={() => sendMessage(s)}
-                    className="rounded-full border border-border-DEFAULT bg-surface-card px-4 py-2 text-xs text-tx-secondary hover:bg-surface-hover hover:border-green-500/40 transition-all"
+                    className="rounded-full border border-border-DEFAULT bg-surface-card px-4 py-2 text-xs text-tx-secondary hover:bg-surface-hover hover:border-emerald-500/40 transition-all"
                   >
                     {s}
                   </button>
@@ -161,7 +161,7 @@ export default function WazerIAPage() {
               <div key={msg.id} className={`group flex gap-2.5 py-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className="flex-shrink-0 pt-0.5">
                   {msg.role === 'assistant' ? (
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-green-600 to-green-700 text-[11px] font-semibold text-white">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-700 text-[11px] font-semibold text-white">
                       IA
                     </div>
                   ) : (
@@ -175,16 +175,16 @@ export default function WazerIAPage() {
                   <div
                     className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-tr-md'
+                        ? 'bg-gradient-to-br from-emerald-600 to-emerald-700 text-white rounded-tr-md'
                         : 'bg-surface-card text-tx-primary border border-border-DEFAULT rounded-tl-md'
                     }`}
                   >
                     {msg.isLoading ? (
                       <div className="flex items-center gap-2 py-0.5">
                         <div className="flex gap-1">
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-green-400" style={{ animationDelay: '0ms' }} />
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-green-400" style={{ animationDelay: '150ms' }} />
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-green-400" style={{ animationDelay: '300ms' }} />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400" style={{ animationDelay: '0ms' }} />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400" style={{ animationDelay: '150ms' }} />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400" style={{ animationDelay: '300ms' }} />
                         </div>
                       </div>
                     ) : (
@@ -216,7 +216,7 @@ export default function WazerIAPage() {
       {/* Input */}
       <div className="border-t border-border-DEFAULT px-4 py-3">
         <div className="mx-auto max-w-2xl">
-          <div className="flex items-end gap-2 rounded-xl border border-border-DEFAULT bg-surface-card p-1.5 focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-500/20 transition-all">
+          <div className="flex items-end gap-2 rounded-xl border border-border-DEFAULT bg-surface-card p-1.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
             <textarea
               ref={inputRef}
               value={input}
@@ -236,7 +236,7 @@ export default function WazerIAPage() {
             <button
               onClick={() => sendMessage()}
               disabled={!input.trim() || isLoading}
-              className="rounded-lg bg-gradient-to-br from-green-600 to-green-700 px-3 py-2 text-xs font-medium text-white transition-all disabled:opacity-40 active:scale-95"
+              className="rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-700 px-3 py-2 text-xs font-medium text-white transition-all disabled:opacity-40 active:scale-95"
             >
               Enviar
             </button>
@@ -265,7 +265,7 @@ function ActionResultBadge({ actionResult }: { actionResult: WazerAIActionResult
         </a>
       )}
       {checkoutSlug && (
-        <a href="/checkouts" className="inline-flex items-center rounded-lg bg-green-500/20 px-3 py-1.5 text-xs font-medium text-green-700 dark:text-green-300 hover:bg-green-500/30 transition-colors">
+        <a href="/checkouts" className="inline-flex items-center rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/30 transition-colors">
           Ver Checkout
         </a>
       )}
@@ -276,7 +276,7 @@ function ActionResultBadge({ actionResult }: { actionResult: WazerAIActionResult
       )}
       {previewUrl && (
         <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-lg bg-slate-500/20 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-500/30 transition-colors">
-          Ver pÃ¡gina gerada
+          Ver página gerada
         </a>
       )}
       {downloadUrl && (
@@ -292,7 +292,7 @@ function MarkdownContent({ content, isUser }: { content: string; isUser: boolean
   const html = simpleMarkdown(content);
   return (
     <div
-      className={`wazerai-markdown prose prose-sm max-w-none ${isUser ? 'prose-invert' : 'prose-green'}`}
+      className={`wazerai-markdown prose prose-sm max-w-none ${isUser ? 'prose-invert' : 'prose-emerald'}`}
       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
     />
   );
@@ -319,7 +319,7 @@ function simpleMarkdown(text: string): string {
       .replace(/^### (.+)$/gm, '<h4 class="text-sm font-bold mt-3 mb-1">$1</h4>')
       .replace(/^## (.+)$/gm, '<h3 class="text-sm font-bold mt-3 mb-1">$1</h3>')
       .replace(/^# (.+)$/gm, '<h2 class="text-base font-bold mt-3 mb-1">$1</h2>')
-      .replace(/^[-â€¢] (.+)$/gm, '<li class="ml-3">$1</li>')
+      .replace(/^[-•] (.+)$/gm, '<li class="ml-3">$1</li>')
       .replace(/^\d+\. (.+)$/gm, '<li class="ml-3 list-decimal">$1</li>')
       .replace(/\n\n/g, '</p><p class="mt-2">')
       .replace(/\n/g, '<br/>');
@@ -330,5 +330,3 @@ function simpleMarkdown(text: string): string {
 
   return processed.join('');
 }
-
-

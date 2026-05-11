@@ -252,7 +252,7 @@ export default function AdminLayout() {
               {/* Profile dropdown */}
               <Menu as="div" className="relative">
                 <Menu.Button className="-m-1.5 flex items-center p-1.5 gap-3 rounded-lg hover:bg-surface-hover transition-colors">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-green-600 text-sm font-semibold text-white">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-sm font-semibold text-white">
                     {user?.name?.charAt(0)?.toUpperCase() || 'A'}
                   </div>
                   <div className="hidden lg:flex lg:items-center">
@@ -319,7 +319,7 @@ export default function AdminLayout() {
                 Abrir control tower
               </Link>
 
-              <Link to="/admin/approvals" className="rounded-full bg-green-500/10 px-2.5 py-1 font-medium text-green-600 hover:bg-green-500/20">
+              <Link to="/admin/approvals" className="rounded-full bg-emerald-500/10 px-2.5 py-1 font-medium text-emerald-600 hover:bg-emerald-500/20">
                 Aprovacoes: {pulseData.queues.pending_approvals}
               </Link>
 
@@ -389,14 +389,8 @@ function SidebarContent({
     <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-white/10 bg-slate-950 px-6 pb-4">
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center">
-        <Link to="/admin" className="flex items-center gap-3">
-          <img
-            src="/img/logo.png"
-            alt="Vector Pagamentos"
-            className="h-9 w-auto"
-            loading="eager"
-          />
-          <span className="text-lg font-bold leading-tight text-white">Vector Pagamentos</span>
+        <Link to="/admin" className="flex items-center">
+          <span className="text-lg font-bold text-white">Vector Pagamentos</span>
           <span className="ml-2 rounded bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-300">
             Admin
           </span>
@@ -429,7 +423,7 @@ function SidebarContent({
                         to={item.href}
                         className={`group flex items-center gap-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
                           active
-                            ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg shadow-green-900/30'
+                            ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg shadow-blue-900/30'
                             : 'text-slate-300 hover:bg-white/10 hover:text-white'
                         }`}
                       >
@@ -456,7 +450,7 @@ function SidebarContent({
         {/* Footer */}
         <div className="mt-auto border-t border-white/10 pt-4">
           <div className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-green-600 to-green-700 text-xs font-bold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-green-600 text-xs font-bold text-white">
               W
             </div>
             <div className="flex-1 min-w-0">
@@ -469,5 +463,3 @@ function SidebarContent({
     </div>
   );
 }
-
-

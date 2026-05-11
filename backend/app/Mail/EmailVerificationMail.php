@@ -28,7 +28,7 @@ class EmailVerificationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verifique seu e-mail â€” Vector Pagamentos',
+            subject: 'Verifique seu e-mail — Vector Pagamentos',
         );
     }
 

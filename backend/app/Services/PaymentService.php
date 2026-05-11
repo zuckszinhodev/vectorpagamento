@@ -416,7 +416,7 @@ class PaymentService
                     ]);
                     $result = ['success' => false, 'error' => 'Adquirente não retornou dados do PIX'];
                 } else {
-                    $charge->update(['status' => 'waiting_payment']);
+                    $charge->update(['status' => 'pending']);
 
                     $cb?->recordSuccess();
                     $this->rotationService?->markSuccess('pix', $acquirerName);
@@ -840,7 +840,8 @@ class PaymentService
                 'acquirer_transaction_id' => $result['external_id'] ?? null,
                 'external_id' => $result['external_id'] ?? null,
                 'pix_qr_code' => $result['pix_qr_code'] ?? null,
-                'pix_copy_paste' => $result['pix_qr_code_url'] ?? $result['pix_qr_code'] ?? null,
+                'pix_copy_paste' => $result['pix_copy_paste'] ?? $result['pix_qr_code'] ?? null,
+                'pix_qr_code_url' => $result['pix_qr_code_url'] ?? null,
                 'pix_end2end_id' => $result['end2end_id'] ?? null,
                 'expires_at' => isset($result['pix_expires_at']) 
                     ? \Carbon\Carbon::parse($result['pix_expires_at']) 
@@ -859,7 +860,8 @@ class PaymentService
                 'transaction_id' => $result['external_id'] ?? null,
                 'status' => $result['status'] ?? 'pending',
                 'pix_qr_code' => $result['pix_qr_code'] ?? null,
-                'pix_copy_paste' => $result['pix_qr_code_url'] ?? $result['pix_qr_code'] ?? null,
+                'pix_copy_paste' => $result['pix_copy_paste'] ?? $result['pix_qr_code'] ?? null,
+                'pix_qr_code_url' => $result['pix_qr_code_url'] ?? null,
                 'expires_at' => $result['pix_expires_at'] ?? null,
             ];
             
@@ -1543,7 +1545,7 @@ class PaymentService
             ]);
             $this->updateWalletOnRefund($charge, $refundedAmount);
             \App\Jobs\DispatchPaymentNotificationsJob::dispatch($charge->id, 'payment.refunded');
-        } elseif ($normalizedStatus === 'chargedback') {
+        } elseif (in_array($normalizedStatus, ['chargeback', 'chargedback'], true)) {
             $charge->update(['status' => 'chargeback']);
             $this->updateWalletOnRefund($charge, $charge->amount);
             \App\Jobs\DispatchPaymentNotificationsJob::dispatch($charge->id, 'payment.chargedback');
@@ -2028,6 +2030,8 @@ class PaymentService
             return $this->syncEnkiChargeStatus($charge);
         } elseif (in_array($acquirer, ['blupay'])) {
             return $this->syncBluPayChargeStatus($charge);
+        } elseif (in_array($acquirer, ['huntersub'])) {
+            return $this->syncHunterSubChargeStatus($charge);
         }
 
         // Default: Babylon sync
@@ -2174,7 +2178,7 @@ class PaymentService
 
                 $charge->refresh();
 
-                return ['success' => true, 'status' => $charge->status, 'synced' => true];
+                return ['success' => true, 'status' => $charge->status, 'synced' => true, 'side_effects_handled' => true];
             }
 
             if ($newStatus !== $charge->status) {
@@ -2195,6 +2199,86 @@ class PaymentService
                 'charge_id' => $charge->id,
                 'error' => $e->getMessage(),
             ]);
+            return ['success' => true, 'status' => $charge->status, 'synced' => false];
+        }
+    }
+
+    /**
+     * Sync with HunterSub API.
+     */
+    private function syncHunterSubChargeStatus(Charge $charge): array
+    {
+        $huntersub = $this->factory->huntersubForAccount($charge->account_id);
+
+        if (!$huntersub) {
+            return ['success' => true, 'status' => $charge->status, 'synced' => false];
+        }
+
+        try {
+            $response = $huntersub->getTransaction($charge->acquirer_transaction_id);
+
+            if (!$response) {
+                return ['success' => true, 'status' => $charge->status, 'synced' => false];
+            }
+
+            $externalStatus = strtolower((string) ($response['status'] ?? $charge->status));
+            $statusMap = [
+                'paid' => 'approved',
+                'approved' => 'approved',
+                'completed' => 'approved',
+                'confirmed' => 'approved',
+                'delivered' => 'approved',
+                'pending' => 'pending',
+                'waiting_payment' => 'pending',
+                'created' => 'pending',
+                'expired' => 'expired',
+                'cancelled' => 'cancelled',
+                'canceled' => 'cancelled',
+                'refunded' => 'refunded',
+                'chargeback' => 'chargeback',
+                'chargedback' => 'chargeback',
+                'failed' => 'failed',
+                'refused' => 'failed',
+                'declined' => 'failed',
+            ];
+            $newStatus = $statusMap[$externalStatus] ?? $charge->status;
+
+            if ($newStatus === 'approved' && $charge->status !== 'approved') {
+                $this->handleWebhookPayment($charge, [
+                    'id' => $charge->acquirer_transaction_id,
+                    'status' => $externalStatus,
+                    'amount' => $response['amount'] ?? null,
+                    'paymentMethod' => $response['paymentMethod'] ?? $charge->payment_method,
+                    'paid_at' => data_get($response, 'pix.paidAt') ?? $response['paidAt'] ?? null,
+                    'pix' => [
+                        'endToEndId' => data_get($response, 'pix.endToEndId'),
+                    ],
+                    'metadata' => [
+                        'source' => 'huntersub_sync',
+                        'charge_id' => $charge->id,
+                    ],
+                ]);
+
+                $charge->refresh();
+
+                return ['success' => true, 'status' => $charge->status, 'synced' => true, 'side_effects_handled' => true];
+            }
+
+            if ($newStatus !== $charge->status && !in_array($charge->status, ['approved', 'refunded', 'chargeback'], true)) {
+                $charge->update([
+                    'status' => $newStatus,
+                    'paid_at' => $newStatus === 'approved' ? ($charge->paid_at ?? now()) : $charge->paid_at,
+                    'pix_end2end_id' => data_get($response, 'pix.endToEndId') ?? $charge->pix_end2end_id,
+                ]);
+            }
+
+            return ['success' => true, 'status' => $newStatus, 'synced' => true];
+        } catch (\Exception $e) {
+            Log::error('Sync HunterSub charge status error', [
+                'charge_id' => $charge->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return ['success' => true, 'status' => $charge->status, 'synced' => false];
         }
     }

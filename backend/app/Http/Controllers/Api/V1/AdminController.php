@@ -13,7 +13,6 @@ use App\Models\Transaction;
 use App\Models\Withdrawal;
 use App\Models\KycSubmission;
 use App\Models\AcquirerConfig;
-use App\Models\AdminActionApproval;
 use App\Models\AuditLog;
 use App\Models\SystemSetting;
 use App\Domain\Acquirer\Entities\Acquirer as AcquirerEntity;
@@ -54,13 +53,6 @@ class AdminController extends Controller
             $pendingWithdrawals = (int) (clone $pendingWithdrawalsQuery)->count();
             $pendingWithdrawalsAmount = (int) (clone $pendingWithdrawalsQuery)->sum('amount');
 
-            $pendingApprovals = 0;
-            try {
-                $pendingApprovals = (int) AdminActionApproval::where('status', 'pending')->count();
-            } catch (\Throwable $e) {
-                $pendingApprovals = 0;
-            }
-
             $pendingKyc = 0;
             try {
                 $pendingKycSubmissions = KycSubmission::whereIn('status', ['pending', 'under_review'])->count();
@@ -80,9 +72,6 @@ class AdminController extends Controller
             if (!$withdrawalProcessingEnabled) {
                 $criticalAlerts[] = 'Processamento de saques estah pausado';
             }
-            if ($pendingApprovals > 20) {
-                $criticalAlerts[] = 'Fila de aprovacoes acima de 20 itens';
-            }
             if ($pendingWithdrawals > 25) {
                 $criticalAlerts[] = 'Fila de saques acima de 25 itens';
             }
@@ -97,9 +86,6 @@ class AdminController extends Controller
             if (!$withdrawalProcessingEnabled) {
                 $healthScore -= 25;
             }
-            if ($pendingApprovals > 10) {
-                $healthScore -= min(20, ($pendingApprovals - 10));
-            }
             if ($pendingWithdrawals > 10) {
                 $healthScore -= min(20, ($pendingWithdrawals - 10));
             }
@@ -112,7 +98,7 @@ class AdminController extends Controller
             $state = 'healthy';
             if (!empty($criticalAlerts) || $healthScore < 65) {
                 $state = 'critical';
-            } elseif ($healthScore < 85 || $pendingApprovals > 10 || $pendingWithdrawals > 10) {
+            } elseif ($healthScore < 85 || $pendingWithdrawals > 10) {
                 $state = 'attention';
             }
 
@@ -124,7 +110,6 @@ class AdminController extends Controller
                     'queues' => [
                         'pending_withdrawals' => $pendingWithdrawals,
                         'pending_withdrawals_amount' => $pendingWithdrawalsAmount,
-                        'pending_approvals' => $pendingApprovals,
                         'pending_kyc' => $pendingKyc,
                     ],
                     'switches' => [
@@ -152,7 +137,6 @@ class AdminController extends Controller
                     'queues' => [
                         'pending_withdrawals' => 0,
                         'pending_withdrawals_amount' => 0,
-                        'pending_approvals' => 0,
                         'pending_kyc' => 0,
                     ],
                     'switches' => [

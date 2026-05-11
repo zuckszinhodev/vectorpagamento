@@ -83,7 +83,7 @@ class PlatformSettingsAdminController extends Controller
             Log::error('PlatformSettingsAdminController::index error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Erro ao carregar configuraÃ§Ãµes',
+                'message' => 'Erro ao carregar configurações',
             ], 500);
         }
     }
@@ -110,13 +110,13 @@ class PlatformSettingsAdminController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'ConfiguraÃ§Ãµes atualizadas com sucesso',
+                'message' => 'Configurações atualizadas com sucesso',
             ]);
         } catch (\Throwable $e) {
             Log::error('PlatformSettingsAdminController::update error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'message' => 'Erro ao atualizar configuraÃ§Ãµes',
+                'message' => 'Erro ao atualizar configurações',
             ], 500);
         }
     }
@@ -194,7 +194,7 @@ class PlatformSettingsAdminController extends Controller
                     'type' => $apiKey->type,
                     'created_at' => $apiKey->created_at,
                 ],
-                'message' => 'API key criada com sucesso. Salve a chave, ela nÃ£o serÃ¡ exibida novamente.',
+                'message' => 'API key criada com sucesso. Salve a chave, ela não será exibida novamente.',
             ]);
         } catch (\Throwable $e) {
             Log::error('PlatformSettingsAdminController::createApiKey error', ['error' => $e->getMessage()]);
@@ -216,7 +216,7 @@ class PlatformSettingsAdminController extends Controller
             if (!$apiKey) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'API key nÃ£o encontrada',
+                    'message' => 'API key não encontrada',
                 ], 404);
             }
 

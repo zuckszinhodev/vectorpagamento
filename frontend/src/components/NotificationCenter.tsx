@@ -204,4 +204,3 @@ export function LiveSalesCounter({ accountId }: { accountId: string }) {
     </div>
   );
 }
-

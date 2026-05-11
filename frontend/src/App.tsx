@@ -4,11 +4,15 @@ import { useThemeStore } from '@/stores/themeStore';
 import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { api } from '@/lib/api';
 import { isCustomDomain } from '@/lib/domain';
+import { PageSpinner } from '@/components/ui/Spinner';
 
 // Layouts (carregados imediatamente)
 import DashboardLayout from '@/layouts/DashboardLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import AdminLayout from '@/layouts/AdminLayout';
+
+// Loading spinner reutilizavel
+const PageLoader = () => <PageSpinner />;
 
 // Auth Pages (lazy)
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
@@ -61,7 +65,9 @@ const CouponsPage = lazy(() => import('@/pages/CouponsPage'));
 const ReportsPage = lazy(() => import('@/pages/ReportsPage'));
 const SplitManagement = lazy(() => import('@/pages/SplitManagement'));
 const WebhookLogsPage = lazy(() => import('@/pages/WebhookLogsPage'));
-const WazerIAPage = lazy(() => import('@/pages/WazerIAPage'));
+const VectorIAPage = lazy(() => import('@/pages/WazerIAPage'));
+
+const BRAND_LOADER_MIN_DURATION_MS = 1200;
 
 // Public Pages (lazy)
 const PublicCheckoutPage = lazy(() => import('@/pages/public/CheckoutPage'));
@@ -81,7 +87,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuthStore();
 
   if (isLoading) {
-    return null;
+    return <PageSpinner />;
   }
 
   if (!isAuthenticated) {
@@ -200,7 +206,7 @@ const AdminMfaChallenge = () => {
                 onChange={(event) => handleDigitChange(index, event.target.value)}
                 onKeyDown={(event) => handleDigitKeyDown(index, event)}
                 disabled={loading || isLocked}
-                className="h-12 w-12 rounded-xl border border-slate-300 bg-white text-center text-xl font-semibold tracking-wide text-slate-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-200 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:ring-green-500/30"
+                className="h-12 w-12 rounded-xl border border-slate-300 bg-white text-center text-xl font-semibold tracking-wide text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:ring-emerald-500/30"
                 aria-label={`Dígito ${index + 1} do código 2FA`}
               />
             ))}
@@ -263,7 +269,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   }, [isLoading, isAuthenticated, user]);
 
   if (isLoading) {
-    return null;
+    return <PageSpinner />;
   }
 
   if (!isAuthenticated) {
@@ -296,7 +302,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 
   // Wait for auth check to complete before redirecting
   if (isLoading) {
-    return null;
+    return <PageSpinner />;
   }
 
   if (isAuthenticated) {
@@ -311,6 +317,7 @@ function App() {
   const { checkAuth, isAuthenticated, user, resetAdminMfaVerification, startImpersonation } = useAuthStore();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [isBootLoading, setIsBootLoading] = useState(true);
 
   // Handle impersonation token from URL
   useEffect(() => {
@@ -374,8 +381,20 @@ function App() {
     }
   }, [theme]);
 
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setIsBootLoading(false);
+    }, BRAND_LOADER_MIN_DURATION_MS);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
+  if (isBootLoading) {
+    return <PageSpinner />;
+  }
+
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* Auth Routes - Redirect to members login on custom domains */}
       <Route
@@ -432,8 +451,7 @@ function App() {
         <Route path="/support" element={<SupportPage />} />
         <Route path="/splits" element={<SplitManagement />} />
         <Route path="/webhook-logs" element={<WebhookLogsPage />} />
-        <Route path="/vector-ia" element={<WazerIAPage />} />
-        <Route path="/api-docs" element={<ApiDocsPage />} />
+        <Route path="/wazer-ia" element={<VectorIAPage />} />
       </Route>
 
       {/* Admin Routes - Full screen with dedicated layout */}
@@ -511,9 +529,8 @@ function App() {
       {/* Legal Pages */}
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
-
-      {/* API Documentation (public) */}
       <Route path="/docs" element={<ApiDocsPage />} />
+      <Route path="/api-docs" element={<ApiDocsPage />} />
 
       {/* Member Area - Student facing pages */}
       <Route path="/members/login" element={<MemberLoginPage />} />
@@ -531,5 +548,3 @@ function App() {
 }
 
 export default App;
-
-

@@ -63,7 +63,7 @@ const glowLinePlugin: Plugin<'line'> = {
         { blur: 4, alpha: 0.25, width: 3 },
       ];
 
-      const borderColor = (dataset.borderColor as string) || 'rgb(22, 163, 74)';
+      const borderColor = (dataset.borderColor as string) || 'rgb(34, 197, 94)';
 
       for (const layer of glowLayers) {
         ctx.save();
@@ -131,17 +131,17 @@ const gridPulsePlugin: Plugin<'line'> = {
 
       const gradient = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
       if (isDark) {
-        gradient.addColorStop(0, 'rgba(22, 163, 74, 0)');
-        gradient.addColorStop(0.2, 'rgba(22, 163, 74, 0.06)');
-        gradient.addColorStop(0.5, 'rgba(22, 163, 74, 0.08)');
-        gradient.addColorStop(0.8, 'rgba(22, 163, 74, 0.06)');
-        gradient.addColorStop(1, 'rgba(22, 163, 74, 0)');
+        gradient.addColorStop(0, 'rgba(34, 197, 94, 0)');
+        gradient.addColorStop(0.2, 'rgba(34, 197, 94, 0.06)');
+        gradient.addColorStop(0.5, 'rgba(34, 197, 94, 0.08)');
+        gradient.addColorStop(0.8, 'rgba(34, 197, 94, 0.06)');
+        gradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
       } else {
-        gradient.addColorStop(0, 'rgba(22, 163, 74, 0)');
-        gradient.addColorStop(0.2, 'rgba(22, 163, 74, 0.04)');
-        gradient.addColorStop(0.5, 'rgba(22, 163, 74, 0.06)');
-        gradient.addColorStop(0.8, 'rgba(22, 163, 74, 0.04)');
-        gradient.addColorStop(1, 'rgba(22, 163, 74, 0)');
+        gradient.addColorStop(0, 'rgba(34, 197, 94, 0)');
+        gradient.addColorStop(0.2, 'rgba(34, 197, 94, 0.04)');
+        gradient.addColorStop(0.5, 'rgba(34, 197, 94, 0.06)');
+        gradient.addColorStop(0.8, 'rgba(34, 197, 94, 0.04)');
+        gradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
       }
 
       ctx.strokeStyle = gradient;
@@ -180,13 +180,13 @@ const glowDoughnutPlugin: Plugin<'doughnut'> = {
 
     const isDark = document.documentElement.classList.contains('dark');
     if (isDark) {
-      gradient.addColorStop(0, 'rgba(22, 163, 74, 0.08)');
-      gradient.addColorStop(0.5, 'rgba(22, 163, 74, 0.04)');
-      gradient.addColorStop(1, 'rgba(22, 163, 74, 0)');
+      gradient.addColorStop(0, 'rgba(34, 197, 94, 0.08)');
+      gradient.addColorStop(0.5, 'rgba(34, 197, 94, 0.04)');
+      gradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
     } else {
-      gradient.addColorStop(0, 'rgba(22, 163, 74, 0.05)');
-      gradient.addColorStop(0.5, 'rgba(22, 163, 74, 0.02)');
-      gradient.addColorStop(1, 'rgba(22, 163, 74, 0)');
+      gradient.addColorStop(0, 'rgba(34, 197, 94, 0.05)');
+      gradient.addColorStop(0.5, 'rgba(34, 197, 94, 0.02)');
+      gradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
     }
 
     ctx.fillStyle = gradient;
@@ -200,41 +200,41 @@ const glowDoughnutPlugin: Plugin<'doughnut'> = {
 
 // ─── Color Palette ─────────────────────────────────────────────────
 const PALETTE = {
-  purple: {
-    line: 'rgb(22, 163, 74)',
-    lineHover: 'rgb(34, 197, 94)',
-    gradientTop: { dark: 'rgba(22, 163, 74, 0.30)', light: 'rgba(22, 163, 74, 0.18)' },
-    gradientMid: { dark: 'rgba(22, 163, 74, 0.08)', light: 'rgba(22, 163, 74, 0.06)' },
-    gradientBot: { dark: 'rgba(22, 163, 74, 0)', light: 'rgba(22, 163, 74, 0)' },
-    point: 'rgb(22, 163, 74)',
-    pointBorder: { dark: 'rgb(22, 22, 22)', light: '#ffffff' },
-    tooltip: { bg: '#052e16', border: 'rgba(22, 163, 74, 0.4)' },
-    grid: { dark: 'rgba(22, 163, 74, 0.08)', light: 'rgba(22, 163, 74, 0.06)' },
-    tick: { dark: 'rgba(120, 140, 120, 0.6)', light: 'rgba(100, 120, 100, 0.6)' },
-  },
-  violet: {
-    line: 'rgb(21, 128, 61)',
-    lineHover: 'rgb(34, 197, 94)',
-    gradientTop: { dark: 'rgba(21, 128, 61, 0.95)', light: 'rgba(21, 128, 61, 0.85)' },
-    gradientMid: { dark: 'rgba(21, 128, 61, 0.80)', light: 'rgba(21, 128, 61, 0.65)' },
-    gradientBot: { dark: 'rgba(21, 128, 61, 0.50)', light: 'rgba(21, 128, 61, 0.35)' },
-    point: 'rgb(21, 128, 61)',
-    pointBorder: { dark: 'rgb(22, 22, 22)', light: '#ffffff' },
-    tooltip: { bg: '#052e16', border: 'rgba(21, 128, 61, 0.4)' },
-    grid: { dark: 'rgba(21, 128, 61, 0.08)', light: 'rgba(21, 128, 61, 0.06)' },
-    tick: { dark: 'rgba(120, 140, 120, 0.6)', light: 'rgba(100, 120, 100, 0.6)' },
-  },
-  fuchsia: {
+  green: {
     line: 'rgb(34, 197, 94)',
     lineHover: 'rgb(74, 222, 128)',
-    gradientTop: { dark: 'rgba(34, 197, 94, 0.25)', light: 'rgba(34, 197, 94, 0.14)' },
-    gradientMid: { dark: 'rgba(34, 197, 94, 0.06)', light: 'rgba(34, 197, 94, 0.04)' },
+    gradientTop: { dark: 'rgba(34, 197, 94, 0.30)', light: 'rgba(34, 197, 94, 0.18)' },
+    gradientMid: { dark: 'rgba(34, 197, 94, 0.08)', light: 'rgba(34, 197, 94, 0.06)' },
     gradientBot: { dark: 'rgba(34, 197, 94, 0)', light: 'rgba(34, 197, 94, 0)' },
     point: 'rgb(34, 197, 94)',
     pointBorder: { dark: 'rgb(22, 22, 22)', light: '#ffffff' },
     tooltip: { bg: '#052e16', border: 'rgba(34, 197, 94, 0.4)' },
     grid: { dark: 'rgba(34, 197, 94, 0.08)', light: 'rgba(34, 197, 94, 0.06)' },
-    tick: { dark: 'rgba(120, 140, 120, 0.6)', light: 'rgba(100, 120, 100, 0.6)' },
+    tick: { dark: 'rgba(168, 162, 186, 0.6)', light: 'rgba(100, 100, 130, 0.6)' },
+  },
+  teal: {
+    line: 'rgb(22, 163, 74)',
+    lineHover: 'rgb(34, 197, 94)',
+    gradientTop: { dark: 'rgba(22, 163, 74, 0.95)', light: 'rgba(22, 163, 74, 0.85)' },
+    gradientMid: { dark: 'rgba(22, 163, 74, 0.80)', light: 'rgba(22, 163, 74, 0.65)' },
+    gradientBot: { dark: 'rgba(22, 163, 74, 0.50)', light: 'rgba(22, 163, 74, 0.35)' },
+    point: 'rgb(22, 163, 74)',
+    pointBorder: { dark: 'rgb(22, 22, 22)', light: '#ffffff' },
+    tooltip: { bg: '#052e16', border: 'rgba(22, 163, 74, 0.4)' },
+    grid: { dark: 'rgba(22, 163, 74, 0.08)', light: 'rgba(22, 163, 74, 0.06)' },
+    tick: { dark: 'rgba(168, 162, 186, 0.6)', light: 'rgba(100, 100, 130, 0.6)' },
+  },
+  emerald: {
+    line: 'rgb(16, 185, 129)',
+    lineHover: 'rgb(52, 211, 153)',
+    gradientTop: { dark: 'rgba(16, 185, 129, 0.25)', light: 'rgba(16, 185, 129, 0.14)' },
+    gradientMid: { dark: 'rgba(16, 185, 129, 0.06)', light: 'rgba(16, 185, 129, 0.04)' },
+    gradientBot: { dark: 'rgba(16, 185, 129, 0)', light: 'rgba(16, 185, 129, 0)' },
+    point: 'rgb(16, 185, 129)',
+    pointBorder: { dark: 'rgb(22, 22, 22)', light: '#ffffff' },
+    tooltip: { bg: '#052e16', border: 'rgba(16, 185, 129, 0.4)' },
+    grid: { dark: 'rgba(16, 185, 129, 0.08)', light: 'rgba(16, 185, 129, 0.06)' },
+    tick: { dark: 'rgba(168, 162, 186, 0.6)', light: 'rgba(100, 100, 130, 0.6)' },
   },
   rose: {
     line: 'rgb(225, 29, 72)',
@@ -271,7 +271,7 @@ export function GlowLineChart({
   labels,
   data,
   label = 'Valor',
-  color = 'purple',
+  color = 'emerald',
   height = 'h-80',
   showPoints = true,
   formatTooltip,
@@ -319,7 +319,7 @@ export function GlowLineChart({
           backgroundColor: (context: any) => {
             const chart = context.chart;
             const { ctx, chartArea } = chart;
-            if (!chartArea) return 'rgba(34,197,94,0)';
+            if (!chartArea) return 'rgba(147,51,234,0)';
             return createGradient(ctx, chartArea);
           },
           tension,
@@ -505,8 +505,8 @@ export function GlowDoughnutChart({
   const isDark = useIsDark();
 
   const defaultColors = isDark
-    ? ['rgba(22, 163, 74, 0.9)', 'rgba(34, 197, 94, 0.7)', 'rgba(21, 128, 61, 0.6)', 'rgba(34, 197, 94, 0.5)']
-    : ['rgb(22, 163, 74)', 'rgb(34, 197, 94)', 'rgb(21, 128, 61)', 'rgb(34, 197, 94)'];
+    ? ['rgba(34, 197, 94, 0.9)', 'rgba(16, 185, 129, 0.7)', 'rgba(22, 163, 74, 0.6)', 'rgba(74, 222, 128, 0.5)']
+    : ['rgb(34, 197, 94)', 'rgb(16, 185, 129)', 'rgb(22, 163, 74)', 'rgb(74, 222, 128)'];
 
   const bgColors = colors || defaultColors;
 
@@ -553,7 +553,7 @@ export function GlowDoughnutChart({
           backgroundColor: '#052e16',
           titleColor: '#e2e8f0',
           bodyColor: '#ffffff',
-          borderColor: 'rgba(22, 163, 74, 0.4)',
+          borderColor: 'rgba(34, 197, 94, 0.4)',
           borderWidth: 1,
           padding: 14,
           cornerRadius: 12,
@@ -622,5 +622,3 @@ export function ChartCard({ title, subtitle, children, actions, className = '' }
 }
 
 export default GlowLineChart;
-
-

@@ -43,6 +43,8 @@ class ChargeController extends Controller
             $status = $request->query('status');
             if (str_contains($status, ',')) {
                 $query->whereIn('status', explode(',', $status));
+            } elseif ($status === 'pending') {
+                $query->whereIn('status', ['pending', 'waiting_payment']);
             } else {
                 $query->where('status', $status);
             }
@@ -322,6 +324,10 @@ class ChargeController extends Controller
             }
         }
 
+        if ($charge->payment_method === 'pix') {
+            app(\App\Services\PixNominalNameService::class)->syncFromCharge($charge->refresh(), $paymentResult);
+        }
+
         // Dispatch webhook & UTMify AFTER response is sent (non-blocking)
         $chargeForDeferred = $charge;
         dispatch(function () use ($chargeForDeferred) {
@@ -432,7 +438,7 @@ class ChargeController extends Controller
                 ], 404);
             }
 
-            if (!in_array($charge->status, ['pending', 'processing'])) {
+            if (!in_array($charge->status, ['pending', 'waiting_payment', 'processing'])) {
                 return response()->json([
                     'success' => false,
                     'error' => [
@@ -652,7 +658,7 @@ class ChargeController extends Controller
 
             // If synced and now paid, also update wallet/checkout and dispatch notifications
             if ($syncResult['synced'] && in_array($charge->status, ['paid', 'approved'])) {
-                if ($previousStatus !== 'approved') {
+                if ($previousStatus !== 'approved' && !($syncResult['side_effects_handled'] ?? false)) {
                     // Normalize to 'approved'
                     if ($charge->status === 'paid') {
                         $charge->update(['status' => 'approved', 'paid_at' => $charge->paid_at ?? now()]);
@@ -718,7 +724,7 @@ class ChargeController extends Controller
         $accountId = $request->user()->account_id;
 
         $pendingCharges = Charge::where('account_id', $accountId)
-            ->whereIn('status', ['pending', 'processing'])
+            ->whereIn('status', ['pending', 'waiting_payment', 'processing'])
             ->whereNotNull('acquirer_transaction_id')
             ->get();
 
@@ -735,7 +741,7 @@ class ChargeController extends Controller
                     $synced++;
                     $charge->refresh();
 
-                    if (in_array($charge->status, ['paid', 'approved']) && $previousStatus !== 'approved') {
+                    if (in_array($charge->status, ['paid', 'approved']) && $previousStatus !== 'approved' && !($syncResult['side_effects_handled'] ?? false)) {
                         if ($charge->status === 'paid') {
                             $charge->update(['status' => 'approved', 'paid_at' => $charge->paid_at ?? now()]);
                         }

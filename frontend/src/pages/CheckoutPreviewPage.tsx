@@ -48,7 +48,7 @@ export default function CheckoutPreviewPage() {
             width: '48px', 
             height: '48px', 
             border: '4px solid #e5e7eb', 
-            borderTopColor: '#16a34a',
+            borderTopColor: '#22c55e',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
@@ -88,7 +88,7 @@ export default function CheckoutPreviewPage() {
           <button
             onClick={() => navigate(-1)}
             style={{
-              background: '#16a34a',
+              background: '#22c55e',
               color: 'white',
               padding: '0.75rem 1.5rem',
               borderRadius: '8px',
@@ -135,5 +135,3 @@ export default function CheckoutPreviewPage() {
     </div>
   );
 }
-
-

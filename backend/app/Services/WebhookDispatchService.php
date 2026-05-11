@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Jobs\DispatchWebhookJob;
 use App\Models\Webhook;
 use App\Models\Charge;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Dispatches webhook events to per-account webhook URLs
  * 
- * Fires notifications to URLs configured by users in the IntegraÃ§Ãµes â†’ Webhook section
+ * Fires notifications to URLs configured by users in the Integrações → Webhook section
  */
 class WebhookDispatchService
 {
@@ -33,7 +34,29 @@ class WebhookDispatchService
 
         foreach ($webhooks as $webhook) {
             if ($webhook->isSubscribedTo($event) || $webhook->isSubscribedTo('*')) {
-                $this->send($webhook, $event, $payload);
+                $this->dispatch($webhook, $event, $payload);
+            }
+        }
+    }
+
+    /**
+     * Dispatch a payment event synchronously (for use inside queue jobs)
+     */
+    public function dispatchPaymentEventSync(string $event, Charge $charge): void
+    {
+        $webhooks = Webhook::where('account_id', $charge->account_id)
+            ->whereRaw('"is_active" = true')
+            ->get();
+
+        if ($webhooks->isEmpty()) {
+            return;
+        }
+
+        $payload = $this->buildPaymentPayload($event, $charge);
+
+        foreach ($webhooks as $webhook) {
+            if ($webhook->isSubscribedTo($event) || $webhook->isSubscribedTo('*')) {
+                $this->sendSync($webhook, $event, $payload);
             }
         }
     }
@@ -75,9 +98,17 @@ class WebhookDispatchService
     }
 
     /**
-     * Send webhook request to a URL
+     * Dispatch webhook asynchronously via queue
      */
-    public function send(Webhook $webhook, string $event, array $payload): void
+    public function dispatch(Webhook $webhook, string $event, array $payload): void
+    {
+        DispatchWebhookJob::dispatch($webhook->id, $event, $payload);
+    }
+
+    /**
+     * Send webhook request synchronously (called by DispatchWebhookJob)
+     */
+    public function sendSync(Webhook $webhook, string $event, array $payload): void
     {
         try {
             $reason = null;

@@ -125,16 +125,16 @@ void main(){
   wisps *= smoothstep(0.0, 0.1, cy) * topFade;
 
   // ---- 4. Color composition ----
-  // Brighter green for core, standard green for glow
-  vec3 coreCol = u_color * 1.6 + vec3(0.05, 0.15, 0.05); // bright green-white
+  // Brighter emerald for core, standard emerald for glow
+  vec3 coreCol = u_color * 1.6 + vec3(0.15, 0.05, 0.2); // bright emerald-white
   coreCol = min(coreCol, vec3(1.0));
   vec3 glowCol = u_color;
   vec3 ambCol  = u_color * 0.7;
 
   vec3 col = vec3(0.0);
   col += coreCol * core;           // razor-thin bright center
-  col += glowCol * glow1;          // medium green glow
-  col += ambCol  * glow2;          // wide ambient green
+  col += glowCol * glow1;          // medium emerald glow
+  col += ambCol  * glow2;          // wide ambient emerald
   col += glowCol * fog;            // base fog
   col += ambCol  * wisps;          // floating particles
 
@@ -142,7 +142,7 @@ void main(){
   float vig = 1.0 - length(uv - vec2(0.5)) * 0.3;
   col *= vig;
 
-  // Dark background tint (very subtle green in dark areas)
+  // Dark background tint (very subtle emerald in dark areas)
   col += u_color * 0.008;
 
   gl_FragColor = vec4(col, 1.0);
@@ -157,7 +157,7 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 
 export default function LaserFlow({
-  color = '#22c55e',
+  color = '#A855F7',
   flowSpeed = 0.35,
   beamWidth = 0.5,
   fogIntensity = 0.5,
@@ -320,5 +320,3 @@ export default function LaserFlow({
     </div>
   );
 }
-
-

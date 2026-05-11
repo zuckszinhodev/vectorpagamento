@@ -123,4 +123,3 @@ export const useAffiliatesStore = create<AffiliatesState>((set, get) => ({
     }
   },
 }));
-

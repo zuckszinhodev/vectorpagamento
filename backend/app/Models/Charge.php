@@ -165,7 +165,20 @@ class Charge extends Model
         }
 
         $config = AcquirerConfig::findByKey($this->acquirer);
-        return $config->nominal_name ?? $config->display_name ?? $this->acquirer;
+
+        if (!$config) {
+            return $this->acquirer;
+        }
+
+        $nominalName = trim((string) ($config->nominal_name ?? ''));
+
+        if ($nominalName !== '') {
+            return $nominalName;
+        }
+
+        $displayName = trim((string) ($config->display_name ?? ''));
+
+        return $displayName !== '' ? $displayName : $this->acquirer;
     }
 
     public function product(): BelongsTo

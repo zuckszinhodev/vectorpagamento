@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
@@ -20,66 +20,27 @@ interface Acquirer {
   name: string;
   slug: string;
   display_name: string;
-  nominal_name?: string;
   logo_url?: string;
   is_active: boolean;
   is_primary: boolean;
   priority: number;
   supports_pix: boolean;
-  supports_pix_out: boolean;
   supports_credit_card: boolean;
   supports_boleto: boolean;
   acquirer_fee_percentage: number;
   acquirer_fee_fixed: number;
-  acquirer_fee_pix_out_percentage: number;
-  acquirer_fee_pix_out_fixed: number;
   gateway_fee_percentage: number;
   gateway_fee_fixed: number;
-  gateway_fee_pix_out_percentage: number;
-  gateway_fee_pix_out_fixed: number;
   sandbox_mode: boolean;
   last_health_check?: string;
   health_status?: 'healthy' | 'degraded' | 'down';
   config?: Record<string, unknown>;
 }
 
-type RotationMethod = 'pix' | 'credit_card' | 'boleto' | 'pix_out';
-type RotationStrategy = 'priority' | 'round_robin' | 'weighted';
-
-interface RotationMethodSettings {
-  strategy: RotationStrategy;
-  weights: Record<string, number>;
-}
-
-interface RotationSettings {
-  enabled: boolean;
-  failover_enabled: boolean;
-  strict_health_check: boolean;
-  use_cooldown: boolean;
-  cooldown_seconds: number;
-  methods: Record<RotationMethod, RotationMethodSettings>;
-}
-
-interface RotationPreviewMethod {
-  strategy: RotationStrategy;
-  candidates: string[];
-  eligible: string[];
-  order: string[];
-  primary: string | null;
-}
-
-interface RotationSettingsResponse {
-  settings: RotationSettings;
-  preview: Record<RotationMethod, RotationPreviewMethod>;
-}
-
-const rotationMethods: RotationMethod[] = ['pix', 'credit_card', 'boleto', 'pix_out'];
-
 export default function AdminAcquirers() {
   const queryClient = useQueryClient();
   const [selectedAcquirer, setSelectedAcquirer] = useState<Acquirer | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [routingForm, setRoutingForm] = useState<RotationSettings | null>(null);
 
   // Fetch acquirers
   const { data: acquirers = [], isLoading, refetch } = useQuery<Acquirer[]>({
@@ -87,33 +48,6 @@ export default function AdminAcquirers() {
     queryFn: async () => {
       const response = await api.get('/admin/acquirers');
       return response.data?.data || [];
-    },
-  });
-
-  const { data: routingData, isLoading: isRoutingLoading } = useQuery<RotationSettingsResponse>({
-    queryKey: ['admin-acquirers-routing'],
-    queryFn: async () => {
-      const response = await api.get('/admin/acquirers/routing/settings');
-      return response.data?.data as RotationSettingsResponse;
-    },
-  });
-
-  useEffect(() => {
-    if (routingData?.settings) {
-      setRoutingForm(routingData.settings);
-    }
-  }, [routingData?.settings]);
-
-  const saveRoutingSettingsMutation = useMutation({
-    mutationFn: async (payload: RotationSettings) => {
-      await api.put('/admin/acquirers/routing/settings', payload);
-    },
-    onSuccess: () => {
-      toast.success('Regras de rotação atualizadas');
-      queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
-    },
-    onError: () => {
-      toast.error('Erro ao salvar regras de rotação');
     },
   });
 
@@ -125,7 +59,6 @@ export default function AdminAcquirers() {
     onSuccess: () => {
       toast.success('Status atualizado');
       queryClient.invalidateQueries({ queryKey: ['admin-acquirers'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
     },
     onError: () => {
       toast.error('Erro ao atualizar status');
@@ -140,7 +73,6 @@ export default function AdminAcquirers() {
     onSuccess: () => {
       toast.success('Gateway primário definido');
       queryClient.invalidateQueries({ queryKey: ['admin-acquirers'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
     },
     onError: () => {
       toast.error('Erro ao definir gateway primário');
@@ -156,7 +88,6 @@ export default function AdminAcquirers() {
     onSuccess: () => {
       toast.success('Gateway atualizado');
       queryClient.invalidateQueries({ queryKey: ['admin-acquirers'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
       setShowEditModal(false);
     },
     onError: () => {
@@ -172,7 +103,6 @@ export default function AdminAcquirers() {
     onSuccess: () => {
       toast.success('Health check executado');
       queryClient.invalidateQueries({ queryKey: ['admin-acquirers'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
     },
     onError: () => {
       toast.error('Erro no health check');
@@ -187,7 +117,6 @@ export default function AdminAcquirers() {
     onSuccess: () => {
       toast.success('Gateway excluído com sucesso');
       queryClient.invalidateQueries({ queryKey: ['admin-acquirers'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Erro ao excluir gateway');
@@ -227,74 +156,6 @@ export default function AdminAcquirers() {
     }
   };
 
-    const methodLabel: Record<RotationMethod, string> = {
-      pix: 'PIX (entrada)',
-      credit_card: 'Cartão de Crédito',
-      boleto: 'Boleto',
-      pix_out: 'PIX OUT (saques)',
-    };
-
-    const supportsMethod = (acquirer: Acquirer, method: RotationMethod): boolean => {
-      if (method === 'pix') {
-        return acquirer.supports_pix;
-      }
-
-      if (method === 'pix_out') {
-        return acquirer.supports_pix_out;
-      }
-
-      if (method === 'credit_card') {
-        return acquirer.supports_credit_card;
-      }
-
-      return acquirer.supports_boleto;
-    };
-
-    const updateMethodStrategy = (method: RotationMethod, strategy: RotationStrategy) => {
-      setRoutingForm((prev) => {
-        if (!prev) return prev;
-
-        return {
-          ...prev,
-          methods: {
-            ...prev.methods,
-            [method]: {
-              ...prev.methods[method],
-              strategy,
-            },
-          },
-        };
-      });
-    };
-
-    const updateMethodWeight = (method: RotationMethod, acquirerKey: string, weight: number) => {
-      setRoutingForm((prev) => {
-        if (!prev) return prev;
-
-        return {
-          ...prev,
-          methods: {
-            ...prev.methods,
-            [method]: {
-              ...prev.methods[method],
-              weights: {
-                ...prev.methods[method].weights,
-                [acquirerKey]: weight,
-              },
-            },
-          },
-        };
-      });
-    };
-
-    const saveRoutingSettings = () => {
-      if (!routingForm) {
-        return;
-      }
-
-      saveRoutingSettingsMutation.mutate(routingForm);
-    };
-
   return (
     <AdminPageShell>
       <AdminPageHeader
@@ -312,164 +173,10 @@ export default function AdminAcquirers() {
         }
       />
 
-      <section className="rounded-2xl border border-border-DEFAULT bg-surface-card p-5">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-base font-semibold text-tx-primary">Rotação Inteligente de Adquirentes</h2>
-            <p className="mt-1 text-sm text-tx-muted">
-              Defina estratégias por método, cooldown automático após falhas e visualize a ordem real de roteamento.
-            </p>
-          </div>
-          <button
-            onClick={saveRoutingSettings}
-            disabled={!routingForm || saveRoutingSettingsMutation.isPending}
-            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saveRoutingSettingsMutation.isPending ? 'Salvando...' : 'Salvar Rotação'}
-          </button>
-        </div>
-
-        {isRoutingLoading || !routingForm ? (
-          <div className="rounded-xl border border-border-DEFAULT bg-surface-page px-4 py-6 text-sm text-tx-muted">
-            Carregando configurações de rotação...
-          </div>
-        ) : (
-          <>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <label className="flex items-center gap-2 rounded-xl border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary">
-                <input
-                  type="checkbox"
-                  checked={routingForm.enabled}
-                  onChange={(e) => setRoutingForm({ ...routingForm, enabled: e.target.checked })}
-                  className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
-                />
-                Rotação ativa
-              </label>
-
-              <label className="flex items-center gap-2 rounded-xl border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary">
-                <input
-                  type="checkbox"
-                  checked={routingForm.failover_enabled}
-                  onChange={(e) => setRoutingForm({ ...routingForm, failover_enabled: e.target.checked })}
-                  className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
-                />
-                Failover habilitado
-              </label>
-
-              <label className="flex items-center gap-2 rounded-xl border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary">
-                <input
-                  type="checkbox"
-                  checked={routingForm.strict_health_check}
-                  onChange={(e) => setRoutingForm({ ...routingForm, strict_health_check: e.target.checked })}
-                  className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
-                />
-                Health check estrito
-              </label>
-
-              <label className="flex items-center gap-2 rounded-xl border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary">
-                <input
-                  type="checkbox"
-                  checked={routingForm.use_cooldown}
-                  onChange={(e) => setRoutingForm({ ...routingForm, use_cooldown: e.target.checked })}
-                  className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
-                />
-                Cooldown automático
-              </label>
-
-              <label className="rounded-xl border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary">
-                Cooldown (segundos)
-                <input
-                  type="number"
-                  min={5}
-                  max={3600}
-                  value={routingForm.cooldown_seconds}
-                  onChange={(e) =>
-                    setRoutingForm({
-                      ...routingForm,
-                      cooldown_seconds: Math.min(3600, Math.max(5, Number(e.target.value) || 5)),
-                    })
-                  }
-                  className="mt-1 w-full rounded-md border border-border-DEFAULT bg-surface-card px-2 py-1 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
-                />
-              </label>
-            </div>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              {rotationMethods.map((method) => {
-                const methodConfig = routingForm.methods[method];
-                const methodPreview = routingData?.preview?.[method];
-                const methodAcquirers = acquirers.filter((acquirer) => supportsMethod(acquirer, method));
-
-                return (
-                  <div key={method} className="rounded-xl border border-border-DEFAULT bg-surface-page p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-semibold text-tx-primary">{methodLabel[method]}</h3>
-                      <select
-                        value={methodConfig.strategy}
-                        onChange={(e) => updateMethodStrategy(method, e.target.value as RotationStrategy)}
-                        className="rounded-md border border-border-DEFAULT bg-surface-card px-2 py-1 text-xs text-tx-primary focus:border-green-500 focus:outline-none"
-                      >
-                        <option value="priority">Prioridade</option>
-                        <option value="round_robin">Round Robin</option>
-                        <option value="weighted">Peso (Weighted)</option>
-                      </select>
-                    </div>
-
-                    {methodConfig.strategy === 'weighted' && (
-                      <div className="mb-3 space-y-2">
-                        {methodAcquirers.length === 0 ? (
-                          <p className="text-xs text-tx-muted">Nenhum adquirente ativo para este método.</p>
-                        ) : (
-                          methodAcquirers.map((acquirer) => (
-                            <div key={`${method}-${acquirer.id}`} className="flex items-center justify-between gap-3">
-                              <span className="text-xs text-tx-secondary">{acquirer.display_name}</span>
-                              <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={methodConfig.weights[acquirer.slug] ?? 1}
-                                onChange={(e) => updateMethodWeight(method, acquirer.slug, Math.max(0, Number(e.target.value) || 0))}
-                                className="w-20 rounded-md border border-border-DEFAULT bg-surface-card px-2 py-1 text-xs text-tx-primary focus:border-green-500 focus:outline-none"
-                              />
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-
-                    <div className="rounded-lg border border-border-DEFAULT bg-surface-card p-3">
-                      <p className="text-xs font-medium text-tx-secondary">Ordem atual de roteamento</p>
-                      {methodPreview?.order?.length ? (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {methodPreview.order.map((key, index) => (
-                            <span
-                              key={`${method}-order-${key}-${index}`}
-                              className={`rounded-md px-2 py-1 text-xs ${
-                                index === 0
-                                  ? 'bg-emerald-500/15 text-emerald-500'
-                                  : 'bg-surface-page text-tx-muted'
-                              }`}
-                            >
-                              {index + 1}. {key}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-xs text-tx-muted">Sem adquirentes elegíveis para este método.</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </section>
-
       {/* Acquirers Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
         </div>
       ) : acquirers.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 rounded-2xl bg-surface-card">
@@ -482,11 +189,11 @@ export default function AdminAcquirers() {
             <div
               key={acquirer.id}
               className={`relative rounded-2xl bg-surface-card p-6 shadow-sm transition-all ${
-                acquirer.is_primary ? 'ring-2 ring-green-500' : ''
+                acquirer.is_primary ? 'ring-2 ring-emerald-500' : ''
               }`}
             >
               {acquirer.is_primary && (
-                <div className="absolute -top-2 -right-2 rounded-full bg-green-500 p-1">
+                <div className="absolute -top-2 -right-2 rounded-full bg-emerald-500 p-1">
                   <ShieldCheckIcon className="h-4 w-4 text-white" />
                 </div>
               )}
@@ -497,16 +204,13 @@ export default function AdminAcquirers() {
                   {acquirer.logo_url ? (
                     <img src={acquirer.logo_url} alt={acquirer.name} className="h-10 w-10 rounded-lg object-contain" />
                   ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
-                      <CreditCardIcon className="h-5 w-5 text-green-500" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
+                      <CreditCardIcon className="h-5 w-5 text-emerald-500" />
                     </div>
                   )}
                   <div>
                     <h3 className="font-semibold text-tx-primary">{acquirer.display_name}</h3>
                     <p className="text-xs text-tx-muted">{acquirer.slug}</p>
-                    {acquirer.nominal_name && (
-                      <p className="text-xs text-green-500 font-medium">Nominal: {acquirer.nominal_name}</p>
-                    )}
                   </div>
                 </div>
                 <button
@@ -538,45 +242,28 @@ export default function AdminAcquirers() {
                 {acquirer.supports_pix && (
                   <span className="rounded bg-emerald-500/10 px-2 py-1 text-xs text-emerald-500">PIX</span>
                 )}
-                {acquirer.supports_pix_out && (
-                  <span className="rounded bg-cyan-500/10 px-2 py-1 text-xs text-cyan-500">PIX OUT</span>
-                )}
                 {acquirer.supports_credit_card && (
                   <span className="rounded bg-blue-500/10 px-2 py-1 text-xs text-blue-500">Cartão</span>
                 )}
                 {acquirer.supports_boleto && (
-                  <span className="rounded bg-green-500/10 px-2 py-1 text-xs text-green-500">Boleto</span>
+                  <span className="rounded bg-emerald-500/10 px-2 py-1 text-xs text-emerald-500">Boleto</span>
                 )}
               </div>
 
               {/* Fees */}
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <div className="rounded-lg bg-surface-page p-2 text-center">
-                  <p className="text-xs text-tx-muted">Taxa Cashin</p>
+                  <p className="text-xs text-tx-muted">Taxa Adquirente</p>
                   <p className="text-sm font-medium text-tx-primary">
                     {acquirer.acquirer_fee_percentage ? `${acquirer.acquirer_fee_percentage}%` : '-'}
                     {acquirer.acquirer_fee_fixed ? ` + R$${acquirer.acquirer_fee_fixed}` : ''}
                   </p>
                 </div>
                 <div className="rounded-lg bg-surface-page p-2 text-center">
-                  <p className="text-xs text-tx-muted">Taxa Cashout</p>
-                  <p className="text-sm font-medium text-tx-primary">
-                    {acquirer.acquirer_fee_pix_out_percentage ? `${acquirer.acquirer_fee_pix_out_percentage}%` : '-'}
-                    {acquirer.acquirer_fee_pix_out_fixed ? ` + R$${acquirer.acquirer_fee_pix_out_fixed}` : ''}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-surface-page p-2 text-center">
-                  <p className="text-xs text-tx-muted">Plataforma Cashin</p>
-                  <p className="text-sm font-medium text-green-500">
+                  <p className="text-xs text-tx-muted">Taxa Plataforma</p>
+                  <p className="text-sm font-medium text-emerald-500">
                     {acquirer.gateway_fee_percentage ? `${acquirer.gateway_fee_percentage}%` : '-'}
                     {acquirer.gateway_fee_fixed ? ` + R$${acquirer.gateway_fee_fixed}` : ''}
-                  </p>
-                </div>
-                <div className="rounded-lg bg-surface-page p-2 text-center">
-                  <p className="text-xs text-tx-muted">Plataforma Cashout</p>
-                  <p className="text-sm font-medium text-green-500">
-                    {acquirer.gateway_fee_pix_out_percentage ? `${acquirer.gateway_fee_pix_out_percentage}%` : '-'}
-                    {acquirer.gateway_fee_pix_out_fixed ? ` + R$${acquirer.gateway_fee_pix_out_fixed}` : ''}
                   </p>
                 </div>
               </div>
@@ -601,7 +288,7 @@ export default function AdminAcquirers() {
                     setSelectedAcquirer(acquirer);
                     setShowEditModal(true);
                   }}
-                  className="flex-1 rounded-lg bg-green-500/10 px-3 py-2 text-xs font-medium text-green-500 hover:bg-green-500/20 transition-colors"
+                  className="flex-1 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-500 hover:bg-emerald-500/20 transition-colors"
                 >
                   <PencilSquareIcon className="inline h-4 w-4 mr-1" />
                   Editar
@@ -664,19 +351,13 @@ function EditAcquirerModal({
 }) {
   const [form, setForm] = useState({
     display_name: acquirer.display_name,
-    nominal_name: acquirer.nominal_name || '',
     priority: acquirer.priority,
     acquirer_fee_percentage: acquirer.acquirer_fee_percentage || 0,
     acquirer_fee_fixed: acquirer.acquirer_fee_fixed || 0,
-    acquirer_fee_pix_out_percentage: acquirer.acquirer_fee_pix_out_percentage || 0,
-    acquirer_fee_pix_out_fixed: acquirer.acquirer_fee_pix_out_fixed || 0,
     gateway_fee_percentage: acquirer.gateway_fee_percentage || 0,
     gateway_fee_fixed: acquirer.gateway_fee_fixed || 0,
-    gateway_fee_pix_out_percentage: acquirer.gateway_fee_pix_out_percentage || 0,
-    gateway_fee_pix_out_fixed: acquirer.gateway_fee_pix_out_fixed || 0,
     sandbox_mode: acquirer.sandbox_mode,
     supports_pix: acquirer.supports_pix,
-    supports_pix_out: acquirer.supports_pix_out,
     supports_credit_card: acquirer.supports_credit_card,
     supports_boleto: acquirer.supports_boleto,
   });
@@ -702,17 +383,7 @@ function EditAcquirerModal({
                   type="text"
                   value={form.display_name}
                   onChange={(e) => setForm({ ...form, display_name: e.target.value })}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-tx-muted mb-1">Nome Nominal</label>
-                <input
-                  type="text"
-                  value={form.nominal_name}
-                  onChange={(e) => setForm({ ...form, nominal_name: e.target.value })}
-                  placeholder="Nome exibido nas cobranças"
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
                 />
               </div>
               <div>
@@ -721,16 +392,16 @@ function EditAcquirerModal({
                   type="number"
                   value={form.priority}
                   onChange={(e) => setForm({ ...form, priority: parseInt(e.target.value) })}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
-          {/* Acquirer Fees - Cashin */}
+          {/* Acquirer Fees */}
           <div>
-            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa do Adquirente (Cashin)</h3>
-            <p className="text-xs text-tx-muted mb-3">Custo que o adquirente cobra por transação de entrada</p>
+            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa do Adquirente</h3>
+            <p className="text-xs text-tx-muted mb-3">Custo que o adquirente cobra por transação</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm text-tx-muted mb-1">Percentual (%)</label>
@@ -739,7 +410,7 @@ function EditAcquirerModal({
                   step="0.01"
                   value={form.acquirer_fee_percentage}
                   onChange={(e) => setForm({ ...form, acquirer_fee_percentage: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
                 />
               </div>
               <div>
@@ -749,44 +420,16 @@ function EditAcquirerModal({
                   step="0.01"
                   value={form.acquirer_fee_fixed}
                   onChange={(e) => setForm({ ...form, acquirer_fee_fixed: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
-          {/* Acquirer Fees - Cashout */}
+          {/* Gateway/Platform Fees */}
           <div>
-            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa do Adquirente (Cashout / PIX OUT)</h3>
-            <p className="text-xs text-tx-muted mb-3">Custo que o adquirente cobra por saque/transferência</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm text-tx-muted mb-1">Percentual (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.acquirer_fee_pix_out_percentage}
-                  onChange={(e) => setForm({ ...form, acquirer_fee_pix_out_percentage: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-tx-muted mb-1">Fixa (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.acquirer_fee_pix_out_fixed}
-                  onChange={(e) => setForm({ ...form, acquirer_fee_pix_out_fixed: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Gateway/Platform Fees - Cashin */}
-          <div>
-            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa da Plataforma - Cashin (Vector Pagamentos)</h3>
-            <p className="text-xs text-tx-muted mb-3">Taxa que cobramos do vendedor por transação de entrada</p>
+            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa da Plataforma (Vector Pagamentos)</h3>
+            <p className="text-xs text-tx-muted mb-3">Taxa que cobramos do vendedor por transação</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm text-tx-muted mb-1">Percentual (%)</label>
@@ -795,7 +438,7 @@ function EditAcquirerModal({
                   step="0.01"
                   value={form.gateway_fee_percentage}
                   onChange={(e) => setForm({ ...form, gateway_fee_percentage: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
                 />
               </div>
               <div>
@@ -805,35 +448,7 @@ function EditAcquirerModal({
                   step="0.01"
                   value={form.gateway_fee_fixed}
                   onChange={(e) => setForm({ ...form, gateway_fee_fixed: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Gateway/Platform Fees - Cashout */}
-          <div>
-            <h3 className="text-sm font-semibold text-tx-secondary mb-1">Taxa da Plataforma - Cashout (Vector Pagamentos)</h3>
-            <p className="text-xs text-tx-muted mb-3">Taxa que cobramos do vendedor por saque/transferência</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm text-tx-muted mb-1">Percentual (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.gateway_fee_pix_out_percentage}
-                  onChange={(e) => setForm({ ...form, gateway_fee_pix_out_percentage: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-tx-muted mb-1">Fixa (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.gateway_fee_pix_out_fixed}
-                  onChange={(e) => setForm({ ...form, gateway_fee_pix_out_fixed: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -848,25 +463,16 @@ function EditAcquirerModal({
                   type="checkbox"
                   checked={form.supports_pix}
                   onChange={(e) => setForm({ ...form, supports_pix: e.target.checked })}
-                  className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+                  className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
                 />
                 <span className="text-sm text-tx-primary">PIX</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={form.supports_pix_out}
-                  onChange={(e) => setForm({ ...form, supports_pix_out: e.target.checked })}
-                  className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
-                />
-                <span className="text-sm text-tx-primary">PIX OUT (Saque)</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
                   checked={form.supports_credit_card}
                   onChange={(e) => setForm({ ...form, supports_credit_card: e.target.checked })}
-                  className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+                  className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
                 />
                 <span className="text-sm text-tx-primary">Cartão de Crédito</span>
               </label>
@@ -875,7 +481,7 @@ function EditAcquirerModal({
                   type="checkbox"
                   checked={form.supports_boleto}
                   onChange={(e) => setForm({ ...form, supports_boleto: e.target.checked })}
-                  className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+                  className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
                 />
                 <span className="text-sm text-tx-primary">Boleto</span>
               </label>
@@ -889,7 +495,7 @@ function EditAcquirerModal({
                 type="checkbox"
                 checked={form.sandbox_mode}
                 onChange={(e) => setForm({ ...form, sandbox_mode: e.target.checked })}
-                className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+                className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
               />
               <span className="text-sm text-tx-primary">Modo Sandbox (Teste)</span>
             </label>
@@ -906,7 +512,7 @@ function EditAcquirerModal({
           <button
             onClick={() => onSave(form)}
             disabled={isSaving}
-            className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+            className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
           >
             {isSaving ? 'Salvando...' : 'Salvar'}
           </button>
@@ -915,5 +521,3 @@ function EditAcquirerModal({
     </div>
   );
 }
-
-

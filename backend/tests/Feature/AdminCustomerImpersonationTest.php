@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 use App\Domain\Auth\Entities\Role;
 use App\Models\Account;
-use App\Models\AdminActionApproval;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
-it('returns an impersonation token immediately without dual control approval', function () {
+it('returns an impersonation token immediately', function () {
     $role = Role::create([
         'id' => Str::uuid()->toString(),
         'name' => 'Administrador',
@@ -87,6 +86,4 @@ it('returns an impersonation token immediately without dual control approval', f
         'resource_type' => 'user',
         'resource_id' => $customer->id,
     ]);
-
-    expect(AdminActionApproval::query()->count())->toBe(0);
 });

@@ -59,7 +59,7 @@ beforeEach(function () {
 it('dispatches webhook for matching event', function () {
     Http::fake(['https://example.com/webhook' => Http::response(['ok' => true], 200)]);
 
-    $this->service->dispatchPaymentEvent('charge.paid', $this->charge);
+    $this->service->dispatchPaymentEventSync('charge.paid', $this->charge);
 
     Http::assertSent(function ($request) {
         return $request->url() === 'https://example.com/webhook'
@@ -70,7 +70,7 @@ it('dispatches webhook for matching event', function () {
 it('does not dispatch for non-matching event', function () {
     Http::fake();
 
-    $this->service->dispatchPaymentEvent('charge.refunded', $this->charge);
+    $this->service->dispatchPaymentEventSync('charge.refunded', $this->charge);
 
     Http::assertNothingSent();
 });
@@ -78,7 +78,7 @@ it('does not dispatch for non-matching event', function () {
 it('includes signature header in webhook request', function () {
     Http::fake(['https://example.com/webhook' => Http::response(['ok' => true], 200)]);
 
-    $this->service->dispatchPaymentEvent('charge.paid', $this->charge);
+    $this->service->dispatchPaymentEventSync('charge.paid', $this->charge);
 
     Http::assertSent(function ($request) {
         return $request->hasHeader('X-Webhook-Signature');

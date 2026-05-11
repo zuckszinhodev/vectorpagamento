@@ -475,7 +475,7 @@ export default function AdminControlTower() {
           value={formatCurrency(liquidityBuffer)}
           subtitle="Receita - repasse - fila de saques"
           icon={BoltIcon}
-          tone={liquidityBuffer <= 0 ? 'amber' : 'violet'}
+          tone={liquidityBuffer <= 0 ? 'amber' : 'emerald'}
         />
         <MetricCard
           title="Sucesso (30d)"
@@ -942,7 +942,7 @@ export default function AdminControlTower() {
           <PlaybookCard
             title="Recovery safe"
             subtitle="Retoma operacao com auto saque desligado"
-            tone="violet"
+            tone="emerald"
             running={playbookMutation.isPending}
             onRun={() => runPlaybook('recovery_safe')}
           />
@@ -966,7 +966,7 @@ export default function AdminControlTower() {
             href="/admin/approvals"
             title="Dual control"
             subtitle={`${pulse?.queues.pending_approvals ?? 0} aprovacoes`}
-            tone={(pulse?.queues.pending_approvals ?? 0) > 10 ? 'amber' : 'violet'}
+            tone={(pulse?.queues.pending_approvals ?? 0) > 10 ? 'amber' : 'emerald'}
           />
           <QuickLink
             href="/admin/kyc"
@@ -997,12 +997,11 @@ function MetricCard({
   value: string;
   subtitle: string;
   icon: typeof ShieldCheckIcon;
-  tone: 'blue' | 'emerald' | 'violet' | 'amber' | 'red';
+  tone: 'blue' | 'emerald' | 'amber' | 'red';
 }) {
   const toneClasses: Record<string, string> = {
     blue: 'bg-blue-500/10 text-blue-500',
     emerald: 'bg-emerald-500/10 text-emerald-500',
-    violet: 'bg-green-500/10 text-green-500',
     amber: 'bg-amber-500/10 text-amber-500',
     red: 'bg-red-500/10 text-red-500',
   };
@@ -1075,14 +1074,13 @@ function MiniStatCard({
 }: {
   label: string;
   value: string;
-  tone: 'blue' | 'emerald' | 'amber' | 'red' | 'violet';
+  tone: 'blue' | 'emerald' | 'amber' | 'red';
 }) {
   const toneClasses: Record<string, string> = {
     blue: 'border-blue-400/20 bg-blue-500/5 text-blue-500',
     emerald: 'border-emerald-400/20 bg-emerald-500/5 text-emerald-500',
     amber: 'border-amber-400/20 bg-amber-500/5 text-amber-500',
     red: 'border-red-400/20 bg-red-500/5 text-red-500',
-    violet: 'border-green-400/20 bg-green-500/5 text-green-500',
   };
 
   return (
@@ -1134,14 +1132,13 @@ function PlaybookCard({
 }: {
   title: string;
   subtitle: string;
-  tone: 'blue' | 'emerald' | 'violet' | 'amber' | 'red';
+  tone: 'blue' | 'emerald' | 'amber' | 'red';
   running: boolean;
   onRun: () => void;
 }) {
   const toneClasses: Record<string, string> = {
     blue: 'bg-blue-500/10 text-blue-500',
     emerald: 'bg-emerald-500/10 text-emerald-500',
-    violet: 'bg-green-500/10 text-green-500',
     amber: 'bg-amber-500/10 text-amber-500',
     red: 'bg-red-500/10 text-red-500',
   };
@@ -1227,12 +1224,11 @@ function QuickLink({
   href: string;
   title: string;
   subtitle: string;
-  tone: 'blue' | 'emerald' | 'violet' | 'amber';
+  tone: 'blue' | 'emerald' | 'amber';
 }) {
   const toneClasses: Record<string, string> = {
     blue: 'bg-blue-500/10 text-blue-500',
     emerald: 'bg-emerald-500/10 text-emerald-500',
-    violet: 'bg-green-500/10 text-green-500',
     amber: 'bg-amber-500/10 text-amber-500',
   };
 
@@ -1244,5 +1240,3 @@ function QuickLink({
     </Link>
   );
 }
-
-

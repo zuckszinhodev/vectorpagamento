@@ -24,7 +24,7 @@ function hexToRgb(hex: string): string {
   if (result) {
     return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`;
   }
-  return '22, 163, 74'; // fallback verde
+  return '34, 197, 94'; // fallback verde
 }
 
 // Apply Tailwind color overrides for the selected theme
@@ -57,7 +57,7 @@ function applyTailwindColors(variant: ThemeVariant) {
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
-      theme: 'dark',
+      theme: 'light',
       themeVariant: 'classic' as ThemeVariant,
       primaryColor: '#16a34a',
       platformName: 'Vector Pagamentos',
@@ -97,12 +97,12 @@ export const useThemeStore = create<ThemeState>()(
       },
     }),
     {
-      name: 'vectorpagamentos-theme',
+      name: 'Vector Pagamentos-theme',
       onRehydrateStorage: () => (state) => {
         // Aplicar tema quando o store for hidratado
         if (state) {
           const variant = state.themeVariant || 'classic';
-          const mode = state.theme || 'dark';
+          const mode = state.theme || 'light';
           applyThemeCssVars(variant, mode);
           applyTailwindColors(variant);
           if (state.primaryColor) {
@@ -113,5 +113,3 @@ export const useThemeStore = create<ThemeState>()(
     }
   )
 );
-
-

@@ -145,7 +145,7 @@ class CustomDomain extends Model
         }
 
         if (!$result['cname_valid']) {
-            $result['errors'][] = 'CNAME ou A record nÃ£o encontrado ou invÃ¡lido';
+            $result['errors'][] = 'CNAME ou A record não encontrado ou inválido';
         }
 
         // Check TXT record for verification
@@ -160,7 +160,7 @@ class CustomDomain extends Model
         }
 
         if (!$result['txt_valid']) {
-            $result['errors'][] = 'TXT de verificaÃ§Ã£o nÃ£o encontrado';
+            $result['errors'][] = 'TXT de verificação não encontrado';
         }
 
         return $result;

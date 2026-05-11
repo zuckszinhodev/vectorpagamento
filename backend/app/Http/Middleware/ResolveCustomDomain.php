@@ -8,17 +8,17 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Middleware para resolver domÃ­nios personalizados.
+ * Middleware para resolver domínios personalizados.
  * 
- * Quando um usuÃ¡rio acessa pay.seudominio.com, este middleware:
- * 1. Identifica o domÃ­nio da requisiÃ§Ã£o
- * 2. Busca o domÃ­nio verificado no banco
- * 3. Injeta o account_id na requisiÃ§Ã£o para uso no checkout
+ * Quando um usuário acessa pay.seudominio.com, este middleware:
+ * 1. Identifica o domínio da requisição
+ * 2. Busca o domínio verificado no banco
+ * 3. Injeta o account_id na requisição para uso no checkout
  */
 class ResolveCustomDomain
 {
     /**
-     * DomÃ­nios que pertencem ao prÃ³prio Vector Pagamentos (nÃ£o sÃ£o personalizados)
+     * Domínios que pertencem ao próprio Vector Pagamentos (não são personalizados)
      */
     protected array $systemDomains = [
         'localhost',
@@ -50,39 +50,39 @@ class ResolveCustomDomain
             return $this->resolveGateProSubdomain($request, $next, $wazerpaySlug, $host);
         }
 
-        // Ignora domÃ­nios do sistema
+        // Ignora domínios do sistema
         if ($this->isSystemDomain($host)) {
             return $next($request);
         }
 
-        // Extrai o domÃ­nio base (remove subdomÃ­nio 'pay.')
+        // Extrai o domínio base (remove subdomínio 'pay.')
         $baseDomain = $this->extractBaseDomain($host);
         
-        // Busca o domÃ­nio personalizado verificado
+        // Busca o domínio personalizado verificado
         $customDomain = CustomDomain::where('domain', $baseDomain)
             ->where('status', 'verified')
             ->first();
 
         if (!$customDomain) {
-            // DomÃ­nio nÃ£o encontrado ou nÃ£o verificado
+            // Domínio não encontrado ou não verificado
             return response()->json([
                 'success' => false,
                 'error' => [
                     'code' => 'domain_not_found',
-                    'message' => 'DomÃ­nio nÃ£o configurado ou nÃ£o verificado',
+                    'message' => 'Domínio não configurado ou não verificado',
                     'domain' => $host,
                 ],
             ], 404);
         }
 
-        // Injeta informaÃ§Ãµes do domÃ­nio na requisiÃ§Ã£o
+        // Injeta informações do domínio na requisição
         $request->merge([
             'custom_domain_id' => $customDomain->id,
             'custom_domain_account_id' => $customDomain->account_id,
             'custom_domain' => $customDomain->domain,
         ]);
 
-        // TambÃ©m disponibiliza como atributo para controllers
+        // Também disponibiliza como atributo para controllers
         $request->attributes->set('custom_domain', $customDomain);
 
         return $next($request);
@@ -103,7 +103,7 @@ class ResolveCustomDomain
                 'success' => false,
                 'error' => [
                     'code' => 'subdomain_not_found',
-                    'message' => 'SubdomÃ­nio Vector Pagamentos nÃ£o encontrado',
+                    'message' => 'Subdomínio Vector Pagamentos não encontrado',
                     'domain' => $host,
                 ],
             ], 404);
@@ -150,7 +150,7 @@ class ResolveCustomDomain
     }
 
     /**
-     * Verifica se Ã© um domÃ­nio do sistema Vector Pagamentos.
+     * Verifica se é um domínio do sistema Vector Pagamentos.
      */
     protected function isSystemDomain(string $host): bool
     {
@@ -167,7 +167,7 @@ class ResolveCustomDomain
     }
 
     /**
-     * Extrai o domÃ­nio base removendo o subdomÃ­nio 'pay.'.
+     * Extrai o domínio base removendo o subdomínio 'pay.'.
      * 
      * Exemplos:
      * - pay.meusite.com -> meusite.com
@@ -179,7 +179,7 @@ class ResolveCustomDomain
         // Remove porta se existir
         $host = preg_replace('/:\d+$/', '', $host);
         
-        // Remove subdomÃ­nios comuns de checkout
+        // Remove subdomínios comuns de checkout
         $prefixes = ['pay.', 'checkout.', 'pagamento.'];
         
         foreach ($prefixes as $prefix) {

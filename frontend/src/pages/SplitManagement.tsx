@@ -483,7 +483,7 @@ function RulesList({
                           <div className="flex items-center gap-2">
                             <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase ${
                               r.recipient_type === 'account' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                              r.recipient_type === 'affiliate' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                              r.recipient_type === 'affiliate' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
                               'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
                             }`}>
                               {r.recipient_type === 'account' ? 'Conta' : r.recipient_type === 'affiliate' ? 'Afiliado' : 'Externo'}
@@ -1287,5 +1287,3 @@ function SimulateModal({
     </Transition>
   );
 }
-
-

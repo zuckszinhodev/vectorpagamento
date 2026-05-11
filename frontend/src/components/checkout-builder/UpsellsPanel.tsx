@@ -181,7 +181,7 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-green-500 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
       </div>
     );
   }
@@ -196,7 +196,7 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
         {!showForm && (
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
-            className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
           >
             <PlusIcon className="h-3.5 w-3.5" />
             Novo
@@ -224,7 +224,7 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
                 onClick={() => setFormData(prev => ({ ...prev, type: 'upsell' }))}
                 className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
                   formData.type === 'upsell'
-                    ? 'border-green-500 bg-green-500/20 text-green-300'
+                    ? 'border-emerald-500 bg-emerald-500/20 text-emerald-300'
                     : 'border-gray-600 text-gray-400 hover:text-white'
                 }`}
               >
@@ -425,7 +425,7 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
               <Switch
                 checked={formData.is_active ?? true}
                 onChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
-                className={`${formData.is_active ? 'bg-green-600' : 'bg-gray-600'} relative inline-flex h-5 w-9 items-center rounded-full transition-colors`}
+                className={`${formData.is_active ? 'bg-emerald-600' : 'bg-gray-600'} relative inline-flex h-5 w-9 items-center rounded-full transition-colors`}
               >
                 <span className={`${formData.is_active ? 'translate-x-5' : 'translate-x-1'} inline-block h-3 w-3 transform rounded-full bg-white transition-transform`} />
               </Switch>
@@ -438,7 +438,7 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
               <Switch
                 checked={formData.one_click_purchase ?? true}
                 onChange={(checked) => setFormData(prev => ({ ...prev, one_click_purchase: checked }))}
-                className={`${formData.one_click_purchase ? 'bg-green-600' : 'bg-gray-600'} relative inline-flex h-5 w-9 items-center rounded-full transition-colors`}
+                className={`${formData.one_click_purchase ? 'bg-emerald-600' : 'bg-gray-600'} relative inline-flex h-5 w-9 items-center rounded-full transition-colors`}
               >
                 <span className={`${formData.one_click_purchase ? 'translate-x-5' : 'translate-x-1'} inline-block h-3 w-3 transform rounded-full bg-white transition-transform`} />
               </Switch>
@@ -447,7 +447,7 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
 
           {/* Actions */}
           <div className="flex gap-2 pt-1">
-            <button onClick={handleSave} className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 transition-colors">
+            <button onClick={handleSave} className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 transition-colors">
               {editingUpsell ? 'Atualizar' : 'Criar Upsell'}
             </button>
             <button onClick={resetForm} className="rounded-lg border border-gray-600 px-3 py-2 text-xs text-tx-muted hover:text-white transition-colors">
@@ -472,7 +472,7 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
               className={`rounded-lg border p-3 transition-all ${
                 upsell.is_active
                   ? upsell.type === 'upsell'
-                    ? 'border-green-500/30 bg-green-900/10'
+                    ? 'border-emerald-500/30 bg-emerald-900/10'
                     : 'border-orange-500/30 bg-orange-900/10'
                   : 'border-gray-700 bg-gray-800/30 opacity-60'
               }`}
@@ -481,7 +481,7 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     {upsell.type === 'upsell' ? (
-                      <BoltIcon className="h-3.5 w-3.5 text-green-400 shrink-0" />
+                      <BoltIcon className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                     ) : (
                       <ArrowDownIcon className="h-3.5 w-3.5 text-orange-400 shrink-0" />
                     )}
@@ -497,7 +497,7 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
                   {(upsell.next_upsell_id || upsell.downsell_id) && (
                     <div className="flex gap-2 mt-1 ml-5">
                       {upsell.next_upsell_id && (
-                        <span className="rounded bg-green-500/20 px-1.5 py-0.5 text-[10px] text-green-300">
+                        <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-300">
                           → próximo: {upsells.find(u => u.id === upsell.next_upsell_id)?.title || '...'}
                         </span>
                       )}
@@ -518,7 +518,7 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
                   <Switch
                     checked={upsell.is_active}
                     onChange={() => toggleActive(upsell)}
-                    className={`${upsell.is_active ? 'bg-green-600' : 'bg-gray-600'} relative inline-flex h-4 w-7 items-center rounded-full transition-colors`}
+                    className={`${upsell.is_active ? 'bg-emerald-600' : 'bg-gray-600'} relative inline-flex h-4 w-7 items-center rounded-full transition-colors`}
                   >
                     <span className={`${upsell.is_active ? 'translate-x-4' : 'translate-x-0.5'} inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform`} />
                   </Switch>
@@ -547,5 +547,3 @@ export default function UpsellsPanel({ checkoutId, availableProducts }: UpsellsP
     </div>
   );
 }
-
-

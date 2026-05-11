@@ -218,7 +218,7 @@ class MessagingController extends Controller
             if (!$this->evolutionApi->isConfigured()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Evolution API nÃ£o estÃ¡ configurada no servidor.',
+                    'message' => 'Evolution API não está configurada no servidor.',
                 ], 422);
             }
 
@@ -308,7 +308,7 @@ class MessagingController extends Controller
 
         $responseData = [
             'success' => count($created) > 0,
-            'message' => count($created) > 0 ? 'Provedores configurados com sucesso!' : 'Nenhum provedor disponÃ­vel no servidor.',
+            'message' => count($created) > 0 ? 'Provedores configurados com sucesso!' : 'Nenhum provedor disponível no servidor.',
             'data' => $created,
         ];
 
@@ -408,7 +408,7 @@ class MessagingController extends Controller
                     'configured' => false,
                     'state' => 'not_configured',
                     'connected' => false,
-                    'message' => 'WhatsApp nÃ£o configurado',
+                    'message' => 'WhatsApp não configurado',
                 ],
             ]);
         }
@@ -513,7 +513,7 @@ class MessagingController extends Controller
 
         return response()->json([
             'success' => $result['success'] ?? false,
-            'message' => $result['message'] ?? 'InstÃ¢ncia reiniciada',
+            'message' => $result['message'] ?? 'Instância reiniciada',
         ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('MessagingController::whatsappRestart error', [
@@ -573,7 +573,7 @@ class MessagingController extends Controller
         if (!$provider->is_active) {
             return response()->json([
                 'success' => false,
-                'error' => ['code' => 'provider_inactive', 'message' => 'Provedor estÃ¡ desativado'],
+                'error' => ['code' => 'provider_inactive', 'message' => 'Provedor está desativado'],
             ], 400);
         }
 
@@ -809,10 +809,10 @@ class MessagingController extends Controller
             ['value' => 'payment.approved', 'label' => 'Pagamento Aprovado'],
             ['value' => 'payment.refused', 'label' => 'Pagamento Recusado'],
             ['value' => 'payment.expired', 'label' => 'Pagamento Expirado'],
-            ['value' => 'charge.created', 'label' => 'CobranÃ§a Criada'],
+            ['value' => 'charge.created', 'label' => 'Cobrança Criada'],
             ['value' => 'pix.generated', 'label' => 'PIX Gerado'],
             ['value' => 'boleto.generated', 'label' => 'Boleto Gerado'],
-            ['value' => 'refund.completed', 'label' => 'Reembolso ConcluÃ­do'],
+            ['value' => 'refund.completed', 'label' => 'Reembolso Concluído'],
             ['value' => 'chargeback.created', 'label' => 'Chargeback Criado'],
             ['value' => 'checkout.abandoned', 'label' => 'Checkout Abandonado'],
             ['value' => 'pix.expired', 'label' => 'PIX Expirado'],

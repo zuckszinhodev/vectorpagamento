@@ -244,7 +244,7 @@ function DashboardTab({ stats, loadingStats, whatsappStatus }: {
         <StatCard icon={PaperAirplaneIcon} label="Mensagens Enviadas" value={whatsappSent} color="green" />
         <StatCard icon={CheckCircleIcon} label="Taxa de Entrega" value={`${deliveryRate}%`} color="blue" />
         <StatCard icon={ExclamationTriangleIcon} label="Falhas" value={totalFailed} color="red" />
-        <StatCard icon={DocumentTextIcon} label="Templates Ativos" value={stats?.templates?.active || 0} color="green" />
+        <StatCard icon={DocumentTextIcon} label="Templates Ativos" value={stats?.templates?.active || 0} color="emerald" />
       </div>
 
       {/* Connection Info */}
@@ -302,7 +302,7 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any; label: strin
     green: 'bg-green-500/10 text-green-500',
     blue: 'bg-blue-500/10 text-blue-500',
     red: 'bg-red-500/10 text-red-400',
-    purple: 'bg-green-500/10 text-green-500',
+    emerald: 'bg-emerald-500/10 text-emerald-500',
     yellow: 'bg-yellow-500/10 text-yellow-500',
   };
   return (
@@ -1417,15 +1417,15 @@ function SettingsTab({ whatsappStatus, providers }: { whatsappStatus?: WhatsAppS
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 rounded-xl bg-green-500/5 border border-green-500/20">
-              <InformationCircleIcon className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-green-400">
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+              <InformationCircleIcon className="h-5 w-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-emerald-400">
                 <p className="font-medium mb-1">Evolution API</p>
                 <p className="text-xs opacity-80">API open-source para WhatsApp. Configure sua instância ou use o setup automático.</p>
               </div>
             </div>
 
-            <button onClick={() => autoSetupMutation.mutate()} disabled={autoSetupMutation.isPending} className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-all">
+            <button onClick={() => autoSetupMutation.mutate()} disabled={autoSetupMutation.isPending} className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-all">
               {autoSetupMutation.isPending ? <ArrowPathIcon className="h-4 w-4 animate-spin" /> : <BoltIcon className="h-4 w-4" />}
               {autoSetupMutation.isPending ? 'Configurando...' : 'Setup Automático'}
             </button>
@@ -1447,7 +1447,7 @@ function SettingsTab({ whatsappStatus, providers }: { whatsappStatus?: WhatsAppS
               </div>
               <div>
                 <label className="block text-sm font-medium text-tx-secondary mb-1">Nome da Instância</label>
-                <input type="text" value={setupForm.instance_name} onChange={e => setSetupForm(p => ({ ...p, instance_name: e.target.value }))} placeholder="vectorpagamentos-whatsapp" className="w-full px-4 py-2.5 rounded-xl bg-surface-page border border-border-DEFAULT text-tx-primary placeholder-tx-muted focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none" />
+                <input type="text" value={setupForm.instance_name} onChange={e => setSetupForm(p => ({ ...p, instance_name: e.target.value }))} placeholder="Vector Pagamentos-whatsapp" className="w-full px-4 py-2.5 rounded-xl bg-surface-page border border-border-DEFAULT text-tx-primary placeholder-tx-muted focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-tx-secondary mb-1">Token da Instância</label>
@@ -1490,5 +1490,3 @@ function SettingsTab({ whatsappStatus, providers }: { whatsappStatus?: WhatsAppS
     </div>
   );
 }
-
-

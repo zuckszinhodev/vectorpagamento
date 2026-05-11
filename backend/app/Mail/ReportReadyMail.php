@@ -23,7 +23,7 @@ class ReportReadyMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Seu relatÃ³rio estÃ¡ pronto - Vector Pagamentos',
+            subject: 'Seu relatório está pronto - Vector Pagamentos',
         );
     }
 

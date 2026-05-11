@@ -23,7 +23,7 @@ class KycRejectedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'VerificaÃ§Ã£o KYC - Ajustes necessÃ¡rios - Vector Pagamentos',
+            subject: 'Verificação KYC - Ajustes necessários - Vector Pagamentos',
         );
     }
 

@@ -36,7 +36,7 @@ class WazerAIActionService
             'generate_image' => $this->generateImage($accountId, $params),
             'full_product_setup' => $this->fullProductSetup($accountId, $params),
             'generate_checkout_from_site' => $this->generateCheckoutFromSite($accountId, $params),
-            default => ['success' => false, 'error' => 'AÃ§Ã£o nÃ£o reconhecida.'],
+            default => ['success' => false, 'error' => 'Ação não reconhecida.'],
         };
     }
 
@@ -145,7 +145,7 @@ class WazerAIActionService
             }
 
             if (!$checkout) {
-                return ['success' => false, 'error' => 'Checkout nÃ£o encontrado.'];
+                return ['success' => false, 'error' => 'Checkout não encontrado.'];
             }
 
             $updateData = [];
@@ -185,7 +185,7 @@ class WazerAIActionService
     private function generateCopy(string $accountId, array $params): array
     {
         if (empty($this->apiKey)) {
-            return ['success' => false, 'error' => 'API key nÃ£o configurada.'];
+            return ['success' => false, 'error' => 'API key não configurada.'];
         }
 
         try {
@@ -204,7 +204,7 @@ class WazerAIActionService
             ])->withoutVerifying()->timeout(45)->post('https://openrouter.ai/api/v1/chat/completions', [
                 'model' => $this->model,
                 'messages' => [
-                    ['role' => 'system', 'content' => 'VocÃª Ã© um copywriter profissional brasileiro especializado em vendas de produtos digitais e infoprodutos. Gere textos persuasivos, otimizados para conversÃ£o, em portuguÃªs brasileiro. Responda APENAS com JSON vÃ¡lido, sem markdown.'],
+                    ['role' => 'system', 'content' => 'Você é um copywriter profissional brasileiro especializado em vendas de produtos digitais e infoprodutos. Gere textos persuasivos, otimizados para conversão, em português brasileiro. Responda APENAS com JSON válido, sem markdown.'],
                     ['role' => 'user', 'content' => $prompt],
                 ],
                 'temperature' => 0.8,
@@ -266,7 +266,7 @@ class WazerAIActionService
     private function generateImage(string $accountId, array $params): array
     {
         if (empty($this->apiKey)) {
-            return ['success' => false, 'error' => 'API key nÃ£o configurada.'];
+            return ['success' => false, 'error' => 'API key não configurada.'];
         }
 
         try {
@@ -286,7 +286,7 @@ class WazerAIActionService
             ])->withoutVerifying()->timeout(60)->post('https://openrouter.ai/api/v1/chat/completions', [
                 'model' => $this->model,
                 'messages' => [
-                    ['role' => 'system', 'content' => 'VocÃª Ã© um designer de capas para produtos digitais. Gere um SVG profissional e bonito que serÃ¡ usado como capa do produto. Use gradientes, formas geomÃ©tricas e cores vibrantes. O SVG deve ter 800x600 pixels. Responda APENAS com o cÃ³digo SVG, sem markdown, sem explicaÃ§Ãµes.'],
+                    ['role' => 'system', 'content' => 'Você é um designer de capas para produtos digitais. Gere um SVG profissional e bonito que será usado como capa do produto. Use gradientes, formas geométricas e cores vibrantes. O SVG deve ter 800x600 pixels. Responda APENAS com o código SVG, sem markdown, sem explicações.'],
                     ['role' => 'user', 'content' => "Crie uma capa SVG profissional para: {$productName}. Tema: {$style}. {$description}"],
                 ],
                 'temperature' => 0.9,
@@ -305,7 +305,7 @@ class WazerAIActionService
             }
 
             if (empty($svgContent) || !str_contains($svgContent, '<svg')) {
-                return ['success' => false, 'error' => 'NÃ£o foi possÃ­vel gerar a imagem.'];
+                return ['success' => false, 'error' => 'Não foi possível gerar a imagem.'];
             }
 
             // Save SVG as file
@@ -355,7 +355,7 @@ class WazerAIActionService
                 $copyData = $copyResult['data'] ?? [];
                 $params['description'] = $copyData['description'] ?? '';
                 $params['checkout_blocks'] = $copyData['checkout_blocks'] ?? [];
-                $steps[] = 'âœ… Copy gerada';
+                $steps[] = '✅ Copy gerada';
             } else {
                 $errors[] = 'Copy: ' . ($copyResult['error'] ?? 'erro');
             }
@@ -370,7 +370,7 @@ class WazerAIActionService
                 'steps' => $steps,
             ];
         }
-        $steps[] = 'âœ… Produto criado';
+        $steps[] = '✅ Produto criado';
 
         $productId = $productResult['data']['product_id'];
         $checkoutId = $productResult['data']['checkout_id'];
@@ -380,7 +380,7 @@ class WazerAIActionService
         $imageParams = array_merge($params, ['product_id' => $productId]);
         $imageResult = $this->generateImage($accountId, $imageParams);
         if ($imageResult['success']) {
-            $steps[] = 'âœ… Imagem gerada';
+            $steps[] = '✅ Imagem gerada';
         } else {
             $errors[] = 'Imagem: ' . ($imageResult['error'] ?? 'erro');
         }
@@ -396,7 +396,7 @@ class WazerAIActionService
 
         $checkoutResult = $this->customizeCheckout($accountId, $checkoutParams);
         if ($checkoutResult['success']) {
-            $steps[] = 'âœ… Checkout personalizado';
+            $steps[] = '✅ Checkout personalizado';
         } else {
             $errors[] = 'Checkout: ' . ($checkoutResult['error'] ?? 'erro');
         }
@@ -405,10 +405,10 @@ class WazerAIActionService
 
         return [
             'success' => true,
-            'message' => "ðŸš€ Produto configurado com sucesso!\n\n" .
+            'message' => "🚀 Produto configurado com sucesso!\n\n" .
                 implode("\n", $steps) .
-                (!empty($errors) ? "\n\nâš ï¸ Avisos:\n" . implode("\n", $errors) : '') .
-                "\n\n**Produto:** {$params['name']}\n**PreÃ§o:** R$ {$price}\n**Checkout:** /checkout/{$checkoutSlug}",
+                (!empty($errors) ? "\n\n⚠️ Avisos:\n" . implode("\n", $errors) : '') .
+                "\n\n**Produto:** {$params['name']}\n**Preço:** R$ {$price}\n**Checkout:** /checkout/{$checkoutSlug}",
             'data' => [
                 'product_id' => $productId,
                 'checkout_id' => $checkoutId,
@@ -432,7 +432,7 @@ class WazerAIActionService
 
             $siteUrl = $this->normalizeSiteUrl($siteUrl);
             if (!$this->isValidExternalSiteUrl($siteUrl)) {
-                return ['success' => false, 'error' => 'A URL informada nÃ£o Ã© permitida para anÃ¡lise automÃ¡tica.'];
+                return ['success' => false, 'error' => 'A URL informada não é permitida para análise automática.'];
             }
 
             $snapshotResult = $this->fetchWebsiteSnapshot($siteUrl);
@@ -460,7 +460,7 @@ class WazerAIActionService
 
             $productDescription = trim((string) ($params['description'] ?? $blueprint['product_description'] ?? $snapshot['description'] ?? ''));
             if ($productDescription === '') {
-                $productDescription = 'Checkout gerado automaticamente pela Vector IA com base no site informado pelo usuÃ¡rio.';
+                $productDescription = 'Checkout gerado automaticamente pela Vector IA com base no site informado pelo usuário.';
             }
 
             $baseCustomization = $this->buildCheckoutCustomization([
@@ -537,7 +537,7 @@ class WazerAIActionService
 
             return [
                 'success' => true,
-                'message' => "Checkout gerado com base no site informado e pacote pronto para baixar.\n\nProduto: {$productName}\nPreÃ§o sugerido: {$formattedPrice}\nCheckout pÃºblico: {$checkoutUrl}",
+                'message' => "Checkout gerado com base no site informado e pacote pronto para baixar.\n\nProduto: {$productName}\nPreço sugerido: {$formattedPrice}\nCheckout público: {$checkoutUrl}",
                 'data' => array_merge($createResult['data'], [
                     'source_url' => $siteUrl,
                     'download_url' => $packageResult['download_url'],
@@ -591,8 +591,8 @@ class WazerAIActionService
             'timer_enabled' => true,
             'timer_minutes' => 15,
             'exit_popup_enabled' => true,
-            'exit_popup_title' => 'Espere! NÃ£o vÃ¡ embora ainda...',
-            'exit_popup_message' => 'Temos uma oferta especial para vocÃª!',
+            'exit_popup_title' => 'Espere! Não vá embora ainda...',
+            'exit_popup_message' => 'Temos uma oferta especial para você!',
             'testimonials_enabled' => false,
             'socialProofEnabled' => true,
             'socialProofInterval' => 30,
@@ -602,7 +602,7 @@ class WazerAIActionService
                 'timerMessage' => 'Oferta expira em:',
                 'exitPopupEnabled' => true,
                 'exitPopupTitle' => 'Espere! Tem certeza?',
-                'exitPopupMessage' => 'Esta oferta pode nÃ£o estar disponÃ­vel depois.',
+                'exitPopupMessage' => 'Esta oferta pode não estar disponível depois.',
                 'socialProofEnabled' => true,
                 'socialProofInterval' => 25,
             ],
@@ -616,12 +616,12 @@ class WazerAIActionService
                 ['type' => 'product', 'enabled' => true, 'settings' => ['showImage' => true, 'showDescription' => true, 'showOriginalPrice' => true]],
                 ['type' => 'timer', 'enabled' => true, 'settings' => []],
                 ['type' => 'benefits', 'enabled' => true, 'settings' => ['items' => [
-                    ['text' => 'Acesso imediato apÃ³s a compra'],
+                    ['text' => 'Acesso imediato após a compra'],
                     ['text' => 'Garantia de 7 dias'],
                     ['text' => 'Suporte exclusivo'],
                 ]]],
                 ['type' => 'payment', 'enabled' => true, 'settings' => ['showInstallments' => true, 'highlightPix' => true]],
-                ['type' => 'guarantee', 'enabled' => true, 'settings' => ['days' => 7, 'title' => 'Garantia Incondicional', 'description' => 'Se nÃ£o ficar satisfeito, devolvemos 100% do seu dinheiro.']],
+                ['type' => 'guarantee', 'enabled' => true, 'settings' => ['days' => 7, 'title' => 'Garantia Incondicional', 'description' => 'Se não ficar satisfeito, devolvemos 100% do seu dinheiro.']],
                 ['type' => 'trust_badges', 'enabled' => true, 'settings' => []],
             ],
         ];
@@ -646,9 +646,9 @@ class WazerAIActionService
         ];
 
         $financeWords = ['financ', 'invest', 'dinheiro', 'renda', 'lucro', 'trader', 'trading', 'cripto', 'bitcoin'];
-        $healthWords = ['saÃºde', 'saude', 'fitness', 'emagrec', 'dieta', 'treino', 'corpo', 'bem-estar'];
-        $educationWords = ['curso', 'aula', 'aprend', 'estud', 'ebook', 'guia', 'formaÃ§Ã£o', 'formacao'];
-        $marketingWords = ['marketing', 'trÃ¡fego', 'trafego', 'vendas', 'copy', 'funil', 'lanÃ§amento'];
+        $healthWords = ['saúde', 'saude', 'fitness', 'emagrec', 'dieta', 'treino', 'corpo', 'bem-estar'];
+        $educationWords = ['curso', 'aula', 'aprend', 'estud', 'ebook', 'guia', 'formação', 'formacao'];
+        $marketingWords = ['marketing', 'tráfego', 'trafego', 'vendas', 'copy', 'funil', 'lançamento'];
 
         foreach ($financeWords as $w) {
             if (str_contains($name, $w)) return $schemes['finance'];
@@ -672,8 +672,8 @@ class WazerAIActionService
     private function buildCopyPrompt(string $name, string $description, string $targetAudience, string $copyType): string
     {
         $base = "Produto: {$name}";
-        if ($description) $base .= "\nDescriÃ§Ã£o: {$description}";
-        if ($targetAudience) $base .= "\nPÃºblico-alvo: {$targetAudience}";
+        if ($description) $base .= "\nDescrição: {$description}";
+        if ($targetAudience) $base .= "\nPúblico-alvo: {$targetAudience}";
 
         if ($copyType === 'full') {
             return <<<PROMPT
@@ -681,24 +681,24 @@ class WazerAIActionService
 
 Gere um JSON com a copy completa para este produto digital:
 {
-  "title": "TÃ­tulo persuasivo para o produto (max 80 chars)",
-  "description": "DescriÃ§Ã£o completa e persuasiva (2-3 parÃ¡grafos)",
-  "short_description": "DescriÃ§Ã£o curta para cards (max 150 chars)",
-  "seo_title": "TÃ­tulo SEO otimizado (max 60 chars)",
+  "title": "Título persuasivo para o produto (max 80 chars)",
+  "description": "Descrição completa e persuasiva (2-3 parágrafos)",
+  "short_description": "Descrição curta para cards (max 150 chars)",
+  "seo_title": "Título SEO otimizado (max 60 chars)",
   "seo_description": "Meta description SEO (max 160 chars)",
-  "benefits": ["benefÃ­cio 1", "benefÃ­cio 2", "benefÃ­cio 3", "benefÃ­cio 4", "benefÃ­cio 5"],
+  "benefits": ["benefício 1", "benefício 2", "benefício 3", "benefício 4", "benefício 5"],
   "checkout_blocks": [
-    {"type": "benefits", "enabled": true, "settings": {"items": [{"text": "benefÃ­cio 1"}, {"text": "benefÃ­cio 2"}, {"text": "benefÃ­cio 3"}]}},
+    {"type": "benefits", "enabled": true, "settings": {"items": [{"text": "benefício 1"}, {"text": "benefício 2"}, {"text": "benefício 3"}]}},
     {"type": "guarantee", "enabled": true, "settings": {"days": 7, "title": "Garantia Incondicional", "description": "texto da garantia"}},
     {"type": "faq", "enabled": true, "settings": {"items": [{"question": "pergunta", "answer": "resposta"}]}}
   ]
 }
 
 Foque em:
-- Headlines que geram curiosidade e urgÃªncia
-- BenefÃ­cios concretos e transformadores
-- Linguagem que conecta com a dor do pÃºblico
-- FAQ que elimina objeÃ§Ãµes de compra
+- Headlines que geram curiosidade e urgência
+- Benefícios concretos e transformadores
+- Linguagem que conecta com a dor do público
+- FAQ que elimina objeções de compra
 PROMPT;
         }
 
@@ -766,7 +766,7 @@ PROMPT;
             ])->timeout(20)->get($siteUrl);
 
             if (!$response->successful()) {
-                return ['success' => false, 'error' => 'NÃ£o foi possÃ­vel acessar o site informado para anÃ¡lise.'];
+                return ['success' => false, 'error' => 'Não foi possível acessar o site informado para análise.'];
             }
 
             $html = (string) $response->body();
@@ -800,7 +800,7 @@ PROMPT;
                 'error' => $e->getMessage(),
             ]);
 
-            return ['success' => false, 'error' => 'NÃ£o foi possÃ­vel analisar o site informado no momento.'];
+            return ['success' => false, 'error' => 'Não foi possível analisar o site informado no momento.'];
         }
     }
 
@@ -811,16 +811,16 @@ PROMPT;
             'product_description' => $params['description'] ?? $snapshot['description'] ?? 'Checkout gerado pela Vector IA com base no seu site.',
             'price_cents' => (int) ($params['price'] ?? $snapshot['price_cents'] ?? 2997),
             'type' => 'digital',
-            'target_audience' => 'PÃºblico do site analisado',
+            'target_audience' => 'Público do site analisado',
             'hero_title' => $snapshot['headline'] ?? $snapshot['title'] ?? 'Checkout pronto para vender',
-            'hero_subtitle' => $snapshot['description'] ?? 'Checkout integrado Ã  Vector Pagamentos e pronto para pagamento via PIX.',
+            'hero_subtitle' => $snapshot['description'] ?? 'Checkout integrado à Vector Pagamentos e pronto para pagamento via PIX.',
             'cta_label' => 'Pagar com PIX na Vector Pagamentos',
             'hero_image_url' => $snapshot['image_url'] ?? null,
             'theme' => $this->normalizeThemeOverrides([], $snapshot['theme_color'] ?? null),
             'benefits' => [
-                'Pagamento PIX com confirmaÃ§Ã£o rÃ¡pida',
+                'Pagamento PIX com confirmação rápida',
                 'Checkout hospedado na Vector Pagamentos',
-                'PÃ¡gina pronta para publicar ou baixar',
+                'Página pronta para publicar ou baixar',
             ],
             'checkout_settings' => [],
             'faq' => [],
@@ -851,7 +851,7 @@ PROMPT;
                 'messages' => [
                     [
                         'role' => 'system',
-                        'content' => 'VocÃª Ã© um especialista em conversÃ£o e checkouts da Vector Pagamentos. A partir de um site de origem, gere um JSON vÃ¡lido e conciso para montar um checkout de alta conversÃ£o na Vector Pagamentos. Responda APENAS com JSON vÃ¡lido, sem markdown.',
+                        'content' => 'Você é um especialista em conversão e checkouts da Vector Pagamentos. A partir de um site de origem, gere um JSON válido e conciso para montar um checkout de alta conversão na Vector Pagamentos. Responda APENAS com JSON válido, sem markdown.',
                     ],
                     [
                         'role' => 'user',
@@ -987,7 +987,7 @@ PROMPT;
             'settings' => [
                 'days' => 7,
                 'title' => 'Compra segura com Vector Pagamentos',
-                'description' => 'Seu cliente finaliza o pagamento em um checkout jÃ¡ conectado ao PIX da Vector Pagamentos.',
+                'description' => 'Seu cliente finaliza o pagamento em um checkout já conectado ao PIX da Vector Pagamentos.',
             ],
         ];
 
@@ -1022,7 +1022,7 @@ PROMPT;
 
             $zip = new ZipArchive();
             if ($zip->open($zipAbsolutePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-                throw new \RuntimeException('NÃ£o foi possÃ­vel criar o arquivo ZIP do checkout.');
+                throw new \RuntimeException('Não foi possível criar o arquivo ZIP do checkout.');
             }
 
             foreach (['index.html', 'README.md', 'checkout-config.json'] as $filename) {
@@ -1038,7 +1038,7 @@ PROMPT;
             ];
         } catch (\Throwable $e) {
             Log::error('Vector IA checkout package error', ['error' => $e->getMessage()]);
-            return ['success' => false, 'error' => 'Erro ao gerar o pacote baixÃ¡vel do checkout.'];
+            return ['success' => false, 'error' => 'Erro ao gerar o pacote baixável do checkout.'];
         }
     }
 
@@ -1171,7 +1171,7 @@ PROMPT;
           <a class="button primary" href="{$checkoutUrl}" target="_blank" rel="noopener noreferrer">{$ctaLabel}</a>
           <a class="button secondary" href="{$siteUrl}" target="_blank" rel="noopener noreferrer">Ver site original</a>
         </div>
-        <div class="trust">Pagamento processado pela Vector Pagamentos com checkout jÃ¡ conectado ao PIX.</div>
+        <div class="trust">Pagamento processado pela Vector Pagamentos com checkout já conectado ao PIX.</div>
       </div>
       {$imageBlock}
     </section>
@@ -1179,9 +1179,9 @@ PROMPT;
     <section class="card">
       <h2>O que este pacote entrega</h2>
       <ul>
-        <li>PÃ¡gina HTML pronta para publicar ou hospedar em qualquer servidor estÃ¡tico.</li>
-        <li>BotÃ£o principal conectado ao checkout pÃºblico da Vector Pagamentos.</li>
-        <li>Fluxo de pagamento PIX jÃ¡ operacional na infraestrutura da Vector Pagamentos.</li>
+        <li>Página HTML pronta para publicar ou hospedar em qualquer servidor estático.</li>
+        <li>Botão principal conectado ao checkout público da Vector Pagamentos.</li>
+        <li>Fluxo de pagamento PIX já operacional na infraestrutura da Vector Pagamentos.</li>
         {$benefitsHtml}
       </ul>
       <div class="footer-note">Origem analisada: {$siteUrl}</div>
@@ -1201,28 +1201,28 @@ HTML;
         return <<<MD
 # {$productName}
 
-Este pacote foi gerado automaticamente pela Vector IA com base no site informado pelo usuÃ¡rio.
+Este pacote foi gerado automaticamente pela Vector IA com base no site informado pelo usuário.
 
 ## O que vem no pacote
 
-- index.html: pÃ¡gina pronta para publicar ou editar
+- index.html: página pronta para publicar ou editar
 - checkout-config.json: manifesto com dados do checkout gerado
-- vectorpagamentos-checkout-package.zip: versÃ£o compactada para download
+- vectorpagamentos-checkout-package.zip: versão compactada para download
 
 ## Como usar
 
-1. Publique o arquivo index.html em qualquer hospedagem estÃ¡tica.
-2. O botÃ£o principal jÃ¡ aponta para o checkout pÃºblico da Vector Pagamentos.
-3. Quando o cliente clicar, ele serÃ¡ enviado para o checkout conectado ao PIX da Vector Pagamentos.
+1. Publique o arquivo index.html em qualquer hospedagem estática.
+2. O botão principal já aponta para o checkout público da Vector Pagamentos.
+3. Quando o cliente clicar, ele será enviado para o checkout conectado ao PIX da Vector Pagamentos.
 
 ## Links
 
 - Site de origem: {$siteUrl}
 - Checkout Vector Pagamentos: {$checkoutUrl}
 
-## ObservaÃ§Ã£o tÃ©cnica
+## Observação técnica
 
-O pacote usa o checkout hospedado da Vector Pagamentos como destino do CTA principal. Isso evita expor chave secreta no navegador e mantÃ©m o PIX jÃ¡ conectado com a infraestrutura oficial da plataforma.
+O pacote usa o checkout hospedado da Vector Pagamentos como destino do CTA principal. Isso evita expor chave secreta no navegador e mantém o PIX já conectado com a infraestrutura oficial da plataforma.
 MD;
     }
 

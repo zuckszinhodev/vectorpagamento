@@ -11,16 +11,16 @@ export default function AcquirersPage() {
       </div>
 
       <section className="relative overflow-hidden rounded-2xl border border-border-DEFAULT bg-surface-card p-6 sm:p-8">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(21,128,61,0.14),transparent_38%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(22,163,74,0.14),transparent_38%)] pointer-events-none" />
 
         <div className="relative max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-green-600">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600">
               <ClockIcon className="h-4 w-4" />
               Em breve
             </div>
 
             <div className="mt-4 flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-green-500/10 text-green-600">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600">
                 <ArrowsRightLeftIcon className="h-6 w-6" />
               </div>
 

@@ -5,7 +5,7 @@ import { Spinner } from '@/components/ui/Spinner';
 
 /**
  * Landing page for custom domains / Vector Pagamentos subdomains.
- * When a user visits teste.vectorpagamentos.com/ (root), this page:
+ * When a user visits teste.Vector Pagamentos.com.br/ (root), this page:
  * 1. Calls the API to get the default checkout for this domain
  * 2. Redirects to /checkout/{slug} or /members/login
  */
@@ -55,4 +55,3 @@ export default function DomainLandingPage() {
     </div>
   );
 }
-

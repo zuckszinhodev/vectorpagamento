@@ -5,31 +5,31 @@
 
 export const SEO_CONFIG = {
   // Base URL - Change this when deploying to production
-  baseUrl: 'https://app.vectorpagamentos.com',
+  baseUrl: 'https://app.Vector Pagamentos.com.br',
   
   // Site Information
   siteName: 'Vector Pagamentos',
   siteTitle: 'Vector Pagamentos - Gateway de Pagamento Completo',
-  siteDescription: 'Plataforma completa de pagamentos com checkout personalizÃ¡vel, sistema de afiliados, gestÃ£o de produtos digitais e fÃ­sicos. Aceite PIX, cartÃ£o e boleto.',
+  siteDescription: 'Plataforma completa de pagamentos com checkout personalizável, sistema de afiliados, gestão de produtos digitais e físicos. Aceite PIX, cartão e boleto.',
   
   // Social Media
-  twitterHandle: '@vectorpagamentos',
+  twitterHandle: '@Vector Pagamentos',
   
   // Images
   defaultImage: '/img/bannersocial.png',
   logo: '/logo.png',
   
   // Keywords
-  defaultKeywords: 'gateway de pagamento, checkout, afiliados, pagamento online, pix, cartÃ£o de crÃ©dito, boleto, api de pagamento, webhook, gestÃ£o financeira, produtos digitais, ecommerce',
+  defaultKeywords: 'gateway de pagamento, checkout, afiliados, pagamento online, pix, cartão de crédito, boleto, api de pagamento, webhook, gestão financeira, produtos digitais, ecommerce',
   
   // Theme
-  themeColor: '#16a34a',
+  themeColor: '#22c55e',
   
   // Organization Schema
   organization: {
     name: 'Vector Pagamentos',
-    url: 'https://app.vectorpagamentos.com',
-    logo: 'https://app.vectorpagamentos.com/logo.png',
+    url: 'https://app.Vector Pagamentos.com.br',
+    logo: 'https://app.Vector Pagamentos.com.br/logo.png',
   },
 } as const;
 
@@ -50,5 +50,3 @@ export function getImageUrl(imagePath: string): string {
   }
   return getFullUrl(imagePath);
 }
-
-

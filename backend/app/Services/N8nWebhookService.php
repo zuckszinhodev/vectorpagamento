@@ -214,7 +214,7 @@ class N8nWebhookService
     {
         $testPayload = [
             'test' => true,
-            'message' => 'Este Ã© um teste de conexÃ£o do Vector Pagamentos',
+            'message' => 'Este é um teste de conexão do Vector Pagamentos',
             'integration_id' => $integration->id,
             'integration_name' => $integration->name,
             'timestamp' => now()->toIso8601String(),

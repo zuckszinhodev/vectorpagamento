@@ -32,7 +32,6 @@ class AdminPermission
         '#^admin/chargebacks#' => 'admin.chargebacks.manage',
         '#^admin/reconciliation#' => 'admin.reconciliation.manage',
         '#^admin/security#' => 'admin.security.monitor',
-        '#^admin/approvals#' => 'admin.approvals.review',
         '#^admin/products#' => 'admin.showcase.manage',
         '#^admin/showcase#' => 'admin.showcase.manage',
         '#^users#' => 'admin.users.manage',

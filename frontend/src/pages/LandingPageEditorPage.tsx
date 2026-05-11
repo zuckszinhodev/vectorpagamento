@@ -266,10 +266,10 @@ export default function LandingPageEditorPage() {
 (function(){
  var enabled=false;
  var ov=document.createElement('div');
- ov.style.cssText='position:fixed;pointer-events:none;border:2px solid #16a34a;background:rgba(139,92,246,0.08);z-index:99999;display:none;transition:all 0.1s ease;border-radius:4px;';
+ ov.style.cssText='position:fixed;pointer-events:none;border:2px solid #22c55e;background:rgba(34,197,94,0.08);z-index:99999;display:none;transition:all 0.1s ease;border-radius:4px;';
  document.body.appendChild(ov);
  var lb=document.createElement('div');
- lb.style.cssText='position:fixed;pointer-events:none;z-index:100000;display:none;background:#16a34a;color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px 4px 0 0;font-family:Inter,sans-serif;white-space:nowrap;';
+ lb.style.cssText='position:fixed;pointer-events:none;z-index:100000;display:none;background:#22c55e;color:#fff;font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px 4px 0 0;font-family:Inter,sans-serif;white-space:nowrap;';
  document.body.appendChild(lb);
  var labels={hero:'Hero',benefits:'Benefícios',testimonials:'Depoimentos',pricing:'Preços',faq:'FAQ',guarantee:'Garantia',cta:'CTA',features:'Funcionalidades',video:'Vídeo',about:'Sobre'};
  window.addEventListener('message',function(e){
@@ -651,5 +651,3 @@ export default function LandingPageEditorPage() {
  </div>
  );
 }
-
-

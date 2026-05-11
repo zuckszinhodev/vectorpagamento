@@ -156,4 +156,3 @@ export const splitsService = {
     return response.data;
   },
 };
-

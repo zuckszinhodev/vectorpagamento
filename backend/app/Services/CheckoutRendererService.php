@@ -385,7 +385,7 @@ HTML;
         $items = $bs['items'] ?? [];
         if (empty($items)) return '';
 
-        $title = $this->e($bs['title'] ?? 'O que vocÃª recebe');
+        $title = $this->e($bs['title'] ?? 'O que você recebe');
         $itemsHtml = '';
         foreach ($items as $item) {
             $t = $this->e($item['text'] ?? $item['title'] ?? '');
@@ -419,7 +419,7 @@ HTML;
         $price         = $product['price'] ?? 0;
 
         $ccBtn = in_array('credit_card', $methods)
-            ? '<button type="button" class="payment-btn pm-btn active" data-method="credit_card"><svg style="width:1.25rem;height:1.25rem" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/></svg> CartÃ£o</button>'
+            ? '<button type="button" class="payment-btn pm-btn active" data-method="credit_card"><svg style="width:1.25rem;height:1.25rem" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/></svg> Cartão</button>'
             : '';
         $pixBtn = in_array('pix', $methods)
             ? '<button type="button" class="payment-btn pm-btn" data-method="pix"><svg style="width:1.25rem;height:1.25rem" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L17.5 7.5Q15.5 9 12 11Q8.5 9 6.5 7.5Z"/><path d="M22 12L16.5 17.5Q15 15.5 13 12Q15 8.5 16.5 6.5Z"/><path d="M12 22L6.5 16.5Q8.5 15 12 13Q15.5 15 17.5 16.5Z"/><path d="M2 12L7.5 6.5Q9 8.5 11 12Q9 15.5 7.5 17.5Z"/></svg> PIX</button>'
@@ -458,7 +458,7 @@ HTML;
     <div class="payment-methods">{$ccBtn}{$pixBtn}{$boletoBtn}</div>
 
     <div class="card-fields{$cardShow}">
-      <input type="text" class="input" name="card_number" placeholder="NÃºmero do cartÃ£o" />
+      <input type="text" class="input" name="card_number" placeholder="Número do cartão" />
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
         <input type="text" class="input" name="card_expiry" placeholder="MM/AA" style="margin-bottom:0" />
         <input type="text" class="input" name="card_cvv" placeholder="CVV" style="margin-bottom:0" />
@@ -473,7 +473,7 @@ HTML;
       <svg style="width:1.25rem;height:1.25rem" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>
       FINALIZAR COMPRA
     </button>
-    <p style="text-align:center;font-size:.75rem;color:#6b7280;margin-top:.5rem">Seus dados estÃ£o protegidos com criptografia SSL</p>
+    <p style="text-align:center;font-size:.75rem;color:#6b7280;margin-top:.5rem">Seus dados estão protegidos com criptografia SSL</p>
   </form>
 </div>
 HTML;
@@ -555,7 +555,7 @@ HTML;
         $items = $bs['items'] ?? [];
         if (empty($items)) return '';
 
-        $title = $this->e($bs['title'] ?? 'BÃ´nus Exclusivos');
+        $title = $this->e($bs['title'] ?? 'Bônus Exclusivos');
         $html  = '';
         foreach ($items as $item) {
             $name  = $this->e($item['name'] ?? '');
@@ -575,7 +575,7 @@ HTML;
 <div class="bonus-container">
   <h3 class="bonus-title">{$title}</h3>
   {$html}
-  <p class="bonus-footer">Tudo isso GRÃTIS hoje!</p>
+  <p class="bonus-footer">Tudo isso GRÁTIS hoje!</p>
 </div>
 HTML;
     }
@@ -584,7 +584,7 @@ HTML;
     {
         $title = $this->e($bs['title'] ?? 'Garantia Incondicional');
         $days  = (int)($bs['days'] ?? $conversion['guaranteeDays'] ?? 7);
-        $desc  = $this->e($bs['description'] ?? 'Se nÃ£o gostar, devolvemos 100% do seu dinheiro');
+        $desc  = $this->e($bs['description'] ?? 'Se não gostar, devolvemos 100% do seu dinheiro');
 
         return <<<HTML
 <div class="guarantee-container">
@@ -606,7 +606,7 @@ HTML;
     {
         $bg   = $bs['backgroundColor'] ?? '#fef3c7';
         $tc   = $bs['textColor'] ?? '#92400e';
-        $msg  = $this->e($bs['message'] ?? 'ðŸš¨ Ãšltimas vagas! Apenas 7 restantes');
+        $msg  = $this->e($bs['message'] ?? '🚨 Últimas vagas! Apenas 7 restantes');
 
         return <<<HTML
 <div class="urgency-banner" style="background:{$bg}"><p class="urgency-text" style="color:{$tc}">{$msg}</p></div>
@@ -647,7 +647,7 @@ HTML;
   </div>
   <div class="trust-badge-item">
     <svg class="trust-badge-icon" style="color:#ef4444" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z"/></svg>
-    <span>SatisfaÃ§Ã£o Garantida</span>
+    <span>Satisfação Garantida</span>
   </div>
 </div>
 HTML;
@@ -656,17 +656,17 @@ HTML;
     private function renderShipping(array $bs, string $text, string $muted, string $primary, string $br, string $btnBg, string $btnColor, array $product): string
     {
         if (($bs['type'] ?? 'digital') === 'physical') {
-            $shippingPrice = !empty($bs['freeShipping']) ? 'GRÃTIS' : $this->formatCurrency($bs['shippingPrice'] ?? 0);
+            $shippingPrice = !empty($bs['freeShipping']) ? 'GRÁTIS' : $this->formatCurrency($bs['shippingPrice'] ?? 0);
             return <<<HTML
 <div class="section border-top">
   <h3 class="section-title" style="color:{$text}">
     <svg style="width:1.25rem;height:1.25rem" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
-    EndereÃ§o de Entrega
+    Endereço de Entrega
   </h3>
   <input type="text" class="input" name="cep" placeholder="CEP" maxlength="9" />
   <input type="text" class="input" name="street" placeholder="Rua/Avenida" />
   <div style="display:grid;grid-template-columns:120px 1fr;gap:.75rem">
-    <input type="text" class="input" name="number" placeholder="NÃºmero" style="margin-bottom:0" />
+    <input type="text" class="input" name="number" placeholder="Número" style="margin-bottom:0" />
     <input type="text" class="input" name="complement" placeholder="Complemento (opcional)" style="margin-bottom:0" />
   </div>
   <input type="text" class="input" name="neighborhood" placeholder="Bairro" />
@@ -681,7 +681,7 @@ HTML;
 HTML;
         }
 
-        $msg = $this->e($bs['message'] ?? 'ðŸ“§ Entrega imediata por e-mail apÃ³s confirmaÃ§Ã£o');
+        $msg = $this->e($bs['message'] ?? '📧 Entrega imediata por e-mail após confirmação');
         return <<<HTML
 <div style="margin:0 0 1rem;padding:.75rem 1rem;background:#eff6ff;border-radius:.5rem;text-align:center">
   <p style="font-size:.875rem;color:#1d4ed8">{$msg}</p>
@@ -693,8 +693,8 @@ HTML;
     {
         if (empty($bs['enabled'])) return '';
 
-        $names          = json_encode($bs['names'] ?? ['JoÃ£o Silva', 'Maria Santos'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-        $paymentMethods = json_encode($bs['paymentMethods'] ?? ['PIX', 'CartÃ£o de CrÃ©dito'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $names          = json_encode($bs['names'] ?? ['João Silva', 'Maria Santos'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $paymentMethods = json_encode($bs['paymentMethods'] ?? ['PIX', 'Cartão de Crédito'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         $position       = $this->e($bs['position'] ?? 'bottom-left');
         $displayTime    = ((int)($bs['displayTime'] ?? 5)) * 1000;
         $intervalTime   = ((int)($bs['intervalTime'] ?? 8)) * 1000;
@@ -708,7 +708,7 @@ HTML;
   <button class="social-proof-close" onclick="document.getElementById('social-proof-notification').classList.remove('show')">&times;</button>
   <div class="social-proof-content">
     <div class="social-proof-text">
-      <p><span class="sp-n" id="sp-name">JoÃ£o Silva</span> comprou <span class="sp-p">{$pName}</span>{$pmSpan}</p>
+      <p><span class="sp-n" id="sp-name">João Silva</span> comprou <span class="sp-p">{$pName}</span>{$pmSpan}</p>
       <div class="social-proof-time" id="sp-time">Agora mesmo</div>
     </div>
   </div>
@@ -719,7 +719,7 @@ HTML;
   var el=document.getElementById('social-proof-notification'),
       ne=document.getElementById('sp-name'),pe=document.getElementById('sp-payment'),
       te=document.getElementById('sp-time');
-  var times=['Agora mesmo','HÃ¡ 1 minuto','HÃ¡ 2 minutos','HÃ¡ 3 minutos','HÃ¡ 5 minutos'];
+  var times=['Agora mesmo','Há 1 minuto','Há 2 minutos','Há 3 minutos','Há 5 minutos'];
   function r(a){return a[Math.floor(Math.random()*a.length)];}
   function show(){
     ne.textContent=r(names);
@@ -876,7 +876,7 @@ HTML;
             ['type' => 'product',      'enabled' => true, 'settings' => ['showImage' => true, 'showDescription' => true, 'showOriginalPrice' => true]],
             ['type' => 'payment',      'enabled' => true, 'settings' => ['showInstallments' => true]],
             ['type' => 'trust_badges', 'enabled' => true, 'settings' => []],
-            ['type' => 'guarantee',    'enabled' => true, 'settings' => ['title' => 'Garantia Incondicional', 'days' => 7, 'description' => 'Se nÃ£o gostar, devolvemos 100% do seu dinheiro']],
+            ['type' => 'guarantee',    'enabled' => true, 'settings' => ['title' => 'Garantia Incondicional', 'days' => 7, 'description' => 'Se não gostar, devolvemos 100% do seu dinheiro']],
         ];
     }
 

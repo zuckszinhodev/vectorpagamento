@@ -1,5 +1,5 @@
 import { Helmet } from 'react-helmet-async';
-import { SEO_CONFIG, getFullUrl } from '@/config/seo';
+import { SEO_CONFIG, getFullUrl, getImageUrl } from '@/config/seo';
 
 interface SEOProps {
   title?: string;
@@ -13,13 +13,14 @@ interface SEOProps {
 export default function SEO({
   title = SEO_CONFIG.siteTitle,
   description = SEO_CONFIG.siteDescription,
-  image: _image = SEO_CONFIG.defaultImage,
+  image = SEO_CONFIG.defaultImage,
   url = '',
   type = 'website',
   keywords = SEO_CONFIG.defaultKeywords,
 }: SEOProps) {
   const fullTitle = title.includes('Vector Pagamentos') ? title : `${title} | Vector Pagamentos`;
   const fullUrl = url ? getFullUrl(url) : SEO_CONFIG.baseUrl;
+  const fullImage = getImageUrl(image);
 
   return (
     <Helmet>
@@ -34,12 +35,15 @@ export default function SEO({
       <meta property="og:url" content={fullUrl} />
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
+      <meta property="og:image" content={fullImage} />
+      <meta property="og:image:secure_url" content={fullImage} />
       
       {/* Twitter */}
-      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:url" content={fullUrl} />
       <meta name="twitter:title" content={fullTitle} />
       <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content={fullImage} />
       
       {/* Canonical */}
       <link rel="canonical" href={fullUrl} />

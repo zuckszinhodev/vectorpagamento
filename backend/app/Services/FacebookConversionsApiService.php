@@ -56,7 +56,7 @@ class FacebookConversionsApiService
             ->first();
 
         if (!$integration) {
-            Log::debug('Facebook CAPI dispatch skipped â€“ no active integration', [
+            Log::debug('Facebook CAPI dispatch skipped – no active integration', [
                 'account_id' => $charge->account_id,
                 'charge_id'  => $charge->id,
             ]);
@@ -66,7 +66,7 @@ class FacebookConversionsApiService
         $resolvedEvent = $eventName ?? $this->resolveEventName($charge->status);
 
         if (!$resolvedEvent) {
-            Log::debug('Facebook CAPI dispatch skipped â€“ no event mapped for status', [
+            Log::debug('Facebook CAPI dispatch skipped – no event mapped for status', [
                 'charge_id' => $charge->id,
                 'status'    => $charge->status,
             ]);
@@ -74,7 +74,7 @@ class FacebookConversionsApiService
         }
 
         if (!$integration->shouldTrack($resolvedEvent)) {
-            Log::debug('Facebook CAPI dispatch skipped â€“ event tracking disabled', [
+            Log::debug('Facebook CAPI dispatch skipped – event tracking disabled', [
                 'charge_id' => $charge->id,
                 'event'     => $resolvedEvent,
             ]);
@@ -102,7 +102,7 @@ class FacebookConversionsApiService
             ->first();
 
         if (!$integration) {
-            Log::info('Facebook CAPI dispatchSync skipped â€“ no active integration', [
+            Log::info('Facebook CAPI dispatchSync skipped – no active integration', [
                 'account_id' => $charge->account_id,
                 'charge_id'  => $charge->id,
             ]);
@@ -230,7 +230,7 @@ class FacebookConversionsApiService
                     'valid'   => true,
                     'status'  => $response->status(),
                     'body'    => $json,
-                    'message' => 'ConexÃ£o com Facebook Conversions API validada com sucesso!',
+                    'message' => 'Conexão com Facebook Conversions API validada com sucesso!',
                 ];
             }
 
@@ -327,7 +327,7 @@ class FacebookConversionsApiService
             $userData['em'] = [hash('sha256', strtolower(trim($email)))];
         }
 
-        // Phone (hashed) â€“ normalize to E.164 without + prefix
+        // Phone (hashed) – normalize to E.164 without + prefix
         $phone = $customer['phone'] ?? null;
         if ($phone) {
             $normalizedPhone = preg_replace('/[^0-9]/', '', $phone);
@@ -376,7 +376,7 @@ class FacebookConversionsApiService
             $userData['fbc'] = $tracking['fbc'];
         }
 
-        // Country â€“ default to BR for Brazilian gateway
+        // Country – default to BR for Brazilian gateway
         $userData['country'] = [hash('sha256', 'br')];
 
         return $userData;

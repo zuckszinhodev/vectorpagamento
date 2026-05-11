@@ -22,7 +22,7 @@ class SetupAdminUser extends Command
             return 1;
         }
 
-        $this->info("User found: {$user->name} ({$user->email}) â€” ID: {$user->id}");
+        $this->info("User found: {$user->name} ({$user->email}) — ID: {$user->id}");
 
         // Activate KYC
         $user->forceFill([

@@ -26,7 +26,6 @@ class RoleSeeder extends Seeder
             'admin.chargebacks.manage',
             'admin.reconciliation.manage',
             'admin.security.monitor',
-            'admin.approvals.review',
             'admin.showcase.manage',
         ];
 
@@ -114,7 +113,6 @@ class RoleSeeder extends Seeder
                     'admin.dashboard.read',
                     'admin.fraud.manage',
                     'admin.security.monitor',
-                    'admin.approvals.review',
                     'admin.chargebacks.manage',
                     'admin.kyc.review',
                 ],

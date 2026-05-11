@@ -250,7 +250,7 @@ class LandingPage extends Model
         return [
             'modern' => [
                 'name' => 'Moderno',
-                'description' => 'Design limpo e moderno com foco em conversÃ£o',
+                'description' => 'Design limpo e moderno com foco em conversão',
                 'preview' => '/templates/modern-preview.png',
             ],
             'bold' => [
@@ -275,7 +275,7 @@ class LandingPage extends Model
             ],
             'video' => [
                 'name' => 'Video Sales Letter',
-                'description' => 'Otimizado para VSL com vÃ­deo hero',
+                'description' => 'Otimizado para VSL com vídeo hero',
                 'preview' => '/templates/video-preview.png',
             ],
         ];
@@ -289,12 +289,12 @@ class LandingPage extends Model
         return [
             'hero' => [
                 'name' => 'Hero Section',
-                'description' => 'SeÃ§Ã£o principal com tÃ­tulo e CTA',
+                'description' => 'Seção principal com título e CTA',
                 'icon' => 'rectangle-stack',
             ],
             'benefits' => [
-                'name' => 'BenefÃ­cios',
-                'description' => 'Lista de benefÃ­cios do produto',
+                'name' => 'Benefícios',
+                'description' => 'Lista de benefícios do produto',
                 'icon' => 'check-badge',
             ],
             'features' => [
@@ -308,8 +308,8 @@ class LandingPage extends Model
                 'icon' => 'chat-bubble-left-right',
             ],
             'pricing' => [
-                'name' => 'PreÃ§os',
-                'description' => 'Tabela de preÃ§os ou oferta',
+                'name' => 'Preços',
+                'description' => 'Tabela de preços ou oferta',
                 'icon' => 'currency-dollar',
             ],
             'faq' => [
@@ -318,13 +318,13 @@ class LandingPage extends Model
                 'icon' => 'question-mark-circle',
             ],
             'video' => [
-                'name' => 'VÃ­deo',
-                'description' => 'SeÃ§Ã£o de vÃ­deo/VSL',
+                'name' => 'Vídeo',
+                'description' => 'Seção de vídeo/VSL',
                 'icon' => 'play-circle',
             ],
             'guarantee' => [
                 'name' => 'Garantia',
-                'description' => 'SeÃ§Ã£o de garantia',
+                'description' => 'Seção de garantia',
                 'icon' => 'shield-check',
             ],
             'about' => [
@@ -334,17 +334,17 @@ class LandingPage extends Model
             ],
             'countdown' => [
                 'name' => 'Contador',
-                'description' => 'Timer de urgÃªncia',
+                'description' => 'Timer de urgência',
                 'icon' => 'clock',
             ],
             'cta' => [
                 'name' => 'Call to Action',
-                'description' => 'BotÃ£o de aÃ§Ã£o',
+                'description' => 'Botão de ação',
                 'icon' => 'cursor-arrow-rays',
             ],
             'custom' => [
                 'name' => 'Personalizado',
-                'description' => 'HTML/conteÃºdo customizado',
+                'description' => 'HTML/conteúdo customizado',
                 'icon' => 'code-bracket',
             ],
         ];

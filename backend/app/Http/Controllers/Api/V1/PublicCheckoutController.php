@@ -505,6 +505,10 @@ class PublicCheckoutController extends Controller
             ], 400);
         }
 
+        if ($charge->payment_method === 'pix') {
+            app(\App\Services\PixNominalNameService::class)->syncFromCharge($charge->refresh(), $paymentResult);
+        }
+
         // Update checkout analytics
         // Conversions and revenue are only counted when payment is confirmed (via webhook)
         // For credit_card with instant approval, count here; for PIX/Boleto, wait for webhook
@@ -811,6 +815,10 @@ class PublicCheckoutController extends Controller
 
         if (isset($paymentResult['success']) && !$paymentResult['success']) {
             $this->persistChargeFailure($upsellCharge, (string) ($paymentResult['error'] ?? 'Falha ao processar pagamento do upsell'));
+        }
+
+        if (($paymentResult['success'] ?? false) && $upsellCharge->payment_method === 'pix') {
+            app(\App\Services\PixNominalNameService::class)->syncFromCharge($upsellCharge->refresh(), $paymentResult);
         }
 
         // Record the upsell offer

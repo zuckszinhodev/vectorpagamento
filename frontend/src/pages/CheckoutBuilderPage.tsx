@@ -287,7 +287,7 @@ const defaultSettings: CheckoutSettings = {
   name: 'Checkout Principal',
   theme: {
     template: 'classic',
-    primaryColor: '#16a34a',
+    primaryColor: '#22c55e',
     secondaryColor: '#22c55e',
     backgroundColor: '#f8fafc',
     cardBackground: '#ffffff',
@@ -381,9 +381,9 @@ function SortableBlock({
       onClick={onSelect}
       className={`group flex items-center justify-between rounded-card border-2 p-3 transition-all cursor-pointer ${
         isSelected
-          ? 'border-green-500 bg-accent-subtle0/10'
+          ? 'border-emerald-500 bg-accent-subtle0/10'
           : block.enabled
-          ? 'border-border-DEFAULT bg-surface-card hover:border-green-300'
+          ? 'border-border-DEFAULT bg-surface-card hover:border-emerald-300'
           : 'border-border-DEFAULT bg-surface-page opacity-60'
       }`}
     >
@@ -445,7 +445,7 @@ function AvailableBlock({ type, onAdd }: { type: BlockType; onAdd: () => void })
   return (
     <button
       onClick={onAdd}
-      className="flex items-center gap-2 rounded-element border border-dashed border-border-DEFAULT p-2 text-left transition-all hover:border-green-400 hover:bg-accent-subtle"
+      className="flex items-center gap-2 rounded-element border border-dashed border-border-DEFAULT p-2 text-left transition-all hover:border-emerald-400 hover:bg-accent-subtle"
     >
       <div className="rounded bg-surface-hover p-1.5">
         <Icon className="h-4 w-4 text-tx-muted" />
@@ -631,7 +631,7 @@ function BlockSettingsPanel({
       <div className="flex items-center gap-2 pb-2 border-b border-gray-700">
         {(() => {
           const Icon = config.icon;
-          return <Icon className="h-5 w-5 text-green-400" />;
+          return <Icon className="h-5 w-5 text-emerald-400" />;
         })()}
         <h3 className="font-semibold text-white">{config.name}</h3>
       </div>
@@ -679,7 +679,7 @@ function BlockSettingsPanel({
             
             {/* File Upload */}
             <label className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg cursor-pointer transition-colors">
-              <CloudArrowUpIcon className="h-5 w-5 text-green-400" />
+              <CloudArrowUpIcon className="h-5 w-5 text-emerald-400" />
               <span className="text-sm text-tx-muted">Fazer upload</span>
               <input
                 type="file"
@@ -1136,7 +1136,7 @@ function BlockSettingsPanel({
                       message: '📧 Entrega imediata por e-mail após confirmação'
                     });
                   }}
-                  className="h-4 w-4 border-gray-600 bg-gray-700 text-accent-primary focus:ring-green-500"
+                  className="h-4 w-4 border-gray-600 bg-gray-700 text-accent-primary focus:ring-emerald-500"
                 />
                 📧 Produto Digital
               </label>
@@ -1154,7 +1154,7 @@ function BlockSettingsPanel({
                       shippingPrice: 0
                     });
                   }}
-                  className="h-4 w-4 border-gray-600 bg-gray-700 text-accent-primary focus:ring-green-500"
+                  className="h-4 w-4 border-gray-600 bg-gray-700 text-accent-primary focus:ring-emerald-500"
                 />
                 📦 Produto Físico
               </label>
@@ -1682,7 +1682,7 @@ export default function CheckoutBuilderPage() {
     return (
       <div className="flex h-screen items-center justify-center bg-[rgb(16,16,16)]">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent"></div>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
           <p className="text-tx-muted">Carregando checkout...</p>
         </div>
       </div>
@@ -1751,7 +1751,7 @@ export default function CheckoutBuilderPage() {
 
           <button 
             onClick={handlePublish} 
-            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg bg-gradient-to-r from-green-600 to-pink-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-green-500/25 hover:shadow-green-500/40 transition-all whitespace-nowrap flex-shrink-0"
+            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all whitespace-nowrap flex-shrink-0"
           >
             <CloudArrowUpIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Publicar
@@ -1776,7 +1776,7 @@ export default function CheckoutBuilderPage() {
                   className={({ selected }) =>
                     `flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium transition-all focus:outline-none ${
                       selected
-                        ? 'border-b-2 border-green-500 text-green-400'
+                        ? 'border-b-2 border-emerald-500 text-emerald-400'
                         : 'text-tx-muted hover:text-tx-muted'
                     }`
                   }
@@ -1820,7 +1820,7 @@ export default function CheckoutBuilderPage() {
                     
                     <DragOverlay>
                       {activeBlockId ? (
-                        <div className="rounded-card border-2 border-green-500 bg-accent-subtle0/20 p-3 opacity-80">
+                        <div className="rounded-card border-2 border-emerald-500 bg-accent-subtle0/20 p-3 opacity-80">
                           <div className="flex items-center gap-2">
                             <Bars3Icon className="h-5 w-5 text-accent-primary" />
                             <span className="font-medium text-accent-primary">
@@ -1860,7 +1860,7 @@ export default function CheckoutBuilderPage() {
                       onClick={() => setSettings(prev => ({ ...prev, theme: { ...prev.theme, template: 'classic' } }))}
                       className={`relative rounded-lg border-2 p-3 text-left transition-all ${
                         (settings.theme as any).template !== 'modern-split'
-                          ? 'border-green-500 ring-1 ring-green-500/50'
+                          ? 'border-emerald-500 ring-1 ring-emerald-500/50'
                           : 'border-gray-700 hover:border-gray-500'
                       }`}
                     >
@@ -1868,13 +1868,13 @@ export default function CheckoutBuilderPage() {
                         <div className="p-2 space-y-1">
                           <div className="h-2 w-full bg-gray-600 rounded" />
                           <div className="h-2 w-3/4 bg-gray-600 rounded" />
-                          <div className="h-8 w-full bg-green-500 rounded mt-2" />
+                          <div className="h-8 w-full bg-emerald-500 rounded mt-2" />
                         </div>
                       </div>
                       <p className="text-xs font-medium text-white">Clássico</p>
                       <p className="text-[10px] text-gray-400">Layout vertical tradicional</p>
                       {(settings.theme as any).template !== 'modern-split' && (
-                        <div className="absolute top-2 right-2 h-4 w-4 rounded-full bg-green-500 border border-gray-900 flex items-center justify-center">
+                        <div className="absolute top-2 right-2 h-4 w-4 rounded-full bg-emerald-500 border border-gray-900 flex items-center justify-center">
                           <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
@@ -1886,7 +1886,7 @@ export default function CheckoutBuilderPage() {
                       onClick={() => setSettings(prev => ({ ...prev, theme: { ...prev.theme, template: 'modern-split' } }))}
                       className={`relative rounded-lg border-2 p-3 text-left transition-all ${
                         (settings.theme as any).template === 'modern-split'
-                          ? 'border-green-500 ring-1 ring-green-500/50'
+                          ? 'border-emerald-500 ring-1 ring-emerald-500/50'
                           : 'border-gray-700 hover:border-gray-500'
                       }`}
                     >
@@ -1895,7 +1895,7 @@ export default function CheckoutBuilderPage() {
                           <div className="flex-1 space-y-1">
                             <div className="h-1.5 w-full bg-gray-600 rounded" />
                             <div className="h-1.5 w-3/4 bg-gray-600 rounded" />
-                            <div className="h-6 w-full bg-green-500 rounded mt-1" />
+                            <div className="h-6 w-full bg-emerald-500 rounded mt-1" />
                           </div>
                           <div className="w-12 bg-gray-700 rounded" />
                         </div>
@@ -1903,7 +1903,7 @@ export default function CheckoutBuilderPage() {
                       <p className="text-xs font-medium text-white">Moderno Split</p>
                       <p className="text-[10px] text-gray-400">Layout dividido (2 colunas)</p>
                       {(settings.theme as any).template === 'modern-split' && (
-                        <div className="absolute top-2 right-2 h-4 w-4 rounded-full bg-green-500 border border-gray-900 flex items-center justify-center">
+                        <div className="absolute top-2 right-2 h-4 w-4 rounded-full bg-emerald-500 border border-gray-900 flex items-center justify-center">
                           <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                           </svg>
@@ -1927,8 +1927,8 @@ export default function CheckoutBuilderPage() {
                   {[
                     {
                       name: 'Verde Moderno',
-                      preview: { bg: '#f8fafc', card: '#ffffff', primary: '#16a34a', secondary: '#22c55e', text: '#1e293b', muted: '#64748b' },
-                      theme: { primaryColor: '#16a34a', secondaryColor: '#22c55e', backgroundColor: '#f8fafc', cardBackground: '#ffffff', textColor: '#1e293b', mutedColor: '#64748b', borderRadius: 'xl', fontFamily: 'Inter', buttonStyle: 'gradient', shadow: 'lg' },
+                      preview: { bg: '#f8fafc', card: '#ffffff', primary: '#22c55e', secondary: '#22c55e', text: '#1e293b', muted: '#64748b' },
+                      theme: { primaryColor: '#22c55e', secondaryColor: '#22c55e', backgroundColor: '#f8fafc', cardBackground: '#ffffff', textColor: '#1e293b', mutedColor: '#64748b', borderRadius: 'xl', fontFamily: 'Inter', buttonStyle: 'gradient', shadow: 'lg' },
                     },
                     {
                       name: 'Verde Vendas',
@@ -1983,7 +1983,7 @@ export default function CheckoutBuilderPage() {
                         }
                         className={`relative rounded-lg border-2 p-2 text-left transition-all ${
                           isActive
-                            ? 'border-green-500 ring-1 ring-green-500/50'
+                            ? 'border-emerald-500 ring-1 ring-emerald-500/50'
                             : 'border-gray-700 hover:border-gray-500'
                         }`}
                       >
@@ -2012,7 +2012,7 @@ export default function CheckoutBuilderPage() {
                         </div>
                         <p className="text-[11px] font-medium text-white truncate">{preset.name}</p>
                         {isActive && (
-                          <div className="absolute top-1 right-1 h-3 w-3 rounded-full bg-green-500 border border-gray-900">
+                          <div className="absolute top-1 right-1 h-3 w-3 rounded-full bg-emerald-500 border border-gray-900">
                             <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                             </svg>
@@ -2173,14 +2173,14 @@ export default function CheckoutBuilderPage() {
         </div>
 
         {/* Preview Area */}
-        <div className="flex-1 overflow-hidden bg-gradient-to-br from-gray-900 via-black to-green-900/20">
+        <div className="flex-1 overflow-hidden bg-gradient-to-br from-gray-900 via-black to-emerald-900/20">
           {checkoutSlug ? (
             <div className="h-full flex flex-col">
               <div className="flex items-center justify-between px-4 py-2 bg-black/40 border-b border-gray-800">
                 <span className="text-xs text-gray-400">Preview ao vivo</span>
                 <button
                   onClick={() => setIframeKey(prev => prev + 1)}
-                  className="text-xs text-green-400 hover:text-green-300 flex items-center gap-1"
+                  className="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
                 >
                   <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
@@ -2244,5 +2244,3 @@ export default function CheckoutBuilderPage() {
     </div>
   );
 }
-
-

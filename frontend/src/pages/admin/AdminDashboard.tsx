@@ -642,7 +642,7 @@ export default function AdminDashboard() {
           value={formatCurrency(stats.seller_payout)}
           change={stats.payout_change}
           icon={ShoppingBagIcon}
-          tone="violet"
+          tone="emerald"
         />
         <MetricCard
           title="Saldo em Risco/Pendente"
@@ -680,7 +680,7 @@ export default function AdminDashboard() {
           value={pendingApprovalsCount.toString()}
           subtitle="Aguardando revisao"
           icon={DocumentCheckIcon}
-          tone={pendingApprovalsCount > 10 ? 'amber' : 'violet'}
+          tone={pendingApprovalsCount > 10 ? 'amber' : 'emerald'}
         />
       </section>
 
@@ -784,7 +784,7 @@ export default function AdminDashboard() {
               <h3 className="text-lg font-semibold text-tx-primary">Fila de Aprovacoes</h3>
               <p className="text-xs text-tx-muted">Acoes criticas sob politica de dual control</p>
             </div>
-            <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-semibold text-green-600">
+            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
               {pendingApprovalsCount} pendentes
             </span>
           </div>
@@ -956,12 +956,11 @@ function MetricCard({
   value: string;
   change: number;
   icon: typeof BanknotesIcon;
-  tone: 'blue' | 'emerald' | 'violet' | 'amber';
+  tone: 'blue' | 'emerald' | 'amber';
 }) {
   const toneClasses: Record<string, string> = {
     blue: 'bg-blue-500/10 text-blue-500',
     emerald: 'bg-emerald-500/10 text-emerald-500',
-    violet: 'bg-green-500/10 text-green-500',
     amber: 'bg-amber-500/10 text-amber-500',
   };
 
@@ -995,12 +994,11 @@ function SimpleMetric({
   value: string;
   subtitle: string;
   icon: typeof BanknotesIcon;
-  tone: 'blue' | 'emerald' | 'violet' | 'amber';
+  tone: 'blue' | 'emerald' | 'amber';
 }) {
   const toneClasses: Record<string, string> = {
     blue: 'bg-blue-500/10 text-blue-500',
     emerald: 'bg-emerald-500/10 text-emerald-500',
-    violet: 'bg-green-500/10 text-green-500',
     amber: 'bg-amber-500/10 text-amber-500',
   };
 
@@ -1056,4 +1054,3 @@ function QuickActionCard({
     </Link>
   );
 }
-

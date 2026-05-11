@@ -414,7 +414,7 @@ class UserWebhookController extends Controller
 
             // Dispatch using existing service
             $service = app(\App\Services\WebhookDispatchService::class);
-            $service->send($webhook, $attempt->event_type, $payload);
+            $service->dispatch($webhook, $attempt->event_type, $payload);
 
             return response()->json([
                 'success' => true,

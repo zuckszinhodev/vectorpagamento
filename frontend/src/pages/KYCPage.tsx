@@ -447,11 +447,11 @@ export default function KYCPage() {
  };
 
  return (
- <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-green-50 py-3 sm:py-5 px-3 sm:px-4">
+ <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 py-3 sm:py-5 px-3 sm:px-4">
  <div className="mx-auto max-w-2xl">
  {isLoadingStatus ? (
  <div className="flex flex-col items-center justify-center py-12">
- <div className="h-10 w-10 animate-spin rounded-full border-3 border-green-500 border-t-transparent" />
+ <div className="h-10 w-10 animate-spin rounded-full border-3 border-emerald-500 border-t-transparent" />
  <p className="mt-4 text-sm text-gray-500">Carregando...</p>
  </div>
  ) : isSubmitted ? (
@@ -476,7 +476,7 @@ export default function KYCPage() {
 
  <button
  onClick={() => navigate('/dashboard')}
- className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+ className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
  >
  Ir para Dashboard
  </button>
@@ -486,8 +486,7 @@ export default function KYCPage() {
  <>
  {/* Header */}
  <div className="mb-4 sm:mb-6 text-center">
- <img src="/img/logo.png" alt="Vector Pagamentos" className="mx-auto mb-3 h-10 w-auto" />
- <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 via-green-800 to-green-900 bg-clip-text text-transparent mb-1.5">
+ <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 via-emerald-800 to-emerald-900 bg-clip-text text-transparent mb-1.5">
  Verificação de Identidade
  </h1>
  <p className="text-xs sm:text-sm text-gray-600 max-w-md mx-auto">
@@ -502,7 +501,7 @@ export default function KYCPage() {
  <div className="absolute top-4 left-[8%] right-[8%] h-0.5 bg-gray-200 rounded-full" style={{ zIndex: 0 }} />
  {/* Active Progress Bar */}
  <div 
- className="absolute top-4 left-[8%] h-0.5 bg-gradient-to-r from-green-500 to-green-500 rounded-full transition-all duration-500"
+ className="absolute top-4 left-[8%] h-0.5 bg-gradient-to-r from-emerald-500 to-emerald-500 rounded-full transition-all duration-500"
  style={{ 
  width: `${(currentStepIndex / (steps.length - 1)) * 84}%`,
  zIndex: 1
@@ -522,7 +521,7 @@ export default function KYCPage() {
  isCompleted
  ? 'border-emerald-500 bg-emerald-500 text-white'
  : isCurrent
- ? 'border-green-500 bg-green-500 text-white ring-2 ring-green-500/20'
+ ? 'border-emerald-500 bg-emerald-500 text-white ring-2 ring-emerald-500/20'
  : 'border-gray-300 bg-white text-gray-400'
  }`}
  >
@@ -534,7 +533,7 @@ export default function KYCPage() {
  </div>
  <span className={`mt-1.5 text-[9px] sm:text-[10px] font-medium text-center max-w-[50px] leading-tight ${
  isCurrent 
- ? 'text-green-700' 
+ ? 'text-emerald-700' 
  : isCompleted
  ? 'text-emerald-600'
  : 'text-gray-400'
@@ -554,8 +553,8 @@ export default function KYCPage() {
  {currentStep === 'type' && (
  <div className="animate-fadeIn">
  <div className="text-center mb-4">
- <div className="inline-flex p-2 rounded-xl bg-gradient-to-br from-green-100 to-green-100 mb-2">
- <IdentificationIcon className="h-6 w-6 text-green-600" />
+ <div className="inline-flex p-2 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-100 mb-2">
+ <IdentificationIcon className="h-6 w-6 text-emerald-600" />
  </div>
  <h2 className="text-lg font-bold text-gray-900 mb-1">
  Qual o tipo de cadastro?
@@ -570,22 +569,22 @@ export default function KYCPage() {
  onClick={() => setPersonType('pf')}
  className={`group relative rounded-xl border-2 p-3 sm:p-4 text-center transition-all duration-200 ${
  personType === 'pf'
- ? 'border-green-500 bg-green-50 shadow-md'
- : 'border-gray-200 hover:border-green-300 hover:bg-green-50/30'
+ ? 'border-emerald-500 bg-emerald-50 shadow-md'
+ : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30'
  }`}
  >
  {personType === 'pf' && (
  <div className="absolute top-2 right-2">
- <CheckCircleIconSolid className="h-4 w-4 text-green-500" />
+ <CheckCircleIconSolid className="h-4 w-4 text-emerald-500" />
  </div>
  )}
  <div className={`mx-auto mb-2 inline-flex p-2.5 rounded-xl transition-all ${
  personType === 'pf' 
- ? 'bg-green-500' 
- : 'bg-gray-100 group-hover:bg-green-100'
+ ? 'bg-emerald-500' 
+ : 'bg-gray-100 group-hover:bg-emerald-100'
  }`}>
  <UserIcon className={`h-6 w-6 ${
- personType === 'pf' ? 'text-white' : 'text-gray-500 group-hover:text-green-600'
+ personType === 'pf' ? 'text-white' : 'text-gray-500 group-hover:text-emerald-600'
  }`} />
  </div>
  <h3 className="text-sm font-bold text-gray-900 mb-0.5">
@@ -606,22 +605,22 @@ export default function KYCPage() {
  onClick={() => setPersonType('pj')}
  className={`group relative rounded-xl border-2 p-3 sm:p-4 text-center transition-all duration-200 ${
  personType === 'pj'
- ? 'border-green-500 bg-green-50 shadow-md'
- : 'border-gray-200 hover:border-green-300 hover:bg-green-50/30'
+ ? 'border-emerald-500 bg-emerald-50 shadow-md'
+ : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/30'
  }`}
  >
  {personType === 'pj' && (
  <div className="absolute top-2 right-2">
- <CheckCircleIconSolid className="h-4 w-4 text-green-500" />
+ <CheckCircleIconSolid className="h-4 w-4 text-emerald-500" />
  </div>
  )}
  <div className={`mx-auto mb-2 inline-flex p-2.5 rounded-xl transition-all ${
  personType === 'pj' 
- ? 'bg-green-500' 
- : 'bg-gray-100 group-hover:bg-green-100'
+ ? 'bg-emerald-500' 
+ : 'bg-gray-100 group-hover:bg-emerald-100'
  }`}>
  <BuildingOfficeIcon className={`h-6 w-6 ${
- personType === 'pj' ? 'text-white' : 'text-gray-500 group-hover:text-green-600'
+ personType === 'pj' ? 'text-white' : 'text-gray-500 group-hover:text-emerald-600'
  }`} />
  </div>
  <h3 className="text-sm font-bold text-gray-900 mb-0.5">
@@ -748,7 +747,7 @@ export default function KYCPage() {
  type="text"
  value={personalData.cpf}
  onChange={(e) => setPersonalData({ ...personalData, cpf: formatCPF(e.target.value) })}
- className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all placeholder:text-gray-400"
+ className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
  placeholder="000.000.000-00"
  maxLength={14}
  />
@@ -762,7 +761,7 @@ export default function KYCPage() {
  type="date"
  value={personalData.birthDate}
  onChange={(e) => setPersonalData({ ...personalData, birthDate: e.target.value })}
- className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all placeholder:text-gray-400"
+ className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
  />
  </div>
  </div>
@@ -779,7 +778,7 @@ export default function KYCPage() {
  type="text"
  value={personalData.companyName}
  onChange={(e) => setPersonalData({ ...personalData, companyName: e.target.value })}
- className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all placeholder:text-gray-400"
+ className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
  placeholder="Nome empresarial registrado"
  />
  </div>
@@ -792,7 +791,7 @@ export default function KYCPage() {
  type="text"
  value={personalData.tradeName}
  onChange={(e) => setPersonalData({ ...personalData, tradeName: e.target.value })}
- className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all placeholder:text-gray-400"
+ className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
  placeholder="Nome comercial da empresa"
  />
  </div>
@@ -805,7 +804,7 @@ export default function KYCPage() {
  type="text"
  value={personalData.cnpj}
  onChange={(e) => setPersonalData({ ...personalData, cnpj: formatCNPJ(e.target.value) })}
- className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all placeholder:text-gray-400"
+ className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
  placeholder="00.000.000/0000-00"
  maxLength={18}
  />
@@ -819,7 +818,7 @@ export default function KYCPage() {
  type="text"
  value={personalData.fullName}
  onChange={(e) => setPersonalData({ ...personalData, fullName: e.target.value })}
- className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all placeholder:text-gray-400"
+ className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
  placeholder="Nome completo do responsável"
  />
  </div>
@@ -832,7 +831,7 @@ export default function KYCPage() {
  type="text"
  value={personalData.cpf}
  onChange={(e) => setPersonalData({ ...personalData, cpf: formatCPF(e.target.value) })}
- className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all placeholder:text-gray-400"
+ className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
  placeholder="000.000.000-00"
  maxLength={14}
  />
@@ -846,7 +845,7 @@ export default function KYCPage() {
  type="date"
  value={personalData.birthDate}
  onChange={(e) => setPersonalData({ ...personalData, birthDate: e.target.value })}
- className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all placeholder:text-gray-400"
+ className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
  />
  </div>
  </>
@@ -860,7 +859,7 @@ export default function KYCPage() {
  type="tel"
  value={personalData.phone}
  onChange={(e) => setPersonalData({ ...personalData, phone: e.target.value })}
- className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all placeholder:text-gray-400"
+ className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
  placeholder="(00) 00000-0000"
  />
  </div>
@@ -887,7 +886,7 @@ export default function KYCPage() {
  setAddressData({ ...addressData, zipCode: e.target.value });
  searchZipCode(e.target.value);
  }}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500/20 placeholder:text-gray-400"
+ className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
  placeholder="00000-000"
  />
  </div>
@@ -900,7 +899,7 @@ export default function KYCPage() {
  type="text"
  value={addressData.street}
  onChange={(e) => setAddressData({ ...addressData, street: e.target.value })}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500/20 placeholder:text-gray-400"
+ className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
  placeholder="Rua, Avenida, etc"
  />
  </div>
@@ -914,7 +913,7 @@ export default function KYCPage() {
  type="text"
  value={addressData.number}
  onChange={(e) => setAddressData({ ...addressData, number: e.target.value })}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500/20 placeholder:text-gray-400"
+ className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
  placeholder="123"
  />
  </div>
@@ -927,7 +926,7 @@ export default function KYCPage() {
  type="text"
  value={addressData.complement}
  onChange={(e) => setAddressData({ ...addressData, complement: e.target.value })}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500/20 placeholder:text-gray-400"
+ className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
  placeholder="Apto, Bloco"
  />
  </div>
@@ -941,7 +940,7 @@ export default function KYCPage() {
  type="text"
  value={addressData.neighborhood}
  onChange={(e) => setAddressData({ ...addressData, neighborhood: e.target.value })}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500/20 placeholder:text-gray-400"
+ className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
  placeholder="Nome do bairro"
  />
  </div>
@@ -955,7 +954,7 @@ export default function KYCPage() {
  type="text"
  value={addressData.city}
  onChange={(e) => setAddressData({ ...addressData, city: e.target.value })}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500/20 placeholder:text-gray-400"
+ className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
  placeholder="Nome da cidade"
  />
  </div>
@@ -968,7 +967,7 @@ export default function KYCPage() {
  type="text"
  value={addressData.state}
  onChange={(e) => setAddressData({ ...addressData, state: e.target.value })}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500/20 placeholder:text-gray-400"
+ className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
  placeholder="SP"
  maxLength={2}
  />
@@ -998,7 +997,7 @@ export default function KYCPage() {
  <select
  value={financialData.pixType}
  onChange={(e) => setFinancialData({ ...financialData, pixType: e.target.value })}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500/20"
+ className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
  >
  <option value="cpf">CPF</option>
  <option value="cnpj">CNPJ</option>
@@ -1016,7 +1015,7 @@ export default function KYCPage() {
  type="text"
  value={financialData.pixKey}
  onChange={(e) => setFinancialData({ ...financialData, pixKey: e.target.value })}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-green-500 focus:ring-1 focus:ring-green-500/20 placeholder:text-gray-400"
+ className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
  placeholder="Digite sua chave PIX"
  />
  </div>
@@ -1077,7 +1076,7 @@ export default function KYCPage() {
  <label className="flex items-start gap-2 cursor-pointer">
  <input
  type="checkbox"
- className="mt-0.5 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+ className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
  />
  <span className="text-xs text-gray-600">
  Declaro que as informações são verdadeiras.
@@ -1122,7 +1121,7 @@ export default function KYCPage() {
  ) : (
  <button
  onClick={handleNext}
- className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-lg bg-green-600 px-5 py-2 text-sm font-semibold text-white hover:bg-green-700 transition-all"
+ className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-all"
  >
  Continuar
  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1167,7 +1166,7 @@ function FileUpload({
  required?: boolean;
 }) {
  return (
- <div className="group rounded-lg border border-dashed border-gray-200 p-3 transition-all hover:border-green-400 hover:bg-green-50/30">
+ <div className="group rounded-lg border border-dashed border-gray-200 p-3 transition-all hover:border-emerald-400 hover:bg-emerald-50/30">
  <div className="flex items-start justify-between mb-2">
  <div>
  <h4 className="text-xs font-semibold text-gray-900 flex items-center gap-1.5">
@@ -1205,8 +1204,8 @@ function FileUpload({
  </button>
  </div>
  ) : (
- <label className="mt-2 flex cursor-pointer flex-col items-center gap-2 rounded-lg bg-gray-50 p-4 hover:bg-green-50 transition-all border border-transparent hover:border-green-200">
- <CloudArrowUpIcon className="h-6 w-6 text-green-500" />
+ <label className="mt-2 flex cursor-pointer flex-col items-center gap-2 rounded-lg bg-gray-50 p-4 hover:bg-emerald-50 transition-all border border-transparent hover:border-emerald-200">
+ <CloudArrowUpIcon className="h-6 w-6 text-emerald-500" />
  <span className="text-xs font-medium text-gray-700">Clique para upload</span>
  <span className="text-[10px] text-gray-400">PDF, JPG, PNG • 5MB máx</span>
  <input
@@ -1223,5 +1222,3 @@ function FileUpload({
  </div>
  );
 }
-
-

@@ -70,4 +70,3 @@ export function CircuitBackground({ className = '' }: { className?: string }) {
 }
 
 export default CircuitBackground;
-

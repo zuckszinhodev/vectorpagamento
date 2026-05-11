@@ -53,7 +53,7 @@ class PaymentApprovedMerchantMail extends Mailable
     {
         return match ($method) {
             'pix' => 'PIX',
-            'credit_card' => 'CartÃ£o de CrÃ©dito',
+            'credit_card' => 'Cartão de Crédito',
             'boleto' => 'Boleto',
             default => $method ?? 'N/A',
         };

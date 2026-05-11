@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Banco Babylon Acquirer Implementation
  * 
- * API Documentation: https://bancobabylon.readme.io/reference/introduÃ§Ã£o
+ * API Documentation: https://bancobabylon.readme.io/reference/introdução
  * 
  * This class implements the simplified AcquirerInterface.
  * For full gateway functionality, use BabylonGateway instead.

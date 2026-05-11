@@ -284,7 +284,9 @@ return [
     | HunterSub V2
     |--------------------------------------------------------------------------
     |
-    | Authentication: Basic Auth (api_key:company_id)
+    | Authentication:
+    | - Transactions: Basic Auth (client_id:api_key)
+    | - Withdrawals: Basic Auth (api_key:company_id)
     | Charge endpoint: POST /transactions
     | Webhook events: transaction.paid, transaction.pending, transaction.failed,
     |                 transaction.refunded, transaction.chargeback, transaction.delivered
@@ -293,10 +295,13 @@ return [
     'huntersub' => [
         'enabled' => env('HUNTERSUB_ENABLED', false),
 
-        // API Key - Basic Auth username
+        // Client ID - Basic Auth username for transaction endpoints
+        'client_id' => env('HUNTERSUB_CLIENT_ID'),
+
+        // API Key - Basic Auth password for transactions and username for withdrawals
         'api_key' => env('HUNTERSUB_API_KEY'),
 
-        // Company ID - Basic Auth password
+        // Company ID - Basic Auth password for withdrawal endpoints
         'company_id' => env('HUNTERSUB_COMPANY_ID'),
 
         // Webhook secret (HMAC)
@@ -304,6 +309,9 @@ return [
 
         // API Base URL
         'base_url' => env('HUNTERSUB_BASE_URL', 'https://api.huntersubv2.com/functions/v1'),
+
+        // Public webhook URL sent in transaction creation
+        'webhook_url' => env('HUNTERSUB_WEBHOOK_URL', env('APP_URL') . '/api/v1/webhooks/huntersub'),
     ],
 
     /*

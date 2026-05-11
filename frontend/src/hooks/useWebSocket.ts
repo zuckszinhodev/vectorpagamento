@@ -219,4 +219,3 @@ export function requestNotificationPermission() {
     Notification.requestPermission();
   }
 }
-

@@ -69,11 +69,13 @@ const sections = [
   { id: 'webhooks', label: 'Webhooks', icon: CodeBracketIcon },
 ];
 
+const EXTERNAL_API_BASE_URL = 'https://api.vectorpagamentos.com/api/v1/external';
+
 // --- Main Component ---
 export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
   const [activeSection, setActiveSection] = useState('introduction');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const displayKey = apiKey || 'vp_live_xxxxxxxxxxxx';
+  const displayKey = apiKey || 'sk_live_xxxxxxxxxxxx';
 
   useEffect(() => {
     const handleScroll = () => {
@@ -99,7 +101,7 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
           </p>
           <div className="mt-4 inline-flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2 border border-gray-700">
             <span className="text-gray-400 text-sm">Base URL:</span>
-            <code className="text-green-400 text-sm font-mono">https://api.vectorpagamentos.com/v1</code>
+            <code className="text-green-400 text-sm font-mono">{EXTERNAL_API_BASE_URL}</code>
           </div>
         </div>
       </div>
@@ -163,7 +165,7 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
                   <div className="bg-surface-page rounded-lg p-4 border border-border-DEFAULT">
                     <p className="text-sm font-medium text-tx-primary">Base URL</p>
                     <code className="text-xs text-green-500 font-mono mt-1 block">
-                      https://api.vectorpagamentos.com/v1
+                      {EXTERNAL_API_BASE_URL}
                     </code>
                   </div>
                   <div className="bg-surface-page rounded-lg p-4 border border-border-DEFAULT">
@@ -185,25 +187,28 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
               <h2 className="text-2xl font-bold text-tx-primary">Authentication</h2>
               <div className="mt-4 bg-surface-card rounded-lg border border-border-DEFAULT p-6 space-y-4">
                 <p className="text-tx-secondary">
-                  All API requests require a Bearer token in the <code className="text-green-500 bg-gray-800 px-1.5 py-0.5 rounded text-sm">Authorization</code> header.
-                  API keys can be generated in <strong className="text-tx-primary">Settings &gt; API Keys</strong>.
+                  Para integrações externas, envie uma chave secreta no header <code className="text-green-500 bg-gray-800 px-1.5 py-0.5 rounded text-sm">X-API-Key</code>.
+                  Chaves podem ser geradas em <strong className="text-tx-primary">Configurações &gt; Chaves de API</strong>.
                 </p>
                 <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
                   <p className="text-sm text-gray-400 mb-2">Header</p>
                   <code className="text-green-400 font-mono text-sm">
-                    Authorization: Bearer {displayKey}
+                    X-API-Key: {displayKey}
                   </code>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="bg-surface-page rounded-lg p-4 border border-border-DEFAULT">
-                    <code className="text-sm text-green-500 font-mono">vp_live_*</code>
-                    <p className="text-xs text-tx-secondary mt-1">Production environment</p>
+                    <code className="text-sm text-green-500 font-mono">sk_live_*</code>
+                    <p className="text-xs text-tx-secondary mt-1">Produção. Use para criar cobranças e saques pelo servidor.</p>
                   </div>
                   <div className="bg-surface-page rounded-lg p-4 border border-border-DEFAULT">
-                    <code className="text-sm text-amber-500 font-mono">vp_test_*</code>
-                    <p className="text-xs text-tx-secondary mt-1">Sandbox environment</p>
+                    <code className="text-sm text-amber-500 font-mono">sk_test_*</code>
+                    <p className="text-xs text-tx-secondary mt-1">Sandbox/testes. Nunca exponha chaves secretas no frontend.</p>
                   </div>
                 </div>
+                <p className="text-xs text-tx-muted">
+                  O header <code className="text-green-500 bg-gray-800 px-1 py-0.5 rounded">Authorization: Bearer</code> é usado para JWT do painel. Na API externa, prefira <code className="text-green-500 bg-gray-800 px-1 py-0.5 rounded">X-API-Key</code>.
+                </p>
               </div>
             </section>
 
@@ -262,15 +267,15 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="POST" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/charges</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/charges</code>
                   <span className="text-tx-muted text-sm">- Create PIX Charge</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Creates a new PIX charge. Returns a QR code and copy-paste code for payment.
                 </p>
                 <CodeBlock
-                  curl={`curl -X POST https://api.vectorpagamentos.com/v1/charges \\
-  -H "Authorization: Bearer ${displayKey}" \\
+                  curl={`curl -X POST ${EXTERNAL_API_BASE_URL}/charges \\
+  -H "X-API-Key: ${displayKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "amount": 5000,
@@ -282,10 +287,10 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
     },
     "description": "Produto X"
   }'`}
-                  js={`const response = await fetch('https://api.vectorpagamentos.com/v1/charges', {
+                  js={`const response = await fetch('${EXTERNAL_API_BASE_URL}/charges', {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer ${displayKey}',
+    'X-API-Key': '${displayKey}',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
@@ -325,15 +330,15 @@ const data = await response.json();`}
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="POST" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/charges</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/charges</code>
                   <span className="text-tx-muted text-sm">- Create Credit Card Charge</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Creates a charge using a credit card. Supports installments.
                 </p>
                 <CodeBlock
-                  curl={`curl -X POST https://api.vectorpagamentos.com/v1/charges \\
-  -H "Authorization: Bearer ${displayKey}" \\
+                  curl={`curl -X POST ${EXTERNAL_API_BASE_URL}/charges \\
+  -H "X-API-Key: ${displayKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "amount": 10000,
@@ -352,10 +357,10 @@ const data = await response.json();`}
       "cvv": "123"
     }
   }'`}
-                  js={`const response = await fetch('https://api.vectorpagamentos.com/v1/charges', {
+                  js={`const response = await fetch('${EXTERNAL_API_BASE_URL}/charges', {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer ${displayKey}',
+    'X-API-Key': '${displayKey}',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
@@ -401,15 +406,15 @@ const data = await response.json();`}
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="POST" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/charges</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/charges</code>
                   <span className="text-tx-muted text-sm">- Create Boleto Charge</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Creates a charge with boleto payment method. Returns a URL and barcode.
                 </p>
                 <CodeBlock
-                  curl={`curl -X POST https://api.vectorpagamentos.com/v1/charges \\
-  -H "Authorization: Bearer ${displayKey}" \\
+                  curl={`curl -X POST ${EXTERNAL_API_BASE_URL}/charges \\
+  -H "X-API-Key: ${displayKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "amount": 15000,
@@ -420,10 +425,10 @@ const data = await response.json();`}
       "document": "12345678900"
     }
   }'`}
-                  js={`const response = await fetch('https://api.vectorpagamentos.com/v1/charges', {
+                  js={`const response = await fetch('${EXTERNAL_API_BASE_URL}/charges', {
   method: 'POST',
   headers: {
-    'Authorization': 'Bearer ${displayKey}',
+    'X-API-Key': '${displayKey}',
     'Content-Type': 'application/json',
   },
   body: JSON.stringify({
@@ -462,20 +467,20 @@ const data = await response.json();`}
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="GET" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/charges</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/charges</code>
                   <span className="text-tx-muted text-sm">- List Charges</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Returns a paginated list of charges. Supports filtering by status.
                 </p>
                 <CodeBlock
-                  curl={`curl -X GET "https://api.vectorpagamentos.com/v1/charges?status=approved&page=1&per_page=20" \\
-  -H "Authorization: Bearer ${displayKey}"`}
+                  curl={`curl -X GET "${EXTERNAL_API_BASE_URL}/charges?status=approved&page=1&per_page=20" \\
+  -H "X-API-Key: ${displayKey}"`}
                   js={`const response = await fetch(
-  'https://api.vectorpagamentos.com/v1/charges?status=approved&page=1&per_page=20',
+  '${EXTERNAL_API_BASE_URL}/charges?status=approved&page=1&per_page=20',
   {
     headers: {
-      'Authorization': 'Bearer ${displayKey}',
+      'X-API-Key': '${displayKey}',
     },
   }
 );
@@ -503,20 +508,20 @@ const data = await response.json();`}
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="GET" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/charges/:id</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/charges/:id</code>
                   <span className="text-tx-muted text-sm">- Get Charge</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Retrieves the details of a specific charge by its ID.
                 </p>
                 <CodeBlock
-                  curl={`curl -X GET https://api.vectorpagamentos.com/v1/charges/chr_xxx \\
-  -H "Authorization: Bearer ${displayKey}"`}
+                  curl={`curl -X GET ${EXTERNAL_API_BASE_URL}/charges/chr_xxx \\
+  -H "X-API-Key: ${displayKey}"`}
                   js={`const response = await fetch(
-  'https://api.vectorpagamentos.com/v1/charges/chr_xxx',
+  '${EXTERNAL_API_BASE_URL}/charges/chr_xxx',
   {
     headers: {
-      'Authorization': 'Bearer ${displayKey}',
+      'X-API-Key': '${displayKey}',
     },
   }
 );
@@ -544,21 +549,21 @@ const data = await response.json();`}
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="POST" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/charges/:id/cancel</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/charges/:id/cancel</code>
                   <span className="text-tx-muted text-sm">- Cancel Charge</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Cancels a pending charge. Only charges with status &quot;pending&quot; can be cancelled.
                 </p>
                 <CodeBlock
-                  curl={`curl -X POST https://api.vectorpagamentos.com/v1/charges/chr_xxx/cancel \\
-  -H "Authorization: Bearer ${displayKey}"`}
+                  curl={`curl -X POST ${EXTERNAL_API_BASE_URL}/charges/chr_xxx/cancel \\
+  -H "X-API-Key: ${displayKey}"`}
                   js={`const response = await fetch(
-  'https://api.vectorpagamentos.com/v1/charges/chr_xxx/cancel',
+  '${EXTERNAL_API_BASE_URL}/charges/chr_xxx/cancel',
   {
     method: 'POST',
     headers: {
-      'Authorization': 'Bearer ${displayKey}',
+      'X-API-Key': '${displayKey}',
     },
   }
 );
@@ -583,25 +588,25 @@ const data = await response.json();`}
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="POST" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/charges/:id/refund</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/charges/:id/refund</code>
                   <span className="text-tx-muted text-sm">- Refund Charge</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Refunds a charge. Optionally specify an amount for partial refunds.
                 </p>
                 <CodeBlock
-                  curl={`curl -X POST https://api.vectorpagamentos.com/v1/charges/chr_xxx/refund \\
-  -H "Authorization: Bearer ${displayKey}" \\
+                  curl={`curl -X POST ${EXTERNAL_API_BASE_URL}/charges/chr_xxx/refund \\
+  -H "X-API-Key: ${displayKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "amount": 5000
   }'`}
                   js={`const response = await fetch(
-  'https://api.vectorpagamentos.com/v1/charges/chr_xxx/refund',
+  '${EXTERNAL_API_BASE_URL}/charges/chr_xxx/refund',
   {
     method: 'POST',
     headers: {
-      'Authorization': 'Bearer ${displayKey}',
+      'X-API-Key': '${displayKey}',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -636,20 +641,20 @@ const data = await response.json();`}
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="GET" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/withdrawals/summary</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/withdrawals/summary</code>
                   <span className="text-tx-muted text-sm">- Get Balance</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Returns the current balance summary including available, pending, and total withdrawn amounts.
                 </p>
                 <CodeBlock
-                  curl={`curl -X GET https://api.vectorpagamentos.com/v1/withdrawals/summary \\
-  -H "Authorization: Bearer ${displayKey}"`}
+                  curl={`curl -X GET ${EXTERNAL_API_BASE_URL}/withdrawals/summary \\
+  -H "X-API-Key: ${displayKey}"`}
                   js={`const response = await fetch(
-  'https://api.vectorpagamentos.com/v1/withdrawals/summary',
+  '${EXTERNAL_API_BASE_URL}/withdrawals/summary',
   {
     headers: {
-      'Authorization': 'Bearer ${displayKey}',
+      'X-API-Key': '${displayKey}',
     },
   }
 );
@@ -675,20 +680,20 @@ const data = await response.json();`}
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="GET" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/withdrawals</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/withdrawals</code>
                   <span className="text-tx-muted text-sm">- List Withdrawals</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Returns a paginated list of withdrawals. Supports filtering by status.
                 </p>
                 <CodeBlock
-                  curl={`curl -X GET "https://api.vectorpagamentos.com/v1/withdrawals?status=completed&page=1" \\
-  -H "Authorization: Bearer ${displayKey}"`}
+                  curl={`curl -X GET "${EXTERNAL_API_BASE_URL}/withdrawals?status=completed&page=1" \\
+  -H "X-API-Key: ${displayKey}"`}
                   js={`const response = await fetch(
-  'https://api.vectorpagamentos.com/v1/withdrawals?status=completed&page=1',
+  '${EXTERNAL_API_BASE_URL}/withdrawals?status=completed&page=1',
   {
     headers: {
-      'Authorization': 'Bearer ${displayKey}',
+      'X-API-Key': '${displayKey}',
     },
   }
 );
@@ -716,26 +721,26 @@ const data = await response.json();`}
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="POST" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/withdrawals</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/withdrawals</code>
                   <span className="text-tx-muted text-sm">- Request Withdrawal</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Requests a new withdrawal from available balance.
                 </p>
                 <CodeBlock
-                  curl={`curl -X POST https://api.vectorpagamentos.com/v1/withdrawals \\
-  -H "Authorization: Bearer ${displayKey}" \\
+                  curl={`curl -X POST ${EXTERNAL_API_BASE_URL}/withdrawals \\
+  -H "X-API-Key: ${displayKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "amount": 50000,
     "method": "pix"
   }'`}
                   js={`const response = await fetch(
-  'https://api.vectorpagamentos.com/v1/withdrawals',
+  '${EXTERNAL_API_BASE_URL}/withdrawals',
   {
     method: 'POST',
     headers: {
-      'Authorization': 'Bearer ${displayKey}',
+      'X-API-Key': '${displayKey}',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -770,21 +775,21 @@ const data = await response.json();`}
               <div className="mt-6 bg-surface-card rounded-lg border border-border-DEFAULT p-6">
                 <div className="flex items-center gap-3 flex-wrap">
                   <MethodBadge method="POST" />
-                  <code className="text-sm font-mono text-tx-primary">/v1/withdrawals/:id/cancel</code>
+                  <code className="text-sm font-mono text-tx-primary">/api/v1/external/withdrawals/:id/cancel</code>
                   <span className="text-tx-muted text-sm">- Cancel Withdrawal</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
                   Cancels a pending withdrawal request.
                 </p>
                 <CodeBlock
-                  curl={`curl -X POST https://api.vectorpagamentos.com/v1/withdrawals/wdr_xxx/cancel \\
-  -H "Authorization: Bearer ${displayKey}"`}
+                  curl={`curl -X POST ${EXTERNAL_API_BASE_URL}/withdrawals/wdr_xxx/cancel \\
+  -H "X-API-Key: ${displayKey}"`}
                   js={`const response = await fetch(
-  'https://api.vectorpagamentos.com/v1/withdrawals/wdr_xxx/cancel',
+  '${EXTERNAL_API_BASE_URL}/withdrawals/wdr_xxx/cancel',
   {
     method: 'POST',
     headers: {
-      'Authorization': 'Bearer ${displayKey}',
+      'X-API-Key': '${displayKey}',
     },
   }
 );

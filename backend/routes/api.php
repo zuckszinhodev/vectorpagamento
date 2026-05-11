@@ -103,7 +103,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         Route::post('/charge/{chargeId}/upsell/{upsellId}/decline', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'declineUpsell']);
     });
 
-    // Custom Domain Checkout (para domÃ­nios personalizados)
+    // Custom Domain Checkout (para domínios personalizados)
     // Acessado via: https://pay.seudominio.com/api/v1/pay/{slug?}
     Route::prefix('pay')->middleware('resolve.domain')->group(function () {
         Route::get('/{slug?}', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'showByDomain']);
@@ -125,7 +125,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
     });
 
     // Webhook Unificado (no auth, signature verification inside handler)
-    // Use este Ãºnico endpoint em todas as adquirentes:
+    // Use este único endpoint em todas as adquirentes:
     //   POST https://api.vectorpagamentos.com/api/v1/webhook
     Route::post('webhook', [\App\Http\Controllers\Api\V1\WebhookController::class, 'unified'])
         ->middleware('throttle:120,1');
@@ -133,12 +133,12 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
     // Webhooks por adquirente (legado/compatibilidade)
     Route::prefix('webhooks')->middleware('throttle:120,1')->group(function () {
 
-        // â”€â”€ Endpoints ativos (PayFort e HunterSub) â”€â”€â”€â”€â”€â”€â”€
+        // ── Endpoints ativos (PayFort e HunterSub) ───────
         Route::post('/payfort', [\App\Http\Controllers\Api\V1\WebhookController::class, 'payfort']);
         Route::post('/huntersub', [\App\Http\Controllers\Api\V1\WebhookController::class, 'huntersub']);
         Route::post('/enki', [\App\Http\Controllers\Api\V1\WebhookController::class, 'enki']);
         
-        // â”€â”€ Endpoints customizados â”€â”€â”€â”€â”€â”€â”€
+        // ── Endpoints customizados ───────
         Route::post('/custom/{integrationId}', [\App\Http\Controllers\Api\V1\WebhookController::class, 'custom']);
         Route::post('/n8n/{integrationId}', [\App\Http\Controllers\Api\V1\WebhookController::class, 'n8n']);
     });
@@ -547,9 +547,9 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::get('/{logId}', [\App\Http\Controllers\Api\V1\N8nDeliveryLogController::class, 'show']);
         });
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ═══════════════════════════════════════════════════════════════════
         // Admin: Security Monitoring - FULL SECURITY MANAGEMENT
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ═══════════════════════════════════════════════════════════════════
         Route::prefix('admin/security')->middleware(['role:admin,owner,support,financial,antifraud', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
             // Stats & Threats (SecurityAdminController)
             Route::get('/stats', [\App\Http\Controllers\Api\V1\SecurityAdminController::class, 'stats']);
@@ -580,13 +580,6 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::delete('/unblock-ip/{ipOrId}', [\App\Http\Controllers\Api\V1\SecurityMonitorController::class, 'unblockIp']);
             Route::get('/ip/{ip}', [\App\Http\Controllers\Api\V1\SecurityMonitorController::class, 'ipDetails']);
             Route::get('/rate-limit-status', [\App\Http\Controllers\Api\V1\SecurityMonitorController::class, 'rateLimitStatus']);
-        });
-
-        // Admin: Dual Control Approvals Queue
-        Route::prefix('admin/approvals')->middleware(['role:admin,owner,support,financial,antifraud', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
-            Route::get('/', [\App\Http\Controllers\Api\V1\AdminActionApprovalController::class, 'index']);
-            Route::post('/{approvalId}/approve', [\App\Http\Controllers\Api\V1\AdminActionApprovalController::class, 'approve']);
-            Route::post('/{approvalId}/reject', [\App\Http\Controllers\Api\V1\AdminActionApprovalController::class, 'reject']);
         });
 
         // Split Config (user's own split settings)

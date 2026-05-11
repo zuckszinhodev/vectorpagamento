@@ -55,7 +55,7 @@ export default function WazerAIChat() {
       wazerAIService.getSuggestions().then(res => {
         if (res.success) setSuggestions(res.data);
       }).catch((error) => {
-        console.error('Erro ao carregar sugestÃµes:', error);
+        console.error('Erro ao carregar sugestões:', error);
       });
     }
   }, [isOpen, messages.length]);
@@ -119,7 +119,7 @@ export default function WazerAIChat() {
         );
       }
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Erro de conexÃ£o. Verifique sua internet e tente novamente.';
+      const errorMsg = err?.response?.data?.error || 'Erro de conexão. Verifique sua internet e tente novamente.';
       setMessages(prev =>
         prev.map(m =>
           m.id === loadingMessage.id
@@ -145,11 +145,11 @@ export default function WazerAIChat() {
     wazerAIService.getSuggestions().then(res => {
       if (res.success) setSuggestions(res.data);
     }).catch((error) => {
-      console.error('Erro ao recarregar sugestÃµes:', error);
+      console.error('Erro ao recarregar sugestões:', error);
     });
   };
 
-  const firstName = user?.name?.split(' ')[0] || 'UsuÃ¡rio';
+  const firstName = user?.name?.split(' ')[0] || 'Usuário';
 
   return (
     <>
@@ -161,9 +161,9 @@ export default function WazerAIChat() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-green-600 text-white shadow-lg shadow-green-500/40 hover:bg-green-500 hover:shadow-xl hover:shadow-green-500/50 transition-all hover:scale-105 active:scale-95"
+            className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-500/40 hover:bg-emerald-500 hover:shadow-xl hover:shadow-emerald-500/50 transition-all hover:scale-105 active:scale-95"
             style={{ opacity: 1 }}
-            title="Vector IA"
+            title="WazerAI"
           >
             <ChatBubbleLeftRightIconSolid className="h-6 w-6" />
           </motion.button>
@@ -182,13 +182,13 @@ export default function WazerAIChat() {
             style={{ opacity: 1 }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border-DEFAULT/60 bg-gradient-to-r from-green-600 to-green-700 px-4 py-3">
+            <div className="flex items-center justify-between border-b border-border-DEFAULT/60 bg-gradient-to-r from-emerald-600 to-emerald-700 px-4 py-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
                   <ChatBubbleLeftRightIconSolid className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">Vector IA</h3>
+                  <h3 className="text-sm font-bold text-white">WazerAI</h3>
                   <p className="text-[11px] text-white/70">Assistente inteligente</p>
                 </div>
               </div>
@@ -214,16 +214,16 @@ export default function WazerAIChat() {
               {messages.length === 0 && (
                 <div className="flex flex-col items-center pt-6 pb-4">
                   <h4 className="text-base font-bold text-tx-primary mb-1">
-                    OlÃ¡, {firstName}! ðŸ‘‹
+                    Olá, {firstName}! 👋
                   </h4>
                   <p className="text-xs text-tx-muted text-center max-w-[280px] mb-6">
-                    Sou a Vector IA, sua assistente inteligente. Posso te ajudar com vendas, mÃ©tricas, estratÃ©gias e mais!
+                    Sou a WazerAI, sua assistente inteligente. Posso te ajudar com vendas, métricas, estratégias e mais!
                   </p>
 
                   {/* Suggestions */}
                   {suggestions.length > 0 && (
                     <div className="w-full space-y-2">
-                      <p className="text-[11px] font-medium text-tx-muted uppercase tracking-wider px-1">SugestÃµes</p>
+                      <p className="text-[11px] font-medium text-tx-muted uppercase tracking-wider px-1">Sugestões</p>
                       <div className="grid grid-cols-1 gap-1.5">
                         {suggestions.slice(0, 10).map((s, i) => {
                           const IconComp = (s.icon && suggestionIcons[s.icon]) || QuestionMarkCircleIcon;
@@ -252,16 +252,16 @@ export default function WazerAIChat() {
                   <div
                     className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-gradient-to-br from-green-600 to-green-700 text-white rounded-br-md'
+                        ? 'bg-gradient-to-br from-emerald-600 to-emerald-700 text-white rounded-br-md'
                         : 'bg-surface-hover/60 text-tx-primary border border-border-DEFAULT/40 rounded-bl-md'
                     }`}
                   >
                     {msg.isLoading ? (
                       <div className="flex items-center gap-2 py-1">
                         <div className="flex gap-1">
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-green-500" style={{ animationDelay: '0ms' }} />
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-green-500" style={{ animationDelay: '150ms' }} />
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-green-500" style={{ animationDelay: '300ms' }} />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-500" style={{ animationDelay: '0ms' }} />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-500" style={{ animationDelay: '150ms' }} />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-500" style={{ animationDelay: '300ms' }} />
                         </div>
                         <span className="text-xs text-tx-muted">Pensando...</span>
                       </div>
@@ -289,7 +289,7 @@ export default function WazerAIChat() {
                   onKeyDown={handleKeyDown}
                   placeholder="Digite sua mensagem..."
                   rows={1}
-                  className="flex-1 resize-none rounded-xl border border-border-DEFAULT/60 bg-gray-50 dark:bg-[#12122a] px-3.5 py-2.5 text-sm text-tx-primary placeholder-tx-muted focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500/50 transition-colors"
+                  className="flex-1 resize-none rounded-xl border border-border-DEFAULT/60 bg-gray-50 dark:bg-[#12122a] px-3.5 py-2.5 text-sm text-tx-primary placeholder-tx-muted focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-colors"
                   style={{ maxHeight: '100px' }}
                   onInput={(e) => {
                     const target = e.target as HTMLTextAreaElement;
@@ -301,13 +301,13 @@ export default function WazerAIChat() {
                 <button
                   onClick={() => sendMessage()}
                   disabled={!input.trim() || isLoading}
-                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-green-600 to-green-700 text-white shadow-md shadow-green-500/20 transition-all hover:shadow-lg hover:shadow-green-500/30 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed active:scale-95"
+                  className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 text-white shadow-md shadow-emerald-500/20 transition-all hover:shadow-lg hover:shadow-emerald-500/30 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed active:scale-95"
                 >
                   <PaperAirplaneIcon className="h-4 w-4" />
                 </button>
               </div>
               <p className="mt-1.5 text-center text-[10px] text-tx-muted/60">
-                @Vector Pagamentos inteligÃªncia para o seu negÃ³cio.
+                @Vector Pagamentos inteligência para o seu negócio.
               </p>
             </div>
           </motion.div>
@@ -344,7 +344,7 @@ function ActionResultBadge({ actionResult }: { actionResult: WazerAIActionResult
       {checkoutSlug && (
         <a
           href={`/checkouts`}
-          className="inline-flex items-center gap-1 rounded-lg bg-green-500/20 px-2 py-1 text-[11px] font-medium text-green-700 dark:text-green-300 hover:bg-green-500/30 transition-colors"
+          className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/20 px-2 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/30 transition-colors"
         >
           <ShoppingCartIcon className="h-3 w-3" />
           Ver Checkout
@@ -369,7 +369,7 @@ function ActionResultBadge({ actionResult }: { actionResult: WazerAIActionResult
           className="inline-flex items-center gap-1 rounded-lg bg-slate-500/20 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-500/30 transition-colors"
         >
           <LinkIcon className="h-3 w-3" />
-          PÃ¡gina
+          Página
         </a>
       )}
       {downloadUrl && (
@@ -397,7 +397,7 @@ function MarkdownContent({ content, isUser }: { content: string; isUser: boolean
       className={`wazerai-markdown prose prose-sm max-w-none ${
         isUser
           ? 'prose-invert'
-          : 'prose-green'
+          : 'prose-emerald'
       }`}
       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
     />
@@ -421,7 +421,7 @@ function simpleMarkdown(text: string): string {
     .replace(/^## (.+)$/gm, '<h3 class="text-sm font-bold mt-3 mb-1">$1</h3>')
     .replace(/^# (.+)$/gm, '<h2 class="text-base font-bold mt-3 mb-1">$1</h2>')
     // Unordered lists
-    .replace(/^[-â€¢] (.+)$/gm, '<li class="ml-3">$1</li>')
+    .replace(/^[-•] (.+)$/gm, '<li class="ml-3">$1</li>')
     // Ordered lists
     .replace(/^\d+\. (.+)$/gm, '<li class="ml-3 list-decimal">$1</li>')
     // Line breaks (double newline = paragraph, single = <br>)
@@ -433,5 +433,3 @@ function simpleMarkdown(text: string): string {
 
   return `<p>${html}</p>`;
 }
-
-

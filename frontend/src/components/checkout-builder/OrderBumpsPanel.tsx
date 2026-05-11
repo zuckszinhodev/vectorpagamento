@@ -144,7 +144,7 @@ export default function OrderBumpsPanel({ checkoutId, availableProducts }: Order
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-green-500 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
       </div>
     );
   }
@@ -159,7 +159,7 @@ export default function OrderBumpsPanel({ checkoutId, availableProducts }: Order
         {!showForm && (
           <button
             onClick={() => { resetForm(); setShowForm(true); }}
-            className="inline-flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-700 transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition-colors"
           >
             <PlusIcon className="h-3.5 w-3.5" />
             Novo
@@ -276,7 +276,7 @@ export default function OrderBumpsPanel({ checkoutId, availableProducts }: Order
               <Switch
                 checked={formData.is_active ?? true}
                 onChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
-                className={`${formData.is_active ? 'bg-green-600' : 'bg-gray-600'} relative inline-flex h-5 w-9 items-center rounded-full transition-colors`}
+                className={`${formData.is_active ? 'bg-emerald-600' : 'bg-gray-600'} relative inline-flex h-5 w-9 items-center rounded-full transition-colors`}
               >
                 <span className={`${formData.is_active ? 'translate-x-5' : 'translate-x-1'} inline-block h-3 w-3 transform rounded-full bg-white transition-transform`} />
               </Switch>
@@ -286,7 +286,7 @@ export default function OrderBumpsPanel({ checkoutId, availableProducts }: Order
               <Switch
                 checked={formData.is_pre_selected ?? false}
                 onChange={(checked) => setFormData(prev => ({ ...prev, is_pre_selected: checked }))}
-                className={`${formData.is_pre_selected ? 'bg-green-600' : 'bg-gray-600'} relative inline-flex h-5 w-9 items-center rounded-full transition-colors`}
+                className={`${formData.is_pre_selected ? 'bg-emerald-600' : 'bg-gray-600'} relative inline-flex h-5 w-9 items-center rounded-full transition-colors`}
               >
                 <span className={`${formData.is_pre_selected ? 'translate-x-5' : 'translate-x-1'} inline-block h-3 w-3 transform rounded-full bg-white transition-transform`} />
               </Switch>
@@ -295,7 +295,7 @@ export default function OrderBumpsPanel({ checkoutId, availableProducts }: Order
 
           {/* Actions */}
           <div className="flex gap-2 pt-1">
-            <button onClick={handleSave} className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 transition-colors">
+            <button onClick={handleSave} className="flex-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 transition-colors">
               {editingBump ? 'Atualizar' : 'Criar Order Bump'}
             </button>
             <button onClick={resetForm} className="rounded-lg border border-gray-600 px-3 py-2 text-xs text-tx-muted hover:text-white transition-colors">
@@ -319,7 +319,7 @@ export default function OrderBumpsPanel({ checkoutId, availableProducts }: Order
               key={bump.id}
               className={`rounded-lg border p-3 transition-all ${
                 bump.is_active
-                  ? 'border-green-500/30 bg-green-900/10'
+                  ? 'border-emerald-500/30 bg-emerald-900/10'
                   : 'border-gray-700 bg-gray-800/30 opacity-60'
               }`}
             >
@@ -349,7 +349,7 @@ export default function OrderBumpsPanel({ checkoutId, availableProducts }: Order
                   <Switch
                     checked={bump.is_active}
                     onChange={() => toggleActive(bump)}
-                    className={`${bump.is_active ? 'bg-green-600' : 'bg-gray-600'} relative inline-flex h-4 w-7 items-center rounded-full transition-colors`}
+                    className={`${bump.is_active ? 'bg-emerald-600' : 'bg-gray-600'} relative inline-flex h-4 w-7 items-center rounded-full transition-colors`}
                   >
                     <span className={`${bump.is_active ? 'translate-x-4' : 'translate-x-0.5'} inline-block h-2.5 w-2.5 transform rounded-full bg-white transition-transform`} />
                   </Switch>
@@ -375,5 +375,3 @@ export default function OrderBumpsPanel({ checkoutId, availableProducts }: Order
     </div>
   );
 }
-
-

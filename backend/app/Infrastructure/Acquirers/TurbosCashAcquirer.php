@@ -12,19 +12,19 @@ use Illuminate\Support\Facades\Log;
  * 
  * API Documentation: https://docs.turbos.cash
  * 
- * Authentication: Basic Access Auth â€” base64(PUBLIC_KEY:SECRET_KEY)
+ * Authentication: Basic Access Auth — base64(PUBLIC_KEY:SECRET_KEY)
  * Base URL: https://api.turbos.cash/v1
  * 
  * Supported payment methods: PIX, Credit Card, Boleto
  * Supported transfer method: PIX OUT
  * 
  * Endpoints:
- *   POST   /v1/transactions           â€” Create sale (PIX/Card/Boleto)
- *   GET    /v1/transactions/{id}      â€” Find sale
- *   POST   /v1/transactions/{id}/refund â€” Refund sale
- *   POST   /v1/transfers              â€” Create PIX OUT (requires x-withdraw-key)
- *   GET    /v1/transfers/{id}         â€” Find transfer (requires x-withdraw-key)
- *   GET    /v1/balance/available      â€” Get available balance
+ *   POST   /v1/transactions           — Create sale (PIX/Card/Boleto)
+ *   GET    /v1/transactions/{id}      — Find sale
+ *   POST   /v1/transactions/{id}/refund — Refund sale
+ *   POST   /v1/transfers              — Create PIX OUT (requires x-withdraw-key)
+ *   GET    /v1/transfers/{id}         — Find transfer (requires x-withdraw-key)
+ *   GET    /v1/balance/available      — Get available balance
  * 
  * Transaction statuses: waiting_payment, pending, approved, refused, in_protest, refunded, paid, cancelled, chargeback
  * Transfer statuses: COMPLETED, PROCESSING, CANCELLED, REFUSED, PENDING_ANALYSIS, PENDING_QUEUE

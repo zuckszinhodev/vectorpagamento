@@ -246,7 +246,7 @@ export default function MemberAreaPage() {
  title="Total de Cursos"
  value={dashboard?.total_courses || 0}
  icon={AcademicCapIcon}
- color="green"
+ color="emerald"
  />
  <StatCard
  title="Total de Aulas"
@@ -394,7 +394,7 @@ export default function MemberAreaPage() {
 // Stat Card Component
 function StatCard({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: any; color: string }) {
  const colorClasses = {
- purple: 'bg-accent-subtle text-accent-primary',
+ emerald: 'bg-accent-subtle text-accent-primary',
  blue: 'bg-accent-subtle text-accent-primary',
  green: 'bg-status-success-subtle text-status-success',
  yellow: 'bg-status-warning-subtle text-status-warning',
@@ -810,13 +810,13 @@ function SettingsTab({ settings }: { settings: any }) {
  <div className="flex gap-2">
  <input
  type="color"
-value={formData.primary_color || '#16A34A'}
+ value={formData.primary_color || '#8B5CF6'}
  onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
  className="h-10 w-14 border border-border-DEFAULT rounded cursor-pointer"
  />
  <input
  type="text"
-value={formData.primary_color || '#16A34A'}
+ value={formData.primary_color || '#8B5CF6'}
  onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
  className="flex-1 px-3 py-2 border border-border-DEFAULT rounded-lg bg-surface-card text-tx-primary"
  />

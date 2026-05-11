@@ -351,12 +351,12 @@ export default function ProductsPage() {
         </div>
         <div className="card p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10">
-              <UsersIcon className="h-5 w-5 text-green-500" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
+              <UsersIcon className="h-5 w-5 text-emerald-500" />
             </div>
             <div>
               <p className="text-xs text-tx-muted">Afiliados</p>
-              <p className="text-xl font-bold text-green-600">{stats.withAffiliates}</p>
+              <p className="text-xl font-bold text-emerald-600">{stats.withAffiliates}</p>
             </div>
           </div>
         </div>
@@ -716,7 +716,7 @@ export default function ProductsPage() {
                     {product.type === 'digital' ? 'Digital' : product.type === 'physical' ? 'Físico' : 'Serviço'}
                   </span>
                   {product.affiliate_enabled && (
-                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-green-100 text-green-700">
+                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-100 text-emerald-700">
                       {product.affiliate_commission_percent}%
                     </span>
                   )}
@@ -780,7 +780,7 @@ export default function ProductsPage() {
                   </td>
                   <td className="px-4 py-3 text-center hidden lg:table-cell">
                     {product.affiliate_enabled ? (
-                      <span className="px-2 py-0.5 text-xs rounded bg-green-100 text-green-700">
+                      <span className="px-2 py-0.5 text-xs rounded bg-emerald-100 text-emerald-700">
                         {product.affiliate_commission_percent}%
                       </span>
                     ) : (
@@ -1418,8 +1418,8 @@ function ProductFormPage({
               {/* Métodos de Pagamento */}
               <div className="mb-6 p-4 rounded-xl border-2 border-border-DEFAULT bg-gradient-to-br from-surface-card to-surface-hover/30">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10">
-                    <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
+                    <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
                   </div>
@@ -1435,38 +1435,38 @@ function ProductFormPage({
                       type="checkbox"
                       defaultChecked={false}
                       disabled
-                      className="h-5 w-5 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+                      className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
                     />
                     <div className="flex items-center gap-2">
-                      <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                       </svg>
                       <span className="text-sm font-medium text-tx-primary">Cartão</span>
                       <span className="text-xs text-tx-muted">(em breve)</span>
                     </div>
                   </label>
-                  <label className="flex items-center gap-3 p-3 rounded-lg bg-surface-card hover:bg-surface-hover cursor-pointer border-2 border-transparent hover:border-green-500/30 transition-all">
+                  <label className="flex items-center gap-3 p-3 rounded-lg bg-surface-card hover:bg-surface-hover cursor-pointer border-2 border-transparent hover:border-emerald-500/30 transition-all">
                     <input
                       {...register('payment_methods.pix')}
                       type="checkbox"
                       defaultChecked
-                      className="h-5 w-5 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+                      className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
                     />
                     <div className="flex items-center gap-2">
-                      <PixIcon className="h-5 w-5 text-green-500" />
+                      <PixIcon className="h-5 w-5 text-emerald-500" />
                       <span className="text-sm font-medium text-tx-primary">PIX</span>
                     </div>
                   </label>
-                  <label className="flex items-center gap-3 p-3 rounded-lg bg-surface-card hover:bg-surface-hover cursor-pointer border-2 border-transparent hover:border-green-500/30 transition-all opacity-50">
+                  <label className="flex items-center gap-3 p-3 rounded-lg bg-surface-card hover:bg-surface-hover cursor-pointer border-2 border-transparent hover:border-emerald-500/30 transition-all opacity-50">
                     <input
                       {...register('payment_methods.boleto')}
                       type="checkbox"
                       defaultChecked={false}
                       disabled
-                      className="h-5 w-5 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+                      className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
                     />
                     <div className="flex items-center gap-2">
-                      <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
                       </svg>
                       <span className="text-sm font-medium text-tx-primary">Boleto</span>
@@ -1551,8 +1551,8 @@ function ProductFormPage({
                 {/* Área de Membros */}
                 <div className={`p-4 rounded-lg border-2 transition-all ${memberAreaEnabled ? 'border-accent-primary bg-accent-subtle' : 'border-border-DEFAULT'}`}>
                   <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                      <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                      <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                       </svg>
                     </div>
@@ -1706,7 +1706,7 @@ function ProductFormPage({
                   <input
                     {...register('stock_enabled')}
                     type="checkbox"
-                    className="ml-auto h-5 w-5 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+                    className="ml-auto h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
                   />
                 </div>
                 <p className="text-sm text-tx-muted mb-4">
@@ -2081,5 +2081,3 @@ function ProductFormPage({
     </div>
   );
 }
-
-

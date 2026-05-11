@@ -9,7 +9,7 @@ Disallow: /settings
 Disallow: /api/
 
 # Sitemap
-Sitemap: https://app.vectorpagamentos.com/sitemap.xml
+Sitemap: https://app.Vector Pagamentos.com.br/sitemap.xml
 
 # Crawl-delay
 Crawl-delay: 1

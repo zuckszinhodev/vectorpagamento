@@ -33,9 +33,9 @@ return new class extends Migration
                 ['key' => 'logo_url', 'value' => null, 'type' => 'string', 'group' => 'appearance', 'description' => 'URL do logo da plataforma', 'created_at' => now(), 'updated_at' => now()],
                 
                 // API settings
-                ['key' => 'rate_limit_per_minute', 'value' => '1000', 'type' => 'integer', 'group' => 'api', 'description' => 'Limite de requisiÃ§Ãµes por minuto', 'created_at' => now(), 'updated_at' => now()],
+                ['key' => 'rate_limit_per_minute', 'value' => '1000', 'type' => 'integer', 'group' => 'api', 'description' => 'Limite de requisições por minuto', 'created_at' => now(), 'updated_at' => now()],
                 ['key' => 'webhook_timeout', 'value' => '30', 'type' => 'integer', 'group' => 'api', 'description' => 'Timeout de webhooks em segundos', 'created_at' => now(), 'updated_at' => now()],
-                ['key' => 'cors_enabled', 'value' => 'true', 'type' => 'boolean', 'group' => 'api', 'description' => 'Permitir requisiÃ§Ãµes cross-origin', 'created_at' => now(), 'updated_at' => now()],
+                ['key' => 'cors_enabled', 'value' => 'true', 'type' => 'boolean', 'group' => 'api', 'description' => 'Permitir requisições cross-origin', 'created_at' => now(), 'updated_at' => now()],
             ]);
         }
     }

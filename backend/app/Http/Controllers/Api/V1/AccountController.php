@@ -29,7 +29,7 @@ class AccountController extends Controller
                 'success' => false,
                 'error' => [
                     'code' => 'account_not_found',
-                    'message' => 'Conta nÃ£o encontrada',
+                    'message' => 'Conta não encontrada',
                 ],
             ], 404);
         }
@@ -61,7 +61,7 @@ class AccountController extends Controller
         $account = Account::find($user->account_id);
 
         if (!$account) {
-            return response()->json(['success' => false, 'message' => 'Conta nÃ£o encontrada'], 404);
+            return response()->json(['success' => false, 'message' => 'Conta não encontrada'], 404);
         }
 
         $settings = $account->settings ?? [];
@@ -113,7 +113,7 @@ class AccountController extends Controller
         $account = Account::find($user->account_id);
 
         if (!$account) {
-            return response()->json(['success' => false, 'message' => 'Conta nÃ£o encontrada'], 404);
+            return response()->json(['success' => false, 'message' => 'Conta não encontrada'], 404);
         }
 
         $validated = $request->validate([
@@ -150,7 +150,7 @@ class AccountController extends Controller
             if (count($keyValues) !== count(array_unique($keyValues))) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Chaves PIX duplicadas nÃ£o sÃ£o permitidas',
+                    'message' => 'Chaves PIX duplicadas não são permitidas',
                 ], 422);
             }
 
@@ -200,7 +200,7 @@ class AccountController extends Controller
                 'success' => false,
                 'error' => [
                     'code' => 'account_not_found',
-                    'message' => 'Conta nÃ£o encontrada',
+                    'message' => 'Conta não encontrada',
                 ],
             ], 404);
         }
@@ -399,7 +399,7 @@ class AccountController extends Controller
             \Illuminate\Support\Facades\Log::error('AccountController::transactions failed', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
-                'error' => ['code' => 'internal_error', 'message' => 'Erro ao carregar transaÃ§Ãµes'],
+                'error' => ['code' => 'internal_error', 'message' => 'Erro ao carregar transações'],
             ], 500);
         }
     }
@@ -414,7 +414,7 @@ class AccountController extends Controller
         $account = Account::find($user->account_id);
 
         if (!$account) {
-            return response()->json(['success' => false, 'message' => 'Conta nÃ£o encontrada'], 404);
+            return response()->json(['success' => false, 'message' => 'Conta não encontrada'], 404);
         }
 
         $settings = $account->settings ?? [];
@@ -458,7 +458,7 @@ class AccountController extends Controller
         $account = Account::find($user->account_id);
 
         if (!$account) {
-            return response()->json(['success' => false, 'message' => 'Conta nÃ£o encontrada'], 404);
+            return response()->json(['success' => false, 'message' => 'Conta não encontrada'], 404);
         }
 
         $validated = $request->validate([
@@ -485,7 +485,7 @@ class AccountController extends Controller
         return response()->json([
             'success' => true,
             'data' => $settings['dashboard_customization'],
-            'message' => 'PersonalizaÃ§Ã£o salva com sucesso',
+            'message' => 'Personalização salva com sucesso',
         ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('AccountController::saveDashboardCustomization error', [
@@ -511,7 +511,7 @@ class AccountController extends Controller
             if (!$account) {
                 return response()->json([
                     'success' => false,
-                    'error' => ['code' => 'account_not_found', 'message' => 'Conta nÃ£o encontrada'],
+                    'error' => ['code' => 'account_not_found', 'message' => 'Conta não encontrada'],
                 ], 404);
             }
 
@@ -543,7 +543,7 @@ class AccountController extends Controller
                 'ips' => ['required', 'array', 'max:20'],
                 'ips.*' => ['required', 'string', 'ip'],
             ], [
-                'ips.*.ip' => 'O valor ":input" nÃ£o Ã© um endereÃ§o IP vÃ¡lido.',
+                'ips.*.ip' => 'O valor ":input" não é um endereço IP válido.',
             ]);
 
             $account = Account::find($request->user()->account_id);
@@ -551,7 +551,7 @@ class AccountController extends Controller
             if (!$account) {
                 return response()->json([
                     'success' => false,
-                    'error' => ['code' => 'account_not_found', 'message' => 'Conta nÃ£o encontrada'],
+                    'error' => ['code' => 'account_not_found', 'message' => 'Conta não encontrada'],
                 ], 404);
             }
 
@@ -570,7 +570,7 @@ class AccountController extends Controller
                 'success' => false,
                 'error' => [
                     'code' => 'validation_error',
-                    'message' => 'Dados invÃ¡lidos.',
+                    'message' => 'Dados inválidos.',
                     'details' => $e->errors(),
                 ],
             ], 422);

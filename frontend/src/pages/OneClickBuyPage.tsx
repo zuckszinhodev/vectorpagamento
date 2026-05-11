@@ -31,9 +31,9 @@ const CARD_BRANDS: Record<string, { color: string; gradient: string }> = {
   visa: { color: '#1A1F71', gradient: 'from-blue-800 to-blue-600' },
   mastercard: { color: '#EB001B', gradient: 'from-red-600 to-orange-500' },
   elo: { color: '#00A4E0', gradient: 'from-cyan-600 to-blue-500' },
-  amex: { color: '#006FCF', gradient: 'from-green-600 to-green-700' },
+  amex: { color: '#006FCF', gradient: 'from-blue-600 to-green-600' },
   hipercard: { color: '#822124', gradient: 'from-red-800 to-red-600' },
-  default: { color: '#16a34a', gradient: 'from-green-700 to-green-500' },
+  default: { color: '#7C3AED', gradient: 'from-emerald-700 to-emerald-500' },
 };
 
 export default function OneClickBuyPage() {
@@ -126,7 +126,7 @@ export default function OneClickBuyPage() {
         </div>
         <button
           onClick={() => setShowAddCard(true)}
-          className="flex items-center gap-2 rounded-xl bg-green-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors shadow-sm"
+          className="flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors shadow-sm"
         >
           <PlusIcon className="h-4 w-4" /> Adicionar Cartão
         </button>
@@ -148,8 +148,8 @@ export default function OneClickBuyPage() {
         <h2 className="text-base font-semibold text-tx-primary mb-4">Como funciona</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="flex flex-col items-center text-center gap-3 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10">
-              <CreditCardIcon className="h-6 w-6 text-green-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
+              <CreditCardIcon className="h-6 w-6 text-emerald-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-tx-primary">1. Salve seu cartão</p>
@@ -157,8 +157,8 @@ export default function OneClickBuyPage() {
             </div>
           </div>
           <div className="flex flex-col items-center text-center gap-3 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10">
-              <LockClosedIcon className="h-6 w-6 text-green-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
+              <LockClosedIcon className="h-6 w-6 text-emerald-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-tx-primary">2. Tokenização</p>
@@ -166,8 +166,8 @@ export default function OneClickBuyPage() {
             </div>
           </div>
           <div className="flex flex-col items-center text-center gap-3 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-500/10">
-              <CheckCircleIcon className="h-6 w-6 text-green-600" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
+              <CheckCircleIcon className="h-6 w-6 text-emerald-600" />
             </div>
             <div>
               <p className="text-sm font-medium text-tx-primary">3. Compra rápida</p>
@@ -180,7 +180,7 @@ export default function OneClickBuyPage() {
       {/* Cards Grid */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
         </div>
       ) : cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 rounded-2xl bg-surface-card">
@@ -189,7 +189,7 @@ export default function OneClickBuyPage() {
           <p className="text-sm text-tx-muted mt-1">Adicione um cartão para comprar com 1 clique</p>
           <button
             onClick={() => setShowAddCard(true)}
-            className="mt-6 flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+            className="mt-6 flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
           >
             <PlusIcon className="h-4 w-4" /> Adicionar Cartão
           </button>
@@ -282,7 +282,7 @@ export default function OneClickBuyPage() {
                   onChange={(e) => setCardForm({ ...cardForm, number: formatCardNumber(e.target.value) })}
                   placeholder="0000 0000 0000 0000"
                   maxLength={19}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary font-mono placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary font-mono placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
                 />
               </div>
 
@@ -293,7 +293,7 @@ export default function OneClickBuyPage() {
                   value={cardForm.holder_name}
                   onChange={(e) => setCardForm({ ...cardForm, holder_name: e.target.value.toUpperCase() })}
                   placeholder="NOME COMO NO CARTÃO"
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
                 />
               </div>
 
@@ -303,7 +303,7 @@ export default function OneClickBuyPage() {
                   <select
                     value={cardForm.exp_month}
                     onChange={(e) => setCardForm({ ...cardForm, exp_month: e.target.value })}
-                    className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
                   >
                     <option value="">MM</option>
                     {Array.from({ length: 12 }, (_, i) => (
@@ -316,7 +316,7 @@ export default function OneClickBuyPage() {
                   <select
                     value={cardForm.exp_year}
                     onChange={(e) => setCardForm({ ...cardForm, exp_year: e.target.value })}
-                    className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
                   >
                     <option value="">AA</option>
                     {Array.from({ length: 10 }, (_, i) => {
@@ -333,7 +333,7 @@ export default function OneClickBuyPage() {
                     onChange={(e) => setCardForm({ ...cardForm, cvv: e.target.value.replace(/\D/g, '').substring(0, 4) })}
                     placeholder="•••"
                     maxLength={4}
-                    className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary font-mono placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary font-mono placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -354,7 +354,7 @@ export default function OneClickBuyPage() {
                 disabled={
                   !cardForm.number || !cardForm.holder_name || !cardForm.exp_month || !cardForm.exp_year || !cardForm.cvv || addCardMutation.isPending
                 }
-                className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
               >
                 {addCardMutation.isPending ? 'Salvando...' : 'Salvar Cartão'}
               </button>
@@ -389,5 +389,3 @@ export default function OneClickBuyPage() {
     </div>
   );
 }
-
-

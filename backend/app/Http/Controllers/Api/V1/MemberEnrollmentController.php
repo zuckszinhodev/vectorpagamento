@@ -27,7 +27,7 @@ class MemberEnrollmentController extends Controller
             if (!$user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'UsuÃ¡rio nÃ£o autenticado',
+                    'message' => 'Usuário não autenticado',
                 ], 401);
             }
 
@@ -36,7 +36,7 @@ class MemberEnrollmentController extends Controller
             if (!$accountId) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Conta nÃ£o encontrada',
+                    'message' => 'Conta não encontrada',
                 ], 404);
             }
 
@@ -81,7 +81,7 @@ class MemberEnrollmentController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Erro ao listar matrÃ­culas: ' . $e->getMessage(),
+                'message' => 'Erro ao listar matrículas: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -101,15 +101,15 @@ class MemberEnrollmentController extends Controller
                 'access_type' => 'sometimes|in:lifetime,subscription,limited',
                 'expires_at' => 'sometimes|nullable|date|after:now',
             ], [
-                'course_id.required' => 'Selecione um curso para a matrÃ­cula.',
-                'course_id.string' => 'O ID do curso deve ser uma string vÃ¡lida.',
+                'course_id.required' => 'Selecione um curso para a matrícula.',
+                'course_id.string' => 'O ID do curso deve ser uma string válida.',
                 'user_email.required' => 'Informe o e-mail do aluno.',
-                'user_email.email' => 'O e-mail informado nÃ£o Ã© vÃ¡lido.',
-                'user_name.string' => 'O nome do aluno deve ser um texto vÃ¡lido.',
-                'user_name.max' => 'O nome do aluno nÃ£o pode exceder 255 caracteres.',
-                'access_type.in' => 'O tipo de acesso deve ser: VitalÃ­cio, Assinatura ou Limitado.',
-                'expires_at.date' => 'A data de expiraÃ§Ã£o deve ser uma data vÃ¡lida.',
-                'expires_at.after' => 'A data de expiraÃ§Ã£o deve ser uma data futura.',
+                'user_email.email' => 'O e-mail informado não é válido.',
+                'user_name.string' => 'O nome do aluno deve ser um texto válido.',
+                'user_name.max' => 'O nome do aluno não pode exceder 255 caracteres.',
+                'access_type.in' => 'O tipo de acesso deve ser: Vitalício, Assinatura ou Limitado.',
+                'expires_at.date' => 'A data de expiração deve ser uma data válida.',
+                'expires_at.after' => 'A data de expiração deve ser uma data futura.',
             ]);
 
             // Verify course belongs to account
@@ -120,7 +120,7 @@ class MemberEnrollmentController extends Controller
             if (!$course) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Curso nÃ£o encontrado',
+                    'message' => 'Curso não encontrado',
                 ], 404);
             }
 
@@ -171,7 +171,7 @@ class MemberEnrollmentController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'MatrÃ­cula reativada com sucesso',
+                    'message' => 'Matrícula reativada com sucesso',
                     'data' => $existingEnrollment->fresh(['user', 'course']),
                 ]);
             }
@@ -215,7 +215,7 @@ class MemberEnrollmentController extends Controller
 
             $response = [
                 'success' => true,
-                'message' => 'MatrÃ­cula criada com sucesso',
+                'message' => 'Matrícula criada com sucesso',
                 'data' => $enrollment->fresh(['user', 'course']),
                 'is_new_user' => $isNewUser,
             ];
@@ -257,7 +257,7 @@ class MemberEnrollmentController extends Controller
             if (!$enrollment) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'MatrÃ­cula nÃ£o encontrada',
+                    'message' => 'Matrícula não encontrada',
                 ], 404);
             }
 
@@ -295,7 +295,7 @@ class MemberEnrollmentController extends Controller
             if (!$enrollment) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'MatrÃ­cula nÃ£o encontrada',
+                    'message' => 'Matrícula não encontrada',
                 ], 404);
             }
 
@@ -309,7 +309,7 @@ class MemberEnrollmentController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'MatrÃ­cula atualizada com sucesso',
+                'message' => 'Matrícula atualizada com sucesso',
                 'data' => $enrollment->fresh(['user', 'course']),
             ]);
         } catch (\Throwable $e) {
@@ -342,7 +342,7 @@ class MemberEnrollmentController extends Controller
             if (!$enrollment) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'MatrÃ­cula nÃ£o encontrada',
+                    'message' => 'Matrícula não encontrada',
                 ], 404);
             }
 
@@ -350,7 +350,7 @@ class MemberEnrollmentController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'MatrÃ­cula cancelada com sucesso',
+                'message' => 'Matrícula cancelada com sucesso',
             ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('MemberEnrollmentController::destroy error', [
@@ -382,7 +382,7 @@ class MemberEnrollmentController extends Controller
             if (!$enrollment) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'MatrÃ­cula nÃ£o encontrada',
+                    'message' => 'Matrícula não encontrada',
                 ], 404);
             }
 
@@ -433,7 +433,7 @@ class MemberEnrollmentController extends Controller
             if (!$enrollment) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'MatrÃ­cula nÃ£o encontrada',
+                    'message' => 'Matrícula não encontrada',
                 ], 404);
             }
 
@@ -481,7 +481,7 @@ class MemberEnrollmentController extends Controller
             if (!$enrollment) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'MatrÃ­cula nÃ£o encontrada',
+                    'message' => 'Matrícula não encontrada',
                 ], 404);
             }
 

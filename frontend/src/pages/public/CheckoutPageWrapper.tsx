@@ -8,4 +8,3 @@ export default function CheckoutPageWrapper() {
   // O CheckoutPage já tem toda a lógica, então vamos apenas retornar ele
   return <PublicCheckoutPage />;
 }
-

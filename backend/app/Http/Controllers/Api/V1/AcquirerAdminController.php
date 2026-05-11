@@ -318,7 +318,6 @@ class AcquirerAdminController extends Controller
             'gateway_fee_fixed' => ['sometimes', 'numeric', 'min:0'],
             'gateway_fee_pix_out_percentage' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'gateway_fee_pix_out_fixed' => ['sometimes', 'numeric', 'min:0'],
-            'nominal_name' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
         // Handle display_name
@@ -429,10 +428,6 @@ class AcquirerAdminController extends Controller
         if (isset($validated['gateway_fee_pix_out_fixed'])) {
             $config->gateway_fee_pix_out_fixed = $validated['gateway_fee_pix_out_fixed'];
         }
-        if (array_key_exists('nominal_name', $validated)) {
-            $config->nominal_name = $validated['nominal_name'];
-        }
-
         $config->save();
 
         // Reset the AcquirerFactory singleton so the next request picks up the new config

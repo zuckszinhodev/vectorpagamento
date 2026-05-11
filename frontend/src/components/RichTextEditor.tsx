@@ -90,21 +90,21 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         }
         .rich-text-editor button:hover .ql-stroke,
         .rich-text-editor .ql-picker-label:hover .ql-stroke {
-          stroke: #16a34a !important;
+          stroke: #22c55e !important;
         }
         .rich-text-editor button:hover .ql-fill,
         .rich-text-editor .ql-picker-label:hover .ql-fill {
-          fill: #16a34a !important;
+          fill: #22c55e !important;
         }
         .rich-text-editor button.ql-active .ql-stroke {
-          stroke: #16a34a !important;
+          stroke: #22c55e !important;
         }
         .rich-text-editor button.ql-active .ql-fill {
-          fill: #16a34a !important;
+          fill: #22c55e !important;
         }
         .rich-text-editor .ql-toolbar button:hover,
         .rich-text-editor .ql-toolbar button:focus {
-          color: #16a34a;
+          color: #22c55e;
         }
 
         /* Dark mode */
@@ -167,4 +167,3 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
     </div>
   );
 }
-

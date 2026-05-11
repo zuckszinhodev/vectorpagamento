@@ -32,13 +32,13 @@ const templates = [
   { id: 'minimal', name: 'Minimalista', description: 'Simples e elegante', icon: Squares2X2Icon },
   { id: 'dark', name: 'Dark Mode', description: 'Design escuro profissional', icon: MoonIcon },
   { id: 'gradient', name: 'Gradiente', description: 'Gradientes modernos', icon: SunIcon },
-  { id: 'video', name: 'VSL', description: 'Otimizado para vÃ­deo', icon: VideoCameraIcon },
+  { id: 'video', name: 'VSL', description: 'Otimizado para vídeo', icon: VideoCameraIcon },
 ];
 
 const tones = [
-  { id: 'professional', name: 'Profissional', description: 'Tom corporativo e sÃ©rio', icon: BriefcaseIcon },
-  { id: 'casual', name: 'Casual', description: 'DescontraÃ­do e amigÃ¡vel', icon: ChatBubbleBottomCenterTextIcon },
-  { id: 'urgent', name: 'Urgente', description: 'Escassez e urgÃªncia', icon: ClockIcon },
+  { id: 'professional', name: 'Profissional', description: 'Tom corporativo e sério', icon: BriefcaseIcon },
+  { id: 'casual', name: 'Casual', description: 'Descontraído e amigável', icon: ChatBubbleBottomCenterTextIcon },
+  { id: 'urgent', name: 'Urgente', description: 'Escassez e urgência', icon: ClockIcon },
   { id: 'luxury', name: 'Luxo', description: 'Premium e exclusivo', icon: StarIcon },
 ];
 
@@ -123,7 +123,7 @@ export default function GenerateLandingPageModal({
 
   const handleGenerate = () => {
     if (!prompt.trim()) {
-      toast.error('Digite uma descriÃ§Ã£o para sua pÃ¡gina');
+      toast.error('Digite uma descrição para sua página');
       return;
     }
 
@@ -217,12 +217,12 @@ export default function GenerateLandingPageModal({
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-[rgb(50,50,50)]">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                      <SparklesIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                      <SparklesIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                     </div>
                     <div>
                       <Dialog.Title className="text-lg font-semibold text-gray-900 dark:text-white">
-                        Gerar PÃ¡gina de Vendas com IA
+                        Gerar Página de Vendas com IA
                       </Dialog.Title>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Passo {step} de {totalSteps}
@@ -243,15 +243,15 @@ export default function GenerateLandingPageModal({
                     {[
                       { num: 1, label: 'Produto' },
                       { num: 2, label: 'Template' },
-                      { num: 3, label: 'DomÃ­nio' },
-                      { num: 4, label: 'DescriÃ§Ã£o' },
+                      { num: 3, label: 'Domínio' },
+                      { num: 4, label: 'Descrição' },
                     ].map((s, index) => (
                       <div key={s.num} className="flex items-center">
                         <div className="flex flex-col items-center">
                           <div
                             className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium transition-colors ${
                               s.num === step
-                                ? 'bg-green-600 text-white'
+                                ? 'bg-emerald-600 text-white'
                                 : s.num < step
                                 ? 'bg-green-500 text-white'
                                 : 'bg-gray-200 dark:bg-[rgb(50,50,50)] text-gray-500 dark:text-gray-400'
@@ -282,7 +282,7 @@ export default function GenerateLandingPageModal({
                             onClick={() => setSelectedProduct(null)}
                             className={`p-3 rounded-lg border text-left transition-all ${
                               !selectedProduct
-                                ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
                                 : 'border-gray-200 dark:border-[rgb(50,50,50)] hover:border-gray-300 dark:hover:border-[rgb(70,70,70)]'
                             }`}
                           >
@@ -290,7 +290,7 @@ export default function GenerateLandingPageModal({
                             <p className="font-medium text-gray-900 dark:text-white text-sm">
                               Sem produto
                             </p>
-                            <p className="text-xs text-gray-500">PÃ¡gina genÃ©rica</p>
+                            <p className="text-xs text-gray-500">Página genérica</p>
                           </button>
                           {products.map((product: any) => (
                             <button
@@ -298,7 +298,7 @@ export default function GenerateLandingPageModal({
                               onClick={() => setSelectedProduct(product)}
                               className={`p-3 rounded-lg border text-left transition-all ${
                                 selectedProduct?.id === product.id
-                                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
                                   : 'border-gray-200 dark:border-[rgb(50,50,50)] hover:border-gray-300 dark:hover:border-[rgb(70,70,70)]'
                               }`}
                             >
@@ -337,7 +337,7 @@ export default function GenerateLandingPageModal({
                                   onClick={() => setSelectedCheckout(checkout)}
                                   className={`p-3 rounded-lg border text-left transition-all ${
                                     selectedCheckout?.id === checkout.id
-                                      ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
                                       : 'border-gray-200 dark:border-[rgb(50,50,50)] hover:border-gray-300 dark:hover:border-[rgb(70,70,70)]'
                                   }`}
                                 >
@@ -369,13 +369,13 @@ export default function GenerateLandingPageModal({
                               onClick={() => setSelectedTemplate(template.id)}
                               className={`p-4 rounded-lg border text-center transition-all ${
                                 selectedTemplate === template.id
-                                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
                                   : 'border-gray-200 dark:border-[rgb(50,50,50)] hover:border-gray-300 dark:hover:border-[rgb(70,70,70)]'
                               }`}
                             >
                               <template.icon className={`h-8 w-8 mx-auto mb-2 ${
                                 selectedTemplate === template.id
-                                  ? 'text-green-600 dark:text-green-400'
+                                  ? 'text-emerald-600 dark:text-emerald-400'
                                   : 'text-gray-400'
                               }`} />
                               <p className="font-medium text-gray-900 dark:text-white text-sm">
@@ -389,7 +389,7 @@ export default function GenerateLandingPageModal({
 
                       <div>
                         <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                          Tom da ComunicaÃ§Ã£o
+                          Tom da Comunicação
                         </h3>
                         <div className="grid grid-cols-2 gap-3">
                           {tones.map((tone) => (
@@ -398,13 +398,13 @@ export default function GenerateLandingPageModal({
                               onClick={() => setSelectedTone(tone.id)}
                               className={`p-3 rounded-lg border text-left transition-all flex items-start gap-3 ${
                                 selectedTone === tone.id
-                                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
                                   : 'border-gray-200 dark:border-[rgb(50,50,50)] hover:border-gray-300 dark:hover:border-[rgb(70,70,70)]'
                               }`}
                             >
                               <tone.icon className={`h-5 w-5 mt-0.5 ${
                                 selectedTone === tone.id
-                                  ? 'text-green-600 dark:text-green-400'
+                                  ? 'text-emerald-600 dark:text-emerald-400'
                                   : 'text-gray-400'
                               }`} />
                               <div>
@@ -423,7 +423,7 @@ export default function GenerateLandingPageModal({
                   {step === 3 && (
                     <div className="space-y-4">
                       <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                        Escolha o DomÃ­nio
+                        Escolha o Domínio
                       </h3>
 
                       {/* Default domain */}
@@ -431,19 +431,19 @@ export default function GenerateLandingPageModal({
                         onClick={() => setSelectedDomain('default')}
                         className={`w-full p-4 rounded-lg border text-left transition-all flex items-start gap-3 ${
                           selectedDomain === 'default'
-                            ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
                             : 'border-gray-200 dark:border-[rgb(50,50,50)] hover:border-gray-300 dark:hover:border-[rgb(70,70,70)]'
                         }`}
                       >
                         <ServerIcon className={`h-6 w-6 mt-0.5 flex-shrink-0 ${
                           selectedDomain === 'default'
-                            ? 'text-green-600 dark:text-green-400'
+                            ? 'text-emerald-600 dark:text-emerald-400'
                             : 'text-gray-400'
                         }`} />
                         <div>
-                          <p className="font-medium text-gray-900 dark:text-white text-sm">DomÃ­nio PadrÃ£o</p>
+                          <p className="font-medium text-gray-900 dark:text-white text-sm">Domínio Padrão</p>
                           <p className="text-xs text-gray-500 mt-0.5">
-                            Sua pÃ¡gina serÃ¡ acessÃ­vel pelo subdomÃ­nio vectorpagamentos.com
+                            Sua página será acessível pelo subdomínio Vector Pagamentos.com
                           </p>
                         </div>
                       </button>
@@ -452,7 +452,7 @@ export default function GenerateLandingPageModal({
                       {verifiedDomains.length > 0 && (
                         <div>
                           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                            DomÃ­nios Personalizados
+                            Domínios Personalizados
                           </p>
                           <div className="space-y-2">
                             {verifiedDomains.map((domain: CustomDomain) => (
@@ -461,13 +461,13 @@ export default function GenerateLandingPageModal({
                                 onClick={() => setSelectedDomain(domain.domain)}
                                 className={`w-full p-4 rounded-lg border text-left transition-all flex items-start gap-3 ${
                                   selectedDomain === domain.domain
-                                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20'
                                     : 'border-gray-200 dark:border-[rgb(50,50,50)] hover:border-gray-300 dark:hover:border-[rgb(70,70,70)]'
                                 }`}
                               >
                                 <GlobeAltIcon className={`h-6 w-6 mt-0.5 flex-shrink-0 ${
                                   selectedDomain === domain.domain
-                                    ? 'text-green-600 dark:text-green-400'
+                                    ? 'text-emerald-600 dark:text-emerald-400'
                                     : 'text-gray-400'
                                 }`} />
                                 <div>
@@ -485,8 +485,8 @@ export default function GenerateLandingPageModal({
                       {verifiedDomains.length === 0 && (
                         <div className="bg-gray-50 dark:bg-[rgb(30,30,30)] rounded-lg p-4 border border-dashed border-gray-300 dark:border-[rgb(50,50,50)]">
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            VocÃª ainda nÃ£o possui domÃ­nios personalizados verificados.
-                            Configure seus domÃ­nios na aba <span className="font-medium text-green-600 dark:text-green-400">DomÃ­nios</span>.
+                            Você ainda não possui domínios personalizados verificados.
+                            Configure seus domínios na aba <span className="font-medium text-emerald-600 dark:text-emerald-400">Domínios</span>.
                           </p>
                         </div>
                       )}
@@ -503,24 +503,24 @@ export default function GenerateLandingPageModal({
                           type="text"
                           value={name}
                           onChange={(e) => setName(e.target.value)}
-                          placeholder="Ex: PÃ¡gina de Vendas - Curso Marketing"
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[rgb(50,50,50)] bg-white dark:bg-[rgb(30,30,30)] text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          placeholder="Ex: Página de Vendas - Curso Marketing"
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[rgb(50,50,50)] bg-white dark:bg-[rgb(30,30,30)] text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                          Descreva o que vocÃª quer na pÃ¡gina *
+                          Descreva o que você quer na página *
                         </label>
                         <textarea
                           value={prompt}
                           onChange={(e) => setPrompt(e.target.value)}
                           rows={5}
-                          placeholder="Descreva sua pÃ¡gina de vendas. Exemplo: Quero uma pÃ¡gina para meu curso de marketing digital, focada em empreendedores iniciantes. Destaque aulas prÃ¡ticas, suporte por 1 ano e comunidade exclusiva. Oferta de 70% de desconto por 24 horas."
-                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[rgb(50,50,50)] bg-white dark:bg-[rgb(30,30,30)] text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          placeholder="Descreva sua página de vendas. Exemplo: Quero uma página para meu curso de marketing digital, focada em empreendedores iniciantes. Destaque aulas práticas, suporte por 1 ano e comunidade exclusiva. Oferta de 70% de desconto por 24 horas."
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-[rgb(50,50,50)] bg-white dark:bg-[rgb(30,30,30)] text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                         />
                         <p className="mt-1.5 text-xs text-gray-500">
-                          Quanto mais detalhes vocÃª fornecer, melhor serÃ¡ o resultado
+                          Quanto mais detalhes você fornecer, melhor será o resultado
                         </p>
                       </div>
 
@@ -555,9 +555,9 @@ export default function GenerateLandingPageModal({
                             </p>
                           </div>
                           <div>
-                            <span className="text-gray-500 dark:text-gray-400">DomÃ­nio:</span>
+                            <span className="text-gray-500 dark:text-gray-400">Domínio:</span>
                             <p className="text-gray-900 dark:text-white font-medium">
-                              {selectedDomain === 'default' ? 'PadrÃ£o (vectorpagamentos.com)' : selectedDomain}
+                              {selectedDomain === 'default' ? 'Padrão (Vector Pagamentos.com)' : selectedDomain}
                             </p>
                           </div>
                         </div>
@@ -578,15 +578,15 @@ export default function GenerateLandingPageModal({
                   {step < totalSteps ? (
                     <button
                       onClick={() => setStep(step + 1)}
-                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+                      className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700"
                     >
-                      PrÃ³ximo
+                      Próximo
                     </button>
                   ) : (
                     <button
                       onClick={handleGenerate}
                       disabled={!prompt.trim() || generateMutation.isPending}
-                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 inline-flex items-center gap-2"
+                      className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 inline-flex items-center gap-2"
                     >
                       {generateMutation.isPending ? (
                         <>
@@ -599,7 +599,7 @@ export default function GenerateLandingPageModal({
                       ) : (
                         <>
                           <SparklesIcon className="h-4 w-4" />
-                          Gerar PÃ¡gina de Vendas
+                          Gerar Página de Vendas
                         </>
                       )}
                     </button>
@@ -613,5 +613,3 @@ export default function GenerateLandingPageModal({
     </Transition>
   );
 }
-
-

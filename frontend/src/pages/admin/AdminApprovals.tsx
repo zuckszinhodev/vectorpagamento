@@ -256,7 +256,7 @@ export default function AdminApprovals() {
                 setActionKey(event.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
 
@@ -268,7 +268,7 @@ export default function AdminApprovals() {
                 setStatus(event.target.value);
                 setPage(1);
               }}
-              className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
             >
               {statusOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -291,7 +291,7 @@ export default function AdminApprovals() {
                 }}
                 className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   actionKey === item.key
-                    ? 'bg-green-600 text-white'
+                    ? 'bg-emerald-600 text-white'
                     : 'bg-surface-page text-tx-secondary hover:bg-surface-hover'
                 }`}
                 title={item.key}
@@ -321,10 +321,10 @@ export default function AdminApprovals() {
             setStatus('all');
             setPage(1);
           }}
-          className="rounded-xl bg-green-500/10 p-4 text-left transition-colors hover:bg-green-500/20"
+          className="rounded-xl bg-emerald-500/10 p-4 text-left transition-colors hover:bg-emerald-500/20"
         >
-          <p className="text-xs font-medium text-green-600">Todas</p>
-          <p className="mt-1 text-2xl font-bold text-green-600">{stats.total}</p>
+          <p className="text-xs font-medium text-emerald-600">Todas</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-600">{stats.total}</p>
         </button>
         <button
           onClick={() => {
@@ -381,7 +381,7 @@ export default function AdminApprovals() {
       <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
           </div>
         ) : approvals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
@@ -503,7 +503,7 @@ export default function AdminApprovals() {
                   onChange={(event) => setReviewReason(event.target.value)}
                   rows={4}
                   placeholder="Descreva o contexto da decisão para auditoria."
-                  className="w-full resize-none rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                  className="w-full resize-none rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -538,5 +538,3 @@ export default function AdminApprovals() {
     </AdminPageShell>
   );
 }
-
-

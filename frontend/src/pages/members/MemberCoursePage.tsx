@@ -636,4 +636,3 @@ function ModuleAccordion({ module, moduleIndex, courseId, currentLessonId }: {
     </div>
   );
 }
-

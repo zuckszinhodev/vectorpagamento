@@ -23,12 +23,12 @@ export const wazerAIService = {
     message: string,
     history: WazerAIChatMessage[] = []
   ): Promise<{ success: boolean; data: { message: string; model?: string; action_result?: WazerAIActionResult | null } }> {
-    const response = await api.post('/vector-ia/chat', { message, history });
+    const response = await api.post('/wazer-ai/chat', { message, history });
     return response.data;
   },
 
   async getSuggestions(): Promise<{ success: boolean; data: WazerAISuggestion[] }> {
-    const response = await api.get('/vector-ia/suggestions');
+    const response = await api.get('/wazer-ai/suggestions');
     return response.data;
   },
 
@@ -36,7 +36,7 @@ export const wazerAIService = {
     action: string,
     params: Record<string, unknown>
   ): Promise<{ success: boolean; data: WazerAIActionResult }> {
-    const response = await api.post('/vector-ia/action', { action, params });
+    const response = await api.post('/wazer-ai/action', { action, params });
     return response.data;
   },
 };

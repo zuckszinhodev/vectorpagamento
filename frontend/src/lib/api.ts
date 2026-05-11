@@ -2,7 +2,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import toast from 'react-hot-toast';
 
 // Configure API base URL to point to Laravel backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.vectorpagamentos.com/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.Vector Pagamentos.com.br/api/v1';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -59,7 +59,7 @@ api.interceptors.response.use(
     const code = (error.response?.data as any)?.error?.code;
     const requestUrl = originalRequest?.url || '';
 
-    // Handle account blocked/suspended â€” immediate redirect
+    // Handle account blocked/suspended — immediate redirect
     if (error.response?.status === 403 && code === 'account_blocked') {
       const blockReason = (error.response?.data as any)?.error?.block_reason;
       localStorage.removeItem('auth_token');
@@ -142,7 +142,7 @@ api.interceptors.response.use(
         isRefreshing = false;
         processQueue(refreshError, null);
 
-        // Refresh failed â€” clear auth and redirect
+        // Refresh failed — clear auth and redirect
         localStorage.removeItem('auth_token');
         window.location.href = '/login';
         return Promise.reject(refreshError);
@@ -150,7 +150,7 @@ api.interceptors.response.use(
     }
 
     if (error.response?.status === 429) {
-      toast.error('Muitas requisiÃ§Ãµes. Aguarde um momento.');
+      toast.error('Muitas requisições. Aguarde um momento.');
     } else if (error.response?.status && error.response.status >= 500) {
       toast.error('Erro no servidor. Tente novamente mais tarde.');
     }
@@ -179,4 +179,3 @@ export const formatDateShort = (date: string | Date): string => {
     dateStyle: 'short',
   }).format(new Date(date));
 };
-

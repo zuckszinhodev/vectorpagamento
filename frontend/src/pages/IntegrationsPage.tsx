@@ -790,7 +790,7 @@ export default function IntegrationsPage() {
  ) : app.route ? (
  <button
  onClick={() => navigate(app.route!)}
- className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium text-white bg-accent-primary rounded-xl hover:bg-accent-hover transition-all hover:shadow-green-500/40"
+ className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium text-white bg-accent-primary rounded-xl hover:bg-accent-hover transition-all hover:shadow-emerald-500/40"
  >
  Acessar
  </button>
@@ -812,7 +812,7 @@ export default function IntegrationsPage() {
  ) : (
  <button
  onClick={() => handleConnect(app)}
- className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium text-white bg-accent-primary rounded-xl hover:bg-accent-hover transition-all hover:shadow-green-500/40"
+ className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium text-white bg-accent-primary rounded-xl hover:bg-accent-hover transition-all hover:shadow-emerald-500/40"
  >
  <PlusIcon className="h-3.5 w-3.5" />
  Conectar
@@ -1109,5 +1109,3 @@ export default function IntegrationsPage() {
  </div>
  );
 }
-
-

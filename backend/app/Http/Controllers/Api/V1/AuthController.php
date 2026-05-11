@@ -10,6 +10,7 @@ use App\Mail\PasswordResetMail;
 use App\Mail\WelcomeMail;
 use App\Models\Account;
 use App\Models\User;
+use App\Services\AccountRegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,10 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly AccountRegistrationService $registrationService,
+    ) {
+    }
     /**
      * Register a new user
      */
@@ -78,66 +83,22 @@ class AuthController extends Controller
         }
 
         // Create account + user atomically
-        $account = null;
-        $user = null;
-
-        DB::beginTransaction();
         try {
-            // Create account first - generate unique placeholder document
-            $document = 'TEMP' . time() . random_int(100000, 999999);
-            $account = Account::create([
-                'id' => Str::uuid()->toString(),
+            $result = $this->registrationService->createAccount([
                 'name' => $request->input('name'),
-                'document' => $document,
-                'document_type' => 'cpf',
                 'email' => $request->input('email'),
-                'status' => 'pending',
+                'password' => $request->input('password'),
             ]);
-
-            // Create user with pending KYC status
-            $user = new User();
-            $user->id = Str::uuid()->toString();
-            $user->account_id = $account->id;
-            $user->email = $request->input('email');
-            $user->password = Hash::make($request->input('password'));
-            $user->name = $request->input('name');
-            $user->kyc_status = 'pending';
-            $user->save();
-
-            // Create wallet
-            \App\Models\AccountWallet::create([
-                'id' => Str::uuid()->toString(),
-                'account_id' => $account->id,
-                'available_balance' => 0,
-                'pending_balance' => 0,
-                'blocked_balance' => 0,
-                'currency' => 'BRL',
-            ]);
-
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Registration failed', ['error' => $e->getMessage(), 'email' => $request->input('email')]);
+            $account = $result['account'];
+            $user = $result['user'];
+        } catch (\RuntimeException $e) {
             return response()->json([
                 'success' => false,
                 'error' => [
                     'code' => 'registration_failed',
-                    'message' => 'Falha ao criar conta. Tente novamente.',
+                    'message' => $e->getMessage(),
                 ],
             ], 500);
-        }
-
-        // Send welcome email
-        try {
-            Mail::to($user->email)->send(new WelcomeMail($user));
-            Log::info('Welcome email sent successfully', ['user_id' => $user->id, 'email' => $user->email]);
-        } catch (\Exception $e) {
-            Log::error('Failed to send welcome email', [
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
         }
 
         // Generate JWT token
@@ -251,47 +212,15 @@ class AuthController extends Controller
                 }
             } else {
                 // New user — register via Google
-                DB::beginTransaction();
                 try {
-                    $document = 'TEMP' . time() . random_int(100000, 999999);
-                    $account = Account::create([
-                        'id' => Str::uuid()->toString(),
+                    $result = $this->registrationService->createAccount([
                         'name' => $name,
-                        'document' => $document,
-                        'document_type' => 'cpf',
                         'email' => $email,
-                        'status' => 'pending',
+                        'password' => null,
+                        'google_id' => $googleId,
                     ]);
-
-                    $user = new User();
-                    $user->id = Str::uuid()->toString();
-                    $user->account_id = $account->id;
-                    $user->email = $email;
-                    $user->password = Hash::make(Str::random(32));
-                    $user->name = $name;
-                    $user->google_id = $googleId;
-                    $user->kyc_status = 'pending';
-                    $user->save();
-
-                    \App\Models\AccountWallet::create([
-                        'id' => Str::uuid()->toString(),
-                        'account_id' => $account->id,
-                        'available_balance' => 0,
-                        'pending_balance' => 0,
-                        'blocked_balance' => 0,
-                        'currency' => 'BRL',
-                    ]);
-
-                    DB::commit();
-
-                    // Send welcome email
-                    try {
-                        Mail::to($user->email)->send(new WelcomeMail($user));
-                    } catch (\Exception $e) {
-                        Log::error('Failed to send welcome email (Google auth)', ['email' => $email, 'error' => $e->getMessage()]);
-                    }
-                } catch (\Exception $e) {
-                    DB::rollBack();
+                    $user = $result['user'];
+                } catch (\RuntimeException $e) {
                     Log::error('Google auth registration failed', ['error' => $e->getMessage(), 'email' => $email]);
                     return response()->json([
                         'success' => false,

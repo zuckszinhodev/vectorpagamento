@@ -276,10 +276,12 @@ class AcquirerConfig extends Model
                 'webhook_url' => $config['webhook_url'] ?? null,
             ],
             'huntersub' => [
+                'client_id' => $config['client_id'] ?? $config['company_id'] ?? null,
                 'api_key' => $config['api_key'] ?? null,
                 'company_id' => $config['company_id'] ?? null,
                 'webhook_secret' => $config['webhook_secret'] ?? null,
                 'base_url' => $config['base_url'] ?? null,
+                'webhook_url' => $config['webhook_url'] ?? null,
             ],
             default => null,
         };
@@ -363,10 +365,12 @@ class AcquirerConfig extends Model
                 ['key' => 'webhook_url', 'label' => 'Webhook URL', 'type' => 'text'],
             ],
             'huntersub' => [
+                ['key' => 'client_id', 'label' => 'Client ID', 'type' => 'text'],
                 ['key' => 'api_key', 'label' => 'API Key', 'type' => 'password'],
                 ['key' => 'company_id', 'label' => 'Company ID', 'type' => 'text'],
                 ['key' => 'webhook_secret', 'label' => 'Webhook Secret', 'type' => 'password'],
                 ['key' => 'base_url', 'label' => 'Base URL', 'type' => 'text'],
+                ['key' => 'webhook_url', 'label' => 'Webhook URL', 'type' => 'text'],
             ],
             default => [],
         };

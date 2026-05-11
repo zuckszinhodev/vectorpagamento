@@ -54,29 +54,12 @@ interface ChargeFilters {
   search?: string;
 }
 
-const PAID_CHARGE_STATUSES = new Set(['paid', 'approved']);
-const FINAL_CHARGE_STATUSES = new Set(['paid', 'approved', 'failed', 'refunded', 'cancelled', 'expired', 'chargeback']);
-
-function normalizeChargeStatus(status: string | null | undefined): string {
-  const normalized = String(status ?? '').toLowerCase().trim();
-  if (!normalized) {
-    return 'pending';
-  }
-  if (normalized === 'canceled') {
-    return 'cancelled';
-  }
-  return normalized;
-}
-
-function isPaidChargeStatus(status: string): boolean {
-  return PAID_CHARGE_STATUSES.has(normalizeChargeStatus(status));
-}
-
-function shouldPollChargeStatus(status: string): boolean {
-  return !FINAL_CHARGE_STATUSES.has(normalizeChargeStatus(status));
+function normalizeChargeStatus(status: string) {
+  return status === 'waiting_payment' ? 'pending' : status;
 }
 
 function StatusBadge({ status }: { status: string }) {
+  const normalizedStatus = normalizeChargeStatus(status);
   const styles: Record<string, string> = {
     paid: 'badge-success',
     approved: 'badge-success',
@@ -91,7 +74,7 @@ function StatusBadge({ status }: { status: string }) {
 
   const labels: Record<string, string> = {
     paid: 'Pago',
-    approved: 'Pago',
+    approved: 'Aprovado',
     pending: 'Pendente',
     processing: 'Processando',
     failed: 'Falhou',
@@ -101,7 +84,11 @@ function StatusBadge({ status }: { status: string }) {
     chargeback: 'Chargeback',
   };
 
-  return <span className={`badge ${styles[status] || 'badge-default'}`}>{labels[status] || status}</span>;
+  return (
+    <span className={`badge ${styles[normalizedStatus] || 'badge-default'}`}>
+      {labels[normalizedStatus] || normalizedStatus}
+    </span>
+  );
 }
 
 function NewPixChargeModal({
@@ -118,9 +105,6 @@ function NewPixChargeModal({
   const [pixCode, setPixCode] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showQrCode, setShowQrCode] = useState(false);
-  const [createdChargeId, setCreatedChargeId] = useState<string | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<string>('pending');
-  const paymentConfirmedToastShown = useRef(false);
   const queryClient = useQueryClient();
 
   const createChargeMutation = useMutation({
@@ -138,15 +122,10 @@ function NewPixChargeModal({
     },
     onSuccess: async (response) => {
       const chargeData = response.data || response;
-      const initialStatus = normalizeChargeStatus(chargeData.status);
-
-      setCreatedChargeId(chargeData.id ?? null);
-      setPaymentStatus(initialStatus);
-      paymentConfirmedToastShown.current = isPaidChargeStatus(initialStatus);
       
-      // Usar PIX retornado pela API ou gerar cÃ³digo simulado como fallback
+      // Usar PIX retornado pela API ou gerar código simulado como fallback
       const pixCopyPaste = chargeData.pix_copy_paste || chargeData.pix_qr_code || 
-        `00020126580014br.gov.bcb.pix0136${chargeData.id}@vectorpagamentos.com52040000530398654${(parseFloat(amount) * 100).toString().padStart(4, '0')}5802BR5913${customerName.substring(0, 13)}6009SAO PAULO62070503***6304`;
+        `00020126580014br.gov.bcb.pix0136${chargeData.id}@Vector Pagamentos.com52040000530398654${(parseFloat(amount) * 100).toString().padStart(4, '0')}5802BR5913${customerName.substring(0, 13)}6009SAO PAULO62070503***6304`;
       
       setPixCode(pixCopyPaste);
       
@@ -172,85 +151,31 @@ function NewPixChargeModal({
         }
       }
       
-      toast.success('CobranÃ§a PIX criada com sucesso!');
+      toast.success('Cobrança PIX criada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['charges'] });
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.error?.message || 'Erro ao criar cobranÃ§a');
+      toast.error(error.response?.data?.error?.message || 'Erro ao criar cobrança');
     },
   });
-
-  useEffect(() => {
-    if (!isOpen || !showQrCode || !createdChargeId || !shouldPollChargeStatus(paymentStatus)) {
-      return;
-    }
-
-    let isCancelled = false;
-    let intervalId: number | null = null;
-
-    const syncChargeStatus = async () => {
-      try {
-        const response = await api.post(`/charges/${createdChargeId}/sync`);
-        const responseData = response.data?.data ?? {};
-        const nextStatus = normalizeChargeStatus(responseData.status ?? paymentStatus);
-
-        if (isCancelled) {
-          return;
-        }
-
-        let statusChanged = false;
-        setPaymentStatus((current) => {
-          const normalizedCurrent = normalizeChargeStatus(current);
-          statusChanged = normalizedCurrent !== nextStatus;
-          return nextStatus;
-        });
-
-        if (statusChanged || response.data?.synced) {
-          queryClient.invalidateQueries({ queryKey: ['charges'] });
-        }
-
-        if (isPaidChargeStatus(nextStatus) && !paymentConfirmedToastShown.current) {
-          paymentConfirmedToastShown.current = true;
-          toast.success('Pagamento confirmado!');
-        }
-
-        if (!shouldPollChargeStatus(nextStatus) && intervalId) {
-          window.clearInterval(intervalId);
-          intervalId = null;
-        }
-      } catch {
-        // Em falha momentanea de rede/gateway, o polling continua no proximo ciclo.
-      }
-    };
-
-    syncChargeStatus();
-    intervalId = window.setInterval(syncChargeStatus, 5000);
-
-    return () => {
-      isCancelled = true;
-      if (intervalId) {
-        window.clearInterval(intervalId);
-      }
-    };
-  }, [isOpen, showQrCode, createdChargeId, paymentStatus, queryClient]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!amount || !customerName || !customerEmail || !customerDocument) {
-      toast.error('Preencha todos os campos obrigatÃ³rios');
+      toast.error('Preencha todos os campos obrigatórios');
       return;
     }
 
     const cleanDoc = customerDocument.replace(/\D/g, '');
     if (cleanDoc.length !== 11 && cleanDoc.length !== 14) {
-      toast.error('CPF deve ter 11 dÃ­gitos ou CNPJ 14 dÃ­gitos');
+      toast.error('CPF deve ter 11 dígitos ou CNPJ 14 dígitos');
       return;
     }
 
     const amountValue = parseFloat(amount.replace(',', '.'));
     if (isNaN(amountValue) || amountValue <= 0) {
-      toast.error('Valor invÃ¡lido');
+      toast.error('Valor inválido');
       return;
     }
 
@@ -264,8 +189,8 @@ function NewPixChargeModal({
 
   const handleCopyPixCode = () => {
     navigator.clipboard.writeText(pixCode)
-      .then(() => toast.success('CÃ³digo PIX copiado!'))
-      .catch(() => toast.error('Erro ao copiar cÃ³digo. Tente novamente.'));
+      .then(() => toast.success('Código PIX copiado!'))
+      .catch(() => toast.error('Erro ao copiar código. Tente novamente.'));
   };
 
   const handleClose = () => {
@@ -276,9 +201,6 @@ function NewPixChargeModal({
     setPixCode('');
     setQrCodeUrl('');
     setShowQrCode(false);
-    setCreatedChargeId(null);
-    setPaymentStatus('pending');
-    paymentConfirmedToastShown.current = false;
     onClose();
   };
 
@@ -311,7 +233,7 @@ function NewPixChargeModal({
               <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
                 <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4">
                   <Dialog.Title className="text-lg font-semibold text-tx-primary">
-                    {showQrCode ? 'PIX QR Code Gerado' : 'Nova CobranÃ§a PIX'}
+                    {showQrCode ? 'PIX QR Code Gerado' : 'Nova Cobrança PIX'}
                   </Dialog.Title>
                   <button
                     onClick={handleClose}
@@ -343,7 +265,7 @@ function NewPixChargeModal({
                         </label>
                         <input
                           type="text"
-                          placeholder="JoÃ£o Silva"
+                          placeholder="João Silva"
                           className="input"
                           value={customerName}
                           onChange={(e) => setCustomerName(e.target.value)}
@@ -425,7 +347,7 @@ function NewPixChargeModal({
                       
                       <div>
                         <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                          CÃ³digo PIX Copia e Cola
+                          Código PIX Copia e Cola
                         </label>
                         <div className="relative">
                           <textarea
@@ -437,34 +359,22 @@ function NewPixChargeModal({
                           <button
                             onClick={handleCopyPixCode}
                             className="absolute right-2 top-2 rounded p-2 hover:bg-surface-hover"
-                            title="Copiar cÃ³digo"
+                            title="Copiar código"
                           >
                             <ClipboardDocumentIcon className="h-5 w-5 text-tx-muted" />
                           </button>
                         </div>
                       </div>
 
-                      <div className="rounded-lg border border-border-DEFAULT bg-surface-elevated p-4">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-tx-muted">Status do pagamento</span>
-                          <StatusBadge status={paymentStatus} />
-                        </div>
-                        <p className="mt-2 text-xs text-tx-muted">
-                          {isPaidChargeStatus(paymentStatus)
-                            ? 'Pagamento identificado e confirmado no gateway.'
-                            : 'Aguardando confirmaÃ§Ã£o de pagamento. AtualizaÃ§Ã£o automÃ¡tica a cada 5 segundos.'}
-                        </p>
-                      </div>
-
                       <div className="rounded-lg bg-accent-subtle p-4">
                         <p className="text-sm text-accent-primary">
-                          <strong>InstruÃ§Ãµes:</strong>
+                          <strong>Instruções:</strong>
                           <br />
                           1. Abra o app do seu banco
                           <br />
                           2. Escolha pagar via PIX QR Code ou Copia e Cola
                           <br />
-                          3. Escaneie o QR Code ou cole o cÃ³digo
+                          3. Escaneie o QR Code ou cole o código
                           <br />
                           4. Confirme o pagamento
                         </p>
@@ -546,7 +456,7 @@ function ChargeDetailModal({
               <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
                 <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4">
                   <Dialog.Title className="text-lg font-semibold text-tx-primary">
-                    Detalhes da CobranÃ§a
+                    Detalhes da Cobrança
                   </Dialog.Title>
                   <button
                     onClick={onClose}
@@ -562,10 +472,10 @@ function ChargeDetailModal({
                       <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
                         <div className="flex items-center gap-2">
                           <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
-                            âš ï¸ EM DISPUTA
+                            ⚠️ EM DISPUTA
                           </span>
                           <span className="text-sm font-medium text-amber-900">
-                            Esta cobranÃ§a possui um chargeback ativo
+                            Esta cobrança possui um chargeback ativo
                           </span>
                         </div>
                       </div>
@@ -585,12 +495,12 @@ function ChargeDetailModal({
                       <StatusBadge status={charge.status} />
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-tx-muted">MÃ©todo</span>
+                      <span className="text-sm text-tx-muted">Método</span>
                       <span className="text-sm text-tx-primary">{charge.payment_method}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-tx-muted">Adquirente</span>
-                      <span className="text-sm text-tx-primary">{charge.acquirer_name || '-'}</span>
+                      <span className="text-sm text-tx-muted">Nominal</span>
+                      <span className="text-sm text-tx-primary">{charge.acquirer_name || ''}</span>
                     </div>
                     <hr className="border-border-DEFAULT" />
                     <div className="flex items-center justify-between">
@@ -615,17 +525,17 @@ function ChargeDetailModal({
                     {charge.metadata?.source === 'split' && (
                       <>
                         <hr className="border-border-DEFAULT" />
-                        <div className="rounded-lg bg-green-50 dark:bg-green-900/20 p-3 space-y-2">
+                        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3 space-y-2">
                           <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                               SPLIT
                             </span>
-                            <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                            <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                               Recebimento via Split
                             </span>
                           </div>
                           {charge.description && (
-                            <p className="text-xs text-green-600 dark:text-green-400">
+                            <p className="text-xs text-emerald-600 dark:text-emerald-400">
                               {charge.description}
                             </p>
                           )}
@@ -762,7 +672,7 @@ function ChargeActionsDropdown({
               <EyeIcon className="mr-3 h-4 w-4" />
               Ver detalhes
             </button>
-            {charge.status === 'pending' && (
+            {normalizeChargeStatus(charge.status) === 'pending' && (
               <button
                 type="button"
                 onClick={() => {
@@ -800,7 +710,7 @@ function ChargeActionsDropdown({
           setIsOpen((current) => !current);
         }}
         className="rounded p-1 hover:bg-surface-hover"
-        aria-label="Abrir aÃ§Ãµes da cobranÃ§a"
+        aria-label="Abrir ações da cobrança"
       >
         <EllipsisVerticalIcon className="h-5 w-5 text-tx-muted" />
       </button>
@@ -842,7 +752,7 @@ export default function ChargesPage() {
       if (data.synced) {
         toast.success(data.message || 'Status sincronizado!');
       } else {
-        toast(data.message || 'NÃ£o foi possÃ­vel sincronizar', { icon: 'â„¹ï¸' });
+        toast(data.message || 'Não foi possível sincronizar', { icon: 'ℹ️' });
       }
       queryClient.invalidateQueries({ queryKey: ['charges'] });
     },
@@ -857,36 +767,17 @@ export default function ChargesPage() {
       return response.data;
     },
     onSuccess: (data) => {
-      toast.success(data.message || 'SincronizaÃ§Ã£o concluÃ­da!');
+      toast.success(data.message || 'Sincronização concluída!');
       queryClient.invalidateQueries({ queryKey: ['charges'] });
     },
     onError: () => {
-      toast.error('Erro ao sincronizar cobranÃ§as');
+      toast.error('Erro ao sincronizar cobranças');
     },
   });
 
   // Usar dados da API
   const charges: Charge[] = data?.data || [];
   const pagination = data?.meta || { total: 0, last_page: 1 };
-
-  useEffect(() => {
-    if (!selectedCharge) {
-      return;
-    }
-
-    const freshSelectedCharge = charges.find((charge) => charge.id === selectedCharge.id);
-
-    if (!freshSelectedCharge) {
-      return;
-    }
-
-    if (
-      freshSelectedCharge.status !== selectedCharge.status
-      || (freshSelectedCharge.paid_at ?? null) !== (selectedCharge.paid_at ?? null)
-    ) {
-      setSelectedCharge(freshSelectedCharge);
-    }
-  }, [charges, selectedCharge]);
 
   const handleViewCharge = (charge: Charge) => {
     setSelectedCharge(charge);
@@ -898,9 +789,9 @@ export default function ChargesPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold text-tx-primary">CobranÃ§as</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-tx-primary">Cobranças</h1>
           <p className="text-xs lg:text-sm text-tx-muted mt-0.5 lg:mt-1">
-            Gerencie todas as suas cobranÃ§as e pagamentos
+            Gerencie todas as suas cobranças e pagamentos
           </p>
         </div>
         <button 
@@ -908,7 +799,7 @@ export default function ChargesPage() {
           className="btn-primary inline-flex items-center gap-2 text-sm"
         >
           <PlusIcon className="h-4 w-4" />
-          Nova CobranÃ§a
+          Nova Cobrança
         </button>
       </div>
 
@@ -944,8 +835,8 @@ export default function ChargesPage() {
               value={filters.payment_method || ''}
               onChange={(e) => setFilters({ ...filters, payment_method: e.target.value })}
             >
-              <option value="">Todos os mÃ©todos</option>
-              <option value="credit_card">CartÃ£o</option>
+              <option value="">Todos os métodos</option>
+              <option value="credit_card">Cartão</option>
               <option value="pix">PIX</option>
               <option value="boleto">Boleto</option>
               <option value="split">Split</option>
@@ -956,7 +847,7 @@ export default function ChargesPage() {
               onClick={() => syncAllMutation.mutate()}
               disabled={syncAllMutation.isPending}
               className="btn-secondary inline-flex items-center text-xs lg:text-sm flex-1 lg:flex-none justify-center"
-              title="Sincronizar todas as cobranÃ§as pendentes com o gateway"
+              title="Sincronizar todas as cobranças pendentes com o gateway"
             >
               <ArrowPathIcon className={`mr-1.5 lg:mr-2 h-4 w-4 lg:h-5 lg:w-5 ${syncAllMutation.isPending ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{syncAllMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}</span>
@@ -981,7 +872,7 @@ export default function ChargesPage() {
           </div>
         ) : charges.length === 0 ? (
           <div className="card p-8 text-center text-tx-muted">
-            Nenhuma cobranÃ§a encontrada
+            Nenhuma cobrança encontrada
           </div>
         ) : (
           charges.map((charge) => (
@@ -1010,7 +901,7 @@ export default function ChargesPage() {
                     {formatCurrency(charge.amount)}
                   </p>
                   {charge.metadata?.source === 'split' && (
-                    <span className="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                       SPLIT
                     </span>
                   )}
@@ -1018,7 +909,10 @@ export default function ChargesPage() {
               </div>
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-border-DEFAULT">
                 <span className="text-xs text-tx-muted">
-                  {charge.payment_method === 'credit_card' ? 'CartÃ£o' : charge.payment_method === 'pix' ? 'PIX' : charge.payment_method === 'boleto' ? 'Boleto' : charge.payment_method}
+                  {charge.payment_method === 'credit_card' ? 'Cartão' : charge.payment_method === 'pix' ? 'PIX' : charge.payment_method === 'boleto' ? 'Boleto' : charge.payment_method}
+                </span>
+                <span className="max-w-[40%] truncate text-xs text-tx-muted">
+                  {charge.acquirer_name || ''}
                 </span>
                 <span className="text-xs text-tx-muted">{formatDate(charge.created_at)}</span>
               </div>
@@ -1043,20 +937,23 @@ export default function ChargesPage() {
                   Status
                 </th>
                 <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">
-                  MÃ©todo
+                  Método
+                </th>
+                <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">
+                  Nominal
                 </th>
                 <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">
                   Data
                 </th>
                 <th className="relative px-6 py-3.5">
-                  <span className="sr-only">AÃ§Ãµes</span>
+                  <span className="sr-only">Ações</span>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border-DEFAULT bg-surface-card" style={{ overflow: 'visible' }}>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-tx-muted">
+                  <td colSpan={7} className="px-6 py-12 text-center text-tx-muted">
                     <div className="flex items-center justify-center">
                       <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-primary border-t-transparent" />
                     </div>
@@ -1064,8 +961,8 @@ export default function ChargesPage() {
                 </tr>
               ) : charges.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-tx-muted">
-                    Nenhuma cobranÃ§a encontrada
+                  <td colSpan={7} className="px-6 py-12 text-center text-tx-muted">
+                    Nenhuma cobrança encontrada
                   </td>
                 </tr>
               ) : (
@@ -1091,7 +988,7 @@ export default function ChargesPage() {
                             {formatCurrency(charge.amount)}
                           </span>
                           {charge.metadata?.source === 'split' && (
-                            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                               SPLIT
                             </span>
                           )}
@@ -1103,7 +1000,7 @@ export default function ChargesPage() {
                         </div>
                         {charge.has_split && charge.split_amount > 0 && (
                           <p className="text-[11px] text-orange-600 dark:text-orange-400 mt-0.5">
-                            Split: -{formatCurrency(charge.split_amount)} â†’ LÃ­quido: {formatCurrency(charge.amount - charge.split_amount)}
+                            Split: -{formatCurrency(charge.split_amount)} → Líquido: {formatCurrency(charge.amount - charge.split_amount)}
                           </p>
                         )}
                       </div>
@@ -1120,7 +1017,7 @@ export default function ChargesPage() {
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-tx-muted">
                       {charge.payment_method === 'credit_card'
-                        ? 'CartÃ£o'
+                        ? 'Cartão'
                         : charge.payment_method === 'pix'
                         ? 'PIX'
                         : charge.payment_method === 'boleto'
@@ -1128,6 +1025,9 @@ export default function ChargesPage() {
                         : charge.payment_method === 'split'
                         ? 'Split'
                         : charge.payment_method}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-tx-muted">
+                      {charge.acquirer_name || ''}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-tx-muted">
                       {formatDate(charge.created_at)}
@@ -1169,7 +1069,7 @@ export default function ChargesPage() {
               disabled={page >= (pagination.last_page || 1)}
               className="btn-secondary text-sm"
             >
-              PrÃ³ximo
+              Próximo
             </button>
           </div>
           <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-between">
@@ -1228,7 +1128,7 @@ export default function ChargesPage() {
                 disabled={page >= (pagination.last_page || 1)}
                 className="btn-secondary"
               >
-                PrÃ³ximo
+                Próximo
               </button>
             </div>
           </div>
@@ -1250,5 +1150,3 @@ export default function ChargesPage() {
     </div>
   );
 }
-
-

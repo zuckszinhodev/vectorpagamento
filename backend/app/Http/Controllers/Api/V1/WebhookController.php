@@ -1162,23 +1162,19 @@ class WebhookController extends Controller
                 'has_signature' => !empty(
                     $request->header('X-HunterSub-Signature')
                     ?? $request->header('x-huntersub-signature')
+                    ?? $request->header('X-WISHPAG-SIGNATURE')
+                    ?? $request->header('x-wishpag-signature')
                     ?? $request->header('X-Webhook-Signature')
                     ?? $request->header('x-webhook-signature')
                 ),
             ]);
 
             $webhookSecret = $this->getHunterSubWebhookSecret();
-            if (!$webhookSecret) {
-                Log::error('HunterSub webhook secret not configured - rejecting webhook for security');
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Webhook secret not configured',
-                ], 500);
-            }
-
             $signature = trim((string) (
                 $request->header('X-HunterSub-Signature')
                 ?? $request->header('x-huntersub-signature')
+                ?? $request->header('X-WISHPAG-SIGNATURE')
+                ?? $request->header('x-wishpag-signature')
                 ?? $request->header('X-Webhook-Signature')
                 ?? $request->header('x-webhook-signature')
                 ?? ''
@@ -1191,12 +1187,16 @@ class WebhookController extends Controller
                 ?? ''
             ));
 
-            if (!$this->verifyHunterSubSignature($rawPayload, $signature, $timestamp, $webhookSecret)) {
-                Log::warning('HunterSub webhook signature verification failed', ['ip' => $request->ip()]);
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Invalid signature',
-                ], 401);
+            if ($webhookSecret) {
+                if (!$this->verifyHunterSubSignature($rawPayload, $signature, $timestamp, $webhookSecret)) {
+                    Log::warning('HunterSub webhook signature verification failed', ['ip' => $request->ip()]);
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Invalid signature',
+                    ], 401);
+                }
+            } else {
+                Log::info('HunterSub webhook accepted without signature verification because no webhook secret is configured');
             }
 
             // Validar estrutura do payload
@@ -1240,10 +1240,10 @@ class WebhookController extends Controller
             // Mapear evento para status interno esperado pelo PaymentService
             $mappedStatus = match ($eventType) {
                 'transaction.paid', 'transaction.delivered' => 'approved',
-                'transaction.pending' => 'waiting_payment',
+                'transaction.pending' => 'pending',
                 'transaction.failed' => 'failed',
                 'transaction.refunded' => 'refunded',
-                'transaction.chargeback' => 'chargedback',
+                'transaction.chargeback' => 'chargeback',
                 default => null,
             };
 

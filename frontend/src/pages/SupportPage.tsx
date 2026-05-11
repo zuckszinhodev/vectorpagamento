@@ -86,7 +86,7 @@ export default function SupportPage() {
  </a>
 
  <a
- href="https://vectorpagamentos.com/docs"
+ href="https://Vector Pagamentos.readme.io/reference"
  target="_blank"
  rel="noopener noreferrer"
  className="bg-surface-card rounded-2xl border border-border-DEFAULT p-5 hover:border-blue-300 transition-all hover:shadow-lg group"
@@ -142,4 +142,3 @@ export default function SupportPage() {
  </div>
  );
 }
-

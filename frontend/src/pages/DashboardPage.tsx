@@ -1,4 +1,53 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+
+const MOTIVATIONAL_MESSAGES = [
+  'Que dia maravilhoso para escalar! 🚀',
+  'Cada venda é uma semente do seu império 🌱',
+  'Hoje é o dia perfeito para bater recordes 💪',
+  'Seu próximo cliente já está te procurando 🎯',
+  'Grandes resultados começam com pequenas ações diárias ⚡',
+  'O sucesso ama quem é consistente 🏆',
+  'Sua dedicação de hoje é o faturamento de amanhã 💰',
+  'Você não chegou até aqui para parar agora 🔥',
+  'Foco no processo, os resultados vêm 📈',
+  'Mais um dia para transformar vidas com seu produto ',
+  'Disciplina hoje, liberdade amanhã 🦅',
+  'Seu negócio cresce na velocidade da sua mentalidade 🧠',
+  'O mercado recompensa quem não desiste 💎',
+  'Bora fazer acontecer! O topo te espera 🏔️',
+  'Cada clique pode ser a próxima grande venda 🛒',
+  'Acredite: o melhor mês da sua vida está chegando ',
+  'Você é mais forte do que qualquer objeção 💪',
+  'Hora de converter visitantes em fãs do seu produto 🎉',
+  'Seu futuro eu vai agradecer o esforço de hoje ',
+  'Nenhum concorrente supera quem trabalha com paixão ❤️‍🔥',
+  'Dia novo, oportunidades novas. Aproveite cada uma! ',
+  'A persistência é o combustível dos grandes empreendedores ',
+  'Quem domina o digital, domina o futuro 🌐',
+  'Transforme conhecimento em receita. Você consegue! 💰',
+  'Seus clientes merecem o melhor — e você entrega! ',
+  'Escalar é uma decisão. Você já tomou a sua ',
+  'O algoritmo favorece quem não para de criar ',
+  'Mais um dia para provar que você fez a escolha certa 👊',
+  'Enquanto muitos duvidam, você executa ',
+  'A melhor versão do seu negócio está sendo construída agora ',
+  'Vender é servir. Sirva com excelência hoje! 🤝',
+];
+
+function getDailyMessage(): string {
+  const now = new Date();
+  const dayOfYear = Math.floor(
+    (now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  return MOTIVATIONAL_MESSAGES[dayOfYear % MOTIVATIONAL_MESSAGES.length];
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Bom dia';
+  if (hour >= 12 && hour < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, formatCurrency } from '@/lib/api';
@@ -8,7 +57,6 @@ import {
 } from '@heroicons/react/24/solid';
 import {
   CurrencyDollarIcon,
-  ShoppingCartIcon,
   TicketIcon,
   CreditCardIcon,
   TrophyIcon,
@@ -17,7 +65,11 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CalendarIcon,
+  EyeIcon,
+  EyeSlashIcon,
   BoltIcon,
+  WalletIcon,
+  ChartBarIcon,
   ArrowTopRightOnSquareIcon,
   ExclamationTriangleIcon,
   ShieldExclamationIcon,
@@ -44,7 +96,7 @@ function getDefaultGoalMilestoneState(): GoalMilestoneState {
 }
 
 function getGoalMilestoneStorageKey(userId: string): string {
-  return `vectorpagamentos.goal-milestone.${userId}`;
+  return `Vector Pagamentos.goal-milestone.${userId}`;
 }
 
 function normalizeGoalMilestoneState(value: Partial<GoalMilestoneState> | null | undefined): GoalMilestoneState {
@@ -146,6 +198,30 @@ function DashboardChartSkeleton() {
   );
 }
 
+function DashboardWalletSkeleton() {
+  return (
+    <div className="bg-surface-card border border-border-DEFAULT rounded-xl p-2 sm:p-4 relative z-0">
+      <div className="mb-2 lg:mb-4">
+        <Skeleton width="7rem" height="1rem" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 lg:grid-cols-1">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="rounded-lg border border-border-DEFAULT p-2 lg:p-3">
+            <div className="mb-2 flex items-center gap-2">
+              <Skeleton width="1.25rem" height="1.25rem" className="rounded-md" />
+              <Skeleton width="45%" height="0.75rem" />
+            </div>
+            <Skeleton width="60%" height="1rem" className="lg:h-7" />
+          </div>
+        ))}
+      </div>
+
+      <Skeleton width="100%" height="2.5rem" className="mt-2 rounded-lg lg:mt-4" />
+    </div>
+  );
+}
+
 function DashboardCircleMetricSkeleton() {
   return (
     <div className="flex flex-col items-center gap-1 sm:flex-row sm:gap-3">
@@ -186,7 +262,7 @@ function DashboardRevenueHeroSkeleton() {
   );
 }
 
-// Componente de CalendÃ¡rio
+// Componente de Calendário
 function DateRangePicker({ 
   startDate, 
   endDate, 
@@ -289,7 +365,7 @@ function DateRangePicker({
       >
         <CalendarIcon className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-tx-muted flex-shrink-0" />
         <span className="sm:hidden">{formatDateShort(startDate)} - {formatDateShort(endDate)}</span>
-        <span className="hidden sm:inline">{formatDate(startDate)} atÃ© {formatDate(endDate)}</span>
+        <span className="hidden sm:inline">{formatDate(startDate)} até {formatDate(endDate)}</span>
       </button>
 
       {isOpen && (
@@ -318,21 +394,21 @@ function DateRangePicker({
 
           {/* Dias da semana */}
           <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-2">
-            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'SÃ¡b'].map((day) => (
+            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
               <div key={day} className="text-center text-[10px] sm:text-xs font-medium text-tx-muted py-1.5 sm:py-2">
                 {day}
               </div>
             ))}
           </div>
 
-          {/* Dias do mÃªs */}
+          {/* Dias do mês */}
           <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
-            {/* EspaÃ§os vazios antes do primeiro dia */}
+            {/* Espaços vazios antes do primeiro dia */}
             {Array.from({ length: startingDayOfWeek }).map((_, i) => (
               <div key={`empty-${i}`} />
             ))}
             
-            {/* Dias do mÃªs */}
+            {/* Dias do mês */}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
               const date = new Date(year, month, day);
@@ -377,6 +453,7 @@ function DateRangePicker({
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { user, isImpersonating, stopImpersonation } = useAuthStore();
+  const [showBalance, setShowBalance] = useState(true);
   const [goalMilestoneState, setGoalMilestoneState] = useState<GoalMilestoneState>(() =>
     readGoalMilestoneState(user?.id ? getGoalMilestoneStorageKey(user.id) : null)
   );
@@ -460,7 +537,7 @@ export default function DashboardPage() {
     },
     refetchInterval: 30000,
     staleTime: 15000,
-    gcTime: 0, // NÃ£o manter cache antigo
+    gcTime: 0, // Não manter cache antigo
   });
 
   const dashboardData = dashboardResponse?.summary || {};
@@ -474,7 +551,23 @@ export default function DashboardPage() {
   const memberAreaRevenue = dashboardResponse?.member_area_revenue || 0;
   const memberAreaCount = dashboardResponse?.member_area_count || 0;
 
+  // Buscar saldo de retirada
+  const {
+    data: walletSummary,
+    isLoading: isWalletLoading,
+    isFetching: isWalletFetching,
+  } = useQuery({
+    queryKey: ['withdrawals-summary'],
+    queryFn: async () => {
+      const response = await api.get('/withdrawals/summary');
+      return response.data?.data || { available_balance: 0, pending_balance: 0 };
+    },
+    refetchInterval: 30000,
+    staleTime: 15000,
+  });
+
   const showDashboardSkeleton = isDashboardLoading || (isDashboardFetching && !dashboardResponse);
+  const showWalletSkeleton = isWalletLoading || (isWalletFetching && !walletSummary);
   const showRevenueHeroSkeleton = showDashboardSkeleton;
 
   // Dados do resumo
@@ -554,19 +647,19 @@ export default function DashboardPage() {
 
   const supportWhatsAppUrl = useMemo(() => {
     const message = user?.name
-      ? `OlÃ¡! Sou ${user.name} e bati minha meta de faturamento na Vector Pagamentos. Gostaria de falar com o suporte.`
-      : 'OlÃ¡! Bati minha meta de faturamento na Vector Pagamentos e gostaria de falar com o suporte.';
+      ? `Olá! Sou ${user.name} e bati minha meta de faturamento na Vector Pagamentos. Gostaria de falar com o suporte.`
+      : 'Olá! Bati minha meta de faturamento na Vector Pagamentos e gostaria de falar com o suporte.';
 
     return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   }, [user?.name]);
 
-  // Memoriza os dados do grÃ¡fico - preenche todas as horas/dias com 0 para mostrar variaÃ§Ã£o
+  // Memoriza os dados do gráfico - preenche todas as horas/dias com 0 para mostrar variação
   const chartData = useMemo(() => {
     const startDateObj = new Date(startDate + 'T00:00:00');
     const endDateObj = new Date(endDate + 'T23:59:59');
     const diffDays = Math.ceil((endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24));
 
-    // Se perÃ­odo <= 3 dias, usa visÃ£o por hora (mostra todas as horas)
+    // Se período <= 3 dias, usa visão por hora (mostra todas as horas)
     if (diffDays <= 3) {
       const labels: string[] = [];
       const data: number[] = [];
@@ -581,7 +674,7 @@ export default function DashboardPage() {
         });
       }
 
-      // Preenche TODAS as horas do perÃ­odo (as sem venda ficam com 0)
+      // Preenche TODAS as horas do período (as sem venda ficam com 0)
       const cursor = new Date(startDateObj);
       const finalHour = new Date(endDateObj);
       // Limita a hora final ao momento atual se for hoje
@@ -607,7 +700,7 @@ export default function DashboardPage() {
       if (labels.length > 0) return { labels, data };
     }
 
-    // Para perÃ­odos maiores, usa visÃ£o diÃ¡ria (mostra todos os dias)
+    // Para períodos maiores, usa visão diária (mostra todos os dias)
     {
       const labels: string[] = [];
       const data: number[] = [];
@@ -620,7 +713,7 @@ export default function DashboardPage() {
         });
       }
 
-      // Preenche TODOS os dias do perÃ­odo (os sem venda ficam com 0)
+      // Preenche TODOS os dias do período (os sem venda ficam com 0)
       const cursor = new Date(startDateObj);
       const finalDay = new Date(endDateObj);
 
@@ -646,19 +739,19 @@ export default function DashboardPage() {
     <div className="space-y-2 sm:space-y-3 pb-4">
       {/* Impersonation Banner */}
       {isImpersonating && (
-        <div className="flex items-center gap-2 sm:gap-3 bg-green-50 dark:bg-green-950/40 border border-green-300 dark:border-green-700 rounded-lg px-2.5 py-1.5 sm:px-4 sm:py-3">
-          <ShieldExclamationIcon className="h-4 w-4 sm:h-6 sm:w-6 text-green-500 flex-shrink-0" />
+        <div className="flex items-center gap-2 sm:gap-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 rounded-lg px-2.5 py-1.5 sm:px-4 sm:py-3">
+          <ShieldExclamationIcon className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-500 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs sm:text-sm font-medium text-green-800 dark:text-green-200">
-              VocÃª estÃ¡ logado como <strong>{user?.name}</strong> (modo impersonaÃ§Ã£o)
+            <p className="text-xs sm:text-sm font-medium text-emerald-800 dark:text-emerald-200">
+              Você está logado como <strong>{user?.name}</strong> (modo impersonação)
             </p>
-            <p className="text-[10px] sm:text-xs text-green-600 dark:text-green-400 mt-0.5 hidden sm:block">
-              Todas as aÃ§Ãµes serÃ£o registradas no audit log.
+            <p className="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 hidden sm:block">
+              Todas as ações serão registradas no audit log.
             </p>
           </div>
           <button
             onClick={() => stopImpersonation()}
-            className="flex-shrink-0 text-[10px] sm:text-xs font-semibold bg-green-500 hover:bg-green-600 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-md transition-colors"
+            className="flex-shrink-0 text-[10px] sm:text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-md transition-colors"
           >
             Voltar ao Admin
           </button>
@@ -671,10 +764,10 @@ export default function DashboardPage() {
           <ShieldExclamationIcon className="h-4 w-4 sm:h-6 sm:w-6 text-amber-500 flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs sm:text-sm font-medium text-amber-800 dark:text-amber-200">
-              Sua conta ainda nÃ£o tem autenticaÃ§Ã£o de dois fatores ativada.
+              Sua conta ainda não tem autenticação de dois fatores ativada.
             </p>
             <p className="text-[10px] sm:text-xs text-amber-600 dark:text-amber-400 mt-0.5 hidden sm:block">
-              Ative o 2FA para proteger sua conta contra acessos nÃ£o autorizados.
+              Ative o 2FA para proteger sua conta contra acessos não autorizados.
             </p>
           </div>
           <button
@@ -686,114 +779,99 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Top Stats Row - 3 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+      {/* Greeting Section */}
+      <div className="mb-0.5 sm:mb-1">
+        <h1 className="text-lg sm:text-2xl font-bold text-tx-primary">
+          {getGreeting()}, {user?.name?.split(' ')[0] || 'Usuário'}
+        </h1>
+        <p className="text-xs sm:text-sm text-tx-muted line-clamp-1">{getDailyMessage()}</p>
+      </div>
+
+      {/* Top Stats Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-3">
         {showDashboardSkeleton ? (
           <>
-            <DashboardMetricCardSkeleton />
             <DashboardMetricCardSkeleton />
             <DashboardMetricCardSkeleton />
           </>
         ) : (
           <>
-            {/* Vendas hoje */}
-            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0e121a] via-[#0a0f16] to-[#070b12] p-3 sm:p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-green-400/40 hover:shadow-[0_10px_30px_rgba(34,197,94,0.12)]">
-              <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-green-500/10 blur-2xl" />
-              <div className="relative flex items-center gap-2 mb-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/10 ring-1 ring-green-500/20">
-                  <ShoppingCartIcon className="h-5 w-5 text-green-400" />
-                </div>
-                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">Faturamento Total</span>
+            {/* Ticket médio */}
+            <div className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                <TicketIcon className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-500" />
+                <span className="text-[10px] sm:text-xs text-tx-muted">Ticket médio</span>
               </div>
-              <p className="relative text-2xl sm:text-3xl font-bold text-white">{formatCurrency(summary.total_revenue || 0)}</p>
-            </div>
-
-            {/* Ticket mÃ©dio */}
-            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#11121a] via-[#0d0f16] to-[#0a0b12] p-3 sm:p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-amber-400/40 hover:shadow-[0_10px_30px_rgba(245,158,11,0.12)]">
-              <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-amber-500/10 blur-2xl" />
-              <div className="relative flex items-center gap-2 mb-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 ring-1 ring-amber-500/20">
-                  <TicketIcon className="h-5 w-5 text-amber-400" />
-                </div>
-                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">Ticket mÃ©dio</span>
-              </div>
-              <p className="relative text-2xl sm:text-3xl font-bold text-white">{formatCurrency(summary.average_ticket || 0)}</p>
+              <p className="text-lg sm:text-2xl font-bold text-tx-primary">{formatCurrency(summary.average_ticket || 0)}</p>
             </div>
 
             {/* Alertas de chargeback */}
             <div 
-              className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#101512] via-[#0c100d] to-[#0a0c0a] p-3 sm:p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-green-400/35 hover:shadow-[0_10px_30px_rgba(34,197,94,0.12)]"
+              className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden cursor-pointer hover:border-emerald-500 transition-colors group"
               onClick={() => navigate('/chargebacks')}
             >
-              <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-green-500/10 blur-2xl" />
-              <div className="relative flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-500/10 ring-1 ring-green-500/20">
-                    <ExclamationTriangleIcon className="h-5 w-5 text-green-400" />
-                  </div>
-                  <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">Alertas de chargeback</span>
+              <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <ExclamationTriangleIcon className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-500" />
+                  <span className="text-[10px] sm:text-xs text-tx-muted">Alertas de chargeback</span>
                 </div>
                 <ArrowTopRightOnSquareIcon className="h-3 w-3 sm:h-4 sm:w-4 text-tx-muted opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
-              <p className="relative text-2xl sm:text-3xl font-bold text-white">{dashboardResponse?.chargeback_alerts || 0}</p>
+              <p className="text-lg sm:text-2xl font-bold text-tx-primary">{dashboardResponse?.chargeback_alerts || 0}</p>
             </div>
           </>
         )}
       </div>
 
       {/* Sales by Payment Method Row - 3 cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-3">
         {showDashboardSkeleton ? (
           <>
-            <DashboardMetricCardSkeleton />
             <DashboardMetricCardSkeleton />
             <DashboardMetricCardSkeleton />
           </>
         ) : (
           <>
             {/* Vendas pix */}
-            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#0d1414] via-[#0a1111] to-[#070d0d] p-3 sm:p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-400/40 hover:shadow-[0_10px_30px_rgba(16,185,129,0.12)]">
-              <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-emerald-500/10 blur-2xl" />
-              <div className="relative flex items-center gap-2 mb-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/10 ring-1 ring-emerald-500/20">
-                  <PixIcon className="h-5 w-5 text-emerald-400" />
+            <div className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                <div className="flex items-center justify-center h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-emerald-500/10">
+                  <PixIcon className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
                 </div>
-                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">PIX nas Ãºltimas 24h</span>
+                <span className="text-[10px] sm:text-xs text-tx-muted">PIX nas últimas 24h</span>
               </div>
-              <p className="relative text-2xl sm:text-3xl font-bold text-emerald-400">{formatCurrency(pixRevenue24h)}</p>
+              <p className="text-base sm:text-xl font-bold text-emerald-500">{formatCurrency(pixRevenue24h)}</p>
             </div>
 
-            {/* Vendas cartÃ£o */}
-            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#11141b] via-[#0d1116] to-[#0a0d12] p-3 sm:p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-sky-400/40 hover:shadow-[0_10px_30px_rgba(56,189,248,0.12)]">
-              <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-sky-500/10 blur-2xl" />
-              <div className="relative flex items-center gap-2 mb-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/10 ring-1 ring-sky-500/20">
-                  <CreditCardIcon className="h-5 w-5 text-sky-400" />
+            {/* Vendas cartão */}
+            <div className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                <div className="flex items-center justify-center h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-emerald-500/10">
+                  <CreditCardIcon className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
                 </div>
-                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">CartÃ£o nas Ãºltimas 24h</span>
+                <span className="text-[10px] sm:text-xs text-tx-muted">Cartão nas últimas 24h</span>
               </div>
-              <p className="relative text-2xl sm:text-3xl font-bold text-sky-400">{formatCurrency(cardRevenue24h)}</p>
+              <p className="text-base sm:text-xl font-bold text-emerald-500">{formatCurrency(cardRevenue24h)}</p>
             </div>
 
             {/* Vendas boleto */}
-            <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-[#171312] via-[#130f0f] to-[#0f0b0a] p-3 sm:p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-orange-400/40 hover:shadow-[0_10px_30px_rgba(251,146,60,0.12)]">
-              <div className="pointer-events-none absolute -right-12 -top-12 h-24 w-24 rounded-full bg-orange-500/10 blur-2xl" />
-              <div className="relative flex items-center gap-2 mb-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500/10 ring-1 ring-orange-500/20">
-                  <DocumentTextIcon className="h-5 w-5 text-orange-400" />
+            <div className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden col-span-2 sm:col-span-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                <div className="flex items-center justify-center h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-emerald-500/10">
+                  <DocumentTextIcon className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
                 </div>
-                <span className="text-xs uppercase tracking-[0.08em] text-tx-muted">Boleto nas Ãºltimas 24h</span>
+                <span className="text-[10px] sm:text-xs text-tx-muted">Boleto nas últimas 24h</span>
               </div>
-              <p className="relative text-2xl sm:text-3xl font-bold text-orange-400">{formatCurrency(boletoRevenue24h)}</p>
+              <p className="text-base sm:text-xl font-bold text-emerald-500">{formatCurrency(boletoRevenue24h)}</p>
             </div>
           </>
         )}
       </div>
 
-      {/* Main Content: Chart */}
-      <div className="space-y-3">
-        {/* HistÃ³rico de faturamento - Chart */}
-        <div className="bg-surface-card border border-border-DEFAULT rounded-xl p-3 sm:p-5 relative z-10">
+      {/* Main Content: Chart + Wallet Sidebar */}
+      <div className="flex flex-col lg:grid lg:grid-cols-3 gap-2 sm:gap-3">
+        {/* Histórico de faturamento - Chart */}
+        <div className="lg:col-span-2 bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-4 relative z-10">
           {showDashboardSkeleton ? (
             <DashboardChartSkeleton />
           ) : (
@@ -808,7 +886,7 @@ export default function DashboardPage() {
                         ? 'bg-accent-primary text-white border-accent-primary'
                         : 'bg-surface-card text-tx-primary border-border-DEFAULT hover:bg-surface-hover'
                       }`}
-                      aria-label={`PerÃ­odo ${option.label}`}
+                      aria-label={`Período ${option.label}`}
                     >
                       {option.label}
                     </button>
@@ -829,18 +907,237 @@ export default function DashboardPage() {
                 />
               </div>
               
-              <div className="h-[240px] sm:h-[360px] overflow-hidden">
+              <div className="h-[140px] sm:h-[220px] overflow-hidden">
                 <GlowLineChart
                   labels={chartData.labels}
                   data={chartData.data}
-                  color="violet"
+                  color="emerald"
                   height="h-full"
                 />
               </div>
             </>
           )}
         </div>
+
+        {/* Minha carteira - Right Sidebar */}
+        {showWalletSkeleton ? (
+          <DashboardWalletSkeleton />
+        ) : (
+          <div className="bg-surface-card border border-border-DEFAULT rounded-xl p-2 sm:p-4 relative z-0">
+            <div className="flex items-center justify-between mb-2 lg:mb-4">
+              <h3 className="text-xs sm:text-base font-semibold text-tx-primary">Minha carteira</h3>
+            </div>
+            
+            <div className="grid grid-cols-3 lg:grid-cols-1 gap-2">
+              {/* Saldo disponível */}
+              <div className="bg-surface-card border border-emerald-200/50 dark:border-emerald-500/20 rounded-lg p-2 lg:p-3 group hover:border-emerald-300 dark:hover:border-emerald-500/40 transition-colors">
+                <div className="flex items-center justify-between gap-1 lg:gap-2 mb-0.5 lg:mb-1">
+                  <div className="flex items-center gap-1 lg:gap-2">
+                    <WalletIcon className="h-3.5 w-3.5 lg:h-5 lg:w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                    <span className="text-[10px] lg:text-xs text-tx-muted truncate">Disponível</span>
+                  </div>
+                  <button
+                    onClick={() => setShowBalance(!showBalance)}
+                    className="p-0.5 lg:p-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded transition-colors"
+                    title={showBalance ? 'Ocultar saldo' : 'Mostrar saldo'}
+                  >
+                    {showBalance ? (
+                      <EyeIcon className="h-3 w-3 lg:h-4 lg:w-4 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <EyeSlashIcon className="h-3 w-3 lg:h-4 lg:w-4 text-emerald-600 dark:text-emerald-400" />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs lg:text-lg font-bold text-emerald-600 dark:text-emerald-400 truncate">
+                  {showBalance ? formatCurrency(walletSummary?.available_balance || 0) : '••••••'}
+                </p>
+              </div>
+
+              {/* Total pendente */}
+              <div className="bg-surface-card border border-amber-200/50 dark:border-amber-500/20 rounded-lg p-2 lg:p-3 group hover:border-amber-300 dark:hover:border-amber-500/40 transition-colors">
+                <div className="flex items-center gap-1 lg:gap-2 mb-0.5 lg:mb-1">
+                  <ChartBarIcon className="h-3.5 w-3.5 lg:h-5 lg:w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                  <span className="text-[10px] lg:text-xs text-tx-muted truncate">Pendente</span>
+                </div>
+                <p className="text-xs lg:text-lg font-bold text-amber-600 dark:text-amber-400 truncate">
+                  {showBalance ? formatCurrency(walletSummary?.pending_balance || 0) : '••••••'}
+                </p>
+              </div>
+
+              {/* Total sacado */}
+              <div className="bg-surface-card border border-emerald-200/50 dark:border-emerald-500/20 rounded-lg p-2 lg:p-3 group hover:border-emerald-300 dark:hover:border-emerald-500/40 transition-colors">
+                <div className="flex items-center gap-1 lg:gap-2 mb-0.5 lg:mb-1">
+                  <CurrencyDollarIcon className="h-3.5 w-3.5 lg:h-5 lg:w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                  <span className="text-[10px] lg:text-xs text-tx-muted truncate">Sacado</span>
+                </div>
+                <p className="text-xs lg:text-lg font-bold text-emerald-600 dark:text-emerald-400 truncate">
+                  {showBalance ? formatCurrency(walletSummary?.total_withdrawn || 0) : '••••••'}
+                </p>
+              </div>
+            </div>
+
+            {/* Solicitar saque button */}
+            <button
+              onClick={() => navigate('/saques')}
+              disabled={!walletSummary?.available_balance || walletSummary.available_balance <= 0}
+              className="w-full mt-2 lg:mt-4 px-3 py-2 lg:py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-xs lg:text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-emerald-600 disabled:hover:to-green-600 disabled:shadow-none"
+            >
+              Solicitar saque
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Mini Gráficos Circulares em Linha */}
+      <div className="bg-surface-card border border-border-DEFAULT rounded-xl p-2 sm:p-4">
+        <div className="grid grid-cols-6 gap-1 sm:gap-4">
+          {showDashboardSkeleton ? (
+            Array.from({ length: 6 }).map((_, index) => (
+              <DashboardCircleMetricSkeleton key={index} />
+            ))
+          ) : (
+            <>
+          {/* Vendas com Checkout */}
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+            <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
+                <circle 
+                  cx="50%" cy="50%" r="45%" fill="none" stroke="#22c55e" strokeWidth="3" 
+                  strokeDasharray={`${Math.min((checkoutRevenue / 100) / 10000 * 100, 100) * 2.83} 283`}
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0 text-center sm:text-left">
+              <p className="text-[8px] sm:text-xs font-semibold text-emerald-400 uppercase tracking-wide truncate">Checkout</p>
+              <p className="text-[10px] sm:text-lg font-bold text-tx-primary">{formatCurrency(checkoutRevenue)}</p>
+              <p className="text-[8px] text-tx-muted hidden sm:block">{checkoutCount || 0} vendas</p>
+            </div>
+          </div>
+
+          {/* Assinaturas */}
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+            <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
+                <circle 
+                  cx="50%" cy="50%" r="45%" fill="none" stroke="#f59e0b" strokeWidth="3" 
+                  strokeDasharray="0 283"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0 text-center sm:text-left">
+              <p className="text-[8px] sm:text-xs font-semibold text-amber-400 uppercase tracking-wide truncate">Assinaturas</p>
+              <p className="text-[10px] sm:text-lg font-bold text-tx-primary">R$ 0</p>
+              <p className="text-[8px] text-tx-muted hidden sm:block">0 assinaturas</p>
+            </div>
+          </div>
+
+          {/* Order Bump */}
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+            <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
+                <circle 
+                  cx="50%" cy="50%" r="45%" fill="none" stroke="#ec4899" strokeWidth="3" 
+                  strokeDasharray="0 283"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0 text-center sm:text-left">
+              <p className="text-[8px] sm:text-xs font-semibold text-green-400 uppercase tracking-wide truncate">Bump</p>
+              <p className="text-[10px] sm:text-lg font-bold text-tx-primary">R$ 0</p>
+              <p className="text-[8px] text-tx-muted hidden sm:block">0 vendas</p>
+            </div>
+          </div>
+
+          {/* Upsell */}
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+            <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
+                <circle 
+                  cx="50%" cy="50%" r="45%" fill="none" stroke="#06b6d4" strokeWidth="3" 
+                  strokeDasharray="0 283"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0 text-center sm:text-left">
+              <p className="text-[8px] sm:text-xs font-semibold text-cyan-400 uppercase tracking-wide truncate">Upsell</p>
+              <p className="text-[10px] sm:text-lg font-bold text-tx-primary">R$ 0</p>
+              <p className="text-[8px] text-tx-muted hidden sm:block">0 vendas</p>
+            </div>
+          </div>
+
+          {/* Área de Membros */}
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+            <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
+                <circle 
+                  cx="50%" cy="50%" r="45%" fill="none" stroke="#10b981" strokeWidth="3" 
+                  strokeDasharray={`${Math.min((memberAreaRevenue / 100) / 10000 * 100, 100) * 2.83} 283`}
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0 text-center sm:text-left">
+              <p className="text-[8px] sm:text-xs font-semibold text-emerald-400 uppercase tracking-wide truncate">Membros</p>
+              <p className="text-[10px] sm:text-lg font-bold text-tx-primary">{formatCurrency(memberAreaRevenue)}</p>
+              <p className="text-[8px] text-tx-muted hidden sm:block">{memberAreaCount || 0} vendas</p>
+            </div>
+          </div>
+
+          {/* Taxa de Conversão */}
+          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
+            <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
+              <svg className="w-full h-full transform -rotate-90">
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
+                <circle 
+                  cx="50%" cy="50%" r="45%" fill="none" stroke="#22c55e" strokeWidth="3" 
+                  strokeDasharray={`${Math.min(summary.conversion_rate || 0, 100) * 2.83} 283`}
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
+            <div className="min-w-0 text-center sm:text-left">
+              <p className="text-[8px] sm:text-xs font-semibold text-emerald-400 uppercase tracking-wide truncate">Conversão</p>
+              <p className="text-[10px] sm:text-lg font-bold text-tx-primary">{(summary.conversion_rate || 0).toFixed(1)}%</p>
+              <p className="text-[8px] text-tx-muted hidden sm:block">aprovadas</p>
+            </div>
+          </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-border-DEFAULT/60 mt-8 pt-6">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div className="text-xs text-tx-muted">
+            <p>Vector Pagamentos Intermediadora de Pagamentos</p>
+            <p>CNPJ: 59.690.852/0001-09</p>
+            <a 
+              href="https://wa.me/5511940968290" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-tx-primary transition-colors"
+            >
+              Gerente de Contas: (11) 94096-8290
+            </a>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-tx-muted">
+            <a href="/privacy" className="hover:text-tx-primary transition-colors">
+              Política de Privacidade
+            </a>
+            <span>Vector Pagamentos © 2026</span>
+          </div>
+        </div>
+      </footer>
 
     </div>
   );
@@ -897,7 +1194,7 @@ function StatCard({
                   {change >= 0 ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />}
                   {change >= 0 ? '+' : ''}{change}%
                 </span>
-                <span className="text-[11px] text-tx-muted">vs mÃªs anterior</span>
+                <span className="text-[11px] text-tx-muted">vs mês anterior</span>
               </div>
             )}
           </div>
@@ -910,7 +1207,7 @@ function StatCard({
   );
 }
 
-// â•â•â• Mini Sparkline SVG â•â•â•
+// ═══ Mini Sparkline SVG ═══
 function MiniSparkline({ data, color }: { data: number[]; color: string }) {
   const width = 64;
   const height = 28;
@@ -980,5 +1277,3 @@ function ActivityItem({
     </div>
   );
 }
-
-

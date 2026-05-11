@@ -190,4 +190,3 @@ export const publicUpsellService = {
     return response.data;
   },
 };
-

@@ -146,7 +146,7 @@ export default function AdminMonitoring() {
                 type="checkbox"
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
-                className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+                className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
               />
               <span className="text-sm text-slate-100">Auto-refresh</span>
             </label>
@@ -167,7 +167,7 @@ export default function AdminMonitoring() {
           title="Requisições (24h)"
           value={stats?.total_requests_24h?.toLocaleString() || '0'}
           icon={GlobeAltIcon}
-          color="purple"
+          color="emerald"
           loading={loadingStats}
         />
         <StatCard
@@ -198,8 +198,8 @@ export default function AdminMonitoring() {
         <div className="rounded-2xl bg-surface-card p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-green-500/10 p-2.5">
-                <EyeIcon className="h-6 w-6 text-green-500" />
+              <div className="rounded-xl bg-emerald-500/10 p-2.5">
+                <EyeIcon className="h-6 w-6 text-emerald-500" />
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-tx-primary">Atividade em Tempo Real</h2>
@@ -216,7 +216,7 @@ export default function AdminMonitoring() {
 
           {loadingActivity ? (
             <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
             </div>
           ) : liveActivity.length === 0 ? (
             <div className="text-center py-8">
@@ -381,14 +381,13 @@ function StatCard({
   title: string; 
   value: string; 
   icon: typeof ShieldExclamationIcon; 
-  color: 'purple' | 'red' | 'amber' | 'emerald' | 'blue';
+  color: 'emerald' | 'red' | 'amber' | 'blue';
   loading?: boolean;
 }) {
   const colors = {
-    purple: 'bg-green-500/10 text-green-500',
+    emerald: 'bg-emerald-500/10 text-emerald-500',
     red: 'bg-red-500/10 text-red-500',
     amber: 'bg-amber-500/10 text-amber-500',
-    emerald: 'bg-emerald-500/10 text-emerald-500',
     blue: 'bg-blue-500/10 text-blue-500',
   };
 
@@ -408,5 +407,3 @@ function StatCard({
     </div>
   );
 }
-
-

@@ -16,13 +16,20 @@ class HunterSubAcquirer implements AcquirerInterface
     private const DEFAULT_PIX_EXPIRATION_SECONDS = 86400;
 
     private string $baseUrl = 'https://api.huntersubv2.com/functions/v1';
+    private string $clientId;
     private string $apiKey;
     private string $companyId;
+    private ?string $webhookUrl;
 
     public function __construct(array $credentials)
     {
+        $this->baseUrl = rtrim((string) ($credentials['base_url'] ?? $this->baseUrl), '/');
+        $this->clientId = (string) ($credentials['client_id'] ?? $credentials['company_id'] ?? '');
         $this->apiKey = $credentials['api_key'] ?? '';
         $this->companyId = $credentials['company_id'] ?? '';
+        $this->webhookUrl = !empty($credentials['webhook_url'])
+            ? (string) $credentials['webhook_url']
+            : config('acquirers.huntersub.webhook_url');
     }
 
     public function getName(): string
@@ -70,6 +77,56 @@ class HunterSubAcquirer implements AcquirerInterface
         ];
     }
 
+    public function sendPixTransfer(array $transferData): array
+    {
+        try {
+            $payload = [
+                'pixkeytype' => strtolower((string) ($transferData['pix_key_type'] ?? 'cpf')),
+                'pixkey' => (string) ($transferData['pix_key'] ?? ''),
+                'requestedamount' => (int) ($transferData['amount_cents'] ?? round(((float) ($transferData['amount'] ?? 0)) * 100)),
+                'description' => (string) ($transferData['description'] ?? 'Saque PIX'),
+                'isPix' => true,
+            ];
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Basic ' . $this->withdrawalAuthToken(),
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+            ])->post("{$this->baseUrl}/withdrawals", $payload);
+
+            if (!$response->successful()) {
+                Log::error('HunterSub: PIX OUT failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => $response->json('message') ?? 'Erro ao processar saque HunterSub',
+                    'raw_response' => $response->json(),
+                ];
+            }
+
+            $data = $response->json();
+
+            return [
+                'success' => true,
+                'transfer_id' => $data['id'] ?? null,
+                'status' => $data['status'] ?? 'pending',
+                'raw_response' => $data,
+            ];
+        } catch (\Exception $e) {
+            Log::error('HunterSub: PIX OUT exception', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
     public function generatePixQrCode(Charge $charge): array
     {
         try {
@@ -92,7 +149,7 @@ class HunterSubAcquirer implements AcquirerInterface
                     'quantity' => 1,
                     'tangible' => false,
                 ]],
-                'postbackUrl' => config('app.url') . '/api/v1/webhooks/huntersub',
+                'postbackUrl' => $this->webhookUrl,
                 'externalRef' => $charge->id,
                 'metadata' => array_merge($charge->metadata ?? [], [
                     'charge_id' => $charge->id,
@@ -101,13 +158,14 @@ class HunterSubAcquirer implements AcquirerInterface
 
             \Illuminate\Support\Facades\Log::info('HunterSub: Sending request', [
                 'url' => "{$this->baseUrl}/transactions",
-                'auth_header' => 'Basic ' . substr(base64_encode("{$this->apiKey}:{$this->companyId}"), 0, 30) . '...',
+                'auth_header' => 'Basic ' . substr($this->transactionAuthToken(), 0, 30) . '...',
                 'api_key_length' => strlen($this->apiKey),
+                'client_id_length' => strlen($this->clientId),
                 'company_id_length' => strlen($this->companyId),
             ]);
 
             $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => 'Basic ' . base64_encode("{$this->apiKey}:{$this->companyId}"),
+                'Authorization' => 'Basic ' . $this->transactionAuthToken(),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
             ])->post("{$this->baseUrl}/transactions", $payload);
@@ -133,11 +191,12 @@ class HunterSubAcquirer implements AcquirerInterface
             return [
                 'success' => true,
                 'external_id' => $data['id'] ?? null,
-                'pix_qr_code' => $pixData['qrcode'] ?? null,  // lowercase 'qrcode'
-                'pix_qr_code_url' => $pixData['qrcode'] ?? null,  // HunterSub usa o mesmo campo
-                'pix_emv' => $pixData['qrcode'] ?? null,
-                'pix_expires_at' => $pixData['expirationDate'] ?? null,
-                'end2end_id' => $pixData['end2EndId'] ?? null,
+                'pix_qr_code' => $pixData['qrCode'] ?? $pixData['qrcode'] ?? null,
+                'pix_copy_paste' => $pixData['qrCode'] ?? $pixData['qrcode'] ?? null,
+                'pix_qr_code_url' => $pixData['qrCodeUrl'] ?? $pixData['qrCodeURL'] ?? null,
+                'pix_emv' => $pixData['qrCode'] ?? $pixData['qrcode'] ?? null,
+                'pix_expires_at' => $pixData['expiresAt'] ?? $pixData['expirationDate'] ?? null,
+                'end2end_id' => $pixData['endToEndId'] ?? $pixData['end2EndId'] ?? null,
                 'status' => $this->mapStatus($data['status'] ?? 'pending'),
                 'data' => $data,
             ];
@@ -194,7 +253,7 @@ class HunterSubAcquirer implements AcquirerInterface
             ]);
 
             $response = Http::withHeaders([
-                'Authorization' => 'Basic ' . base64_encode("{$this->apiKey}:{$this->companyId}"),
+                'Authorization' => 'Basic ' . $this->transactionAuthToken(),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
             ])->post("{$this->baseUrl}/transactions", $payload);
@@ -285,7 +344,7 @@ class HunterSubAcquirer implements AcquirerInterface
             ]);
 
             $response = Http::withHeaders([
-                'Authorization' => 'Basic ' . base64_encode("{$this->apiKey}:{$this->companyId}"),
+                'Authorization' => 'Basic ' . $this->transactionAuthToken(),
                 'Accept' => 'application/json',
             ])->delete("{$this->baseUrl}/transactions/{$request->transactionId}");
 
@@ -341,7 +400,7 @@ class HunterSubAcquirer implements AcquirerInterface
     {
         try {
             $response = Http::withHeaders([
-                'Authorization' => 'Basic ' . base64_encode("{$this->apiKey}:{$this->companyId}"),
+                'Authorization' => 'Basic ' . $this->transactionAuthToken(),
                 'Accept' => 'application/json',
             ])->get("{$this->baseUrl}/transactions/{$transactionId}");
 
@@ -438,6 +497,10 @@ class HunterSubAcquirer implements AcquirerInterface
             ],
         ];
 
+        if ($this->webhookUrl) {
+            $payload['postbackUrl'] = $this->webhookUrl;
+        }
+
         // Adicionar telefone se disponível
         if (!empty($request->customer['phone'])) {
             $payload['customer']['phone'] = preg_replace('/\D/', '', $request->customer['phone']);
@@ -503,13 +566,12 @@ class HunterSubAcquirer implements AcquirerInterface
 
     private function mapStatus(string $hunterSubStatus): string
     {
-        return match($hunterSubStatus) {
-            'paid' => 'approved',
-            'pending' => 'pending',
-            'waiting_payment' => 'pending',
-            'failed' => 'failed',
+        return match(strtolower($hunterSubStatus)) {
+            'paid', 'approved', 'completed', 'confirmed', 'delivered' => 'approved',
+            'pending', 'waiting_payment', 'created' => 'pending',
+            'failed', 'expired', 'refused', 'declined' => 'failed',
             'refunded' => 'refunded',
-            'chargeback' => 'chargeback',
+            'chargeback', 'chargedback' => 'chargeback',
             default => 'pending',
         };
     }
@@ -536,5 +598,15 @@ class HunterSubAcquirer implements AcquirerInterface
             'boleto' => 'BOLETO',
             default => 'PIX',
         };
+    }
+
+    private function transactionAuthToken(): string
+    {
+        return base64_encode("{$this->clientId}:{$this->apiKey}");
+    }
+
+    private function withdrawalAuthToken(): string
+    {
+        return base64_encode("{$this->apiKey}:{$this->companyId}");
     }
 }

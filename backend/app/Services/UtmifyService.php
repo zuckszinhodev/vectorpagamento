@@ -64,7 +64,7 @@ class UtmifyService
             ->first();
 
         if (!$integration) {
-            Log::info('UTMify dispatch skipped â€“ no active integration', [
+            Log::info('UTMify dispatch skipped – no active integration', [
                 'account_id' => $charge->account_id,
                 'charge_id'  => $charge->id,
             ]);
@@ -97,7 +97,7 @@ class UtmifyService
             ->first();
 
         if (!$integration) {
-            Log::info('UTMify dispatchSync skipped â€“ no active integration', [
+            Log::info('UTMify dispatchSync skipped – no active integration', [
                 'account_id' => $charge->account_id,
                 'charge_id'  => $charge->id,
             ]);

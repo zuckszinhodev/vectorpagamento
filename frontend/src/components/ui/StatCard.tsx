@@ -8,7 +8,7 @@ interface StatCardProps {
     label?: string;
   };
   icon?: React.ReactNode;
-  color?: 'blue' | 'green' | 'purple' | 'orange' | 'red';
+  color?: 'blue' | 'green' | 'emerald' | 'orange' | 'red';
   loading?: boolean;
 }
 

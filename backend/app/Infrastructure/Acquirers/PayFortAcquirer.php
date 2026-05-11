@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
  * 
  * API Documentation: https://docs.payfortbank.com
  * 
- * Authentication: Basic Auth (apiKey:apiSecret) â†’ JWT Bearer Token (30min TTL)
+ * Authentication: Basic Auth (apiKey:apiSecret) → JWT Bearer Token (30min TTL)
  * PIX IN: POST /api/v1/pix/in/qrcode
  * PIX OUT: POST /api/v1/pix/out/pixkey
  * 
@@ -309,7 +309,7 @@ class PayFortAcquirer implements AcquirerInterface
                 'pixKey' => $transferData['pix_key'],
                 'amount' => (int)($transferData['amount'] * 100),
                 'currency' => 'BRL',
-                'description' => $transferData['description'] ?? 'TransferÃªncia PIX',
+                'description' => $transferData['description'] ?? 'Transferência PIX',
                 'postbackUrl' => config('app.url') . '/api/v1/webhooks/payfort',
             ];
 

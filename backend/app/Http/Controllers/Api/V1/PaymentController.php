@@ -12,6 +12,7 @@ use App\Models\AcquirerConfig;
 use App\Models\AccountCustomFee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -22,7 +23,6 @@ class PaymentController extends Controller
      */
     public function process(Request $request, string $chargeId): JsonResponse
     {
-        try {
         $accountId = $request->user()->account_id;
 
         $charge = Charge::where('id', $chargeId)
@@ -63,7 +63,6 @@ class PaymentController extends Controller
         $paymentMethod = $request->input('payment_method', $charge->payment_method);
         $result = $this->processPaymentMethod($charge, $paymentMethod, $request);
 
-        // Create transaction record
         $transaction = Transaction::create([
             'id' => Str::uuid()->toString(),
             'charge_id' => $chargeId,
@@ -78,12 +77,9 @@ class PaymentController extends Controller
             ],
         ]);
 
-        // Update charge status
         $chargeUpdate = ['status' => $result['status']];
         if ($result['status'] === 'paid') {
             $chargeUpdate['paid_at'] = now();
-            
-            // Credit to account wallet
             $this->creditToWallet($charge);
         }
         $charge->update(array_merge($chargeUpdate, $result['payment_data'] ?? []));
@@ -109,17 +105,6 @@ class PaymentController extends Controller
                 'processed_at' => now()->toIso8601String(),
             ],
         ], $statusCode);
-        } catch (\Throwable $e) {
-            Log::error('PaymentController::process error', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            return response()->json([
-                'success' => false,
-                'error' => ['code' => 'server_error', 'message' => 'Erro interno do servidor.'],
-            ], 500);
-        }
     }
 
     /**
@@ -127,7 +112,6 @@ class PaymentController extends Controller
      */
     public function methods(Request $request): JsonResponse
     {
-        try {
         $methods = [
             [
                 'id' => 'credit_card',
@@ -160,17 +144,6 @@ class PaymentController extends Controller
             'success' => true,
             'data' => $methods,
         ]);
-        } catch (\Throwable $e) {
-            Log::error('PaymentController::methods error', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            return response()->json([
-                'success' => false,
-                'error' => ['code' => 'server_error', 'message' => 'Erro interno do servidor.'],
-            ], 500);
-        }
     }
 
     /**
@@ -178,7 +151,6 @@ class PaymentController extends Controller
      */
     public function installments(Request $request): JsonResponse
     {
-        try {
         $request->validate([
             'amount' => ['required', 'integer', 'min:100'],
         ]);
@@ -192,7 +164,7 @@ class PaymentController extends Controller
         for ($i = 1; $i <= $maxInstallments; $i++) {
             $installmentAmount = $amount / $i;
             $hasInterest = $i > $interestFreeLimit;
-            
+
             if ($hasInterest) {
                 $installmentAmount = $amount * pow(1 + $interestRate, $i) / $i;
             }
@@ -210,17 +182,6 @@ class PaymentController extends Controller
             'success' => true,
             'data' => $installments,
         ]);
-        } catch (\Throwable $e) {
-            Log::error('PaymentController::installments error', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            return response()->json([
-                'success' => false,
-                'error' => ['code' => 'server_error', 'message' => 'Erro interno do servidor.'],
-            ], 500);
-        }
     }
 
     /**
@@ -228,7 +189,6 @@ class PaymentController extends Controller
      */
     public function capture(Request $request, string $transactionId): JsonResponse
     {
-        try {
         $accountId = $request->user()->account_id;
 
         $transaction = Transaction::where('id', $transactionId)
@@ -263,7 +223,6 @@ class PaymentController extends Controller
 
         $captureAmount = $request->input('amount', $transaction->amount);
 
-        // Create capture transaction
         $captureTransaction = Transaction::create([
             'id' => Str::uuid()->toString(),
             'charge_id' => $transaction->charge_id,
@@ -274,7 +233,6 @@ class PaymentController extends Controller
             'provider_transaction_id' => 'cap_' . Str::random(16),
         ]);
 
-        // Update charge
         $transaction->charge->update([
             'status' => 'paid',
             'paid_at' => now(),
@@ -290,17 +248,6 @@ class PaymentController extends Controller
                 'captured_at' => now()->toIso8601String(),
             ],
         ]);
-        } catch (\Throwable $e) {
-            Log::error('PaymentController::capture error', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            return response()->json([
-                'success' => false,
-                'error' => ['code' => 'server_error', 'message' => 'Erro interno do servidor.'],
-            ], 500);
-        }
     }
 
     /**
@@ -329,49 +276,50 @@ class PaymentController extends Controller
         ];
     }
 
-    /**
-     * Credit amount to account wallet after payment
-     */
     private function creditToWallet(Charge $charge): void
     {
-        $wallet = AccountWallet::firstOrCreate(
-            ['account_id' => $charge->account_id],
-            [
-                'currency' => 'BRL',
-                'available_balance' => 0,
-                'pending_balance' => 0,
-                'blocked_balance' => 0,
-            ]
-        );
+        DB::transaction(function () use ($charge) {
+            $freshCharge = Charge::lockForUpdate()->find($charge->id);
 
-        // Get acquirer config to calculate fees (R$2.00 fixed + 5% per transaction)
-        $acquirerConfig = AcquirerConfig::findByKey($charge->acquirer);
-
-        $feeAmount = 0;
-        $netAmount = $charge->amount;
-
-        if ($acquirerConfig) {
-            // Check for per-account custom gateway fee
-            $customFee = AccountCustomFee::where('account_id', $charge->account_id)->first();
-            $customGatewayFee = $customFee?->calculateGatewayFee($charge->amount, $charge->payment_method);
-
-            if (!is_null($customGatewayFee)) {
-                $acquirerFee = $acquirerConfig->calculateAcquirerFee($charge->amount);
-                $feeAmount = $customGatewayFee + $acquirerFee;
-            } else {
-                $feeAmount = $acquirerConfig->calculateGatewayFee($charge->amount);
+            if (!$freshCharge || $freshCharge->net_amount > 0) {
+                return;
             }
 
-            $netAmount = $charge->amount - $feeAmount;
-        }
+            $wallet = AccountWallet::lockForUpdate()->firstOrCreate(
+                ['account_id' => $freshCharge->account_id],
+                [
+                    'currency' => 'BRL',
+                    'available_balance' => 0,
+                    'pending_balance' => 0,
+                    'blocked_balance' => 0,
+                ]
+            );
 
-        // Update charge with fee information
-        $charge->update([
-            'fee_amount' => $feeAmount,
-            'net_amount' => $netAmount,
-        ]);
+            $acquirerConfig = AcquirerConfig::findByKey($freshCharge->acquirer);
 
-        // Credit net amount to wallet
-        $wallet->increment('available_balance', $netAmount);
+            $feeAmount = 0;
+            $netAmount = $freshCharge->amount;
+
+            if ($acquirerConfig) {
+                $customFee = AccountCustomFee::where('account_id', $freshCharge->account_id)->first();
+                $customGatewayFee = $customFee?->calculateGatewayFee($freshCharge->amount, $freshCharge->payment_method);
+
+                if (!is_null($customGatewayFee)) {
+                    $acquirerFee = $acquirerConfig->calculateAcquirerFee($freshCharge->amount);
+                    $feeAmount = $customGatewayFee + $acquirerFee;
+                } else {
+                    $feeAmount = $acquirerConfig->calculateGatewayFee($freshCharge->amount);
+                }
+
+                $netAmount = $freshCharge->amount - $feeAmount;
+            }
+
+            $freshCharge->update([
+                'fee_amount' => $feeAmount,
+                'net_amount' => $netAmount,
+            ]);
+
+            $wallet->increment('available_balance', $netAmount);
+        });
     }
 }

@@ -36,7 +36,7 @@ const LIGHT_MODE_VARS = {
   '--text-secondary': '#52525B',
   '--text-muted': '#A1A1AA',
   '--text-inverted': '#FFFFFF',
-  '--accent-subtle': 'rgba(21,128,61,0.08)',
+  '--accent-subtle': 'rgba(22,163,74,0.08)',
   '--status-success-subtle': 'rgba(34,197,94,0.10)',
   '--status-error-subtle': 'rgba(239,68,68,0.10)',
   '--status-warning-subtle': 'rgba(245,158,11,0.10)',
@@ -1110,7 +1110,7 @@ export default function PublicCheckoutPage() {
 
   // Theme - defaults match CheckoutBuilderPage
   const theme = {
-    primaryColor: themeData.primaryColor || settings.theme_color || '#16a34a',
+    primaryColor: themeData.primaryColor || settings.theme_color || '#22c55e',
     secondaryColor: themeData.secondaryColor || '#22c55e',
     backgroundColor: themeData.backgroundColor || '#f8fafc',
     cardBackground: themeData.cardBackground || '#ffffff',
@@ -1575,7 +1575,7 @@ export default function PublicCheckoutPage() {
                             {item.avatar ? (
                               <img src={item.avatar} alt={item.name} className="h-10 w-10 rounded-full object-cover" />
                             ) : (
-                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-400 to-pink-400 flex items-center justify-center text-white font-bold">
+                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-green-400 flex items-center justify-center text-white font-bold">
                                 {item.name.charAt(0)}
                               </div>
                             )}
@@ -1819,7 +1819,7 @@ export default function PublicCheckoutPage() {
         }
         
         .checkout-description a {
-          color: #16a34a;
+          color: #22c55e;
           text-decoration: underline;
         }
         
@@ -1831,7 +1831,7 @@ export default function PublicCheckoutPage() {
         }
         
         .checkout-description blockquote {
-          border-left: 4px solid #16a34a;
+          border-left: 4px solid #22c55e;
           padding-left: 1em;
           margin: 1em 0;
           font-style: italic;
@@ -1861,5 +1861,3 @@ export default function PublicCheckoutPage() {
     </div>
   );
 }
-
-

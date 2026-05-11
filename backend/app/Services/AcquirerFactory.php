@@ -688,9 +688,11 @@ class AcquirerFactory
 
             if ($envConfigured) {
                 $this->huntersub = new \App\Infrastructure\Acquirers\HunterSubAcquirer([
+                    'client_id'      => config('acquirers.huntersub.client_id', ''),
                     'api_key'        => config('acquirers.huntersub.api_key', ''),
                     'company_id'     => config('acquirers.huntersub.company_id', ''),
                     'base_url'       => config('acquirers.huntersub.base_url', 'https://api.huntersubv2.com/functions/v1'),
+                    'webhook_url'    => config('acquirers.huntersub.webhook_url', ''),
                     'webhook_secret' => config('acquirers.huntersub.webhook_secret', ''),
                 ]);
             } else {
@@ -698,9 +700,11 @@ class AcquirerFactory
                 if ($creds) {
                     Log::info('HunterSub: using DB-stored credentials');
                     $this->huntersub = new \App\Infrastructure\Acquirers\HunterSubAcquirer([
+                        'client_id'      => $creds['client_id'] ?? $creds['company_id'] ?? '',
                         'api_key'        => $creds['api_key'] ?? '',
                         'company_id'     => $creds['company_id'] ?? '',
                         'base_url'       => $creds['base_url'] ?? config('acquirers.huntersub.base_url', 'https://api.huntersubv2.com/functions/v1'),
+                        'webhook_url'    => $creds['webhook_url'] ?? config('acquirers.huntersub.webhook_url', ''),
                         'webhook_secret' => $creds['webhook_secret'] ?? '',
                     ]);
                 }
@@ -720,9 +724,11 @@ class AcquirerFactory
             if ($creds) {
                 Log::info('HunterSub: using account-level DB credentials', ['account_id' => $accountId]);
                 $this->huntersubByAccount[$accountId] = new \App\Infrastructure\Acquirers\HunterSubAcquirer([
+                    'client_id'      => $creds['client_id'] ?? $creds['company_id'] ?? '',
                     'api_key'        => $creds['api_key'] ?? '',
                     'company_id'     => $creds['company_id'] ?? '',
                     'base_url'       => $creds['base_url'] ?? config('acquirers.huntersub.base_url', 'https://api.huntersubv2.com/functions/v1'),
+                    'webhook_url'    => $creds['webhook_url'] ?? config('acquirers.huntersub.webhook_url', ''),
                     'webhook_secret' => $creds['webhook_secret'] ?? '',
                 ]);
             } else {

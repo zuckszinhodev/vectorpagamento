@@ -135,7 +135,7 @@ export default function AdminSettings() {
   if (isLoading || !settings) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
       </div>
     );
   }
@@ -164,7 +164,7 @@ export default function AdminSettings() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
-                  activeTab === tab.id ? 'bg-green-500 text-white' : 'text-tx-secondary hover:bg-surface-hover'
+                  activeTab === tab.id ? 'bg-emerald-500 text-white' : 'text-tx-secondary hover:bg-surface-hover'
                 }`}
               >
                 <tab.icon className="h-5 w-5" />
@@ -244,7 +244,7 @@ function GeneralSettings({
           type="checkbox"
           checked={form.maintenance_mode}
           onChange={(e) => setForm({ ...form, maintenance_mode: e.target.checked })}
-          className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+          className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
         />
         <span className="text-sm text-tx-primary">Modo de manutencao</span>
       </label>
@@ -284,7 +284,7 @@ function EmailSettings({
               type={showPassword ? 'text' : 'password'}
               value={form.smtp_password}
               onChange={(e) => setForm({ ...form, smtp_password: e.target.value })}
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 pr-10 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 pr-10 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
             />
             <button
               type="button"
@@ -401,7 +401,7 @@ function FeatureSettings({
               type="checkbox"
               checked={form[feature.key]}
               onChange={(e) => setForm({ ...form, [feature.key]: e.target.checked })}
-              className="h-5 w-5 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+              className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
             />
             <div className="flex-1">
               <span className="text-sm font-medium text-tx-primary">{feature.label}</span>
@@ -434,7 +434,7 @@ function Input({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
       />
     </div>
   );
@@ -455,7 +455,7 @@ function Toggle({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
+        className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
       />
       <span className="text-sm text-tx-primary">{label}</span>
     </label>
@@ -467,10 +467,9 @@ function SaveButton({ isSaving, onClick }: { isSaving: boolean; onClick: () => v
     <button
       onClick={onClick}
       disabled={isSaving}
-      className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+      className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
     >
       {isSaving ? 'Salvando...' : 'Salvar Alteracoes'}
     </button>
   );
 }
-

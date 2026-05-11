@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * PIX icon – SVG version that accepts color via className.
- * Use text-green-500, text-cyan-500, etc. to change color.
+ * Use text-emerald-500, text-cyan-500, etc. to change color.
  */
 const PixIcon: React.FC<React.SVGProps<SVGSVGElement>> = ({ className, ...props }) => (
   <svg
@@ -17,5 +17,3 @@ const PixIcon: React.FC<React.SVGProps<SVGSVGElement>> = ({ className, ...props 
 );
 
 export default PixIcon;
-
-

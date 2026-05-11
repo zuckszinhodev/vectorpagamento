@@ -133,10 +133,10 @@ class MessagingService
                 MessagingProvider::PROVIDER_TWILIO => $this->testTwilio($provider),
                 MessagingProvider::PROVIDER_VONAGE => $this->testVonage($provider),
                 MessagingProvider::PROVIDER_GATEPRO => $this->testGatePro($provider),
-                default => ['valid' => true, 'message' => 'Provider configurado (sem teste disponÃ­vel)'],
+                default => ['valid' => true, 'message' => 'Provider configurado (sem teste disponível)'],
             };
         } catch (\Exception $e) {
-            return ['valid' => false, 'message' => 'Erro ao testar conexÃ£o: ' . $e->getMessage()];
+            return ['valid' => false, 'message' => 'Erro ao testar conexão: ' . $e->getMessage()];
         }
     }
 
@@ -180,11 +180,11 @@ class MessagingService
             $state = $data['instance']['state'] ?? $data['state'] ?? 'unknown';
             return [
                 'valid' => $state === 'open',
-                'message' => $state === 'open' ? 'InstÃ¢ncia conectada!' : "InstÃ¢ncia em estado: {$state}",
+                'message' => $state === 'open' ? 'Instância conectada!' : "Instância em estado: {$state}",
             ];
         }
 
-        return ['valid' => false, 'message' => 'NÃ£o foi possÃ­vel conectar Ã  Evolution API'];
+        return ['valid' => false, 'message' => 'Não foi possível conectar à Evolution API'];
     }
 
     // ---- Z-API (WhatsApp) ----
@@ -228,7 +228,7 @@ class MessagingService
             ];
         }
 
-        return ['valid' => false, 'message' => 'NÃ£o foi possÃ­vel conectar Ã  Z-API'];
+        return ['valid' => false, 'message' => 'Não foi possível conectar à Z-API'];
     }
 
     // ---- Twilio (SMS) ----
@@ -270,7 +270,7 @@ class MessagingService
 
         return [
             'valid' => $response->successful(),
-            'message' => $response->successful() ? 'Conta Twilio vÃ¡lida!' : 'Credenciais invÃ¡lidas',
+            'message' => $response->successful() ? 'Conta Twilio válida!' : 'Credenciais inválidas',
         ];
     }
 
@@ -317,7 +317,7 @@ class MessagingService
 
         return [
             'valid' => $response->successful(),
-            'message' => $response->successful() ? 'Conta Vonage vÃ¡lida!' : 'Credenciais invÃ¡lidas',
+            'message' => $response->successful() ? 'Conta Vonage válida!' : 'Credenciais inválidas',
         ];
     }
 
@@ -330,7 +330,7 @@ class MessagingService
         $smsSender = $provider->sender_number ?? config('services.vectorpagamentos_sms.sender', env('VECTORPAGAMENTOS_SMS_SENDER', 'Vector Pagamentos'));
 
         if (!$smsUrl) {
-            throw new \Exception('Vector Pagamentos SMS: URL do gateway SMS nÃ£o configurada (VECTORPAGAMENTOS_SMS_URL)');
+            throw new \Exception('Vector Pagamentos SMS: URL do gateway SMS não configurada (VECTORPAGAMENTOS_SMS_URL)');
         }
 
         $formattedPhone = $this->formatPhoneInternational($phone);
@@ -361,7 +361,7 @@ class MessagingService
         $smsKey = config('services.vectorpagamentos_sms.key', env('VECTORPAGAMENTOS_SMS_KEY', ''));
 
         if (!$smsUrl) {
-            return ['valid' => false, 'message' => 'URL do gateway SMS nÃ£o configurada'];
+            return ['valid' => false, 'message' => 'URL do gateway SMS não configurada'];
         }
 
         try {
@@ -371,7 +371,7 @@ class MessagingService
 
             return [
                 'valid' => $response->successful(),
-                'message' => $response->successful() ? 'Vector Pagamentos SMS ativo!' : 'ServiÃ§o SMS indisponÃ­vel',
+                'message' => $response->successful() ? 'Vector Pagamentos SMS ativo!' : 'Serviço SMS indisponível',
             ];
         } catch (\Exception $e) {
             return ['valid' => false, 'message' => 'Erro ao conectar: ' . $e->getMessage()];
@@ -384,7 +384,7 @@ class MessagingService
     {
         $baseUrl = rtrim($provider->api_url ?? '', '/');
         if (!$baseUrl) {
-            throw new \Exception('URL da API nÃ£o configurada');
+            throw new \Exception('URL da API não configurada');
         }
 
         $headers = ['Content-Type' => 'application/json'];

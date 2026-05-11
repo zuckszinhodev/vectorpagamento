@@ -457,6 +457,7 @@ export default function WithdrawalsPage() {
  ? withdrawals
  : withdrawals.filter(w => w.status === selectedStatus);
 
+ const getWithdrawalReason = (withdrawal: Withdrawal) => withdrawal.failure_reason || withdrawal.notes;
 
  return (
  <div className="space-y-6">
@@ -485,7 +486,7 @@ export default function WithdrawalsPage() {
  {/* Balance Cards */}
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
  {/* Saldo Disponível */}
- <div className="rounded-2xl bg-gradient-to-br from-green-600 via-green-600 to-green-700 p-5 sm:p-6 relative overflow-hidden">
+ <div className="rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-600 to-green-700 p-5 sm:p-6 relative overflow-hidden">
  <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '20px 20px' }} />
  <div className="relative">
  <div className="flex items-center justify-between mb-2">
@@ -533,7 +534,7 @@ export default function WithdrawalsPage() {
  Taxa personalizada
  </span>
  )}
- <span>Mín. saque: <strong className="text-tx-secondary">{minWithdrawal <= 0 ? 'Sem mínimo' : formatCurrency(minWithdrawal)}</strong></span>
+ <span>Mín. saque: <strong className="text-tx-secondary">{formatCurrency(minWithdrawal)}</strong></span>
  <span className="hidden sm:inline text-tx-muted">|</span>
  <span>PIX: <strong className="text-tx-secondary">{(settings?.standard_withdrawal_fee_pix ?? 0) === 0 ? 'Grátis' : formatCurrency(settings?.standard_withdrawal_fee_pix ?? 0)}</strong></span>
  <span className="hidden sm:inline text-tx-muted">|</span>
@@ -604,7 +605,7 @@ export default function WithdrawalsPage() {
  }
  setIsWithdrawModalOpen(true);
  }}
- disabled={createWithdrawalMutation.isPending || !withdrawalsEnabled || availableBalance <= 0 || availableBalance < minWithdrawal}
+ disabled={createWithdrawalMutation.isPending || !withdrawalsEnabled || availableBalance < minWithdrawal}
  className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-2.5 w-full sm:w-auto"
  >
  <ArrowDownTrayIcon className="h-5 w-5" />
@@ -656,6 +657,7 @@ export default function WithdrawalsPage() {
  filteredWithdrawals.map((withdrawal) => {
  const config = statusConfig[withdrawal.status];
  const StatusIcon = config.icon;
+ const withdrawalReason = getWithdrawalReason(withdrawal);
 
  return (
  <tr key={withdrawal.id} className="hover:bg-surface-page/50 transition-colors">
@@ -732,6 +734,11 @@ export default function WithdrawalsPage() {
  <StatusIcon className="h-3.5 w-3.5" />
  {config.label}
  </span>
+ {withdrawalReason && (
+ <p className="mt-2 text-xs leading-5 text-tx-muted whitespace-pre-line break-words">
+ Motivo: {withdrawalReason}
+ </p>
+ )}
  </div>
  </div>
  </td>
@@ -1178,5 +1185,3 @@ export default function WithdrawalsPage() {
  </div>
  );
 }
-
-

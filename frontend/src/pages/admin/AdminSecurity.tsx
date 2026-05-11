@@ -211,7 +211,7 @@ export default function AdminSecurity() {
       case 'suspicious_activity':
         return <ExclamationTriangleIcon className="h-5 w-5 text-amber-500" />;
       case 'bot_detected':
-        return <NoSymbolIcon className="h-5 w-5 text-green-500" />;
+        return <NoSymbolIcon className="h-5 w-5 text-emerald-500" />;
       case 'card_testing':
         return <ShieldExclamationIcon className="h-5 w-5 text-red-500" />;
       default:
@@ -263,9 +263,9 @@ export default function AdminSecurity() {
           <p className="text-xs text-orange-600 mb-1">Ameaças 7 dias</p>
           <p className="text-2xl font-bold text-orange-600">{stats?.threats_week || 0}</p>
         </div>
-        <div className="rounded-xl bg-green-500/10 p-4">
-          <p className="text-xs text-green-600 mb-1">IPs Bloqueados</p>
-          <p className="text-2xl font-bold text-green-600">{stats?.blocked_ips || 0}</p>
+        <div className="rounded-xl bg-emerald-500/10 p-4">
+          <p className="text-xs text-emerald-600 mb-1">IPs Bloqueados</p>
+          <p className="text-2xl font-bold text-emerald-600">{stats?.blocked_ips || 0}</p>
         </div>
         <div className="rounded-xl bg-blue-500/10 p-4">
           <p className="text-xs text-blue-600 mb-1">Emails Bloqueados</p>
@@ -286,7 +286,7 @@ export default function AdminSecurity() {
           }}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'threats'
-              ? 'border-green-500 text-green-500'
+              ? 'border-emerald-500 text-emerald-500'
               : 'border-transparent text-tx-muted hover:text-tx-primary'
           }`}
         >
@@ -299,7 +299,7 @@ export default function AdminSecurity() {
           }}
           className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'blocklist'
-              ? 'border-green-500 text-green-500'
+              ? 'border-emerald-500 text-emerald-500'
               : 'border-transparent text-tx-muted hover:text-tx-primary'
           }`}
         >
@@ -323,7 +323,7 @@ export default function AdminSecurity() {
                     setSearch(e.target.value);
                     setPage(1);
                   }}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
                 />
               </div>
               <select
@@ -332,7 +332,7 @@ export default function AdminSecurity() {
                   setSeverityFilter(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
               >
                 <option value="all">Todas severidades</option>
                 <option value="critical">Crítico</option>
@@ -347,7 +347,7 @@ export default function AdminSecurity() {
           <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
             {threatsLoading ? (
               <div className="flex items-center justify-center py-20">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
               </div>
             ) : threats.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
@@ -482,7 +482,7 @@ export default function AdminSecurity() {
                   setBlocklistType(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
               >
                 <option value="all">Todos os tipos</option>
                 <option value="ip">IPs</option>
@@ -494,7 +494,7 @@ export default function AdminSecurity() {
 
               <button
                 onClick={() => setShowAddBlockModal(true)}
-                className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
               >
                 <PlusIcon className="h-4 w-4" />
                 Adicionar Bloqueio
@@ -506,7 +506,7 @@ export default function AdminSecurity() {
           <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
             {blocklistLoading ? (
               <div className="flex items-center justify-center py-20">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
               </div>
             ) : blocklist.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
@@ -653,7 +653,7 @@ function AddBlockModal({
             <select
               value={form.type}
               onChange={(e) => setForm({ ...form, type: e.target.value })}
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
             >
               <option value="ip">IP Address</option>
               <option value="email">Email</option>
@@ -676,7 +676,7 @@ function AddBlockModal({
                 form.type === 'card_bin' ? '411111' :
                 '000.000.000-00'
               }
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
             />
           </div>
 
@@ -687,7 +687,7 @@ function AddBlockModal({
               value={form.reason}
               onChange={(e) => setForm({ ...form, reason: e.target.value })}
               placeholder="Tentativa de fraude"
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
             />
           </div>
 
@@ -697,7 +697,7 @@ function AddBlockModal({
               type="datetime-local"
               value={form.expires_at}
               onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
             />
             <p className="text-xs text-tx-muted mt-1">Deixe vazio para bloqueio permanente</p>
           </div>
@@ -712,7 +712,7 @@ function AddBlockModal({
             <button
               onClick={() => onSave(form)}
               disabled={isSaving || !form.value}
-              className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+              className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
             >
               {isSaving ? 'Adicionando...' : 'Adicionar'}
             </button>
@@ -722,5 +722,3 @@ function AddBlockModal({
     </div>
   );
 }
-
-

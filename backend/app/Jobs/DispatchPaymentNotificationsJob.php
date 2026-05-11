@@ -66,11 +66,11 @@ class DispatchPaymentNotificationsJob implements ShouldQueue
         $this->safeDispatch(fn () => $n8nService->dispatch($this->event, $this->buildN8nPayload($charge), $charge->account_id), 'n8n');
 
         // 2. Account webhooks
-        $this->safeDispatch(fn () => $webhookDispatch->dispatchPaymentEvent($this->event, $charge), 'account_webhook');
+        $this->safeDispatch(fn () => $webhookDispatch->dispatchPaymentEventSync($this->event, $charge), 'account_webhook');
         if ($this->event === 'payment.approved') {
-            $this->safeDispatch(fn () => $webhookDispatch->dispatchPaymentEvent('charge.paid', $charge), 'account_webhook_charge_paid');
+            $this->safeDispatch(fn () => $webhookDispatch->dispatchPaymentEventSync('charge.paid', $charge), 'account_webhook_charge_paid');
         } elseif ($this->event === 'payment.refunded') {
-            $this->safeDispatch(fn () => $webhookDispatch->dispatchPaymentEvent('charge.refunded', $charge), 'account_webhook_charge_refunded');
+            $this->safeDispatch(fn () => $webhookDispatch->dispatchPaymentEventSync('charge.refunded', $charge), 'account_webhook_charge_refunded');
         }
 
         // 3. UTMify
