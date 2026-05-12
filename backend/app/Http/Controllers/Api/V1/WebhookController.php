@@ -114,6 +114,9 @@ class WebhookController extends Controller
             // HunterSub events: transaction.paid, transaction.pending, transaction.failed, etc
             return 'huntersub';
         }
+        if (($payload['type'] ?? null) === 'transaction' && isset($payload['data']['id'], $payload['data']['status'])) {
+            return 'huntersub';
+        }
 
         // Enki – top-level event with transaction/withdrawal object
         if (isset($payload['event'])
@@ -1237,13 +1240,24 @@ class WebhookController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Charge not found'], 404);
             }
 
-            // Mapear evento para status interno esperado pelo PaymentService
+            // Mapear evento para status interno esperado pelo PaymentService.
+            // HunterSub can send either specific events (transaction.paid) or a
+            // generic "transaction" event with the status inside data.status.
+            $externalStatus = strtolower(trim((string) ($data['status'] ?? '')));
             $mappedStatus = match ($eventType) {
                 'transaction.paid', 'transaction.delivered' => 'approved',
                 'transaction.pending' => 'pending',
                 'transaction.failed' => 'failed',
                 'transaction.refunded' => 'refunded',
                 'transaction.chargeback' => 'chargeback',
+                'transaction' => match ($externalStatus) {
+                    'paid', 'approved', 'success', 'completed', 'delivered' => 'approved',
+                    'waiting_payment', 'pending', 'processing' => 'pending',
+                    'refused', 'failed', 'declined', 'rejected' => 'failed',
+                    'refunded' => 'refunded',
+                    'chargeback', 'chargedback' => 'chargeback',
+                    default => null,
+                },
                 default => null,
             };
 

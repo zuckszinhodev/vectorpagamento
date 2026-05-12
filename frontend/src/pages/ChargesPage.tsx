@@ -74,7 +74,7 @@ function StatusBadge({ status }: { status: string }) {
 
   const labels: Record<string, string> = {
     paid: 'Pago',
-    approved: 'Aprovado',
+    approved: 'Pago',
     pending: 'Pendente',
     processing: 'Processando',
     failed: 'Falhou',
