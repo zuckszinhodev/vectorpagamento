@@ -332,6 +332,7 @@ return [
         'api_key' => env('SHARKHUBSUB_API_KEY'),
         'withdrawal_key' => env('SHARKHUBSUB_WITHDRAWAL_KEY'),
         'webhook_secret' => env('SHARKHUBSUB_WEBHOOK_SECRET'),
+        'transfer_webhook_secret' => env('SHARKHUBSUB_TRANSFER_WEBHOOK_SECRET'),
         'base_url' => env('SHARKHUBSUB_BASE_URL', 'https://api.sharkhubsubadquirente.com'),
         'webhook_url' => env('SHARKHUBSUB_WEBHOOK_URL', env('APP_URL') . '/api/v1/webhooks/sharkhubsub'),
         'transfer_webhook_url' => env('SHARKHUBSUB_TRANSFER_WEBHOOK_URL', env('APP_URL') . '/api/v1/webhooks/sharkhubsub'),

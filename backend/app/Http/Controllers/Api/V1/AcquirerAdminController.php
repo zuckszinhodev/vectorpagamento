@@ -309,6 +309,7 @@ class AcquirerAdminController extends Controller
             'api_key' => ['sometimes', 'nullable', 'string'],
             'api_secret' => ['sometimes', 'nullable', 'string'],
             'webhook_secret' => ['sometimes', 'nullable', 'string'],
+            'transfer_webhook_secret' => ['sometimes', 'nullable', 'string'],
             'merchant_id' => ['sometimes', 'nullable', 'string'],
             'credentials' => ['sometimes', 'array'],
             'acquirer_fee_percentage' => ['sometimes', 'numeric', 'min:0', 'max:100'],
@@ -393,6 +394,9 @@ class AcquirerAdminController extends Controller
         }
         if (isset($validated['webhook_secret']) && $validated['webhook_secret']) {
             $credentials['webhook_secret'] = $validated['webhook_secret'];
+        }
+        if (isset($validated['transfer_webhook_secret']) && $validated['transfer_webhook_secret']) {
+            $credentials['transfer_webhook_secret'] = $validated['transfer_webhook_secret'];
         }
         if (isset($validated['merchant_id']) && $validated['merchant_id']) {
             $credentials['merchant_id'] = $validated['merchant_id'];

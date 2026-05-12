@@ -1356,7 +1356,12 @@ class WebhookController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'Invalid payload'], 400);
             }
 
-            $webhookSecret = $this->getSharkHubSubWebhookSecret();
+            $isPaymentWebhook = isset($payload['payer'])
+                || isset($payload['items'])
+                || array_key_exists('paidAt', $payload)
+                || array_key_exists('refundedAt', $payload);
+
+            $webhookSecret = $this->getSharkHubSubWebhookSecret(!$isPaymentWebhook);
             $signature = (string) ($request->header('X-Signature') ?? $request->header('x-signature') ?? '');
 
             if ($webhookSecret) {
@@ -1367,11 +1372,6 @@ class WebhookController extends Controller
             } else {
                 Log::info('SharkHubSub webhook accepted without signature verification because no webhook secret is configured');
             }
-
-            $isPaymentWebhook = isset($payload['payer'])
-                || isset($payload['items'])
-                || array_key_exists('paidAt', $payload)
-                || array_key_exists('refundedAt', $payload);
 
             if (!$isPaymentWebhook) {
                 $mappedTransferStatus = \App\Infrastructure\Acquirers\SharkHubSubAcquirer::mapWebhookTransferStatus($status);
@@ -1469,11 +1469,19 @@ class WebhookController extends Controller
         return $dbSecret !== '' ? $dbSecret : null;
     }
 
-    private function getSharkHubSubWebhookSecret(): ?string
+    private function getSharkHubSubWebhookSecret(bool $transfer = false): ?string
     {
-        $envSecret = trim((string) config('acquirers.sharkhubsub.webhook_secret', ''));
+        $configKey = $transfer ? 'transfer_webhook_secret' : 'webhook_secret';
+        $envSecret = trim((string) config("acquirers.sharkhubsub.{$configKey}", ''));
         if ($envSecret !== '') {
             return $envSecret;
+        }
+
+        if ($transfer) {
+            $fallbackEnvSecret = trim((string) config('acquirers.sharkhubsub.webhook_secret', ''));
+            if ($fallbackEnvSecret !== '') {
+                return $fallbackEnvSecret;
+            }
         }
 
         $config = AcquirerConfig::findByKey('sharkhubsub');
@@ -1482,7 +1490,10 @@ class WebhookController extends Controller
         }
 
         $credentials = $config->getDecryptedCredentials() ?? [];
-        $dbSecret = trim((string) ($credentials['webhook_secret'] ?? ''));
+        $dbSecret = trim((string) ($credentials[$configKey] ?? ''));
+        if ($transfer && $dbSecret === '') {
+            $dbSecret = trim((string) ($credentials['webhook_secret'] ?? ''));
+        }
 
         return $dbSecret !== '' ? $dbSecret : null;
     }

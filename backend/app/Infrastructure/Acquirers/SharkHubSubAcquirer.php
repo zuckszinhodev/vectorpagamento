@@ -16,6 +16,7 @@ class SharkHubSubAcquirer implements AcquirerInterface
     private ?string $webhookUrl;
     private ?string $transferWebhookUrl;
     private string $webhookSecret;
+    private string $transferWebhookSecret;
 
     public function __construct(array $credentials)
     {
@@ -29,6 +30,7 @@ class SharkHubSubAcquirer implements AcquirerInterface
             ? (string) $credentials['transfer_webhook_url']
             : config('acquirers.sharkhubsub.transfer_webhook_url');
         $this->webhookSecret = (string) ($credentials['webhook_secret'] ?? '');
+        $this->transferWebhookSecret = (string) ($credentials['transfer_webhook_secret'] ?? $this->webhookSecret);
     }
 
     public function getName(): string

@@ -779,6 +779,7 @@ class AcquirerFactory
                     'webhook_url' => config('acquirers.sharkhubsub.webhook_url', ''),
                     'transfer_webhook_url' => config('acquirers.sharkhubsub.transfer_webhook_url', ''),
                     'webhook_secret' => config('acquirers.sharkhubsub.webhook_secret', ''),
+                    'transfer_webhook_secret' => config('acquirers.sharkhubsub.transfer_webhook_secret', ''),
                 ]);
             } else {
                 $creds = self::resolveCredentials('sharkhubsub');
@@ -791,6 +792,7 @@ class AcquirerFactory
                         'webhook_url' => $creds['webhook_url'] ?? config('acquirers.sharkhubsub.webhook_url', ''),
                         'transfer_webhook_url' => $creds['transfer_webhook_url'] ?? config('acquirers.sharkhubsub.transfer_webhook_url', ''),
                         'webhook_secret' => $creds['webhook_secret'] ?? '',
+                        'transfer_webhook_secret' => $creds['transfer_webhook_secret'] ?? '',
                     ]);
                 }
             }
@@ -816,6 +818,7 @@ class AcquirerFactory
                     'webhook_url' => $creds['webhook_url'] ?? config('acquirers.sharkhubsub.webhook_url', ''),
                     'transfer_webhook_url' => $creds['transfer_webhook_url'] ?? config('acquirers.sharkhubsub.transfer_webhook_url', ''),
                     'webhook_secret' => $creds['webhook_secret'] ?? '',
+                    'transfer_webhook_secret' => $creds['transfer_webhook_secret'] ?? '',
                 ]);
             } else {
                 $this->sharkhubsubByAccount[$accountId] = $this->sharkhubsub();
