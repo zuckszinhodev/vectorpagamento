@@ -65,9 +65,12 @@ class EnkiAcquirer implements AcquirerInterface
                 $payload['utm'] = $utm;
             }
 
+            $diagnostics = $this->buildPixDiagnostics($payload);
+
             Log::info('Enki PIX request', [
                 'charge_id' => $charge->id,
                 'amount' => $charge->amount,
+                'diagnostics' => $diagnostics,
             ]);
 
             $response = $this->getHttpClient()->post("{$this->baseUrl}/v1/transactions", $payload);
@@ -79,6 +82,7 @@ class EnkiAcquirer implements AcquirerInterface
                     'charge_id' => $charge->id,
                     'status' => $response->status(),
                     'body' => $response->body(),
+                    'diagnostics' => $diagnostics,
                 ]);
 
                 return [
@@ -346,6 +350,26 @@ class EnkiAcquirer implements AcquirerInterface
             'tangible' => false,
             'external_ref' => (string) $charge->id,
         ]];
+    }
+
+    private function buildPixDiagnostics(array $payload): array
+    {
+        $customer = is_array($payload['customer'] ?? null) ? $payload['customer'] : [];
+        $document = is_array($customer['document'] ?? null) ? $customer['document'] : [];
+        $phoneDigits = preg_replace('/\D+/', '', (string) ($customer['phone'] ?? ''));
+        $documentDigits = preg_replace('/\D+/', '', (string) ($document['number'] ?? ''));
+
+        return [
+            'customer_name_present' => trim((string) ($customer['name'] ?? '')) !== '',
+            'customer_email_present' => trim((string) ($customer['email'] ?? '')) !== '',
+            'customer_phone_digits' => strlen($phoneDigits),
+            'customer_phone_is_fallback' => $phoneDigits === '11999999999',
+            'customer_document_digits' => strlen($documentDigits),
+            'customer_document_type' => $document['type'] ?? null,
+            'items_count' => count($payload['items'] ?? []),
+            'postback_host' => parse_url((string) ($payload['postback_url'] ?? ''), PHP_URL_HOST),
+            'has_utm' => isset($payload['utm']),
+        ];
     }
 
     private function buildCustomerPayload(Charge $charge): array

@@ -1215,6 +1215,8 @@ function WithdrawalsTab({
 }) {
   const queryClient = useQueryClient();
   const [detailWithdrawal, setDetailWithdrawal] = useState<WithdrawalItem | null>(null);
+  const [withdrawalStatusDraft, setWithdrawalStatusDraft] = useState('');
+  const [withdrawalStatusNote, setWithdrawalStatusNote] = useState('');
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalItem | null>(null);
   const [cancelReason, setCancelReason] = useState('');
 
@@ -1273,6 +1275,41 @@ function WithdrawalsTab({
     },
   });
 
+  const updateWithdrawalStatusMutation = useMutation({
+    mutationFn: async ({
+      withdrawalId,
+      status,
+      notes,
+    }: {
+      withdrawalId: string;
+      status: string;
+      notes: string;
+    }) => {
+      const response = await api.put(`/admin/withdrawals/${withdrawalId}`, {
+        status,
+        notes: notes.trim() || undefined,
+      });
+      return response.data;
+    },
+    onSuccess: (payload) => {
+      toast.success(payload?.message || 'Status do saque atualizado.');
+      const updated = payload?.data as WithdrawalItem | undefined;
+      if (updated) {
+        setDetailWithdrawal(updated);
+        setWithdrawalStatusDraft(updated.status);
+        setWithdrawalStatusNote('');
+      }
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-withdrawals', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-detail', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-logs', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || error?.response?.data?.error?.message || 'Erro ao alterar status do saque';
+      toast.error(message);
+    },
+  });
+
   const closeCancelModal = () => {
     if (cancelWithdrawalMutation.isPending) return;
     setSelectedWithdrawal(null);
@@ -1280,7 +1317,10 @@ function WithdrawalsTab({
   };
 
   const closeDetailModal = () => {
+    if (updateWithdrawalStatusMutation.isPending) return;
     setDetailWithdrawal(null);
+    setWithdrawalStatusDraft('');
+    setWithdrawalStatusNote('');
   };
 
   const getWithdrawalReason = (withdrawal: WithdrawalItem) => withdrawal.failure_reason || withdrawal.notes;
@@ -1360,7 +1400,11 @@ function WithdrawalsTab({
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
-                            onClick={() => setDetailWithdrawal(w)}
+                            onClick={() => {
+                              setDetailWithdrawal(w);
+                              setWithdrawalStatusDraft(w.status);
+                              setWithdrawalStatusNote('');
+                            }}
                             className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
                             title="Ver detalhes do saque"
                           >
@@ -1507,6 +1551,53 @@ function WithdrawalsTab({
               <div className="rounded-md bg-gray-50 p-4">
                 <p className="text-xs uppercase tracking-wide text-gray-500">Motivo / observações</p>
                 <p className="mt-2 whitespace-pre-line break-words text-sm text-gray-900">{getWithdrawalReason(detailWithdrawal)}</p>
+              </div>
+            )}
+
+            {['pending_approval', 'pending', 'processing'].includes(detailWithdrawal.status) && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-amber-700">Alterar status do saque</p>
+                <div className="mt-3 grid gap-3 md:grid-cols-[220px_1fr]">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-amber-800">Novo status</label>
+                    <select
+                      value={withdrawalStatusDraft || detailWithdrawal.status}
+                      onChange={(event) => setWithdrawalStatusDraft(event.target.value)}
+                      className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-amber-400 focus:outline-none"
+                    >
+                      <option value="processing">Processando</option>
+                      <option value="completed">Pago / concluido</option>
+                      <option value="failed">Falhou</option>
+                      <option value="cancelled">Cancelado</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-amber-800">Motivo / observacao</label>
+                    <input
+                      type="text"
+                      value={withdrawalStatusNote}
+                      onChange={(event) => setWithdrawalStatusNote(event.target.value)}
+                      placeholder="Ex: pago manualmente na adquirente"
+                      className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:border-amber-400 focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateWithdrawalStatusMutation.mutate({
+                    withdrawalId: detailWithdrawal.id,
+                    status: withdrawalStatusDraft || detailWithdrawal.status,
+                    notes: withdrawalStatusNote,
+                  })}
+                  disabled={
+                    updateWithdrawalStatusMutation.isPending ||
+                    !withdrawalStatusDraft ||
+                    withdrawalStatusDraft === detailWithdrawal.status
+                  }
+                  className="mt-3 inline-flex items-center justify-center rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {updateWithdrawalStatusMutation.isPending ? 'Alterando...' : 'Salvar novo status'}
+                </button>
               </div>
             )}
 

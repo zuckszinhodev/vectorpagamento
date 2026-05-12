@@ -198,11 +198,12 @@ class SharkHubSubAcquirer implements AcquirerInterface
             }
 
             $data = $this->responseJson($response);
+            $transfer = is_array($data['data'] ?? null) ? $data['data'] : $data;
 
             return [
                 'success' => true,
-                'transfer_id' => $data['id'] ?? null,
-                'status' => $this->mapTransferStatus((string) ($data['status'] ?? 'IN_QUEUE')),
+                'transfer_id' => $transfer['id'] ?? $data['id'] ?? null,
+                'status' => $this->mapTransferStatus((string) ($transfer['status'] ?? $data['status'] ?? 'IN_QUEUE')),
                 'raw_response' => $data,
             ];
         } catch (\Throwable $e) {
@@ -238,7 +239,17 @@ class SharkHubSubAcquirer implements AcquirerInterface
         try {
             $response = $this->transferClient()->get("{$this->baseUrl}/v1/transfer/{$transferId}");
 
-            return $response->successful() ? $this->responseJson($response) : null;
+            if (!$response->successful()) {
+                Log::warning('SharkHubSub: get transfer failed', [
+                    'transfer_id' => $transferId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return null;
+            }
+
+            return $this->responseJson($response);
         } catch (\Throwable $e) {
             Log::warning('SharkHubSub: get transfer exception', [
                 'transfer_id' => $transferId,
@@ -369,9 +380,9 @@ class SharkHubSubAcquirer implements AcquirerInterface
     private static function normalizeTransferStatus(string $status): string
     {
         return match (strtoupper($status)) {
-            'COMPLETED', 'PAID' => 'completed',
+            'COMPLETED', 'COMPLETE', 'PAID', 'SUCCESS', 'SUCCEEDED', 'DONE' => 'completed',
             'REFUSED', 'FAILED', 'CANCELLED', 'CANCELED' => 'failed',
-            'IN_QUEUE', 'IN_ANALYSIS', 'APPROVED', 'PROCESSING' => 'processing',
+            'IN_QUEUE', 'IN_ANALYSIS', 'APPROVED', 'PROCESSING', 'PENDING', 'CREATED' => 'processing',
             default => 'processing',
         };
     }

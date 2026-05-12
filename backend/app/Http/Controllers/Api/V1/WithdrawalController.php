@@ -972,7 +972,7 @@ class WithdrawalController extends Controller
     public function adminUpdate(Request $request, string $withdrawalId): JsonResponse
     {
         $validated = $request->validate([
-            'status' => ['required', 'in:approved,rejected,completed'],
+            'status' => ['required', 'in:approved,rejected,pending,processing,completed,failed,cancelled'],
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -985,7 +985,7 @@ class WithdrawalController extends Controller
             ], 404);
         }
 
-        if (!in_array($withdrawal->status, ['pending', 'processing'])) {
+        if (!in_array($withdrawal->status, ['pending_approval', 'pending', 'processing'], true)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Este saque não pode mais ser alterado',
@@ -995,12 +995,18 @@ class WithdrawalController extends Controller
         try {
             DB::beginTransaction();
 
-            $newStatus = $validated['status'];
+            $oldStatus = (string) $withdrawal->status;
+            $newStatus = (string) $validated['status'];
             
-            if ($newStatus === 'approved' || $newStatus === 'completed') {
+            if ($newStatus === 'approved') {
                 // Process via acquirer PIX OUT (instant)
-                if ($withdrawal->status === 'pending') {
+                if (in_array($withdrawal->status, ['pending_approval', 'pending'], true)) {
                     try {
+                        if ($withdrawal->status === 'pending_approval') {
+                            $withdrawal->update(['status' => 'pending']);
+                            $withdrawal->refresh();
+                        }
+
                         $withdrawalService = app(WithdrawalService::class);
                         $result = $withdrawalService->processWithdrawal($withdrawal);
 
@@ -1032,23 +1038,33 @@ class WithdrawalController extends Controller
                 }
 
                 // Fallback: mark as completed manually
+                $newStatus = 'completed';
+            }
+
+            if ($newStatus === 'completed') {
                 $withdrawal->update([
                     'status' => 'completed',
+                    'notes' => $validated['notes'] ?? $withdrawal->notes,
                     'processed_at' => now(),
                 ]);
 
                 // Deduct from pending balance
                 $wallet = AccountWallet::where('account_id', $withdrawal->account_id)->first();
-                if ($wallet) {
+                if ($wallet && in_array($oldStatus, ['pending_approval', 'pending', 'processing'], true)) {
                     $wallet->decrement('pending_balance', $withdrawal->amount);
                 }
 
-                $this->logAdminWithdrawalEvent($request, $withdrawal, 'admin_completed_manually');
-            } elseif ($newStatus === 'rejected') {
+                $this->logAdminWithdrawalEvent($request, $withdrawal, 'admin_status_changed', [
+                    'from' => $oldStatus,
+                    'to' => 'completed',
+                    'reason' => $validated['notes'] ?? null,
+                ]);
+            } elseif ($newStatus === 'rejected' || $newStatus === 'cancelled' || $newStatus === 'failed') {
                 // Reject and return funds to available balance
                 $reason = $validated['notes'] ?? 'Rejeitado pela administração';
+                $finalStatus = $newStatus === 'rejected' ? 'cancelled' : $newStatus;
                 $withdrawal->update([
-                    'status' => 'cancelled',
+                    'status' => $finalStatus,
                     'processed_at' => now(),
                     'failure_reason' => $reason,
                     'notes' => $reason,
@@ -1056,13 +1072,28 @@ class WithdrawalController extends Controller
 
                 // Return amount to available balance
                 $wallet = AccountWallet::where('account_id', $withdrawal->account_id)->first();
-                if ($wallet) {
+                if ($wallet && in_array($oldStatus, ['pending_approval', 'pending', 'processing'], true)) {
                     $wallet->decrement('pending_balance', $withdrawal->amount);
                     $wallet->increment('available_balance', $withdrawal->amount);
                 }
 
-                $this->logAdminWithdrawalEvent($request, $withdrawal, 'admin_rejected', [
+                $this->logAdminWithdrawalEvent($request, $withdrawal, 'admin_status_changed', [
+                    'from' => $oldStatus,
+                    'to' => $finalStatus,
                     'reason' => $reason,
+                ]);
+            } elseif ($newStatus === 'pending' || $newStatus === 'processing') {
+                $withdrawal->update([
+                    'status' => $newStatus,
+                    'notes' => $validated['notes'] ?? $withdrawal->notes,
+                    'processed_at' => null,
+                    'failure_reason' => null,
+                ]);
+
+                $this->logAdminWithdrawalEvent($request, $withdrawal, 'admin_status_changed', [
+                    'from' => $oldStatus,
+                    'to' => $newStatus,
+                    'reason' => $validated['notes'] ?? null,
                 ]);
             }
 
@@ -1071,9 +1102,7 @@ class WithdrawalController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => $withdrawal->fresh(),
-                'message' => $newStatus === 'rejected' 
-                    ? 'Saque rejeitado e valor devolvido' 
-                    : 'Saque aprovado com sucesso',
+                'message' => 'Status do saque atualizado com sucesso',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

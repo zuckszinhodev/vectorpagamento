@@ -252,6 +252,91 @@ class WithdrawalService
     }
 
     /**
+     * Poll processing withdrawals that may have missed an acquirer webhook.
+     */
+    public function syncProcessingWithdrawals(int $limit = 50): array
+    {
+        $results = [
+            'checked' => 0,
+            'completed' => 0,
+            'failed' => 0,
+            'still_processing' => 0,
+            'not_found' => 0,
+            'errors' => [],
+        ];
+
+        $withdrawals = Withdrawal::query()
+            ->where('status', 'processing')
+            ->where('acquirer', 'sharkhubsub')
+            ->whereNotNull('acquirer_transfer_id')
+            ->orderBy('updated_at')
+            ->limit($limit)
+            ->get();
+
+        foreach ($withdrawals as $withdrawal) {
+            $results['checked']++;
+
+            try {
+                $transferId = (string) $withdrawal->acquirer_transfer_id;
+                $sharkhub = $this->factory->sharkhubsub();
+
+                if (!$sharkhub) {
+                    $results['errors'][] = [
+                        'withdrawal_id' => $withdrawal->id,
+                        'error' => 'SharkHubSub não configurada',
+                    ];
+                    continue;
+                }
+
+                $transfer = $sharkhub->getTransfer($transferId);
+
+                if (!$transfer) {
+                    $results['not_found']++;
+                    continue;
+                }
+
+                $rawStatus = (string) ($transfer['status'] ?? $transfer['data']['status'] ?? '');
+                $mappedStatus = \App\Infrastructure\Acquirers\SharkHubSubAcquirer::mapWebhookTransferStatus($rawStatus);
+
+                Log::info('WithdrawalService: synced SharkHubSub transfer status', [
+                    'withdrawal_id' => $withdrawal->id,
+                    'transfer_id' => $transferId,
+                    'raw_status' => $rawStatus,
+                    'mapped_status' => $mappedStatus,
+                ]);
+
+                if ($mappedStatus === 'completed') {
+                    if ($this->handleTransferCompleted($transferId, $mappedStatus, $transfer)) {
+                        $results['completed']++;
+                    }
+                    continue;
+                }
+
+                if ($mappedStatus === 'failed' || $mappedStatus === 'cancelled') {
+                    if ($this->handleTransferCompleted($transferId, $mappedStatus, $transfer)) {
+                        $results['failed']++;
+                    }
+                    continue;
+                }
+
+                $results['still_processing']++;
+            } catch (\Throwable $e) {
+                $results['errors'][] = [
+                    'withdrawal_id' => $withdrawal->id,
+                    'error' => $e->getMessage(),
+                ];
+
+                Log::error('WithdrawalService: error syncing SharkHubSub withdrawal', [
+                    'withdrawal_id' => $withdrawal->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $results;
+    }
+
+    /**
      * Cancel a withdrawal from the admin panel.
      *
      * For processing withdrawals already handed off to an acquirer, this method

@@ -158,7 +158,7 @@ class HunterSubAcquirer implements AcquirerInterface
 
             \Illuminate\Support\Facades\Log::info('HunterSub: Sending request', [
                 'url' => "{$this->baseUrl}/transactions",
-                'auth_header' => 'Basic ' . substr($this->transactionAuthToken(), 0, 30) . '...',
+                'auth_mode' => 'api_key:company_id',
                 'api_key_length' => strlen($this->apiKey),
                 'client_id_length' => strlen($this->clientId),
                 'company_id_length' => strlen($this->companyId),
@@ -602,7 +602,7 @@ class HunterSubAcquirer implements AcquirerInterface
 
     private function transactionAuthToken(): string
     {
-        return base64_encode("{$this->clientId}:{$this->apiKey}");
+        return base64_encode("{$this->apiKey}:{$this->companyId}");
     }
 
     private function withdrawalAuthToken(): string

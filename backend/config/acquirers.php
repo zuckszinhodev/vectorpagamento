@@ -285,7 +285,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Authentication:
-    | - Transactions: Basic Auth (client_id:api_key)
+    | - Transactions: Basic Auth (api_key:company_id)
     | - Withdrawals: Basic Auth (api_key:company_id)
     | Charge endpoint: POST /transactions
     | Webhook events: transaction.paid, transaction.pending, transaction.failed,
@@ -295,13 +295,13 @@ return [
     'huntersub' => [
         'enabled' => env('HUNTERSUB_ENABLED', false),
 
-        // Client ID - Basic Auth username for transaction endpoints
+        // Client ID - legacy optional identifier; company_id is used for Basic Auth.
         'client_id' => env('HUNTERSUB_CLIENT_ID'),
 
-        // API Key - Basic Auth password for transactions and username for withdrawals
+        // API Key / Secret Key - Basic Auth username for transactions and withdrawals
         'api_key' => env('HUNTERSUB_API_KEY'),
 
-        // Company ID - Basic Auth password for withdrawal endpoints
+        // Company ID - Basic Auth password for transaction and withdrawal endpoints
         'company_id' => env('HUNTERSUB_COMPANY_ID'),
 
         // Webhook secret (HMAC)

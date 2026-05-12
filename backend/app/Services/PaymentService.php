@@ -8,6 +8,7 @@ use App\Models\Charge;
 use App\Models\Checkout;
 use App\Models\Transaction;
 use App\Models\AccountWallet;
+use App\Models\AccountAcquirer;
 use App\Models\AcquirerConfig;
 use App\Models\AccountCustomFee;
 use App\Models\SystemSetting;
@@ -233,17 +234,17 @@ class PaymentService
                 ];
             }
 
-            // Always route by the global admin priority for the payment method.
+            // Route by account-specific acquirer order when configured; otherwise use global admin priority.
             $accountId = $charge->account_id;
             $paymentMethod = $charge->payment_method ?? 'pix';
-            $acquirer = $this->factory->getActiveAcquirerName($paymentMethod);
+            $acquirer = $this->factory->getActiveAcquirerNameForAccount($accountId, $paymentMethod);
 
             Log::info('PaymentService: processing payment', [
                 'charge_id' => $charge->id,
                 'payment_method' => $paymentMethod,
                 'active_acquirer' => $acquirer,
                 'account_id' => $accountId,
-                'routing_scope' => 'global_admin',
+                'routing_scope' => $accountId ? 'account_then_global' : 'global_admin',
             ]);
 
             $forcedRoutingError = $this->validateForcedAcquirerSupport($paymentMethod, $acquirer);
@@ -366,8 +367,8 @@ class PaymentService
         $rotationSettings = $this->rotationService?->getSettings() ?? [];
         $failoverEnabled = (bool) ($rotationSettings['failover_enabled'] ?? config('acquirers.routing.failover_enabled', true));
 
-        // Build ordered acquirer list from the global admin priority.
-        $acquirerOrder = $this->factory->getPixAcquirerOrder($primaryAcquirer);
+        // Build ordered acquirer list from account priority first, then global admin priority.
+        $acquirerOrder = $this->factory->getPixAcquirerOrderForAccount($charge->account_id, $primaryAcquirer);
 
         foreach ($acquirerOrder as $acquirerName) {
             $isEnabled = $this->isAcquirerEnabledForRouting($acquirerName);
@@ -376,6 +377,15 @@ class PaymentService
                 Log::info('Acquirer disabled in database, skipping', [
                     'charge_id' => $charge->id,
                     'acquirer' => $acquirerName,
+                ]);
+                continue;
+            }
+
+            if (!$this->isPixAmountAllowedForAcquirer($charge, $acquirerName)) {
+                Log::info('PIX acquirer skipped by amount limits', [
+                    'charge_id' => $charge->id,
+                    'acquirer' => $acquirerName,
+                    'amount' => $charge->amount,
                 ]);
                 continue;
             }
@@ -468,6 +478,118 @@ class PaymentService
     private function getPixAcquirerOrder(string $primary): array
     {
         return $this->factory->getPixAcquirerOrder($primary);
+    }
+
+    private function isPixAmountAllowedForAcquirer(Charge $charge, string $acquirerName): bool
+    {
+        $amount = (int) ($charge->amount ?? 0);
+        if ($amount <= 0) {
+            return true;
+        }
+
+        $settings = [];
+
+        try {
+            $globalConfig = AcquirerConfig::where('acquirer_key', $acquirerName)->first();
+            if (is_array($globalConfig?->settings)) {
+                $settings = array_replace_recursive($settings, $globalConfig->settings);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to read acquirer amount settings', [
+                'charge_id' => $charge->id,
+                'acquirer' => $acquirerName,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            if ($charge->account_id) {
+                $accountConfig = AccountAcquirer::query()
+                    ->where('account_acquirers.account_id', $charge->account_id)
+                    ->where('account_acquirers.is_active', true)
+                    ->join('acquirers', 'acquirers.id', '=', 'account_acquirers.acquirer_id')
+                    ->where('acquirers.slug', $acquirerName)
+                    ->select('account_acquirers.settings')
+                    ->first();
+
+                if (is_array($accountConfig?->settings)) {
+                    $settings = array_replace_recursive($settings, $accountConfig->settings);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Failed to read account acquirer amount settings', [
+                'charge_id' => $charge->id,
+                'account_id' => $charge->account_id,
+                'acquirer' => $acquirerName,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        [$minAmount, $maxAmount] = $this->extractPixAmountLimits($settings);
+
+        if ($minAmount !== null && $amount < $minAmount) {
+            return false;
+        }
+
+        if ($maxAmount !== null && $amount > $maxAmount) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Supported keys in acquirer/settings JSON:
+     * - min_amount / max_amount
+     * - min_amount_cents / max_amount_cents
+     * - pix.min_amount / pix.max_amount
+     * Values <= 10000 are treated as reais for convenience, larger values as cents.
+     *
+     * @return array{0: ?int, 1: ?int}
+     */
+    private function extractPixAmountLimits(array $settings): array
+    {
+        $pixSettings = is_array($settings['pix'] ?? null) ? $settings['pix'] : [];
+
+        $min = $pixSettings['min_amount_cents']
+            ?? $settings['min_amount_cents']
+            ?? $pixSettings['min_amount']
+            ?? $settings['min_amount']
+            ?? null;
+
+        $max = $pixSettings['max_amount_cents']
+            ?? $settings['max_amount_cents']
+            ?? $pixSettings['max_amount']
+            ?? $settings['max_amount']
+            ?? null;
+
+        return [
+            $this->normalizeAmountLimit($min),
+            $this->normalizeAmountLimit($max),
+        ];
+    }
+
+    private function normalizeAmountLimit(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = str_replace(['R$', ' ', '.'], '', $value);
+            $value = str_replace(',', '.', $value);
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $amount = (float) $value;
+        if ($amount <= 0) {
+            return null;
+        }
+
+        return (int) round($amount <= 10000 ? $amount * 100 : $amount);
     }
 
     /**
