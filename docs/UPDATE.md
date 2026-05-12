@@ -13,8 +13,8 @@ cd /var/www/vectorpagamento \
 	&& chown -R www-data:www-data storage bootstrap/cache \
 	&& chmod -R 775 storage bootstrap/cache \
 	&& (systemctl restart php8.3-fpm || systemctl restart php8.2-fpm || systemctl restart php8.1-fpm) \
-	&& systemctl restart vectorpagamentos-worker \
-	&& systemctl restart vectorpagamentos-scheduler \
+	&& (systemctl restart vectorpagamentos-worker || true) \
+	&& (systemctl restart vectorpagamentos-scheduler || true) \
 	&& cd ../frontend \
 	&& chown -R root:root . \
 	&& chmod -R 755 . \
@@ -35,8 +35,8 @@ cd /var/www/vectorpagamento/backend \
 	&& php artisan config:cache \
 	&& php artisan route:cache \
 	&& (systemctl restart php8.3-fpm || systemctl restart php8.2-fpm || systemctl restart php8.1-fpm) \
-	&& systemctl restart vectorpagamentos-worker \
-	&& systemctl restart vectorpagamentos-scheduler
+	&& (systemctl restart vectorpagamentos-worker || true) \
+	&& (systemctl restart vectorpagamentos-scheduler || true)
 
 UPDATE FRONTEND
 cd /var/www/vectorpagamento \
