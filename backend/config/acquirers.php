@@ -316,6 +316,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | SharkHub Subadquirente
+    |--------------------------------------------------------------------------
+    |
+    | Authentication:
+    | - Payments: Bearer token from "Credenciais de API"
+    | - Transfers: Bearer token from "Credenciais de Saque via API"
+    | PIX IN:  POST /v1/payment
+    | PIX OUT: POST /v1/transfer
+    | Webhook signature: HMAC-SHA256 Base64 via X-Signature header
+    |
+    */
+    'sharkhubsub' => [
+        'enabled' => env('SHARKHUBSUB_ENABLED', false),
+        'api_key' => env('SHARKHUBSUB_API_KEY'),
+        'withdrawal_key' => env('SHARKHUBSUB_WITHDRAWAL_KEY'),
+        'webhook_secret' => env('SHARKHUBSUB_WEBHOOK_SECRET'),
+        'base_url' => env('SHARKHUBSUB_BASE_URL', 'https://api.sharkhubsubadquirente.com'),
+        'webhook_url' => env('SHARKHUBSUB_WEBHOOK_URL', env('APP_URL') . '/api/v1/webhooks/sharkhubsub'),
+        'transfer_webhook_url' => env('SHARKHUBSUB_TRANSFER_WEBHOOK_URL', env('APP_URL') . '/api/v1/webhooks/sharkhubsub'),
+        'supported_methods' => ['pix', 'pix_out'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Default Acquirer
     |--------------------------------------------------------------------------
     |

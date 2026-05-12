@@ -82,6 +82,7 @@ class WebhookController extends Controller
             'witetec'     => $this->witetec($request),
             'asaas'       => $this->asaas($request),
             'huntersub'   => $this->huntersub($request),
+            'sharkhubsub' => $this->sharkhubsub($request),
             'stripe'      => $this->stripe($request),
             'pagarme'     => $this->pagarme($request),
             'mercadopago' => $this->mercadopago($request),
@@ -116,6 +117,21 @@ class WebhookController extends Controller
         }
         if (($payload['type'] ?? null) === 'transaction' && isset($payload['data']['id'], $payload['data']['status'])) {
             return 'huntersub';
+        }
+
+        // SharkHub Subadquirente sends top-level payment/transfer payloads.
+        if (isset($payload['id'], $payload['status'], $payload['method']) && strtoupper((string) $payload['method']) === 'PIX') {
+            $reference = $payload['externalRef'] ?? null;
+            if ($reference) {
+                $charge = Charge::where('id', $reference)
+                    ->orWhere('external_id', $payload['id'])
+                    ->orWhere('acquirer_transaction_id', $payload['id'])
+                    ->first();
+
+                if ($charge && $charge->acquirer === 'sharkhubsub') {
+                    return 'sharkhubsub';
+                }
+            }
         }
 
         // Enki – top-level event with transaction/withdrawal object
@@ -1319,6 +1335,122 @@ class WebhookController extends Controller
         }
     }
 
+    public function sharkhubsub(Request $request): JsonResponse
+    {
+        try {
+            $rawPayload = $request->getContent();
+            $payload = $request->all();
+            $eventId = (string) ($payload['id'] ?? '');
+            $status = (string) ($payload['status'] ?? '');
+
+            Log::info('SharkHubSub webhook received', [
+                'ip' => $request->ip(),
+                'id' => $eventId,
+                'status' => $status,
+                'method' => $payload['method'] ?? null,
+                'has_signature' => !empty($request->header('X-Signature') ?? $request->header('x-signature')),
+            ]);
+
+            if ($eventId === '' || $status === '') {
+                Log::warning('SharkHubSub: invalid webhook payload');
+                return response()->json(['status' => 'error', 'message' => 'Invalid payload'], 400);
+            }
+
+            $webhookSecret = $this->getSharkHubSubWebhookSecret();
+            $signature = (string) ($request->header('X-Signature') ?? $request->header('x-signature') ?? '');
+
+            if ($webhookSecret) {
+                if (!\App\Infrastructure\Acquirers\SharkHubSubAcquirer::verifyWebhookSignature($rawPayload, $signature, $webhookSecret)) {
+                    Log::warning('SharkHubSub webhook signature verification failed', ['ip' => $request->ip()]);
+                    return response()->json(['status' => 'error', 'message' => 'Invalid signature'], 401);
+                }
+            } else {
+                Log::info('SharkHubSub webhook accepted without signature verification because no webhook secret is configured');
+            }
+
+            $isPaymentWebhook = isset($payload['payer'])
+                || isset($payload['items'])
+                || array_key_exists('paidAt', $payload)
+                || array_key_exists('refundedAt', $payload);
+
+            if (!$isPaymentWebhook) {
+                $mappedTransferStatus = \App\Infrastructure\Acquirers\SharkHubSubAcquirer::mapWebhookTransferStatus($status);
+                $handled = app(\App\Services\WithdrawalService::class)
+                    ->handleTransferCompleted($eventId, $mappedTransferStatus, $payload);
+
+                return response()->json([
+                    'status' => $handled ? 'success' : 'ok',
+                    'message' => $handled ? 'Transfer webhook processed' : 'Transfer not found',
+                    'transfer_id' => $eventId,
+                ]);
+            }
+
+            $charge = null;
+            $externalRef = $payload['externalRef'] ?? null;
+            if ($externalRef) {
+                $charge = Charge::where('id', $externalRef)->first();
+            }
+
+            if (!$charge) {
+                $charge = Charge::where('external_id', $eventId)
+                    ->orWhere('acquirer_transaction_id', $eventId)
+                    ->first();
+            }
+
+            if (!$charge) {
+                Log::warning('SharkHubSub: Charge not found', [
+                    'payment_id' => $eventId,
+                    'external_ref' => $externalRef,
+                ]);
+
+                return response()->json(['status' => 'error', 'message' => 'Charge not found'], 404);
+            }
+
+            $mappedStatus = \App\Infrastructure\Acquirers\SharkHubSubAcquirer::mapWebhookPaymentStatus($status);
+            $webhookData = [
+                'id' => $eventId,
+                'status' => $mappedStatus,
+                'amount' => $payload['amount'] ?? null,
+                'refundedAmount' => $payload['refundedAmount'] ?? null,
+                'paymentMethod' => $payload['method'] ?? 'PIX',
+                'paidAt' => $payload['paidAt'] ?? null,
+                'refundedAt' => $payload['refundedAt'] ?? null,
+                'pix' => [
+                    'endToEndId' => $payload['data']['e2e'] ?? null,
+                    'copyPaste' => $payload['data']['copypaste'] ?? null,
+                ],
+                'metadata' => [
+                    'charge_id' => $charge->id,
+                    'source' => 'sharkhubsub',
+                ],
+            ];
+
+            $previousStatus = $charge->status;
+            $this->paymentService->handleWebhookPayment($charge, $webhookData);
+            $freshCharge = $charge->fresh();
+
+            event(new \App\Events\PaymentStatusChanged($freshCharge ?? $charge));
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Webhook processed successfully',
+                'charge_id' => $charge->id,
+                'previous_status' => $previousStatus,
+                'charge_status' => $freshCharge->status ?? $previousStatus,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('SharkHubSub webhook error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Internal server error',
+            ], 500);
+        }
+    }
+
     private function getHunterSubWebhookSecret(): ?string
     {
         $envSecret = trim((string) config('acquirers.huntersub.webhook_secret', ''));
@@ -1327,6 +1459,24 @@ class WebhookController extends Controller
         }
 
         $config = AcquirerConfig::findByKey('huntersub');
+        if (!$config) {
+            return null;
+        }
+
+        $credentials = $config->getDecryptedCredentials() ?? [];
+        $dbSecret = trim((string) ($credentials['webhook_secret'] ?? ''));
+
+        return $dbSecret !== '' ? $dbSecret : null;
+    }
+
+    private function getSharkHubSubWebhookSecret(): ?string
+    {
+        $envSecret = trim((string) config('acquirers.sharkhubsub.webhook_secret', ''));
+        if ($envSecret !== '') {
+            return $envSecret;
+        }
+
+        $config = AcquirerConfig::findByKey('sharkhubsub');
         if (!$config) {
             return null;
         }

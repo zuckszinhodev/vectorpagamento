@@ -283,6 +283,14 @@ class AcquirerConfig extends Model
                 'base_url' => $config['base_url'] ?? null,
                 'webhook_url' => $config['webhook_url'] ?? null,
             ],
+            'sharkhubsub' => [
+                'api_key' => $config['api_key'] ?? null,
+                'withdrawal_key' => $config['withdrawal_key'] ?? null,
+                'webhook_secret' => $config['webhook_secret'] ?? null,
+                'base_url' => $config['base_url'] ?? null,
+                'webhook_url' => $config['webhook_url'] ?? null,
+                'transfer_webhook_url' => $config['transfer_webhook_url'] ?? null,
+            ],
             default => null,
         };
     }
@@ -302,6 +310,7 @@ class AcquirerConfig extends Model
             'turbos' => !empty($credentials['public_key']) && !empty($credentials['secret_key']),
             'ascentpay' => !empty($credentials['secret_key']) && !empty($credentials['public_key']),
             'huntersub' => !empty($credentials['api_key']) && !empty($credentials['company_id']),
+            'sharkhubsub' => !empty($credentials['api_key']),
             'enki' => !empty($credentials['public_key']) && !empty($credentials['secret_key']),
             default => false,
         };
@@ -371,6 +380,14 @@ class AcquirerConfig extends Model
                 ['key' => 'webhook_secret', 'label' => 'Webhook Secret', 'type' => 'password'],
                 ['key' => 'base_url', 'label' => 'Base URL', 'type' => 'text'],
                 ['key' => 'webhook_url', 'label' => 'Webhook URL', 'type' => 'text'],
+            ],
+            'sharkhubsub' => [
+                ['key' => 'api_key', 'label' => 'API Key Pagamento', 'type' => 'password'],
+                ['key' => 'withdrawal_key', 'label' => 'API Key Saque', 'type' => 'password'],
+                ['key' => 'webhook_secret', 'label' => 'Webhook Secret', 'type' => 'password'],
+                ['key' => 'base_url', 'label' => 'Base URL', 'type' => 'text'],
+                ['key' => 'webhook_url', 'label' => 'Webhook Pagamento URL', 'type' => 'text'],
+                ['key' => 'transfer_webhook_url', 'label' => 'Webhook Saque URL', 'type' => 'text'],
             ],
             default => [],
         };

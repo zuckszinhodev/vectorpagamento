@@ -62,7 +62,7 @@ class PaymentService
         $this->factory = AcquirerFactory::instance();
 
         // Initialize circuit breakers per acquirer (threshold=3 failures, cooldown=60s)
-        foreach (['payfort', 'blupay', 'babylon'] as $name) {
+        foreach (['payfort', 'blupay', 'babylon', 'enki', 'huntersub', 'sharkhubsub'] as $name) {
             $this->circuitBreakers[$name] = new CircuitBreaker("acquirer:{$name}", 3, 60);
         }
 
@@ -349,6 +349,7 @@ class PaymentService
             'witetec' => AcquirerFactory::isWitetecConfigured(),
             'asaas' => AcquirerFactory::isAsaasConfigured(),
             'huntersub' => AcquirerFactory::isHunterSubConfigured(),
+            'sharkhubsub' => AcquirerFactory::isSharkHubSubConfigured(),
             default => false,
         };
     }
@@ -402,6 +403,7 @@ class PaymentService
                 'enki' => $this->factory->enkiForAccount($charge->account_id) ? $this->generatePixViaEnki($charge) : null,
                 'babylon' => $this->isConfigured() ? $this->generatePix($charge) : null,
                 'huntersub' => $this->factory->huntersubForAccount($charge->account_id) ? $this->generatePixViaHunterSub($charge) : null,
+                'sharkhubsub' => $this->factory->sharkhubsubForAccount($charge->account_id) ? $this->generatePixViaSharkHubSub($charge) : null,
                 default => null,
             };
 
@@ -872,6 +874,83 @@ class PaymentService
                 'trace' => $e->getTraceAsString(),
             ]);
             
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    public function generatePixViaSharkHubSub(Charge $charge): array
+    {
+        $sharkhub = $this->factory->sharkhubsubForAccount($charge->account_id);
+
+        if (!$sharkhub) {
+            Log::error('SharkHubSub not configured', ['charge_id' => $charge->id]);
+            return [
+                'success' => false,
+                'error' => 'SharkHub Subadquirente não configurada',
+            ];
+        }
+
+        try {
+            Log::info('SharkHubSub PIX request', ['charge_id' => $charge->id]);
+
+            $result = $sharkhub->generatePixQrCode($charge);
+
+            if (!($result['success'] ?? false)) {
+                Log::error('SharkHubSub PIX failed', [
+                    'charge_id' => $charge->id,
+                    'error' => $result['error'] ?? 'Unknown error',
+                    'raw_response' => $result['raw_response'] ?? null,
+                ]);
+
+                return $result;
+            }
+
+            $charge->update([
+                'acquirer' => 'sharkhubsub',
+                'acquirer_transaction_id' => $result['external_id'] ?? null,
+                'external_id' => $result['external_id'] ?? null,
+                'pix_qr_code' => $result['pix_qr_code'] ?? null,
+                'pix_copy_paste' => $result['pix_copy_paste'] ?? $result['pix_qr_code'] ?? null,
+                'pix_qr_code_url' => $result['pix_qr_code_url'] ?? null,
+                'pix_end2end_id' => $result['end2end_id'] ?? null,
+                'expires_at' => isset($result['pix_expires_at'])
+                    ? \Carbon\Carbon::parse($result['pix_expires_at'])
+                    : $this->defaultPixExpirationAt(),
+                'status' => $result['status'] ?? 'pending',
+            ]);
+
+            Transaction::create([
+                'id' => Str::uuid()->toString(),
+                'charge_id' => $charge->id,
+                'acquirer_id' => $this->getOrCreateAcquirerId('sharkhubsub', 'SharkHub Subadquirente'),
+                'type' => 'authorization',
+                'status' => 'pending',
+                'amount' => $charge->amount,
+                'net_amount' => $charge->amount,
+                'acquirer_tid' => $result['external_id'] ?? null,
+                'gateway_response' => $result['data'] ?? null,
+            ]);
+
+            return [
+                'success' => true,
+                'acquirer' => 'sharkhubsub',
+                'transaction_id' => $result['external_id'] ?? null,
+                'status' => $result['status'] ?? 'pending',
+                'pix_qr_code' => $result['pix_qr_code'] ?? null,
+                'pix_copy_paste' => $result['pix_copy_paste'] ?? $result['pix_qr_code'] ?? null,
+                'pix_qr_code_url' => $result['pix_qr_code_url'] ?? null,
+                'expires_at' => $result['pix_expires_at'] ?? null,
+            ];
+        } catch (\Throwable $e) {
+            Log::error('SharkHubSub PIX exception', [
+                'charge_id' => $charge->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -2032,6 +2111,8 @@ class PaymentService
             return $this->syncBluPayChargeStatus($charge);
         } elseif (in_array($acquirer, ['huntersub'])) {
             return $this->syncHunterSubChargeStatus($charge);
+        } elseif (in_array($acquirer, ['sharkhubsub'])) {
+            return $this->syncSharkHubSubChargeStatus($charge);
         }
 
         // Default: Babylon sync
@@ -2275,6 +2356,65 @@ class PaymentService
             return ['success' => true, 'status' => $newStatus, 'synced' => true];
         } catch (\Exception $e) {
             Log::error('Sync HunterSub charge status error', [
+                'charge_id' => $charge->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['success' => true, 'status' => $charge->status, 'synced' => false];
+        }
+    }
+
+    private function syncSharkHubSubChargeStatus(Charge $charge): array
+    {
+        $sharkhub = $this->factory->sharkhubsubForAccount($charge->account_id);
+
+        if (!$sharkhub) {
+            return ['success' => true, 'status' => $charge->status, 'synced' => false];
+        }
+
+        try {
+            $response = $sharkhub->getPayment($charge->acquirer_transaction_id);
+
+            if (!$response) {
+                return ['success' => true, 'status' => $charge->status, 'synced' => false];
+            }
+
+            $externalStatus = (string) ($response['status'] ?? $charge->status);
+            $newStatus = \App\Infrastructure\Acquirers\SharkHubSubAcquirer::mapWebhookPaymentStatus($externalStatus);
+
+            if ($newStatus === 'approved' && $charge->status !== 'approved') {
+                $this->handleWebhookPayment($charge, [
+                    'id' => $charge->acquirer_transaction_id,
+                    'status' => $newStatus,
+                    'amount' => $response['amount'] ?? null,
+                    'paymentMethod' => $response['method'] ?? $charge->payment_method,
+                    'paidAt' => $response['paidAt'] ?? null,
+                    'pix' => [
+                        'endToEndId' => data_get($response, 'data.e2e'),
+                        'copyPaste' => data_get($response, 'data.copypaste'),
+                    ],
+                    'metadata' => [
+                        'source' => 'sharkhubsub_sync',
+                        'charge_id' => $charge->id,
+                    ],
+                ]);
+
+                $charge->refresh();
+
+                return ['success' => true, 'status' => $charge->status, 'synced' => true, 'side_effects_handled' => true];
+            }
+
+            if ($newStatus !== $charge->status && !in_array($charge->status, ['approved', 'refunded', 'chargeback'], true)) {
+                $charge->update([
+                    'status' => $newStatus,
+                    'paid_at' => $newStatus === 'approved' ? ($charge->paid_at ?? now()) : $charge->paid_at,
+                    'pix_end2end_id' => data_get($response, 'data.e2e') ?? $charge->pix_end2end_id,
+                ]);
+            }
+
+            return ['success' => true, 'status' => $newStatus, 'synced' => true];
+        } catch (\Throwable $e) {
+            Log::error('Sync SharkHubSub charge status error', [
                 'charge_id' => $charge->id,
                 'error' => $e->getMessage(),
             ]);

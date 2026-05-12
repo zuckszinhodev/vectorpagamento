@@ -32,6 +32,7 @@ class AcquirerFactory
     private ?\App\Infrastructure\Acquirers\WitetecAcquirer $witetec = null;
     private ?\App\Infrastructure\Acquirers\AsaasAcquirer $asaas = null;
     private ?\App\Infrastructure\Acquirers\HunterSubAcquirer $huntersub = null;
+    private ?\App\Infrastructure\Acquirers\SharkHubSubAcquirer $sharkhubsub = null;
     private ?\App\Infrastructure\Acquirers\BabylonAcquirer $babylon = null;
 
     private bool $payfortInitialized = false;
@@ -40,6 +41,7 @@ class AcquirerFactory
     private bool $witetecInitialized = false;
     private bool $asaasInitialized = false;
     private bool $huntersubInitialized = false;
+    private bool $sharkhubsubInitialized = false;
     private bool $babylonInitialized = false;
     private ?AcquirerRotationService $rotationService = null;
 
@@ -56,6 +58,10 @@ class AcquirerFactory
      * @var array<string, \App\Infrastructure\Acquirers\HunterSubAcquirer|null>
      */
     private array $huntersubByAccount = [];
+    /**
+     * @var array<string, \App\Infrastructure\Acquirers\SharkHubSubAcquirer|null>
+     */
+    private array $sharkhubsubByAccount = [];
 
     public static function instance(): self
     {
@@ -165,6 +171,7 @@ class AcquirerFactory
             'witetec' => self::isWitetecConfigured(),
             'asaas' => self::isAsaasConfigured(),
             'huntersub' => self::isHunterSubConfigured(),
+            'sharkhubsub' => self::isSharkHubSubConfigured(),
             default => false,
         };
     }
@@ -216,6 +223,7 @@ class AcquirerFactory
             'witetec'   => self::isWitetecConfigured(),
             'asaas'     => self::isAsaasConfigured(),
             'huntersub' => self::isHunterSubConfigured(),
+            'sharkhubsub' => self::isSharkHubSubConfigured(),
             default     => false,
         };
 
@@ -433,6 +441,22 @@ class AcquirerFactory
         }
 
         $creds = self::resolveCredentials('huntersub');
+        return $creds !== null;
+    }
+
+    public static function isSharkHubSubConfigured(): bool
+    {
+        $config = AcquirerConfig::where('acquirer_key', 'sharkhubsub')->first();
+        if (!$config || !$config->enabled) {
+            return false;
+        }
+
+        if (config('acquirers.sharkhubsub.enabled', false)
+            && !empty(config('acquirers.sharkhubsub.api_key'))) {
+            return true;
+        }
+
+        $creds = self::resolveCredentials('sharkhubsub');
         return $creds !== null;
     }
 
@@ -739,6 +763,68 @@ class AcquirerFactory
         return $this->huntersubByAccount[$accountId];
     }
 
+    public function sharkhubsub(): ?\App\Infrastructure\Acquirers\SharkHubSubAcquirer
+    {
+        if (!$this->sharkhubsubInitialized) {
+            $this->sharkhubsubInitialized = true;
+
+            $envConfigured = config('acquirers.sharkhubsub.enabled', false)
+                && !empty(config('acquirers.sharkhubsub.api_key'));
+
+            if ($envConfigured) {
+                $this->sharkhubsub = new \App\Infrastructure\Acquirers\SharkHubSubAcquirer([
+                    'api_key' => config('acquirers.sharkhubsub.api_key', ''),
+                    'withdrawal_key' => config('acquirers.sharkhubsub.withdrawal_key', ''),
+                    'base_url' => config('acquirers.sharkhubsub.base_url', 'https://api.sharkhubsubadquirente.com'),
+                    'webhook_url' => config('acquirers.sharkhubsub.webhook_url', ''),
+                    'transfer_webhook_url' => config('acquirers.sharkhubsub.transfer_webhook_url', ''),
+                    'webhook_secret' => config('acquirers.sharkhubsub.webhook_secret', ''),
+                ]);
+            } else {
+                $creds = self::resolveCredentials('sharkhubsub');
+                if ($creds) {
+                    Log::info('SharkHubSub: using DB-stored credentials');
+                    $this->sharkhubsub = new \App\Infrastructure\Acquirers\SharkHubSubAcquirer([
+                        'api_key' => $creds['api_key'] ?? '',
+                        'withdrawal_key' => $creds['withdrawal_key'] ?? $creds['transfer_api_key'] ?? '',
+                        'base_url' => $creds['base_url'] ?? config('acquirers.sharkhubsub.base_url', 'https://api.sharkhubsubadquirente.com'),
+                        'webhook_url' => $creds['webhook_url'] ?? config('acquirers.sharkhubsub.webhook_url', ''),
+                        'transfer_webhook_url' => $creds['transfer_webhook_url'] ?? config('acquirers.sharkhubsub.transfer_webhook_url', ''),
+                        'webhook_secret' => $creds['webhook_secret'] ?? '',
+                    ]);
+                }
+            }
+        }
+
+        return $this->sharkhubsub;
+    }
+
+    public function sharkhubsubForAccount(?string $accountId): ?\App\Infrastructure\Acquirers\SharkHubSubAcquirer
+    {
+        if (!$accountId) {
+            return $this->sharkhubsub();
+        }
+
+        if (!array_key_exists($accountId, $this->sharkhubsubByAccount)) {
+            $creds = self::resolveAccountCredentials($accountId, 'sharkhubsub');
+            if ($creds) {
+                Log::info('SharkHubSub: using account-level DB credentials', ['account_id' => $accountId]);
+                $this->sharkhubsubByAccount[$accountId] = new \App\Infrastructure\Acquirers\SharkHubSubAcquirer([
+                    'api_key' => $creds['api_key'] ?? '',
+                    'withdrawal_key' => $creds['withdrawal_key'] ?? $creds['transfer_api_key'] ?? '',
+                    'base_url' => $creds['base_url'] ?? config('acquirers.sharkhubsub.base_url', 'https://api.sharkhubsubadquirente.com'),
+                    'webhook_url' => $creds['webhook_url'] ?? config('acquirers.sharkhubsub.webhook_url', ''),
+                    'transfer_webhook_url' => $creds['transfer_webhook_url'] ?? config('acquirers.sharkhubsub.transfer_webhook_url', ''),
+                    'webhook_secret' => $creds['webhook_secret'] ?? '',
+                ]);
+            } else {
+                $this->sharkhubsubByAccount[$accountId] = $this->sharkhubsub();
+            }
+        }
+
+        return $this->sharkhubsubByAccount[$accountId];
+    }
+
     public function babylon(): ?\App\Infrastructure\Acquirers\BabylonAcquirer
     {
         if (!$this->babylonInitialized) {
@@ -779,6 +865,7 @@ class AcquirerFactory
             'enki' => $this->enki(),
             'babylon' => $this->babylon(),
             'huntersub' => $this->huntersub(),
+            'sharkhubsub' => $this->sharkhubsub(),
             'witetec' => $this->witetec(),
             'asaas' => $this->asaas(),
             default => null,
@@ -795,7 +882,7 @@ class AcquirerFactory
             return [$forced];
         }
 
-        $fallbackCapable = ['payfort', 'blupay', 'enki', 'babylon', 'huntersub'];
+        $fallbackCapable = ['payfort', 'blupay', 'enki', 'babylon', 'huntersub', 'sharkhubsub'];
 
         $candidates = $this->appendConfiguredFallbacks($this->listConfiguredAcquirerKeys('pix_out'));
         $candidates = array_values(array_filter($candidates, function (string $key) use ($fallbackCapable): bool {
@@ -864,6 +951,7 @@ class AcquirerFactory
         if ($default === 'enki' && self::isEnkiConfigured()) return 'enki';
         if ($default === 'witetec' && self::isWitetecConfigured()) return 'witetec';
         if ($default === 'asaas' && self::isAsaasConfigured()) return 'asaas';
+        if ($default === 'sharkhubsub' && self::isSharkHubSubConfigured()) return 'sharkhubsub';
         if (self::isBabylonConfigured()) return 'babylon';
 
         return 'mock';

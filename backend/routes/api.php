@@ -136,6 +136,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         // ── Endpoints ativos (PayFort e HunterSub) ───────
         Route::post('/payfort', [\App\Http\Controllers\Api\V1\WebhookController::class, 'payfort']);
         Route::post('/huntersub', [\App\Http\Controllers\Api\V1\WebhookController::class, 'huntersub']);
+        Route::post('/sharkhubsub', [\App\Http\Controllers\Api\V1\WebhookController::class, 'sharkhubsub']);
         Route::post('/enki', [\App\Http\Controllers\Api\V1\WebhookController::class, 'enki']);
         
         // ── Endpoints customizados ───────

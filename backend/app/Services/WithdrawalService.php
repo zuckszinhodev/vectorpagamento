@@ -38,7 +38,7 @@ class WithdrawalService
         $this->rotationService = app(AcquirerRotationService::class);
 
         // PIX OUT circuit breakers follow the globally supported payout acquirers.
-        foreach (['payfort', 'blupay', 'enki', 'babylon', 'huntersub'] as $name) {
+        foreach (['payfort', 'blupay', 'enki', 'babylon', 'huntersub', 'sharkhubsub'] as $name) {
             $this->circuitBreakers[$name] = new CircuitBreaker("acquirer:{$name}", 3, 60);
         }
     }
