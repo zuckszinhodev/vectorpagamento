@@ -1,10 +1,10 @@
 DEPLOY COMPLETO
-cd /var/www/vectorpagamentos-gateway \
+cd /var/www/vectorpagamento \
 	&& git fetch --all \
 	&& git reset --hard origin/main \
 	&& cd backend \
 	&& rm -rf vendor \
-	&& composer install --optimize-autoloader --no-dev \
+	&& COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-dev --ignore-platform-req=php \
 	&& php artisan migrate --force \
 	&& php artisan config:cache \
 	&& php artisan route:cache \
@@ -29,9 +29,9 @@ cd /var/www/vectorpagamentos-gateway \
 	&& echo "Atualizacao completa"
 
 UPDATE BACKEND
-cd /var/www/vectorpagamentos-gateway/backend \
+cd /var/www/vectorpagamento/backend \
 	&& rm -rf vendor \
-	&& composer install --optimize-autoloader --no-dev \
+	&& COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-dev --ignore-platform-req=php \
 	&& php artisan config:cache \
 	&& php artisan route:cache \
 	&& systemctl restart php8.2-fpm \
@@ -39,7 +39,7 @@ cd /var/www/vectorpagamentos-gateway/backend \
 	&& systemctl restart vectorpagamentos-scheduler
 
 UPDATE FRONTEND
-cd /var/www/vectorpagamentos-gateway \
+cd /var/www/vectorpagamento \
 	&& git fetch --all \
 	&& git reset --hard origin/main \
 	&& cd frontend \
@@ -72,8 +72,8 @@ After=network.target
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/var/www/vectorpagamentos-gateway/backend
-ExecStart=/usr/bin/php /var/www/vectorpagamentos-gateway/backend/artisan schedule:work
+WorkingDirectory=/var/www/vectorpagamento/backend
+ExecStart=/usr/bin/php /var/www/vectorpagamento/backend/artisan schedule:work
 Restart=always
 RestartSec=5
 
