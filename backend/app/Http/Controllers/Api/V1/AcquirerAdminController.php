@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\AcquirerConfig;
+use App\Models\Charge;
 use App\Models\Transaction;
 use App\Services\AcquirerRotationService;
 use Illuminate\Http\JsonResponse;
@@ -563,6 +564,71 @@ class AcquirerAdminController extends Controller
     }
 
     /**
+     * Refresh the displayed nominal name from the last generated PIX BR Code.
+     */
+    public function refreshNominal(string $acquirerId): JsonResponse
+    {
+        try {
+            $config = AcquirerConfig::find($acquirerId);
+            if (!$config) {
+                return response()->json(['success' => false, 'message' => 'Adquirente nao encontrado'], 404);
+            }
+
+            $charge = Charge::query()
+                ->where('acquirer', $config->acquirer_key)
+                ->where(function ($query) {
+                    $query->whereNotNull('pix_copy_paste')
+                        ->where('pix_copy_paste', '!=', '')
+                        ->orWhere(function ($nested) {
+                            $nested->whereNotNull('pix_qr_code')
+                                ->where('pix_qr_code', '!=', '');
+                        });
+                })
+                ->latest()
+                ->first();
+
+            if (!$charge) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nenhum PIX gerado encontrado para esta adquirente',
+                ], 422);
+            }
+
+            $pixPayload = (string) ($charge->pix_copy_paste ?: $charge->pix_qr_code);
+            $nominalName = $this->extractPixMerchantName($pixPayload);
+
+            if ($nominalName === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nao consegui localizar a nominal no PIX gerado',
+                ], 422);
+            }
+
+            $config->nominal_name = $nominalName;
+            $config->save();
+            AcquirerConfig::clearCache();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $config->id,
+                    'key' => $config->acquirer_key,
+                    'nominal_name' => $config->nominal_name,
+                    'charge_id' => $charge->id,
+                ],
+                'message' => 'Nominal atualizada para ' . $config->nominal_name,
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('AcquirerAdminController::refreshNominal error', [
+                'error' => $e->getMessage(),
+                'acquirer_id' => $acquirerId,
+            ]);
+
+            return response()->json(['success' => false, 'message' => 'Erro ao atualizar nominal'], 500);
+        }
+    }
+
+    /**
      * Perform health check on acquirer API
      */
     public function healthCheck(string $acquirerId): JsonResponse
@@ -781,5 +847,40 @@ class AcquirerAdminController extends Controller
         $normalized = array_map(static fn ($key): string => strtolower((string) $key), $configs);
 
         return array_values(array_unique(array_filter($normalized, static fn ($key): bool => $key !== '')));
+    }
+
+    private function extractPixMerchantName(string $pixPayload): ?string
+    {
+        $payload = trim($pixPayload);
+        $offset = 0;
+        $length = strlen($payload);
+
+        while ($offset + 4 <= $length) {
+            $tag = substr($payload, $offset, 2);
+            $valueLengthRaw = substr($payload, $offset + 2, 2);
+
+            if (!ctype_digit($tag) || !ctype_digit($valueLengthRaw)) {
+                return null;
+            }
+
+            $valueLength = (int) $valueLengthRaw;
+            $valueStart = $offset + 4;
+            $valueEnd = $valueStart + $valueLength;
+
+            if ($valueEnd > $length) {
+                return null;
+            }
+
+            $value = substr($payload, $valueStart, $valueLength);
+            if ($tag === '59') {
+                $merchantName = trim($value);
+
+                return $merchantName !== '' ? $merchantName : null;
+            }
+
+            $offset = $valueEnd;
+        }
+
+        return null;
     }
 }

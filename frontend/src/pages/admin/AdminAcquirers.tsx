@@ -213,6 +213,22 @@ export default function AdminAcquirers() {
     },
   });
 
+  // Refresh nominal from latest generated PIX
+  const refreshNominalMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await api.post(`/admin/acquirers/${id}/refresh-nominal`);
+      return response.data;
+    },
+    onSuccess: (response) => {
+      toast.success(response?.message || 'Nominal atualizada');
+      queryClient.invalidateQueries({ queryKey: ['admin-acquirers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Erro ao atualizar nominal');
+    },
+  });
+
   // Delete acquirer
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -686,13 +702,22 @@ export default function AdminAcquirers() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => healthCheckMutation.mutate(acquirer.id)}
                   disabled={healthCheckMutation.isPending}
                   className="flex-1 rounded-lg bg-surface-hover px-3 py-2 text-xs font-medium text-tx-secondary hover:bg-border-DEFAULT transition-colors"
                 >
                   Health Check
+                </button>
+                <button
+                  onClick={() => refreshNominalMutation.mutate(acquirer.id)}
+                  disabled={refreshNominalMutation.isPending}
+                  className="flex-1 rounded-lg bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-500 hover:bg-sky-500/20 transition-colors"
+                  title="Atualizar nominal pelo ultimo PIX gerado"
+                >
+                  <ArrowPathIcon className="inline h-4 w-4 mr-1" />
+                  Nominal
                 </button>
                 <button
                   onClick={() => {
