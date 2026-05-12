@@ -3,6 +3,7 @@
 namespace App\Infrastructure\Acquirers;
 
 use App\Domain\Acquirer\Contracts\AcquirerInterface;
+use App\Models\Account;
 use App\Models\Charge;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -275,8 +276,19 @@ class SharkHubSubAcquirer implements AcquirerInterface
     private function buildPaymentPayload(Charge $charge, string $method): array
     {
         $customer = $charge->customer ?? [];
+        $account = $charge->relationLoaded('account') ? $charge->account : Account::find($charge->account_id);
         $document = preg_replace('/\D/', '', (string) ($customer['document'] ?? ''));
+        $sellerDocument = preg_replace('/\D/', '', (string) ($account?->document ?? ''));
         $description = (string) ($charge->description ?? 'Pagamento PIX');
+        $metadata = array_merge($charge->metadata ?? [], [
+            'charge_id' => $charge->id,
+            'account_id' => $charge->account_id,
+            'source' => 'vectorpagamentos',
+            'provider' => 'vectorpagamentos',
+            'orderId' => $charge->id,
+            'sellerTaxId' => $sellerDocument,
+            'sellerEmail' => (string) ($account?->email ?? ''),
+        ]);
 
         return [
             'amount' => (int) $charge->amount,
@@ -297,11 +309,10 @@ class SharkHubSubAcquirer implements AcquirerInterface
                 'price' => (int) $charge->amount,
                 'type' => 'DIGITAL',
             ]],
-            'metadata' => array_merge($charge->metadata ?? [], [
-                'charge_id' => $charge->id,
-                'account_id' => $charge->account_id,
-                'source' => 'vectorpagamentos',
-            ]),
+            'metadata' => array_map(
+                fn ($value) => is_scalar($value) || $value === null ? (string) ($value ?? '') : json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                $metadata
+            ),
         ];
     }
 
