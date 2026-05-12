@@ -523,11 +523,11 @@ function App() {
       <Route path="/api-docs" element={<ApiDocsPage />} />
 
       {/* Member Area - Student facing pages */}
-      <Route path="/members/login" element={<MemberLoginPage />} />
-      <Route path="/members/dashboard" element={<MemberDashboardPage />} />
-      <Route path="/members/profile" element={<MemberProfilePage />} />
-      <Route path="/members/courses/:courseId" element={<MemberCoursePage />} />
-      <Route path="/members/courses/:courseId/:lessonId" element={<MemberCoursePage />} />
+      <Route path="/members/login" element={isCustomDomain() ? <MemberLoginPage /> : <Navigate to="/login" replace />} />
+      <Route path="/members/dashboard" element={isCustomDomain() ? <MemberDashboardPage /> : <Navigate to="/login" replace />} />
+      <Route path="/members/profile" element={isCustomDomain() ? <MemberProfilePage /> : <Navigate to="/login" replace />} />
+      <Route path="/members/courses/:courseId" element={isCustomDomain() ? <MemberCoursePage /> : <Navigate to="/login" replace />} />
+      <Route path="/members/courses/:courseId/:lessonId" element={isCustomDomain() ? <MemberCoursePage /> : <Navigate to="/login" replace />} />
 
       {/* Redirects */}
       <Route path="/" element={isCustomDomain() ? <DomainLandingPage /> : <Navigate to="/login" replace />} />
