@@ -76,7 +76,7 @@ function StatusBadge({ status }: { status: string }) {
   };
 
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status] || 'bg-surface-hover text-tx-secondary'}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
       {status === 'open' && <ExclamationTriangleIcon className="h-3 w-3" />}
       {status === 'won' && <CheckCircleIcon className="h-3 w-3" />}
       {status === 'lost' && <XCircleIcon className="h-3 w-3" />}
@@ -134,14 +134,14 @@ function ResolveDisputeModal({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-                <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4">
-                  <Dialog.Title className="text-lg font-semibold text-tx-primary">
+              <Dialog.Panel className="relative transform overflow-hidden rounded-md bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+                <div className="flex items-center justify-between border-b border-gray-200 px-4 sm:px-6 py-4">
+                  <Dialog.Title className="text-lg font-semibold text-gray-900">
                     Resolver Disputa
                   </Dialog.Title>
                   <button
                     onClick={onClose}
-                    className="text-tx-muted hover:text-tx-secondary"
+                    className="text-gray-500 hover:text-gray-600"
                   >
                     <XMarkIcon className="h-6 w-6" />
                   </button>
@@ -164,7 +164,7 @@ function ResolveDisputeModal({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-tx-primary mb-2">
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
                         Resultado da Disputa *
                       </label>
                       <div className="grid grid-cols-2 gap-3">
@@ -174,14 +174,14 @@ function ResolveDisputeModal({
                           className={`p-4 rounded-lg border-2 transition-all ${
                             outcome === 'won'
                               ? 'border-status-success bg-status-success-subtle'
-                              : 'border-border-DEFAULT hover:border-status-success'
+                              : 'border-gray-200 hover:border-status-success'
                           }`}
                         >
-                          <CheckCircleIcon className={`h-8 w-8 mx-auto mb-2 ${outcome === 'won' ? 'text-status-success' : 'text-tx-muted'}`} />
-                          <p className={`text-sm font-medium ${outcome === 'won' ? 'text-status-success' : 'text-tx-secondary'}`}>
+                          <CheckCircleIcon className={`h-8 w-8 mx-auto mb-2 ${outcome === 'won' ? 'text-status-success' : 'text-gray-500'}`} />
+                          <p className={`text-sm font-medium ${outcome === 'won' ? 'text-status-success' : 'text-gray-600'}`}>
                             Ganho
                           </p>
-                          <p className="text-xs text-tx-muted mt-1">
+                          <p className="text-xs text-gray-500 mt-1">
                             Disputa vencida
                           </p>
                         </button>
@@ -191,14 +191,14 @@ function ResolveDisputeModal({
                           className={`p-4 rounded-lg border-2 transition-all ${
                             outcome === 'lost'
                               ? 'border-status-error bg-status-error-subtle'
-                              : 'border-border-DEFAULT hover:border-status-error'
+                              : 'border-gray-200 hover:border-status-error'
                           }`}
                         >
-                          <XCircleIcon className={`h-8 w-8 mx-auto mb-2 ${outcome === 'lost' ? 'text-status-error' : 'text-tx-muted'}`} />
-                          <p className={`text-sm font-medium ${outcome === 'lost' ? 'text-status-error' : 'text-tx-secondary'}`}>
+                          <XCircleIcon className={`h-8 w-8 mx-auto mb-2 ${outcome === 'lost' ? 'text-status-error' : 'text-gray-500'}`} />
+                          <p className={`text-sm font-medium ${outcome === 'lost' ? 'text-status-error' : 'text-gray-600'}`}>
                             Perdido
                           </p>
-                          <p className="text-xs text-tx-muted mt-1">
+                          <p className="text-xs text-gray-500 mt-1">
                             Disputa perdida
                           </p>
                         </button>
@@ -206,7 +206,7 @@ function ResolveDisputeModal({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-tx-primary mb-2">
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
                         Notas da Resolução *
                       </label>
                       <textarea
@@ -220,7 +220,7 @@ function ResolveDisputeModal({
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 border-t border-border-DEFAULT px-4 sm:px-6 py-4">
+                  <div className="flex justify-end gap-3 border-t border-gray-200 px-4 sm:px-6 py-4">
                     <button type="button" onClick={onClose} className="btn-secondary">
                       Cancelar
                     </button>
@@ -284,33 +284,33 @@ function ChargebackDetailModal({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl">
-                <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4 bg-gradient-to-r from-green-50 to-blue-50">
+              <Dialog.Panel className="relative transform overflow-hidden rounded-md bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl">
+                <div className="flex items-center justify-between border-b border-gray-200 px-4 sm:px-6 py-4 bg-gradient-to-r from-green-50 to-blue-50">
                   <div>
-                    <Dialog.Title className="text-lg font-semibold text-tx-primary">
+                    <Dialog.Title className="text-lg font-semibold text-gray-900">
                       Gestão Completa de Disputa
                     </Dialog.Title>
-                    <p className="text-sm text-tx-muted mt-0.5">
+                    <p className="text-sm text-gray-500 mt-0.5">
                       ID: {chargeback.id.slice(0, 13)}...
                     </p>
                   </div>
                   <button
                     onClick={onClose}
-                    className="text-tx-muted hover:text-tx-secondary"
+                    className="text-gray-500 hover:text-gray-600"
                   >
                     <XMarkIcon className="h-6 w-6" />
                   </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="border-b border-border-DEFAULT px-4 sm:px-6 bg-surface-page">
+                <div className="border-b border-gray-200 px-4 sm:px-6 bg-gray-50">
                   <nav className="flex gap-6">
                     <button
                       onClick={() => setActiveTab('details')}
                       className={`py-3 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === 'details'
                           ? 'border-accent-primary text-accent-primary'
-                          : 'border-transparent text-tx-muted hover:text-tx-secondary'
+                          : 'border-transparent text-gray-500 hover:text-gray-600'
                       }`}
                     >
                       📋 Informações
@@ -320,7 +320,7 @@ function ChargebackDetailModal({
                       className={`py-3 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === 'evidence'
                           ? 'border-accent-primary text-accent-primary'
-                          : 'border-transparent text-tx-muted hover:text-tx-secondary'
+                          : 'border-transparent text-gray-500 hover:text-gray-600'
                       }`}
                     >
                       📎 Evidências
@@ -335,7 +335,7 @@ function ChargebackDetailModal({
                       className={`py-3 text-sm font-medium border-b-2 transition-colors ${
                         activeTab === 'timeline'
                           ? 'border-accent-primary text-accent-primary'
-                          : 'border-transparent text-tx-muted hover:text-tx-secondary'
+                          : 'border-transparent text-gray-500 hover:text-gray-600'
                       }`}
                     >
                       🕐 Histórico
@@ -348,7 +348,7 @@ function ChargebackDetailModal({
                   {activeTab === 'details' && (
                     <div className="space-y-6">
                       {/* Status Card */}
-                      <div className={`rounded-xl p-4 border-2 ${
+                      <div className={`rounded-md p-4 border-2 ${
                         chargeback.status === 'open' ? 'bg-amber-50 border-amber-200' :
                         chargeback.status === 'won' ? 'bg-green-50 border-green-200' :
                         chargeback.status === 'lost' ? 'bg-red-50 border-red-200' :
@@ -356,14 +356,14 @@ function ChargebackDetailModal({
                       }`}>
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-tx-secondary">Status Atual</p>
+                            <p className="text-sm font-medium text-gray-600">Status Atual</p>
                             <div className="mt-1">
                               <StatusBadge status={chargeback.status} />
                             </div>
                           </div>
                           {chargeback.deadline_at && chargeback.status === 'open' && (
                             <div className="text-right">
-                              <p className="text-sm font-medium text-tx-secondary">Prazo para Resposta</p>
+                              <p className="text-sm font-medium text-gray-600">Prazo para Resposta</p>
                               <p className="text-lg font-bold text-status-warning mt-1">
                                 {formatDate(chargeback.deadline_at)}
                               </p>
@@ -374,24 +374,24 @@ function ChargebackDetailModal({
 
                       {/* Chargeback Info */}
                       <div>
-                        <h3 className="text-sm font-semibold text-tx-primary mb-3">Informações do Chargeback</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 mb-3">Informações do Chargeback</h3>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-xs text-tx-muted mb-1">Valor</p>
+                            <p className="text-xs text-gray-500 mb-1">Valor</p>
                             <p className="text-lg font-bold text-status-error">{formatCurrency(chargeback.amount)}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-tx-muted mb-1">ID da Cobrança</p>
-                            <p className="font-mono text-sm text-tx-primary">{chargeback.charge_id.slice(0, 13)}...</p>
+                            <p className="text-xs text-gray-500 mb-1">ID da Cobrança</p>
+                            <p className="font-mono text-sm text-gray-900">{chargeback.charge_id.slice(0, 13)}...</p>
                           </div>
                           <div>
-                            <p className="text-xs text-tx-muted mb-1">Criado em</p>
-                            <p className="text-sm text-tx-primary">{formatDate(chargeback.created_at)}</p>
+                            <p className="text-xs text-gray-500 mb-1">Criado em</p>
+                            <p className="text-sm text-gray-900">{formatDate(chargeback.created_at)}</p>
                           </div>
                           {chargeback.resolved_at && (
                             <div>
-                              <p className="text-xs text-tx-muted mb-1">Resolvido em</p>
-                              <p className="text-sm text-tx-primary">{formatDate(chargeback.resolved_at)}</p>
+                              <p className="text-xs text-gray-500 mb-1">Resolvido em</p>
+                              <p className="text-sm text-gray-900">{formatDate(chargeback.resolved_at)}</p>
                             </div>
                           )}
                         </div>
@@ -416,15 +416,15 @@ function ChargebackDetailModal({
                       {/* Seller Info */}
                       {chargeback.account && (
                         <div>
-                          <h3 className="text-sm font-semibold text-tx-primary mb-3">Informações do Seller</h3>
-                          <div className="space-y-3 rounded-lg border border-border-DEFAULT p-4">
+                          <h3 className="text-sm font-semibold text-gray-900 mb-3">Informações do Seller</h3>
+                          <div className="space-y-3 rounded-lg border border-gray-200 p-4">
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-tx-muted">Nome</span>
-                              <span className="text-sm font-medium text-tx-primary">{chargeback.account.name || '-'}</span>
+                              <span className="text-sm text-gray-500">Nome</span>
+                              <span className="text-sm font-medium text-gray-900">{chargeback.account.name || '-'}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-tx-muted">Email</span>
-                              <span className="text-sm font-medium text-tx-primary">{chargeback.account.email || '-'}</span>
+                              <span className="text-sm text-gray-500">Email</span>
+                              <span className="text-sm font-medium text-gray-900">{chargeback.account.email || '-'}</span>
                             </div>
                           </div>
                         </div>
@@ -434,19 +434,19 @@ function ChargebackDetailModal({
                       {charge && (
                         <>
                           <div>
-                            <h3 className="text-sm font-semibold text-tx-primary mb-3">Informações do Cliente</h3>
-                            <div className="space-y-3 rounded-lg border border-border-DEFAULT p-4">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-3">Informações do Cliente</h3>
+                            <div className="space-y-3 rounded-lg border border-gray-200 p-4">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-tx-muted">Nome</span>
-                                <span className="text-sm font-medium text-tx-primary">{charge.customer?.name || '-'}</span>
+                                <span className="text-sm text-gray-500">Nome</span>
+                                <span className="text-sm font-medium text-gray-900">{charge.customer?.name || '-'}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-tx-muted">Email</span>
-                                <span className="text-sm font-medium text-tx-primary">{charge.customer?.email || '-'}</span>
+                                <span className="text-sm text-gray-500">Email</span>
+                                <span className="text-sm font-medium text-gray-900">{charge.customer?.email || '-'}</span>
                               </div>
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-tx-muted">Método de Pagamento</span>
-                                <span className="text-sm font-medium text-tx-primary">
+                                <span className="text-sm text-gray-500">Método de Pagamento</span>
+                                <span className="text-sm font-medium text-gray-900">
                                   {charge.payment_method === 'credit_card' ? 'Cartão de Crédito' :
                                    charge.payment_method === 'pix' ? 'PIX' :
                                    charge.payment_method === 'boleto' ? 'Boleto' : charge.payment_method}
@@ -460,13 +460,13 @@ function ChargebackDetailModal({
                       {/* Resolution Notes */}
                       {chargeback.resolution_notes && (
                         <div>
-                          <h3 className="text-sm font-semibold text-tx-primary mb-3">Notas da Resolução</h3>
+                          <h3 className="text-sm font-semibold text-gray-900 mb-3">Notas da Resolução</h3>
                           <div className={`rounded-lg p-4 ${
                             chargeback.outcome === 'won' 
                               ? 'bg-status-success-subtle border border-status-success' 
                               : 'bg-status-error-subtle border border-status-error'
                           }`}>
-                            <p className="text-sm text-tx-primary whitespace-pre-wrap">{chargeback.resolution_notes}</p>
+                            <p className="text-sm text-gray-900 whitespace-pre-wrap">{chargeback.resolution_notes}</p>
                           </div>
                         </div>
                       )}
@@ -478,9 +478,9 @@ function ChargebackDetailModal({
                     <div className="space-y-6">
                       {!hasEvidence ? (
                         <div className="text-center py-12">
-                          <DocumentTextIcon className="mx-auto h-12 w-12 text-tx-muted" />
-                          <p className="mt-4 text-sm font-medium text-tx-primary">Nenhuma evidência enviada</p>
-                          <p className="text-sm text-tx-muted mt-1">
+                          <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-500" />
+                          <p className="mt-4 text-sm font-medium text-gray-900">Nenhuma evidência enviada</p>
+                          <p className="text-sm text-gray-500 mt-1">
                             O seller ainda não enviou evidências para este chargeback
                           </p>
                         </div>
@@ -489,9 +489,9 @@ function ChargebackDetailModal({
                           {/* Description */}
                           {evidence.description && (
                             <div>
-                              <h3 className="text-sm font-semibold text-tx-primary mb-3">Descrição</h3>
-                              <div className="rounded-lg border border-border-DEFAULT bg-surface-page p-4">
-                                <p className="text-sm text-tx-primary whitespace-pre-wrap">{evidence.description}</p>
+                              <h3 className="text-sm font-semibold text-gray-900 mb-3">Descrição</h3>
+                              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                <p className="text-sm text-gray-900 whitespace-pre-wrap">{evidence.description}</p>
                               </div>
                             </div>
                           )}
@@ -499,18 +499,18 @@ function ChargebackDetailModal({
                           {/* Tracking & Delivery */}
                           {(evidence.tracking_number || evidence.delivery_proof) && (
                             <div>
-                              <h3 className="text-sm font-semibold text-tx-primary mb-3">Informações de Entrega</h3>
-                              <div className="space-y-3 rounded-lg border border-border-DEFAULT p-4">
+                              <h3 className="text-sm font-semibold text-gray-900 mb-3">Informações de Entrega</h3>
+                              <div className="space-y-3 rounded-lg border border-gray-200 p-4">
                                 {evidence.tracking_number && (
                                   <div>
-                                    <p className="text-xs text-tx-muted mb-1">Código de Rastreamento</p>
-                                    <p className="text-sm font-mono text-tx-primary">{evidence.tracking_number}</p>
+                                    <p className="text-xs text-gray-500 mb-1">Código de Rastreamento</p>
+                                    <p className="text-sm font-mono text-gray-900">{evidence.tracking_number}</p>
                                   </div>
                                 )}
                                 {evidence.delivery_proof && (
                                   <div>
-                                    <p className="text-xs text-tx-muted mb-1">Comprovante de Entrega</p>
-                                    <p className="text-sm text-tx-primary break-all">{evidence.delivery_proof}</p>
+                                    <p className="text-xs text-gray-500 mb-1">Comprovante de Entrega</p>
+                                    <p className="text-sm text-gray-900 break-all">{evidence.delivery_proof}</p>
                                   </div>
                                 )}
                               </div>
@@ -520,7 +520,7 @@ function ChargebackDetailModal({
                           {/* Images */}
                           {evidence.images && evidence.images.length > 0 && (
                             <div>
-                              <h3 className="text-sm font-semibold text-tx-primary mb-3">
+                              <h3 className="text-sm font-semibold text-gray-900 mb-3">
                                 Comprovantes ({evidence.images.length})
                               </h3>
                               <div className="grid grid-cols-2 gap-4">
@@ -531,7 +531,7 @@ function ChargebackDetailModal({
                                   return (
                                     <div
                                       key={index}
-                                      className="group relative aspect-video rounded-lg border-2 border-border-DEFAULT overflow-hidden bg-surface-page hover:border-accent-primary transition-colors"
+                                      className="group relative aspect-video rounded-lg border-2 border-gray-200 overflow-hidden bg-gray-50 hover:border-accent-primary transition-colors"
                                     >
                                       <img
                                         src={imageUrl}
@@ -596,9 +596,9 @@ function ChargebackDetailModal({
                               <ExclamationTriangleIcon className="h-4 w-4 text-status-error" />
                             </div>
                             <div className="flex-1 pb-6">
-                              <p className="text-sm font-semibold text-tx-primary">Chargeback Recebido</p>
-                              <p className="text-xs text-tx-muted mt-1">{formatDate(chargeback.created_at)}</p>
-                              <p className="text-sm text-tx-secondary mt-2">
+                              <p className="text-sm font-semibold text-gray-900">Chargeback Recebido</p>
+                              <p className="text-xs text-gray-500 mt-1">{formatDate(chargeback.created_at)}</p>
+                              <p className="text-sm text-gray-600 mt-2">
                                 Um chargeback foi iniciado pelo cliente no valor de {formatCurrency(chargeback.amount)}
                               </p>
                             </div>
@@ -611,9 +611,9 @@ function ChargebackDetailModal({
                                 <DocumentTextIcon className="h-4 w-4 text-blue-600" />
                               </div>
                               <div className="flex-1 pb-6">
-                                <p className="text-sm font-semibold text-tx-primary">Evidências Enviadas</p>
-                                <p className="text-xs text-tx-muted mt-1">{formatDate(chargeback.updated_at)}</p>
-                                <p className="text-sm text-tx-secondary mt-2">
+                                <p className="text-sm font-semibold text-gray-900">Evidências Enviadas</p>
+                                <p className="text-xs text-gray-500 mt-1">{formatDate(chargeback.updated_at)}</p>
+                                <p className="text-sm text-gray-600 mt-2">
                                   O seller enviou evidências para contestar o chargeback
                                 </p>
                               </div>
@@ -633,11 +633,11 @@ function ChargebackDetailModal({
                                 )}
                               </div>
                               <div className="flex-1">
-                                <p className="text-sm font-semibold text-tx-primary">
+                                <p className="text-sm font-semibold text-gray-900">
                                   {chargeback.status === 'won' ? 'Disputa Ganha' : 'Disputa Perdida'}
                                 </p>
-                                <p className="text-xs text-tx-muted mt-1">{formatDate(chargeback.resolved_at)}</p>
-                                <p className="text-sm text-tx-secondary mt-2">
+                                <p className="text-xs text-gray-500 mt-1">{formatDate(chargeback.resolved_at)}</p>
+                                <p className="text-sm text-gray-600 mt-2">
                                   {chargeback.status === 'won' 
                                     ? 'A disputa foi resolvida a favor do seller.'
                                     : 'A disputa foi resolvida a favor do cliente.'}
@@ -651,7 +651,7 @@ function ChargebackDetailModal({
                   )}
                 </div>
 
-                <div className="flex justify-end gap-3 border-t border-border-DEFAULT px-4 sm:px-6 py-4">
+                <div className="flex justify-end gap-3 border-t border-gray-200 px-4 sm:px-6 py-4">
                   {canResolve && (
                     <button
                       onClick={() => {
@@ -764,13 +764,13 @@ export default function AdminChargebacksPage() {
   return (
     <AdminPageShell className="space-y-4 lg:space-y-6">
       <AdminPageHeader
-        icon={ShieldExclamationIcon}
+        
         title="Disputas & Chargebacks"
         subtitle="Gerencie todas as disputas e chargebacks da plataforma"
         actions={
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 transition-colors"
+            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
             <ArrowPathIcon className="h-4 w-4" />
             Atualizar
@@ -783,15 +783,15 @@ export default function AdminChargebacksPage() {
         {/* Total Amount */}
         <div className="card p-4 lg:p-5">
           <div className="flex items-center gap-3 lg:gap-4">
-            <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-xl bg-status-error-subtle">
+            <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-md bg-status-error-subtle">
               <BanknotesIcon className="h-5 w-5 lg:h-6 lg:w-6 text-status-error" />
             </div>
             <div>
-              <p className="text-xs lg:text-sm font-medium text-tx-muted">Valor Total</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-500">Valor Total</p>
               <p className="text-lg lg:text-2xl font-bold text-status-error">
                 {formatCurrency(totalAmount)}
               </p>
-              <p className="text-xs text-tx-muted hidden sm:block">desta página</p>
+              <p className="text-xs text-gray-500 hidden sm:block">desta página</p>
             </div>
           </div>
         </div>
@@ -799,15 +799,15 @@ export default function AdminChargebacksPage() {
         {/* Active Chargebacks */}
         <div className="card p-4 lg:p-5">
           <div className="flex items-center gap-3 lg:gap-4">
-            <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-xl bg-amber-100">
+            <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-md bg-amber-100">
               <ExclamationTriangleIcon className="h-5 w-5 lg:h-6 lg:w-6 text-status-warning" />
             </div>
             <div>
-              <p className="text-xs lg:text-sm font-medium text-tx-muted">Ativos</p>
-              <p className="text-lg lg:text-2xl font-bold text-tx-primary">
+              <p className="text-xs lg:text-sm font-medium text-gray-500">Ativos</p>
+              <p className="text-lg lg:text-2xl font-bold text-gray-900">
                 {activeCount}
               </p>
-              <p className="text-xs text-tx-muted hidden sm:block">aguardando resolução</p>
+              <p className="text-xs text-gray-500 hidden sm:block">aguardando resolução</p>
             </div>
           </div>
         </div>
@@ -815,15 +815,15 @@ export default function AdminChargebacksPage() {
         {/* Won */}
         <div className="card p-4 lg:p-5">
           <div className="flex items-center gap-3 lg:gap-4">
-            <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-xl bg-status-success-subtle">
+            <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-md bg-status-success-subtle">
               <CheckCircleIcon className="h-5 w-5 lg:h-6 lg:w-6 text-status-success" />
             </div>
             <div>
-              <p className="text-xs lg:text-sm font-medium text-tx-muted">Ganhos</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-500">Ganhos</p>
               <p className="text-lg lg:text-2xl font-bold text-status-success">
                 {wonCount}
               </p>
-              <p className="text-xs text-tx-muted hidden sm:block">disputas vencidas</p>
+              <p className="text-xs text-gray-500 hidden sm:block">disputas vencidas</p>
             </div>
           </div>
         </div>
@@ -831,15 +831,15 @@ export default function AdminChargebacksPage() {
         {/* Lost */}
         <div className="card p-4 lg:p-5">
           <div className="flex items-center gap-3 lg:gap-4">
-            <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-xl bg-status-error-subtle">
+            <div className="flex h-10 w-10 lg:h-12 lg:w-12 items-center justify-center rounded-md bg-status-error-subtle">
               <XCircleIcon className="h-5 w-5 lg:h-6 lg:w-6 text-status-error" />
             </div>
             <div>
-              <p className="text-xs lg:text-sm font-medium text-tx-muted">Perdidos</p>
+              <p className="text-xs lg:text-sm font-medium text-gray-500">Perdidos</p>
               <p className="text-lg lg:text-2xl font-bold text-status-error">
                 {lostCount}
               </p>
-              <p className="text-xs text-tx-muted hidden sm:block">disputas perdidas</p>
+              <p className="text-xs text-gray-500 hidden sm:block">disputas perdidas</p>
             </div>
           </div>
         </div>
@@ -849,7 +849,7 @@ export default function AdminChargebacksPage() {
       <div className="card p-3 lg:p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
             <input
               type="text"
               placeholder="Buscar por e-mail, nome, ID..."
@@ -892,23 +892,23 @@ export default function AdminChargebacksPage() {
           </div>
         ) : chargebacks.length === 0 ? (
           <div className="card p-8 text-center">
-            <DocumentTextIcon className="mx-auto h-10 w-10 text-tx-muted" />
-            <p className="mt-2 text-sm font-medium text-tx-primary">Nenhum chargeback encontrado</p>
-            <p className="text-xs text-tx-muted">Chargebacks aparecerão aqui</p>
+            <DocumentTextIcon className="mx-auto h-10 w-10 text-gray-500" />
+            <p className="mt-2 text-sm font-medium text-gray-900">Nenhum chargeback encontrado</p>
+            <p className="text-xs text-gray-500">Chargebacks aparecerão aqui</p>
           </div>
         ) : (
           chargebacks.map((chargeback) => (
             <div
               key={chargeback.id}
-              className="card p-4 cursor-pointer hover:bg-surface-hover/50 transition-colors"
+              className="card p-4 cursor-pointer hover:bg-gray-100/50 transition-colors"
               onClick={() => handleViewChargeback(chargeback)}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium text-tx-primary text-sm truncate">
+                  <p className="font-medium text-gray-900 text-sm truncate">
                     {chargeback.charge?.customer?.name || 'Cliente'}
                   </p>
-                  <p className="text-xs text-tx-muted truncate">
+                  <p className="text-xs text-gray-500 truncate">
                     {chargeback.charge?.customer?.email}
                   </p>
                 </div>
@@ -916,20 +916,20 @@ export default function AdminChargebacksPage() {
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-tx-muted">Valor</p>
+                  <p className="text-xs text-gray-500">Valor</p>
                   <p className="font-semibold text-status-error text-sm">
                     {formatCurrency(chargeback.amount)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-tx-muted">Criado em</p>
-                  <p className="font-semibold text-tx-primary text-sm">
+                  <p className="text-xs text-gray-500">Criado em</p>
+                  <p className="font-semibold text-gray-900 text-sm">
                     {formatDate(chargeback.created_at)}
                   </p>
                 </div>
               </div>
               {chargeback.deadline_at && (
-                <div className="mt-3 pt-3 border-t border-border-DEFAULT">
+                <div className="mt-3 pt-3 border-t border-gray-200">
                   <span className="text-xs text-status-warning">
                     Prazo: {formatDate(chargeback.deadline_at)}
                   </span>
@@ -944,24 +944,24 @@ export default function AdminChargebacksPage() {
       <div className="hidden lg:block card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-border-DEFAULT">
-            <thead className="bg-surface-page">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-tx-muted">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Seller
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-tx-muted">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Cliente
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-tx-muted">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Valor
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-tx-muted">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-tx-muted">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Prazo
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-tx-muted">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                   Criado em
                 </th>
                 <th className="relative px-6 py-3">
@@ -969,10 +969,10 @@ export default function AdminChargebacksPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-DEFAULT bg-surface-card">
+            <tbody className="divide-y divide-border-DEFAULT bg-white">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-tx-muted">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     <div className="flex items-center justify-center">
                       <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-primary border-t-transparent" />
                     </div>
@@ -982,10 +982,10 @@ export default function AdminChargebacksPage() {
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <DocumentTextIcon className="h-12 w-12 text-tx-muted" />
+                      <DocumentTextIcon className="h-12 w-12 text-gray-500" />
                       <div>
-                        <p className="text-sm font-medium text-tx-primary">Nenhum chargeback encontrado</p>
-                        <p className="text-sm text-tx-muted">
+                        <p className="text-sm font-medium text-gray-900">Nenhum chargeback encontrado</p>
+                        <p className="text-sm text-gray-500">
                           Chargebacks aparecerão aqui
                         </p>
                       </div>
@@ -996,25 +996,25 @@ export default function AdminChargebacksPage() {
                 chargebacks.map((chargeback) => (
                   <tr
                     key={chargeback.id}
-                    className="hover:bg-surface-page cursor-pointer"
+                    className="hover:bg-gray-50 cursor-pointer"
                     onClick={() => handleViewChargeback(chargeback)}
                   >
                     <td className="whitespace-nowrap px-6 py-4">
                       <div>
-                        <p className="font-medium text-tx-primary">
+                        <p className="font-medium text-gray-900">
                           {chargeback.account?.name || 'Seller'}
                         </p>
-                        <p className="text-xs text-tx-muted">
+                        <p className="text-xs text-gray-500">
                           {chargeback.account?.email || chargeback.account_id.slice(0, 8)}
                         </p>
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
                       <div>
-                        <p className="font-medium text-tx-primary">
+                        <p className="font-medium text-gray-900">
                           {chargeback.charge?.customer?.name || 'Cliente'}
                         </p>
-                        <p className="text-sm text-tx-muted">
+                        <p className="text-sm text-gray-500">
                           {chargeback.charge?.customer?.email}
                         </p>
                       </div>
@@ -1027,18 +1027,18 @@ export default function AdminChargebacksPage() {
                     <td className="whitespace-nowrap px-6 py-4">
                       <StatusBadge status={chargeback.status} />
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-tx-muted">
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                       {chargeback.deadline_at ? (
                         <span className="text-status-warning">{formatDate(chargeback.deadline_at)}</span>
                       ) : '-'}
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-tx-muted">
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                       {formatDate(chargeback.created_at)}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                       <button
                         onClick={(e) => { e.stopPropagation(); handleViewChargeback(chargeback); }}
-                        className="rounded p-1 hover:bg-surface-hover text-tx-muted hover:text-tx-secondary"
+                        className="rounded p-1 hover:bg-gray-100 text-gray-500 hover:text-gray-600"
                       >
                         <EyeIcon className="h-5 w-5" />
                       </button>
@@ -1053,7 +1053,7 @@ export default function AdminChargebacksPage() {
 
       {/* Pagination - Shows for both mobile and desktop */}
       {(pagination.last_page > 1 || pagination.total_pages > 1) && (
-        <div className="flex items-center justify-between bg-surface-card rounded-lg border border-border-DEFAULT px-4 py-3 lg:px-6 lg:py-4">
+        <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-4 py-3 lg:px-6 lg:py-4">
           <div className="flex flex-1 justify-between lg:hidden">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -1062,7 +1062,7 @@ export default function AdminChargebacksPage() {
             >
               Anterior
             </button>
-            <span className="text-sm text-tx-muted self-center">
+            <span className="text-sm text-gray-500 self-center">
               {page} / {pagination.last_page || pagination.total_pages || 1}
             </span>
             <button
@@ -1075,7 +1075,7 @@ export default function AdminChargebacksPage() {
           </div>
           <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm text-tx-secondary">
+              <p className="text-sm text-gray-600">
                 Mostrando{' '}
                 <span className="font-medium">{chargebacks.length > 0 ? (page - 1) * 10 + 1 : 0}</span>{' '}
                 a{' '}

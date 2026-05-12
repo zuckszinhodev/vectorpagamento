@@ -2,12 +2,6 @@ import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
-import {
-  SwatchIcon,
-  PhotoIcon,
-  CheckCircleIcon,
-  ArrowPathIcon,
-} from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface BrandingSettings {
@@ -38,9 +32,7 @@ export default function AdminBranding() {
       toast.success('Branding atualizado');
       queryClient.invalidateQueries({ queryKey: ['platform-settings'] });
     },
-    onError: () => {
-      toast.error('Erro ao salvar');
-    },
+    onError: () => toast.error('Erro ao salvar'),
   });
 
   const [form, setForm] = useState<BrandingSettings>({
@@ -52,10 +44,8 @@ export default function AdminBranding() {
     custom_css: '',
   });
 
-  // Update form when settings load
   useEffect(() => {
     if (!settings) return;
-
     setForm({
       platform_name: settings.platform_name || '',
       logo_url: settings.logo_url || '',
@@ -69,204 +59,93 @@ export default function AdminBranding() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
       </div>
     );
   }
 
   return (
     <AdminPageShell>
-      <AdminPageHeader
-        icon={SwatchIcon}
-        title="Branding da Plataforma"
-        subtitle="Personalize a aparencia visual da plataforma"
-      />
+      <AdminPageHeader title="Branding" subtitle="Personalize a aparência da plataforma" />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Logo & Identity */}
-        <div className="rounded-2xl bg-surface-card p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-green-500/10 p-2.5">
-              <PhotoIcon className="h-6 w-6 text-green-500" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-tx-primary">Identidade Visual</h2>
-              <p className="text-sm text-tx-muted">Logo e ícones da plataforma</p>
-            </div>
-          </div>
-
+        {/* Identity */}
+        <div className="rounded-lg border border-gray-200 bg-white p-5">
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Identidade</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-tx-secondary mb-1">Nome da Plataforma</label>
-              <input
-                type="text"
-                value={form.platform_name}
-                onChange={(e) => setForm({ ...form, platform_name: e.target.value })}
-                placeholder="Vector Pagamentos"
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
-              />
+              <label className="block text-xs font-medium text-gray-500 mb-1">Nome da Plataforma</label>
+              <input type="text" value={form.platform_name} onChange={(e) => setForm({ ...form, platform_name: e.target.value })} className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none" />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-tx-secondary mb-1">URL do Logo</label>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="url"
-                  value={form.logo_url}
-                  onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
-                  placeholder="https://example.com/logo.png"
-                  className="flex-1 rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
-                />
-                {form.logo_url && (
-                  <div className="h-12 w-12 rounded-lg border border-border-DEFAULT p-2 bg-white">
-                    <img src={form.logo_url} alt="Logo" className="h-full w-full object-contain" />
-                  </div>
-                )}
+              <label className="block text-xs font-medium text-gray-500 mb-1">URL do Logo</label>
+              <div className="flex gap-2 items-center">
+                <input type="url" value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} placeholder="https://..." className="flex-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none" />
+                {form.logo_url && <img src={form.logo_url} alt="Logo" className="h-10 w-10 rounded border border-gray-200 object-contain p-1" />}
               </div>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-tx-secondary mb-1">URL do Favicon</label>
-              <div className="flex gap-3 items-center">
-                <input
-                  type="url"
-                  value={form.favicon_url}
-                  onChange={(e) => setForm({ ...form, favicon_url: e.target.value })}
-                  placeholder="https://example.com/favicon.ico"
-                  className="flex-1 rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
-                />
-                {form.favicon_url && (
-                  <div className="h-10 w-10 rounded-lg border border-border-DEFAULT p-1.5 bg-white">
-                    <img src={form.favicon_url} alt="Favicon" className="h-full w-full object-contain" />
-                  </div>
-                )}
+              <label className="block text-xs font-medium text-gray-500 mb-1">URL do Favicon</label>
+              <div className="flex gap-2 items-center">
+                <input type="url" value={form.favicon_url} onChange={(e) => setForm({ ...form, favicon_url: e.target.value })} placeholder="https://..." className="flex-1 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none" />
+                {form.favicon_url && <img src={form.favicon_url} alt="Favicon" className="h-8 w-8 rounded border border-gray-200 object-contain p-0.5" />}
               </div>
             </div>
           </div>
         </div>
 
         {/* Colors */}
-        <div className="rounded-2xl bg-surface-card p-6 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-green-500/10 p-2.5">
-              <SwatchIcon className="h-6 w-6 text-green-500" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-tx-primary">Esquema de Cores</h2>
-              <p className="text-sm text-tx-muted">Cores principais da interface</p>
-            </div>
-          </div>
-
+        <div className="rounded-lg border border-gray-200 bg-white p-5">
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Cores</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-tx-secondary mb-2">Cor Primária</label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="color"
-                  value={form.primary_color}
-                  onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
-                  className="h-12 w-20 rounded-lg border border-border-DEFAULT cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={form.primary_color}
-                  onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
-                  className="w-28 rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary font-mono focus:border-green-500 focus:outline-none"
-                />
-                <div 
-                  className="h-12 flex-1 rounded-lg" 
-                  style={{ backgroundColor: form.primary_color }}
-                />
+              <label className="block text-xs font-medium text-gray-500 mb-1">Cor Primária</label>
+              <div className="flex items-center gap-3">
+                <input type="color" value={form.primary_color} onChange={(e) => setForm({ ...form, primary_color: e.target.value })} className="h-10 w-14 cursor-pointer rounded border border-gray-200" />
+                <input type="text" value={form.primary_color} onChange={(e) => setForm({ ...form, primary_color: e.target.value })} className="w-24 rounded-md border border-gray-200 px-3 py-2 text-sm font-mono text-gray-900 focus:border-gray-400 focus:outline-none" />
+                <div className="h-10 flex-1 rounded-md" style={{ backgroundColor: form.primary_color }} />
               </div>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-tx-secondary mb-2">Cor Secundária</label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="color"
-                  value={form.secondary_color}
-                  onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
-                  className="h-12 w-20 rounded-lg border border-border-DEFAULT cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={form.secondary_color}
-                  onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
-                  className="w-28 rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary font-mono focus:border-green-500 focus:outline-none"
-                />
-                <div 
-                  className="h-12 flex-1 rounded-lg" 
-                  style={{ backgroundColor: form.secondary_color }}
-                />
+              <label className="block text-xs font-medium text-gray-500 mb-1">Cor Secundária</label>
+              <div className="flex items-center gap-3">
+                <input type="color" value={form.secondary_color} onChange={(e) => setForm({ ...form, secondary_color: e.target.value })} className="h-10 w-14 cursor-pointer rounded border border-gray-200" />
+                <input type="text" value={form.secondary_color} onChange={(e) => setForm({ ...form, secondary_color: e.target.value })} className="w-24 rounded-md border border-gray-200 px-3 py-2 text-sm font-mono text-gray-900 focus:border-gray-400 focus:outline-none" />
+                <div className="h-10 flex-1 rounded-md" style={{ backgroundColor: form.secondary_color }} />
               </div>
             </div>
-
-            {/* Preview */}
-            <div className="mt-6 p-4 rounded-xl bg-surface-page">
-              <p className="text-xs text-tx-muted mb-3">Preview</p>
-              <div className="flex gap-3">
-                <button 
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-white"
-                  style={{ backgroundColor: form.primary_color }}
-                >
-                  Botão Primário
-                </button>
-                <button 
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-white"
-                  style={{ backgroundColor: form.secondary_color }}
-                >
-                  Botão Secundário
-                </button>
+            <div className="rounded-md bg-gray-50 p-3">
+              <p className="text-xs text-gray-500 mb-2">Preview</p>
+              <div className="flex gap-2">
+                <button className="rounded-md px-3 py-1.5 text-sm font-medium text-white" style={{ backgroundColor: form.primary_color }}>Primário</button>
+                <button className="rounded-md px-3 py-1.5 text-sm font-medium text-white" style={{ backgroundColor: form.secondary_color }}>Secundário</button>
               </div>
             </div>
           </div>
         </div>
 
         {/* Custom CSS */}
-        <div className="rounded-2xl bg-surface-card p-6 shadow-sm lg:col-span-2">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-green-500/10 p-2.5">
-              <SwatchIcon className="h-6 w-6 text-green-500" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-tx-primary">CSS Personalizado</h2>
-              <p className="text-sm text-tx-muted">Adicione estilos CSS customizados (avançado)</p>
-            </div>
-          </div>
-
+        <div className="rounded-lg border border-gray-200 bg-white p-5 lg:col-span-2">
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">CSS Personalizado</h2>
           <textarea
             value={form.custom_css}
             onChange={(e) => setForm({ ...form, custom_css: e.target.value })}
-            placeholder="/* Adicione seu CSS personalizado aqui */"
-            rows={8}
-            className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm font-mono text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+            placeholder="/* CSS customizado */"
+            rows={6}
+            className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-mono text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none"
           />
         </div>
       </div>
 
-      {/* Save Button */}
       <div className="flex justify-end">
         <button
           onClick={() => updateMutation.mutate(form)}
           disabled={updateMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
         >
-          {updateMutation.isPending ? (
-            <>
-              <ArrowPathIcon className="h-4 w-4 animate-spin" />
-              Salvando...
-            </>
-          ) : (
-            <>
-              <CheckCircleIcon className="h-4 w-4" />
-              Salvar Alterações
-            </>
-          )}
+          {updateMutation.isPending ? 'Salvando...' : 'Salvar'}
         </button>
       </div>
     </AdminPageShell>
   );
 }
-
-

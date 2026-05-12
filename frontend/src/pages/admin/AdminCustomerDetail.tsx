@@ -291,31 +291,31 @@ export default function AdminCustomerDetail() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active': return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-500"><CheckCircleIcon className="h-3.5 w-3.5" />Ativo</span>;
-      case 'suspended': return <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-500"><ClockIcon className="h-3.5 w-3.5" />Suspenso</span>;
-      case 'blocked': return <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-500"><XCircleIcon className="h-3.5 w-3.5" />Bloqueado</span>;
+      case 'active': return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"><CheckCircleIcon className="h-3.5 w-3.5" />Ativo</span>;
+      case 'suspended': return <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700"><ClockIcon className="h-3.5 w-3.5" />Suspenso</span>;
+      case 'blocked': return <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"><XCircleIcon className="h-3.5 w-3.5" />Bloqueado</span>;
       default: return null;
     }
   };
 
   const getKycBadge = (status: string) => {
     switch (status) {
-      case 'approved': return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-500"><ShieldCheckIcon className="h-3.5 w-3.5" />Aprovado</span>;
-      case 'submitted': return <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-500">Enviado</span>;
-      case 'under_review': return <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-500">Em Análise</span>;
-      case 'pending': return <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-500">Pendente</span>;
-      case 'rejected': return <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-500">Rejeitado</span>;
-      default: return <span className="text-xs text-tx-muted">-</span>;
+      case 'approved': return <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"><ShieldCheckIcon className="h-3.5 w-3.5" />Aprovado</span>;
+      case 'submitted': return <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">Enviado</span>;
+      case 'under_review': return <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">Em Análise</span>;
+      case 'pending': return <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">Pendente</span>;
+      case 'rejected': return <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">Rejeitado</span>;
+      default: return <span className="text-xs text-gray-500">-</span>;
     }
   };
 
   const getChargeStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      approved: 'bg-emerald-500/10 text-emerald-500',
-      pending: 'bg-amber-500/10 text-amber-500',
-      processing: 'bg-blue-500/10 text-blue-500',
-      refunded: 'bg-green-500/10 text-green-500',
-      failed: 'bg-red-500/10 text-red-500',
+      approved: 'bg-emerald-50 text-emerald-700',
+      pending: 'bg-amber-50 text-amber-700',
+      processing: 'bg-blue-50 text-blue-700',
+      refunded: 'bg-green-50 text-green-700',
+      failed: 'bg-red-50 text-red-700',
       cancelled: 'bg-gray-500/10 text-gray-500',
     };
     const labels: Record<string, string> = {
@@ -327,13 +327,13 @@ export default function AdminCustomerDetail() {
 
   const getWithdrawalStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      completed: 'bg-emerald-500/10 text-emerald-500',
-      approved: 'bg-blue-500/10 text-blue-500',
-      processing: 'bg-blue-500/10 text-blue-500',
-      pending: 'bg-amber-500/10 text-amber-500',
-      rejected: 'bg-red-500/10 text-red-500',
+      completed: 'bg-emerald-50 text-emerald-700',
+      approved: 'bg-blue-50 text-blue-700',
+      processing: 'bg-blue-50 text-blue-700',
+      pending: 'bg-amber-50 text-amber-700',
+      rejected: 'bg-red-50 text-red-700',
       cancelled: 'bg-gray-500/10 text-gray-500',
-      failed: 'bg-red-500/10 text-red-500',
+      failed: 'bg-red-50 text-red-700',
     };
     const labels: Record<string, string> = {
       completed: 'Concluído', approved: 'Aprovado', processing: 'Processando',
@@ -350,7 +350,7 @@ export default function AdminCustomerDetail() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
       </div>
     );
   }
@@ -358,8 +358,8 @@ export default function AdminCustomerDetail() {
   if (!customer) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <p className="text-tx-muted">Cliente não encontrado</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-green-500 hover:underline">Voltar</button>
+        <p className="text-gray-500">Cliente não encontrado</p>
+        <button onClick={() => navigate(-1)} className="mt-4 text-green-700 hover:underline">Voltar</button>
       </div>
     );
   }
@@ -380,21 +380,21 @@ export default function AdminCustomerDetail() {
         <div className="flex items-start gap-4">
           <button
             onClick={() => navigate(-1)}
-            className="mt-1 rounded-lg p-2 text-tx-muted hover:bg-surface-hover transition-colors"
+            className="mt-1 rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors"
           >
             <ArrowLeftIcon className="h-5 w-5" />
           </button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-tx-primary">{customer.name || 'Sem nome'}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{customer.name || 'Sem nome'}</h1>
               {getStatusBadge(customer.status)}
               {getKycBadge(customer.kyc_status)}
             </div>
-            <p className="text-sm text-tx-muted mt-1">{customer.email}</p>
-            {customer.phone && <p className="text-xs text-tx-muted">{customer.phone}</p>}
-            <p className="text-xs text-tx-muted mt-1">
+            <p className="text-sm text-gray-500 mt-1">{customer.email}</p>
+            {customer.phone && <p className="text-xs text-gray-500">{customer.phone}</p>}
+            <p className="text-xs text-gray-500 mt-1">
               ID: <span className="font-mono">{customer.id}</span>
-              <button onClick={() => copyToClipboard(customer.id)} className="ml-1 text-green-500 hover:text-green-400">
+              <button onClick={() => copyToClipboard(customer.id)} className="ml-1 text-green-700 hover:text-green-400">
                 <ClipboardDocumentIcon className="inline h-3 w-3" />
               </button>
             </p>
@@ -404,7 +404,7 @@ export default function AdminCustomerDetail() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-1.5 rounded-lg bg-surface-card px-3 py-2 text-xs font-medium text-tx-secondary hover:bg-surface-hover transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
           >
             <ArrowPathIcon className="h-3.5 w-3.5" />
             Atualizar
@@ -424,7 +424,7 @@ export default function AdminCustomerDetail() {
               }
             }}
             disabled={impersonateMutation.isPending}
-            className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50 transition-colors"
           >
             <KeyIcon className="h-3.5 w-3.5" />
             Login como Vendedor
@@ -434,40 +434,40 @@ export default function AdminCustomerDetail() {
 
       {/* Financial Summary Cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl bg-emerald-500/10 p-4">
+        <div className="rounded-md bg-emerald-50 p-4">
           <p className="text-xs text-emerald-600 mb-1">Saldo Disponível</p>
           <p className="text-xl font-bold text-emerald-600">{formatCurrency(customer.financials.available_balance)}</p>
         </div>
-        <div className="rounded-xl bg-green-500/10 p-4">
+        <div className="rounded-md bg-green-50 p-4">
           <p className="text-xs text-green-600 mb-1">Faturamento Total</p>
           <p className="text-xl font-bold text-green-600">{formatCurrency(customer.financials.total_revenue)}</p>
         </div>
-        <div className="rounded-xl bg-blue-500/10 p-4">
+        <div className="rounded-md bg-blue-50 p-4">
           <p className="text-xs text-blue-600 mb-1">Total Sacado</p>
           <p className="text-xl font-bold text-blue-600">{formatCurrency(customer.financials.total_withdrawn)}</p>
         </div>
-        <div className="rounded-xl bg-amber-500/10 p-4">
+        <div className="rounded-md bg-amber-50 p-4">
           <p className="text-xs text-amber-600 mb-1">Saques Pendentes</p>
           <p className="text-xl font-bold text-amber-600">{formatCurrency(customer.financials.pending_withdrawals)}</p>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl bg-slate-500/10 p-4">
+        <div className="rounded-md bg-slate-500/10 p-4">
           <p className="text-xs text-slate-600 mb-1">Compliance KYC</p>
           <p className="text-sm font-bold text-slate-700">
             {customer.kyc_status === 'approved' ? 'Aprovado' : customer.kyc_status === 'rejected' ? 'Rejeitado' : 'Em análise'}
           </p>
         </div>
-        <div className="rounded-xl bg-cyan-500/10 p-4">
+        <div className="rounded-md bg-cyan-500/10 p-4">
           <p className="text-xs text-cyan-600 mb-1">MFA</p>
           <p className="text-sm font-bold text-cyan-700">{customer.mfa_enabled ? 'Ativo' : 'Desativado'}</p>
         </div>
-        <div className="rounded-xl bg-green-500/10 p-4">
+        <div className="rounded-md bg-green-50 p-4">
           <p className="text-xs text-green-600 mb-1">Último Login</p>
           <p className="text-sm font-bold text-green-700">{customer.last_login_at ? formatDate(customer.last_login_at) : 'Sem registro'}</p>
         </div>
-        <div className="rounded-xl bg-red-500/10 p-4">
+        <div className="rounded-md bg-red-50 p-4">
           <p className="text-xs text-red-600 mb-1">Risco Operacional</p>
           <p className="text-sm font-bold text-red-700">
             {customer.status === 'blocked' || !customer.mfa_enabled || customer.kyc_status !== 'approved' ? 'Atenção' : 'Controlado'}
@@ -476,7 +476,7 @@ export default function AdminCustomerDetail() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-border-DEFAULT">
+      <div className="border-b border-gray-200">
         <div className="flex overflow-x-auto">
           {tabs.map((tab) => (
             <button
@@ -485,7 +485,7 @@ export default function AdminCustomerDetail() {
               className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-tx-muted hover:text-tx-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-900'
               }`}
             >
               <tab.icon className="h-4 w-4" />
@@ -552,9 +552,9 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Personal Info */}
-      <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-tx-primary mb-4 flex items-center gap-2">
-          <UserCircleIcon className="h-4 w-4 text-green-500" />
+      <div className="rounded-lg bg-white p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <UserCircleIcon className="h-4 w-4 text-green-700" />
           Dados Pessoais
         </h3>
         <div className="space-y-3">
@@ -572,9 +572,9 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
       </div>
 
       {/* KYC Info */}
-      <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-tx-primary mb-4 flex items-center gap-2">
-          <IdentificationIcon className="h-4 w-4 text-green-500" />
+      <div className="rounded-lg bg-white p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <IdentificationIcon className="h-4 w-4 text-green-700" />
           KYC / Verificação
         </h3>
         {customer.kyc ? (
@@ -589,8 +589,8 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
             {customer.kyc.company_document && <InfoRow label="CNPJ" value={customer.kyc.company_document} />}
             {customer.kyc.address && (
               <>
-                <div className="border-t border-border-DEFAULT pt-2 mt-2">
-                  <p className="text-xs font-medium text-tx-muted mb-2">Endereço</p>
+                <div className="border-t border-gray-200 pt-2 mt-2">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Endereço</p>
                 </div>
                 <InfoRow label="Rua" value={customer.kyc.address.street} />
                 <InfoRow label="Número" value={customer.kyc.address.number} />
@@ -601,32 +601,32 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
               </>
             )}
             {customer.kyc.rejection_reason && (
-              <div className="mt-2 rounded-lg bg-red-500/10 p-3">
-                <p className="text-xs font-medium text-red-500 mb-1">Motivo da Rejeição</p>
+              <div className="mt-2 rounded-lg bg-red-50 p-3">
+                <p className="text-xs font-medium text-red-700 mb-1">Motivo da Rejeição</p>
                 <p className="text-xs text-red-400">{customer.kyc.rejection_reason}</p>
               </div>
             )}
             <InfoRow label="Enviado em" value={customer.kyc.submitted_at ? formatDate(customer.kyc.submitted_at) : '-'} />
           </div>
         ) : (
-          <p className="text-sm text-tx-muted">KYC não enviado</p>
+          <p className="text-sm text-gray-500">KYC não enviado</p>
         )}
 
         {customer.kyc_documents && customer.kyc_documents.length > 0 && (
-          <div className="mt-4 border-t border-border-DEFAULT pt-4">
-            <p className="text-xs font-medium text-tx-muted mb-2">Documentos Enviados</p>
+          <div className="mt-4 border-t border-gray-200 pt-4">
+            <p className="text-xs font-medium text-gray-500 mb-2">Documentos Enviados</p>
             <div className="space-y-2">
               {customer.kyc_documents.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between rounded-lg bg-surface-page p-2.5">
+                <div key={doc.id} className="flex items-center justify-between rounded-lg bg-gray-50 p-2.5">
                   <div className="flex items-center gap-2">
-                    <DocumentTextIcon className="h-4 w-4 text-tx-muted" />
+                    <DocumentTextIcon className="h-4 w-4 text-gray-500" />
                     <div>
-                      <p className="text-xs font-medium text-tx-primary">{doc.type}</p>
-                      <p className="text-xs text-tx-muted">{doc.file_name}</p>
+                      <p className="text-xs font-medium text-gray-900">{doc.type}</p>
+                      <p className="text-xs text-gray-500">{doc.file_name}</p>
                     </div>
                   </div>
                   {doc.file_url && (
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-green-500 hover:underline">
+                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-green-700 hover:underline">
                       <EyeIcon className="h-4 w-4" />
                     </a>
                   )}
@@ -638,44 +638,44 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
       </div>
 
       {/* Payment Info */}
-      <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-tx-primary mb-4 flex items-center gap-2">
-          <BanknotesIcon className="h-4 w-4 text-green-500" />
+      <div className="rounded-lg bg-white p-5 shadow-sm">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <BanknotesIcon className="h-4 w-4 text-green-700" />
           Dados de Pagamento
         </h3>
         <div className="space-y-4">
           {/* PIX */}
           <div>
-            <p className="text-xs font-medium text-tx-muted mb-2">Chaves PIX</p>
+            <p className="text-xs font-medium text-gray-500 mb-2">Chaves PIX</p>
             {customer.pix_keys && customer.pix_keys.length > 0 ? (
               <div className="space-y-2">
                 {customer.pix_keys.map((key, i) => (
-                  <div key={key.id || i} className="flex items-center justify-between rounded-lg bg-surface-page p-2.5">
+                  <div key={key.id || i} className="flex items-center justify-between rounded-lg bg-gray-50 p-2.5">
                     <div>
-                      <p className="text-xs text-tx-muted">{key.pix_type?.toUpperCase()} {key.label ? `(${key.label})` : ''}</p>
-                      <p className="text-sm font-mono text-tx-primary">{key.pix_key}</p>
+                      <p className="text-xs text-gray-500">{key.pix_type?.toUpperCase()} {key.label ? `(${key.label})` : ''}</p>
+                      <p className="text-sm font-mono text-gray-900">{key.pix_key}</p>
                     </div>
                     <button onClick={() => { navigator.clipboard.writeText(key.pix_key); toast.success('Copiado!'); }}>
-                      <ClipboardDocumentIcon className="h-4 w-4 text-tx-muted hover:text-green-500" />
+                      <ClipboardDocumentIcon className="h-4 w-4 text-gray-500 hover:text-green-700" />
                     </button>
                   </div>
                 ))}
               </div>
             ) : customer.pix_info ? (
-              <div className="rounded-lg bg-surface-page p-2.5">
-                <p className="text-xs text-tx-muted">{customer.pix_info.pix_type?.toUpperCase()} {customer.pix_info.from_kyc ? '(do KYC)' : ''}</p>
-                <p className="text-sm font-mono text-tx-primary">{customer.pix_info.pix_key}</p>
+              <div className="rounded-lg bg-gray-50 p-2.5">
+                <p className="text-xs text-gray-500">{customer.pix_info.pix_type?.toUpperCase()} {customer.pix_info.from_kyc ? '(do KYC)' : ''}</p>
+                <p className="text-sm font-mono text-gray-900">{customer.pix_info.pix_key}</p>
               </div>
             ) : (
-              <p className="text-xs text-tx-muted">Nenhuma chave PIX cadastrada</p>
+              <p className="text-xs text-gray-500">Nenhuma chave PIX cadastrada</p>
             )}
           </div>
 
           {/* Bank */}
           <div>
-            <p className="text-xs font-medium text-tx-muted mb-2">Conta Bancária</p>
+            <p className="text-xs font-medium text-gray-500 mb-2">Conta Bancária</p>
             {customer.bank_info ? (
-              <div className="rounded-lg bg-surface-page p-3 space-y-1">
+              <div className="rounded-lg bg-gray-50 p-3 space-y-1">
                 <InfoRow label="Banco" value={`${customer.bank_info.bank_code || ''} - ${customer.bank_info.bank_name || ''}`} />
                 <InfoRow label="Agência" value={customer.bank_info.agency} />
                 <InfoRow label="Conta" value={customer.bank_info.account_number} />
@@ -684,7 +684,7 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
                 <InfoRow label="CPF/CNPJ" value={customer.bank_info.holder_document} />
               </div>
             ) : (
-              <p className="text-xs text-tx-muted">Nenhuma conta bancária cadastrada</p>
+              <p className="text-xs text-gray-500">Nenhuma conta bancária cadastrada</p>
             )}
           </div>
         </div>
@@ -692,8 +692,8 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
 
       {/* Financial Stats + Status Control */}
       <div className="space-y-6">
-        <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-tx-primary mb-4">Resumo Financeiro</h3>
+        <div className="rounded-lg bg-white p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Resumo Financeiro</h3>
           <div className="grid grid-cols-2 gap-3">
             <StatMini label="Total Cobranças" value={customer.financials.total_charges.toString()} />
             <StatMini label="Aprovadas" value={customer.financials.approved_charges.toString()} color="emerald" />
@@ -703,15 +703,15 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
         </div>
 
         {/* Status Control */}
-        <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-tx-primary mb-4 flex items-center gap-2">
-            <ShieldCheckIcon className="h-4 w-4 text-green-500" />
+        <div className="rounded-lg bg-white p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <ShieldCheckIcon className="h-4 w-4 text-green-700" />
             Controle de Conta
           </h3>
 
           {customer.block_reason && (
-            <div className="mb-4 rounded-lg bg-red-500/10 p-3">
-              <p className="text-xs font-medium text-red-500 mb-1">Motivo do Bloqueio</p>
+            <div className="mb-4 rounded-lg bg-red-50 p-3">
+              <p className="text-xs font-medium text-red-700 mb-1">Motivo do Bloqueio</p>
               <p className="text-xs text-red-400">{customer.block_reason}</p>
               {customer.blocked_at && <p className="text-xs text-red-400 mt-1">Em: {formatDate(customer.blocked_at)}</p>}
             </div>
@@ -719,13 +719,13 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
 
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-tx-muted mb-1">Motivo (opcional)</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Motivo (opcional)</label>
               <input
                 type="text"
                 value={blockReason}
                 onChange={(e) => setBlockReason(e.target.value)}
                 placeholder="Motivo para suspensão/bloqueio..."
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none"
               />
             </div>
             <div className="flex gap-2">
@@ -760,15 +760,15 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
 
         {/* Activity Timeline */}
         {customer.logs && customer.logs.length > 0 && (
-          <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-tx-primary mb-4">Histórico Rápido</h3>
+          <div className="rounded-lg bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">Histórico Rápido</h3>
             <div className="space-y-3">
               {customer.logs.map((log, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-green-500" />
                   <div>
-                    <p className="text-xs font-medium text-tx-primary">{log.event}</p>
-                    <p className="text-xs text-tx-muted">{log.date ? formatDate(log.date) : '-'}{log.ip ? ` · IP: ${log.ip}` : ''}</p>
+                    <p className="text-xs font-medium text-gray-900">{log.event}</p>
+                    <p className="text-xs text-gray-500">{log.date ? formatDate(log.date) : '-'}{log.ip ? ` · IP: ${log.ip}` : ''}</p>
                   </div>
                 </div>
               ))}
@@ -875,19 +875,19 @@ function ChargesTab({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             placeholder="Buscar por ID, nome, email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-9 pr-4 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-4 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none"
           />
         </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+          className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
         >
           <option value="all">Todos os status</option>
           <option value="approved">Aprovados</option>
@@ -895,54 +895,54 @@ function ChargesTab({
           <option value="refunded">Reembolsados</option>
           <option value="failed">Falhos</option>
         </select>
-        {pagination && <p className="text-xs text-tx-muted">{pagination.total} transações</p>}
+        {pagination && <p className="text-xs text-gray-500">{pagination.total} transações</p>}
       </div>
 
-      <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
           </div>
         ) : charges.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <BanknotesIcon className="h-10 w-10 text-tx-muted" />
-            <p className="mt-3 text-sm text-tx-muted">Nenhuma transação encontrada</p>
+            <BanknotesIcon className="h-10 w-10 text-gray-500" />
+            <p className="mt-3 text-sm text-gray-500">Nenhuma transação encontrada</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border-DEFAULT bg-surface-page">
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Produto</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Cliente</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-tx-muted">Valor</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-tx-muted">Taxa</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-tx-muted">Líquido</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Método</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Data</th>
-                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-tx-muted">Ações</th>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Produto</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Cliente</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Valor</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Taxa</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Líquido</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Método</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Data</th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold uppercase text-gray-500">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-DEFAULT">
                   {charges.map((charge) => (
-                    <tr key={charge.id} className="hover:bg-surface-hover transition-colors">
-                      <td className="px-4 py-3 text-sm text-tx-primary max-w-[180px] truncate">{charge.product_name || '-'}</td>
+                    <tr key={charge.id} className="hover:bg-gray-100 transition-colors">
+                      <td className="px-4 py-3 text-sm text-gray-900 max-w-[180px] truncate">{charge.product_name || '-'}</td>
                       <td className="px-4 py-3">
-                        <p className="text-sm text-tx-primary truncate max-w-[140px]">{charge.customer_name || '-'}</p>
-                        <p className="text-xs text-tx-muted truncate max-w-[140px]">{charge.customer_email || ''}</p>
+                        <p className="text-sm text-gray-900 truncate max-w-[140px]">{charge.customer_name || '-'}</p>
+                        <p className="text-xs text-gray-500 truncate max-w-[140px]">{charge.customer_email || ''}</p>
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-medium text-tx-primary">{formatCurrency(charge.amount)}</td>
-                      <td className="px-4 py-3 text-right text-sm text-tx-muted">{formatCurrency(charge.fee_amount)}</td>
-                      <td className="px-4 py-3 text-right text-sm font-medium text-emerald-500">{formatCurrency(charge.net_amount)}</td>
-                      <td className="px-4 py-3 text-sm text-tx-primary uppercase">{charge.payment_method || '-'}</td>
+                      <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">{formatCurrency(charge.amount)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-500">{formatCurrency(charge.fee_amount)}</td>
+                      <td className="px-4 py-3 text-right text-sm font-medium text-emerald-700">{formatCurrency(charge.net_amount)}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 uppercase">{charge.payment_method || '-'}</td>
                       <td className="px-4 py-3">{getStatusBadge(charge.status)}</td>
-                      <td className="px-4 py-3 text-xs text-tx-muted whitespace-nowrap">{formatDate(charge.created_at)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(charge.created_at)}</td>
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => openDetailModal(charge)}
-                          className="rounded-lg p-2 text-green-500 hover:bg-green-50 transition-colors"
+                          className="rounded-lg p-2 text-green-700 hover:bg-green-50 transition-colors"
                           title="Ver detalhes"
                         >
                           <EyeIcon className="h-4 w-4" />
@@ -961,12 +961,12 @@ function ChargesTab({
       {/* Modal de Detalhes da Transação */}
       {showDetailModal && selectedCharge && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-surface-card shadow-xl">
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border-DEFAULT bg-surface-card px-6 py-4">
-              <h3 className="text-lg font-semibold text-tx-primary">Detalhes da Transação</h3>
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg bg-white shadow-xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+              <h3 className="text-lg font-semibold text-gray-900">Detalhes da Transação</h3>
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover transition-colors"
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors"
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
@@ -975,7 +975,7 @@ function ChargesTab({
             <div className="p-6 space-y-6">
               {/* Informações Gerais */}
               <div>
-                <h4 className="text-sm font-semibold text-tx-primary mb-3">Informações Gerais</h4>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Informações Gerais</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <InfoRow label="ID da Transação" value={selectedCharge.id} mono />
                   <InfoRow label="Status" value={selectedCharge.status} badge />
@@ -989,26 +989,26 @@ function ChargesTab({
 
               {/* Valores */}
               <div>
-                <h4 className="text-sm font-semibold text-tx-primary mb-3">Valores</h4>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Valores</h4>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="rounded-lg bg-surface-page p-4">
-                    <p className="text-xs text-tx-muted mb-1">Valor Total</p>
-                    <p className="text-lg font-semibold text-tx-primary">{formatCurrency(selectedCharge.amount)}</p>
+                  <div className="rounded-lg bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Valor Total</p>
+                    <p className="text-lg font-semibold text-gray-900">{formatCurrency(selectedCharge.amount)}</p>
                   </div>
-                  <div className="rounded-lg bg-surface-page p-4">
-                    <p className="text-xs text-tx-muted mb-1">Taxa</p>
+                  <div className="rounded-lg bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Taxa</p>
                     <p className="text-lg font-semibold text-orange-500">{formatCurrency(selectedCharge.fee_amount)}</p>
                   </div>
-                  <div className="rounded-lg bg-surface-page p-4">
-                    <p className="text-xs text-tx-muted mb-1">Valor Líquido</p>
-                    <p className="text-lg font-semibold text-emerald-500">{formatCurrency(selectedCharge.net_amount)}</p>
+                  <div className="rounded-lg bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500 mb-1">Valor Líquido</p>
+                    <p className="text-lg font-semibold text-emerald-700">{formatCurrency(selectedCharge.net_amount)}</p>
                   </div>
                 </div>
               </div>
 
               {/* Informações do Cliente */}
               <div>
-                <h4 className="text-sm font-semibold text-tx-primary mb-3">Informações do Cliente</h4>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Informações do Cliente</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <InfoRow label="Nome" value={selectedCharge.customer_name} />
                   <InfoRow label="Email" value={selectedCharge.customer_email} />
@@ -1020,7 +1020,7 @@ function ChargesTab({
               {/* Informações do Adquirente */}
               {selectedCharge.acquirer_name && (
                 <div>
-                  <h4 className="text-sm font-semibold text-tx-primary mb-3">Adquirente</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Adquirente</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <InfoRow label="Nome do Adquirente" value={selectedCharge.acquirer_name} />
                     {selectedCharge.acquirer_transaction_id && (
@@ -1033,7 +1033,7 @@ function ChargesTab({
               {/* Detalhes do Cartão */}
               {selectedCharge.payment_method === 'credit_card' && (
                 <div>
-                  <h4 className="text-sm font-semibold text-tx-primary mb-3">Detalhes do Cartão</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Detalhes do Cartão</h4>
                   <div className="grid grid-cols-2 gap-4">
                     {selectedCharge.card_brand && <InfoRow label="Bandeira" value={selectedCharge.card_brand.toUpperCase()} />}
                     {selectedCharge.card_last_digits && <InfoRow label="Últimos Dígitos" value={`**** ${selectedCharge.card_last_digits}`} />}
@@ -1045,33 +1045,33 @@ function ChargesTab({
               {/* QR Code PIX */}
               {selectedCharge.payment_method === 'pix' && (selectedCharge.pix_qr_code_url || selectedCharge.pix_emv) && (
                 <div>
-                  <h4 className="text-sm font-semibold text-tx-primary mb-3">QR Code PIX</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">QR Code PIX</h4>
                   <div className="space-y-4">
                     {selectedCharge.pix_qr_code_url && (
                       <div className="flex justify-center">
                         <img 
                           src={selectedCharge.pix_qr_code_url} 
                           alt="QR Code PIX" 
-                          className="w-64 h-64 rounded-lg border border-border-DEFAULT"
+                          className="w-64 h-64 rounded-lg border border-gray-200"
                         />
                       </div>
                     )}
                     {selectedCharge.pix_emv && (
                       <div>
-                        <label className="text-xs font-medium text-tx-muted mb-2 block">Código PIX Copia e Cola</label>
+                        <label className="text-xs font-medium text-gray-500 mb-2 block">Código PIX Copia e Cola</label>
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
                             value={selectedCharge.pix_emv}
                             readOnly
-                            className="flex-1 rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm font-mono text-tx-primary"
+                            className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono text-gray-900"
                           />
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(selectedCharge.pix_emv!);
                               toast.success('Código PIX copiado!');
                             }}
-                            className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 transition-colors"
+                            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
                           >
                             Copiar
                           </button>
@@ -1085,24 +1085,24 @@ function ChargesTab({
               {/* Boleto */}
               {selectedCharge.payment_method === 'boleto' && (selectedCharge.boleto_barcode || selectedCharge.boleto_url) && (
                 <div>
-                  <h4 className="text-sm font-semibold text-tx-primary mb-3">Boleto</h4>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">Boleto</h4>
                   <div className="space-y-4">
                     {selectedCharge.boleto_barcode && (
                       <div>
-                        <label className="text-xs font-medium text-tx-muted mb-2 block">Código de Barras</label>
+                        <label className="text-xs font-medium text-gray-500 mb-2 block">Código de Barras</label>
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
                             value={selectedCharge.boleto_barcode}
                             readOnly
-                            className="flex-1 rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm font-mono text-tx-primary"
+                            className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono text-gray-900"
                           />
                           <button
                             onClick={() => {
                               navigator.clipboard.writeText(selectedCharge.boleto_barcode!);
                               toast.success('Código de barras copiado!');
                             }}
-                            className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 transition-colors"
+                            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
                           >
                             Copiar
                           </button>
@@ -1114,7 +1114,7 @@ function ChargesTab({
                         href={selectedCharge.boleto_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 transition-colors"
+                        className="inline-flex items-center gap-2 rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 transition-colors"
                       >
                         <DocumentTextIcon className="h-4 w-4" />
                         Visualizar Boleto
@@ -1132,11 +1132,11 @@ function ChargesTab({
 
                 <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-tx-muted">Novo status</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-500">Novo status</label>
                     <select
                       value={targetStatus}
                       onChange={(e) => setTargetStatus(e.target.value)}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-white px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     >
                       {manualStatusOptions.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -1145,7 +1145,7 @@ function ChargesTab({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-medium text-tx-muted">Código 2FA</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-500">Código 2FA</label>
                     <input
                       type="text"
                       inputMode="numeric"
@@ -1153,19 +1153,19 @@ function ChargesTab({
                       value={mfaCode}
                       onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="000000"
-                      className="w-full rounded-lg border border-border-DEFAULT bg-white px-3 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="mt-3">
-                  <label className="mb-1 block text-xs font-medium text-tx-muted">Motivo da alteração</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-500">Motivo da alteração</label>
                   <textarea
                     rows={3}
                     value={changeReason}
                     onChange={(e) => setChangeReason(e.target.value)}
                     placeholder="Descreva o motivo operacional/compliance para a troca de status..."
-                    className="w-full rounded-lg border border-border-DEFAULT bg-white px-3 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none"
                   />
                 </div>
 
@@ -1185,10 +1185,10 @@ function ChargesTab({
               </div>
             </div>
 
-            <div className="sticky bottom-0 border-t border-border-DEFAULT bg-surface-card px-6 py-4">
+            <div className="sticky bottom-0 border-t border-gray-200 bg-white px-6 py-4">
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="w-full rounded-lg bg-surface-hover px-4 py-2 text-sm font-medium text-tx-primary hover:bg-surface-page transition-colors"
+                className="w-full rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 hover:bg-gray-50 transition-colors"
               >
                 Fechar
               </button>
@@ -1288,65 +1288,65 @@ function WithdrawalsTab({
   return (
     <>
     <div className="space-y-4">
-      {pagination && <p className="text-xs text-tx-muted">{pagination.total} saques</p>}
+      {pagination && <p className="text-xs text-gray-500">{pagination.total} saques</p>}
 
-      <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
           </div>
         ) : withdrawals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <BoltIcon className="h-10 w-10 text-tx-muted" />
-            <p className="mt-3 text-sm text-tx-muted">Nenhum saque encontrado</p>
+            <BoltIcon className="h-10 w-10 text-gray-500" />
+            <p className="mt-3 text-sm text-gray-500">Nenhum saque encontrado</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border-DEFAULT bg-surface-page">
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-tx-muted">Valor</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-tx-muted">Taxa</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-tx-muted">Líquido</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Método</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Destino</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Data</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Processado</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-tx-muted">Ações</th>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Valor</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Taxa</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Líquido</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Método</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Destino</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Data</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Processado</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-DEFAULT">
                   {withdrawals.map((w) => (
-                    <tr key={w.id} className="hover:bg-surface-hover transition-colors">
-                      <td className="px-4 py-3 text-right text-sm font-medium text-tx-primary">{formatCurrency(w.amount)}</td>
-                      <td className="px-4 py-3 text-right text-sm text-tx-muted">{w.fee ? formatCurrency(w.fee) : '-'}</td>
-                      <td className="px-4 py-3 text-right text-sm font-medium text-emerald-500">{w.net_amount ? formatCurrency(w.net_amount) : '-'}</td>
+                    <tr key={w.id} className="hover:bg-gray-100 transition-colors">
+                      <td className="px-4 py-3 text-right text-sm font-medium text-gray-900">{formatCurrency(w.amount)}</td>
+                      <td className="px-4 py-3 text-right text-sm text-gray-500">{w.fee ? formatCurrency(w.fee) : '-'}</td>
+                      <td className="px-4 py-3 text-right text-sm font-medium text-emerald-700">{w.net_amount ? formatCurrency(w.net_amount) : '-'}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
-                          {w.is_instant && <BoltIcon className="h-3.5 w-3.5 text-amber-500" />}
-                          <span className="text-sm text-tx-primary uppercase">{w.method || 'pix'}</span>
+                          {w.is_instant && <BoltIcon className="h-3.5 w-3.5 text-amber-700" />}
+                          <span className="text-sm text-gray-900 uppercase">{w.method || 'pix'}</span>
                         </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="space-y-1.5">
                           {getStatusBadge(w.status)}
                           {getWithdrawalReason(w) && (
-                            <p className="max-w-[240px] text-xs leading-5 text-tx-muted whitespace-pre-line break-words">
+                            <p className="max-w-[240px] text-xs leading-5 text-gray-500 whitespace-pre-line break-words">
                               Motivo: {getWithdrawalReason(w)}
                             </p>
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs text-tx-muted max-w-[200px]">
+                      <td className="px-4 py-3 text-xs text-gray-500 max-w-[200px]">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="truncate text-tx-primary">{getDestinationSummary(w)}</p>
+                          <p className="truncate text-gray-900">{getDestinationSummary(w)}</p>
                           {getDestinationSummary(w) !== '-' && (
                             <button
                               type="button"
                               onClick={() => copyValue(getDestinationSummary(w))}
-                              className="rounded-md p-1 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
+                              className="rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
                               title="Copiar destino"
                             >
                               <ClipboardDocumentIcon className="h-3.5 w-3.5" />
@@ -1354,14 +1354,14 @@ function WithdrawalsTab({
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-xs text-tx-muted whitespace-nowrap">{formatDate(w.created_at)}</td>
-                      <td className="px-4 py-3 text-xs text-tx-muted whitespace-nowrap">{w.processed_at ? formatDate(w.processed_at) : '-'}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(w.created_at)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{w.processed_at ? formatDate(w.processed_at) : '-'}</td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
                             onClick={() => setDetailWithdrawal(w)}
-                            className="rounded-lg border border-border-DEFAULT p-2 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
+                            className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
                             title="Ver detalhes do saque"
                           >
                             <EyeIcon className="h-4 w-4" />
@@ -1394,15 +1394,15 @@ function WithdrawalsTab({
 
     {detailWithdrawal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeDetailModal}>
-        <div className="w-full max-w-2xl rounded-2xl bg-surface-card p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
+        <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
           <div className="mb-6 flex items-start justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-tx-primary">Detalhes do saque</h3>
-              <p className="mt-1 text-sm text-tx-muted">Visualize todas as informações disponíveis deste saque.</p>
+              <h3 className="text-lg font-bold text-gray-900">Detalhes do saque</h3>
+              <p className="mt-1 text-sm text-gray-500">Visualize todas as informações disponíveis deste saque.</p>
             </div>
             <button
               onClick={closeDetailModal}
-              className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover"
+              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
@@ -1410,39 +1410,39 @@ function WithdrawalsTab({
 
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs uppercase tracking-wide text-tx-muted">Resumo financeiro</p>
-                <div className="mt-3 space-y-2 text-sm text-tx-primary">
-                  <p><span className="text-tx-muted">Valor:</span> {formatCurrency(detailWithdrawal.amount)}</p>
-                  <p><span className="text-tx-muted">Taxa:</span> {detailWithdrawal.fee ? formatCurrency(detailWithdrawal.fee) : '-'}</p>
-                  <p><span className="text-tx-muted">Líquido:</span> {detailWithdrawal.net_amount ? formatCurrency(detailWithdrawal.net_amount) : '-'}</p>
-                  <p><span className="text-tx-muted">Método:</span> {(detailWithdrawal.method || 'pix').toUpperCase()}</p>
-                  <p><span className="text-tx-muted">Status:</span> {getStatusBadge(detailWithdrawal.status)}</p>
-                  <p><span className="text-tx-muted">Instantâneo:</span> {detailWithdrawal.is_instant ? 'Sim' : 'Não'}</p>
+              <div className="rounded-md bg-gray-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-gray-500">Resumo financeiro</p>
+                <div className="mt-3 space-y-2 text-sm text-gray-900">
+                  <p><span className="text-gray-500">Valor:</span> {formatCurrency(detailWithdrawal.amount)}</p>
+                  <p><span className="text-gray-500">Taxa:</span> {detailWithdrawal.fee ? formatCurrency(detailWithdrawal.fee) : '-'}</p>
+                  <p><span className="text-gray-500">Líquido:</span> {detailWithdrawal.net_amount ? formatCurrency(detailWithdrawal.net_amount) : '-'}</p>
+                  <p><span className="text-gray-500">Método:</span> {(detailWithdrawal.method || 'pix').toUpperCase()}</p>
+                  <p><span className="text-gray-500">Status:</span> {getStatusBadge(detailWithdrawal.status)}</p>
+                  <p><span className="text-gray-500">Instantâneo:</span> {detailWithdrawal.is_instant ? 'Sim' : 'Não'}</p>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs uppercase tracking-wide text-tx-muted">Datas</p>
-                <div className="mt-3 space-y-2 text-sm text-tx-primary">
-                  <p><span className="text-tx-muted">Solicitado em:</span> {formatDate(detailWithdrawal.created_at)}</p>
-                  <p><span className="text-tx-muted">Processado em:</span> {detailWithdrawal.processed_at ? formatDate(detailWithdrawal.processed_at) : '-'}</p>
+              <div className="rounded-md bg-gray-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-gray-500">Datas</p>
+                <div className="mt-3 space-y-2 text-sm text-gray-900">
+                  <p><span className="text-gray-500">Solicitado em:</span> {formatDate(detailWithdrawal.created_at)}</p>
+                  <p><span className="text-gray-500">Processado em:</span> {detailWithdrawal.processed_at ? formatDate(detailWithdrawal.processed_at) : '-'}</p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl bg-surface-page p-4">
+            <div className="rounded-md bg-gray-50 p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="text-xs uppercase tracking-wide text-tx-muted">Identificadores</p>
+                <p className="text-xs uppercase tracking-wide text-gray-500">Identificadores</p>
               </div>
-              <div className="space-y-3 text-sm text-tx-primary">
+              <div className="space-y-3 text-sm text-gray-900">
                 <div>
                   <div className="mb-1 flex items-center justify-between gap-2">
-                    <span className="text-tx-muted">ID do saque</span>
+                    <span className="text-gray-500">ID do saque</span>
                     <button
                       type="button"
                       onClick={() => copyValue(detailWithdrawal.id)}
-                      className="rounded-md p-1 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
+                      className="rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
                       title="Copiar ID do saque"
                     >
                       <ClipboardDocumentIcon className="h-4 w-4" />
@@ -1452,17 +1452,17 @@ function WithdrawalsTab({
                 </div>
 
                 {detailWithdrawal.acquirer && (
-                  <p><span className="text-tx-muted">Adquirente:</span> <span className="uppercase">{detailWithdrawal.acquirer}</span></p>
+                  <p><span className="text-gray-500">Adquirente:</span> <span className="uppercase">{detailWithdrawal.acquirer}</span></p>
                 )}
 
                 {detailWithdrawal.acquirer_transfer_id && (
                   <div>
                     <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="text-tx-muted">ID da transferência</span>
+                      <span className="text-gray-500">ID da transferência</span>
                       <button
                         type="button"
                         onClick={() => copyValue(detailWithdrawal.acquirer_transfer_id)}
-                        className="rounded-md p-1 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
+                        className="rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
                         title="Copiar ID da transferência"
                       >
                         <ClipboardDocumentIcon className="h-4 w-4" />
@@ -1474,14 +1474,14 @@ function WithdrawalsTab({
               </div>
             </div>
 
-            <div className="rounded-xl bg-surface-page p-4">
+            <div className="rounded-md bg-gray-50 p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="text-xs uppercase tracking-wide text-tx-muted">Destino</p>
+                <p className="text-xs uppercase tracking-wide text-gray-500">Destino</p>
                 {getDestinationSummary(detailWithdrawal) !== '-' && (
                   <button
                     type="button"
                     onClick={() => copyValue(getDestinationSummary(detailWithdrawal))}
-                    className="rounded-md p-1 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
+                    className="rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
                     title="Copiar destino"
                   >
                     <ClipboardDocumentIcon className="h-4 w-4" />
@@ -1492,28 +1492,28 @@ function WithdrawalsTab({
               {getDestinationEntries(detailWithdrawal).length > 0 ? (
                 <div className="grid gap-3 md:grid-cols-2">
                   {getDestinationEntries(detailWithdrawal).map(([key, value]) => (
-                    <div key={key} className="rounded-lg border border-border-DEFAULT bg-surface-card p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-tx-muted">{destinationFieldLabels[key] || key.replace(/_/g, ' ')}</p>
-                      <p className="mt-1 break-all text-sm text-tx-primary">{formatDestinationValue(key, value)}</p>
+                    <div key={key} className="rounded-lg border border-gray-200 bg-white p-3">
+                      <p className="text-[11px] uppercase tracking-wide text-gray-500">{destinationFieldLabels[key] || key.replace(/_/g, ' ')}</p>
+                      <p className="mt-1 break-all text-sm text-gray-900">{formatDestinationValue(key, value)}</p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-tx-muted">Nenhuma informação de destino disponível.</p>
+                <p className="text-sm text-gray-500">Nenhuma informação de destino disponível.</p>
               )}
             </div>
 
             {getWithdrawalReason(detailWithdrawal) && (
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs uppercase tracking-wide text-tx-muted">Motivo / observações</p>
-                <p className="mt-2 whitespace-pre-line break-words text-sm text-tx-primary">{getWithdrawalReason(detailWithdrawal)}</p>
+              <div className="rounded-md bg-gray-50 p-4">
+                <p className="text-xs uppercase tracking-wide text-gray-500">Motivo / observações</p>
+                <p className="mt-2 whitespace-pre-line break-words text-sm text-gray-900">{getWithdrawalReason(detailWithdrawal)}</p>
               </div>
             )}
 
             <div className="flex justify-end pt-2">
               <button
                 onClick={closeDetailModal}
-                className="rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
+                className="rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-900 hover:bg-border-DEFAULT transition-colors"
               >
                 Fechar
               </button>
@@ -1525,11 +1525,11 @@ function WithdrawalsTab({
 
     {selectedWithdrawal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={closeCancelModal}>
-        <div className="w-full max-w-lg rounded-2xl bg-surface-card p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
+        <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-bold text-tx-primary">{selectedWithdrawal.status === 'processing' ? 'Cancelar saque em processamento' : 'Cancelar saque'}</h3>
-              <p className="mt-1 text-sm text-tx-muted">Informe o motivo que ficará visível para o vendedor na área de saques.</p>
+              <h3 className="text-lg font-bold text-gray-900">{selectedWithdrawal.status === 'processing' ? 'Cancelar saque em processamento' : 'Cancelar saque'}</h3>
+              <p className="mt-1 text-sm text-gray-500">Informe o motivo que ficará visível para o vendedor na área de saques.</p>
               {selectedWithdrawal.status === 'processing' && (
                 <div className="mt-2 space-y-1 text-xs text-amber-600">
                   <p>
@@ -1548,37 +1548,37 @@ function WithdrawalsTab({
             </div>
             <button
               onClick={closeCancelModal}
-              className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover"
+              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
           </div>
 
           <div className="space-y-4">
-            <div className="rounded-xl bg-surface-page p-4">
-              <p className="text-xs text-tx-muted">Saque selecionado</p>
-              <p className="mt-1 text-base font-semibold text-tx-primary">{formatCurrency(selectedWithdrawal.amount)}</p>
-              <p className="mt-1 text-xs text-tx-muted">Solicitado em {formatDate(selectedWithdrawal.created_at)}</p>
-              <div className="mt-4 space-y-3 text-xs text-tx-muted">
+            <div className="rounded-md bg-gray-50 p-4">
+              <p className="text-xs text-gray-500">Saque selecionado</p>
+              <p className="mt-1 text-base font-semibold text-gray-900">{formatCurrency(selectedWithdrawal.amount)}</p>
+              <p className="mt-1 text-xs text-gray-500">Solicitado em {formatDate(selectedWithdrawal.created_at)}</p>
+              <div className="mt-4 space-y-3 text-xs text-gray-500">
                 <div>
                   <div className="mb-1 flex items-center justify-between gap-2">
                     <span className="uppercase tracking-wide">ID do saque</span>
                     <button
                       type="button"
                       onClick={() => copyValue(selectedWithdrawal.id)}
-                      className="rounded-md p-1 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
+                      className="rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
                       title="Copiar ID do saque"
                     >
                       <ClipboardDocumentIcon className="h-4 w-4" />
                     </button>
                   </div>
-                  <p className="break-all font-mono text-tx-primary">{selectedWithdrawal.id}</p>
+                  <p className="break-all font-mono text-gray-900">{selectedWithdrawal.id}</p>
                 </div>
 
                 {selectedWithdrawal.acquirer && (
                   <div>
                     <p className="uppercase tracking-wide">Adquirente</p>
-                    <p className="mt-1 text-tx-primary uppercase">{selectedWithdrawal.acquirer}</p>
+                    <p className="mt-1 text-gray-900 uppercase">{selectedWithdrawal.acquirer}</p>
                   </div>
                 )}
 
@@ -1589,13 +1589,13 @@ function WithdrawalsTab({
                       <button
                         type="button"
                         onClick={() => copyValue(selectedWithdrawal.acquirer_transfer_id)}
-                        className="rounded-md p-1 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
+                        className="rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
                         title="Copiar ID da transferência"
                       >
                         <ClipboardDocumentIcon className="h-4 w-4" />
                       </button>
                     </div>
-                    <p className="break-all font-mono text-tx-primary">{selectedWithdrawal.acquirer_transfer_id}</p>
+                    <p className="break-all font-mono text-gray-900">{selectedWithdrawal.acquirer_transfer_id}</p>
                   </div>
                 )}
 
@@ -1606,13 +1606,13 @@ function WithdrawalsTab({
                       <button
                         type="button"
                         onClick={() => copyValue(selectedWithdrawal.destination?.pix_key || selectedWithdrawal.destination?.bank_name)}
-                        className="rounded-md p-1 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
+                        className="rounded-md p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
                         title="Copiar destino"
                       >
                         <ClipboardDocumentIcon className="h-4 w-4" />
                       </button>
                     </div>
-                    <p className="break-all text-tx-primary">{selectedWithdrawal.destination?.pix_key || selectedWithdrawal.destination?.bank_name}</p>
+                    <p className="break-all text-gray-900">{selectedWithdrawal.destination?.pix_key || selectedWithdrawal.destination?.bank_name}</p>
                     {selectedWithdrawal.destination?.pix_type && <p className="mt-1">Tipo PIX: {String(selectedWithdrawal.destination.pix_type).toUpperCase()}</p>}
                     {selectedWithdrawal.destination?.holder_name && <p className="mt-1">Titular: {selectedWithdrawal.destination.holder_name}</p>}
                     {selectedWithdrawal.destination?.holder_document && <p className="mt-1">Documento: {selectedWithdrawal.destination.holder_document}</p>}
@@ -1622,21 +1622,21 @@ function WithdrawalsTab({
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-tx-secondary">Motivo do cancelamento</label>
+              <label className="mb-2 block text-sm font-medium text-gray-600">Motivo do cancelamento</label>
               <textarea
                 value={cancelReason}
                 onChange={(event) => setCancelReason(event.target.value)}
                 rows={4}
                 placeholder="Explique ao vendedor por que o saque foi cancelado"
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none"
               />
-              <p className="mt-2 text-xs text-tx-muted">Mínimo de 5 caracteres.</p>
+              <p className="mt-2 text-xs text-gray-500">Mínimo de 5 caracteres.</p>
             </div>
 
             <div className="flex gap-3 pt-2">
               <button
                 onClick={closeCancelModal}
-                className="flex-1 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
+                className="flex-1 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-900 hover:bg-border-DEFAULT transition-colors"
               >
                 Fechar
               </button>
@@ -1685,14 +1685,14 @@ function LogsTab({
 
   const getRiskBadge = (risk?: string) => {
     if (risk === 'high') {
-      return <span className="inline-flex rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-500">Alto</span>;
+      return <span className="inline-flex rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">Alto</span>;
     }
 
     if (risk === 'medium') {
-      return <span className="inline-flex rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-500">Médio</span>;
+      return <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">Médio</span>;
     }
 
-    return <span className="inline-flex rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">Baixo</span>;
+    return <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Baixo</span>;
   };
 
   const filteredLogs = useMemo(() => {
@@ -1809,15 +1809,15 @@ function LogsTab({
     <div className="space-y-6">
       {/* Activity timeline */}
       {activityLogs.length > 0 && (
-        <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-tx-primary mb-4">Timeline de Eventos</h3>
+        <div className="rounded-lg bg-white p-5 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Timeline de Eventos</h3>
           <div className="space-y-3">
             {activityLogs.map((log, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-green-500" />
                 <div>
-                  <p className="text-xs font-medium text-tx-primary">{log.event}</p>
-                  <p className="text-xs text-tx-muted">{log.date ? formatDate(log.date) : '-'}{log.ip ? ` · IP: ${log.ip}` : ''}</p>
+                  <p className="text-xs font-medium text-gray-900">{log.event}</p>
+                  <p className="text-xs text-gray-500">{log.date ? formatDate(log.date) : '-'}{log.ip ? ` · IP: ${log.ip}` : ''}</p>
                 </div>
               </div>
             ))}
@@ -1826,26 +1826,26 @@ function LogsTab({
       )}
 
       {/* Audit Logs Table */}
-      <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-border-DEFAULT">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="px-5 py-4 border-b border-gray-200">
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h3 className="text-sm font-semibold text-tx-primary">Audit Logs</h3>
-                {pagination && <p className="text-xs text-tx-muted mt-0.5">{filteredLogs.length} visíveis nesta página ({pagination.total} no total)</p>}
+                <h3 className="text-sm font-semibold text-gray-900">Audit Logs</h3>
+                {pagination && <p className="text-xs text-gray-500 mt-0.5">{filteredLogs.length} visíveis nesta página ({pagination.total} no total)</p>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={exportCsv}
                   disabled={filteredLogs.length === 0}
-                  className="rounded-lg bg-surface-hover px-3 py-1.5 text-xs font-medium text-tx-primary hover:bg-border-DEFAULT disabled:opacity-50"
+                  className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-900 hover:bg-border-DEFAULT disabled:opacity-50"
                 >
                   Exportar CSV
                 </button>
                 <button
                   onClick={exportJson}
                   disabled={filteredLogs.length === 0}
-                  className="rounded-lg bg-surface-hover px-3 py-1.5 text-xs font-medium text-tx-primary hover:bg-border-DEFAULT disabled:opacity-50"
+                  className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-900 hover:bg-border-DEFAULT disabled:opacity-50"
                 >
                   Exportar JSON
                 </button>
@@ -1857,18 +1857,18 @@ function LogsTab({
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 placeholder="Buscar ação, IP, correlation..."
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-green-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-900 focus:border-gray-400 focus:outline-none"
               />
               <input
                 value={endpointFilter}
                 onChange={(e) => setEndpointFilter(e.target.value)}
                 placeholder="Filtrar endpoint"
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-green-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-900 focus:border-gray-400 focus:outline-none"
               />
               <select
                 value={riskFilter}
                 onChange={(e) => setRiskFilter(e.target.value as 'all' | 'low' | 'medium' | 'high')}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-green-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-900 focus:border-gray-400 focus:outline-none"
               >
                 <option value="all">Risco: Todos</option>
                 <option value="low">Risco: Baixo</option>
@@ -1878,7 +1878,7 @@ function LogsTab({
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as 'all' | '2xx' | '4xx' | '5xx')}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-green-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-900 focus:border-gray-400 focus:outline-none"
               >
                 <option value="all">Status HTTP: Todos</option>
                 <option value="2xx">Status HTTP: 2xx</option>
@@ -1887,7 +1887,7 @@ function LogsTab({
               </select>
               <button
                 onClick={clearFilters}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs font-medium text-tx-primary hover:bg-surface-hover"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-medium text-gray-900 hover:bg-gray-100"
               >
                 Limpar filtros
               </button>
@@ -1897,59 +1897,59 @@ function LogsTab({
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
           </div>
         ) : logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <DocumentTextIcon className="h-10 w-10 text-tx-muted" />
-            <p className="mt-3 text-sm text-tx-muted">Nenhum log encontrado</p>
+            <DocumentTextIcon className="h-10 w-10 text-gray-500" />
+            <p className="mt-3 text-sm text-gray-500">Nenhum log encontrado</p>
           </div>
         ) : filteredLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <DocumentTextIcon className="h-10 w-10 text-tx-muted" />
-            <p className="mt-3 text-sm text-tx-muted">Nenhum log encontrado para os filtros aplicados</p>
+            <DocumentTextIcon className="h-10 w-10 text-gray-500" />
+            <p className="mt-3 text-sm text-gray-500">Nenhum log encontrado para os filtros aplicados</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border-DEFAULT bg-surface-page">
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Ação</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Origem</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Endpoint</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">IP</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Entrada</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Saída</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Duração</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Risco</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-tx-muted">Detalhes</th>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Ação</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Origem</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Endpoint</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">IP</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Entrada</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Saída</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Duração</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Risco</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Detalhes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-DEFAULT">
                   {filteredLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-surface-hover transition-colors">
+                    <tr key={log.id} className="hover:bg-gray-100 transition-colors">
                       <td className="px-4 py-3">
-                        <span className="inline-flex rounded bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-500">
+                        <span className="inline-flex rounded bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
                           {log.action}
                         </span>
-                        <p className="mt-1 text-[11px] text-tx-muted">
+                        <p className="mt-1 text-[11px] text-gray-500">
                           {log.entity_type}{log.entity_id ? ` #${log.entity_id.slice(0, 8)}` : ''}
                         </p>
                       </td>
-                      <td className="px-4 py-3 text-xs text-tx-muted">{log.source || 'audit_log'}</td>
-                      <td className="px-4 py-3 text-xs text-tx-muted max-w-[220px] truncate" title={log.endpoint || '-'}>
+                      <td className="px-4 py-3 text-xs text-gray-500">{log.source || 'audit_log'}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 max-w-[220px] truncate" title={log.endpoint || '-'}>
                         {log.method ? `${log.method} ` : ''}{log.endpoint || '-'}
                       </td>
-                      <td className="px-4 py-3 text-xs font-mono text-tx-muted">{log.ip_address || '-'}</td>
-                      <td className="px-4 py-3 text-xs text-tx-muted whitespace-nowrap">{formatDate(log.entered_at || log.created_at)}</td>
-                      <td className="px-4 py-3 text-xs text-tx-muted whitespace-nowrap">{formatDate(log.exited_at || log.created_at)}</td>
-                      <td className="px-4 py-3 text-xs text-tx-muted whitespace-nowrap">{formatDuration(log.duration_ms)}</td>
+                      <td className="px-4 py-3 text-xs font-mono text-gray-500">{log.ip_address || '-'}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(log.entered_at || log.created_at)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDate(log.exited_at || log.created_at)}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{formatDuration(log.duration_ms)}</td>
                       <td className="px-4 py-3">{getRiskBadge(log.risk_level)}</td>
                       <td className="px-4 py-3">
                         <button
                           onClick={() => setSelectedLog(log)}
-                          className="rounded-lg bg-surface-hover px-2.5 py-1 text-xs font-medium text-tx-primary hover:bg-border-DEFAULT"
+                          className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-900 hover:bg-border-DEFAULT"
                         >
                           Ver completo
                         </button>
@@ -1966,10 +1966,10 @@ function LogsTab({
 
       {selectedLog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedLog(null)}>
-          <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl bg-surface-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-tx-primary">Detalhes completos do log</h3>
-              <button onClick={() => setSelectedLog(null)} className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover">
+              <h3 className="text-lg font-semibold text-gray-900">Detalhes completos do log</h3>
+              <button onClick={() => setSelectedLog(null)} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
@@ -1990,29 +1990,29 @@ function LogsTab({
             </div>
 
             <div className="mt-4 space-y-3">
-              <div className="rounded-lg bg-surface-page p-3">
-                <p className="mb-1 text-xs font-semibold text-tx-muted">Security Flags</p>
-                <pre className="overflow-x-auto text-xs text-tx-primary">{JSON.stringify(selectedLog.security_flags || [], null, 2)}</pre>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-semibold text-gray-500">Security Flags</p>
+                <pre className="overflow-x-auto text-xs text-gray-900">{JSON.stringify(selectedLog.security_flags || [], null, 2)}</pre>
               </div>
 
-              <div className="rounded-lg bg-surface-page p-3">
-                <p className="mb-1 text-xs font-semibold text-tx-muted">Metadata</p>
-                <pre className="overflow-x-auto text-xs text-tx-primary">{JSON.stringify(selectedLog.metadata || {}, null, 2)}</pre>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-semibold text-gray-500">Metadata</p>
+                <pre className="overflow-x-auto text-xs text-gray-900">{JSON.stringify(selectedLog.metadata || {}, null, 2)}</pre>
               </div>
 
-              <div className="rounded-lg bg-surface-page p-3">
-                <p className="mb-1 text-xs font-semibold text-tx-muted">New Values</p>
-                <pre className="overflow-x-auto text-xs text-tx-primary">{JSON.stringify(selectedLog.new_values || {}, null, 2)}</pre>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-semibold text-gray-500">New Values</p>
+                <pre className="overflow-x-auto text-xs text-gray-900">{JSON.stringify(selectedLog.new_values || {}, null, 2)}</pre>
               </div>
 
-              <div className="rounded-lg bg-surface-page p-3">
-                <p className="mb-1 text-xs font-semibold text-tx-muted">Old Values</p>
-                <pre className="overflow-x-auto text-xs text-tx-primary">{JSON.stringify(selectedLog.old_values || {}, null, 2)}</pre>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-semibold text-gray-500">Old Values</p>
+                <pre className="overflow-x-auto text-xs text-gray-900">{JSON.stringify(selectedLog.old_values || {}, null, 2)}</pre>
               </div>
 
-              <div className="rounded-lg bg-surface-page p-3">
-                <p className="mb-1 text-xs font-semibold text-tx-muted">Request Body</p>
-                <pre className="overflow-x-auto text-xs text-tx-primary">{JSON.stringify(selectedLog.request_body || null, null, 2)}</pre>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <p className="mb-1 text-xs font-semibold text-gray-500">Request Body</p>
+                <pre className="overflow-x-auto text-xs text-gray-900">{JSON.stringify(selectedLog.request_body || null, null, 2)}</pre>
               </div>
             </div>
           </div>
@@ -2028,28 +2028,28 @@ function InfoRow({ label, value, mono, badge }: { label: string; value?: string 
   if (!value) return null;
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs text-tx-muted">{label}</span>
+      <span className="text-xs text-gray-500">{label}</span>
       {badge ? (
         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-          value === 'approved' ? 'bg-emerald-500/10 text-emerald-500' :
-          value === 'submitted' || value === 'under_review' ? 'bg-blue-500/10 text-blue-500' :
-          value === 'pending' ? 'bg-amber-500/10 text-amber-500' :
-          'bg-red-500/10 text-red-500'
+          value === 'approved' ? 'bg-emerald-50 text-emerald-700' :
+          value === 'submitted' || value === 'under_review' ? 'bg-blue-50 text-blue-700' :
+          value === 'pending' ? 'bg-amber-50 text-amber-700' :
+          'bg-red-50 text-red-700'
         }`}>
           {value === 'approved' ? 'Aprovado' : value === 'submitted' ? 'Enviado' : value === 'under_review' ? 'Em Análise' : value === 'pending' ? 'Pendente' : 'Rejeitado'}
         </span>
       ) : (
-        <span className={`text-xs font-medium text-tx-primary ${mono ? 'font-mono' : ''}`}>{value}</span>
+        <span className={`text-xs font-medium text-gray-900 ${mono ? 'font-mono' : ''}`}>{value}</span>
       )}
     </div>
   );
 }
 
 function StatMini({ label, value, color }: { label: string; value: string; color?: string }) {
-  const colorClass = color === 'emerald' ? 'text-emerald-500' : color === 'amber' ? 'text-amber-500' : color === 'purple' ? 'text-green-500' : 'text-tx-primary';
+  const colorClass = color === 'emerald' ? 'text-emerald-700' : color === 'amber' ? 'text-amber-700' : color === 'purple' ? 'text-green-700' : 'text-gray-900';
   return (
-    <div className="rounded-lg bg-surface-page p-3">
-      <p className="text-xs text-tx-muted mb-0.5">{label}</p>
+    <div className="rounded-lg bg-gray-50 p-3">
+      <p className="text-xs text-gray-500 mb-0.5">{label}</p>
       <p className={`text-lg font-bold ${colorClass}`}>{value}</p>
     </div>
   );
@@ -2058,15 +2058,15 @@ function StatMini({ label, value, color }: { label: string; value: string; color
 function Pagination({ pagination, page, setPage }: { pagination?: { current_page: number; last_page: number; total: number }; page: number; setPage: (p: number) => void }) {
   if (!pagination || pagination.last_page <= 1) return null;
   return (
-    <div className="flex items-center justify-between border-t border-border-DEFAULT px-4 py-3">
-      <p className="text-xs text-tx-muted">
+    <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
+      <p className="text-xs text-gray-500">
         Página {pagination.current_page} de {pagination.last_page} ({pagination.total})
       </p>
       <div className="flex items-center gap-1">
-        <button onClick={() => setPage(page - 1)} disabled={page === 1} className="rounded-lg p-1.5 text-tx-muted hover:bg-surface-hover disabled:opacity-40">
+        <button onClick={() => setPage(page - 1)} disabled={page === 1} className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-40">
           <ChevronLeftIcon className="h-4 w-4" />
         </button>
-        <button onClick={() => setPage(page + 1)} disabled={page >= pagination.last_page} className="rounded-lg p-1.5 text-tx-muted hover:bg-surface-hover disabled:opacity-40">
+        <button onClick={() => setPage(page + 1)} disabled={page >= pagination.last_page} className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-40">
           <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
@@ -2157,23 +2157,23 @@ function FeesTab({ customerId }: { customerId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl bg-surface-card p-6 shadow-sm">
+      <div className="rounded-lg border border-gray-200 bg-white p-5">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-sm font-semibold text-tx-primary">Taxas Personalizadas</h3>
-            <p className="text-xs text-tx-muted mt-0.5">Deixe em branco para usar as taxas padrão do sistema</p>
+            <h3 className="text-sm font-semibold text-gray-900">Taxas Personalizadas</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Deixe em branco para usar as taxas padrão do sistema</p>
           </div>
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
           >
             {saveMutation.isPending ? 'Salvando...' : 'Salvar Taxas'}
           </button>
@@ -2181,7 +2181,7 @@ function FeesTab({ customerId }: { customerId: string }) {
 
         {/* PIX */}
         <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-tx-muted mb-3">PIX</h4>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">PIX</h4>
           <div className="grid grid-cols-2 gap-4">
             <FeeInput label="Taxa (%)" value={fees.pix_fee_percent} onChange={(v) => updateField('pix_fee_percent', v)} suffix="%" />
             <FeeInput label="Taxa Fixa (R$)" value={fees.pix_fee_fixed} onChange={(v) => updateField('pix_fee_fixed', v)} prefix="R$" />
@@ -2190,7 +2190,7 @@ function FeesTab({ customerId }: { customerId: string }) {
 
         {/* Cartão de Crédito */}
         <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-tx-muted mb-3">Cartão de Crédito</h4>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Cartão de Crédito</h4>
           <div className="grid grid-cols-2 gap-4">
             <FeeInput label="Taxa (%)" value={fees.credit_card_fee_percent} onChange={(v) => updateField('credit_card_fee_percent', v)} suffix="%" />
             <FeeInput label="Taxa Fixa (R$)" value={fees.credit_card_fee_fixed} onChange={(v) => updateField('credit_card_fee_fixed', v)} prefix="R$" />
@@ -2199,7 +2199,7 @@ function FeesTab({ customerId }: { customerId: string }) {
 
         {/* Boleto */}
         <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-tx-muted mb-3">Boleto</h4>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Boleto</h4>
           <div className="grid grid-cols-2 gap-4">
             <FeeInput label="Taxa (%)" value={fees.boleto_fee_percent} onChange={(v) => updateField('boleto_fee_percent', v)} suffix="%" />
             <FeeInput label="Taxa Fixa (R$)" value={fees.boleto_fee_fixed} onChange={(v) => updateField('boleto_fee_fixed', v)} prefix="R$" />
@@ -2208,7 +2208,7 @@ function FeesTab({ customerId }: { customerId: string }) {
 
         {/* Parcelamento */}
         <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-tx-muted mb-3">Parcelamento</h4>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Parcelamento</h4>
           <div className="grid grid-cols-2 gap-4">
             <FeeInput label="Taxa Parcela (%)" value={fees.installment_fee_percent} onChange={(v) => updateField('installment_fee_percent', v)} suffix="%" />
           </div>
@@ -2216,7 +2216,7 @@ function FeesTab({ customerId }: { customerId: string }) {
 
         {/* Saques */}
         <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-tx-muted mb-3">Saques</h4>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Saques</h4>
           <div className="grid grid-cols-2 gap-4">
             <FeeInput label="Taxa PIX (R$)" value={fees.withdrawal_pix_fee} onChange={(v) => updateField('withdrawal_pix_fee', v)} prefix="R$" />
             <FeeInput label="Taxa TED (R$)" value={fees.withdrawal_ted_fee} onChange={(v) => updateField('withdrawal_ted_fee', v)} prefix="R$" />
@@ -2227,7 +2227,7 @@ function FeesTab({ customerId }: { customerId: string }) {
 
         {/* Antifraude */}
         <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-tx-muted mb-3">Antifraude</h4>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Antifraude</h4>
           <div className="grid grid-cols-2 gap-4">
             <FeeInput label="Taxa (%)" value={fees.antifraude_fee_percent} onChange={(v) => updateField('antifraude_fee_percent', v)} suffix="%" />
             <FeeInput label="Taxa Fixa (R$)" value={fees.antifraude_fee_fixed} onChange={(v) => updateField('antifraude_fee_fixed', v)} prefix="R$" />
@@ -2236,7 +2236,7 @@ function FeesTab({ customerId }: { customerId: string }) {
 
         {/* Holdback */}
         <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-tx-muted mb-3">Holdback / Reserva</h4>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Holdback / Reserva</h4>
           <div className="grid grid-cols-2 gap-4">
             <FeeInput label="Holdback (%)" value={fees.holdback_percent} onChange={(v) => updateField('holdback_percent', v)} suffix="%" />
             <FeeInput label="Dias de Holdback" value={fees.holdback_days} onChange={(v) => updateField('holdback_days', v)} suffix="dias" />
@@ -2245,13 +2245,13 @@ function FeesTab({ customerId }: { customerId: string }) {
 
         {/* Notas */}
         <div>
-          <label className="block text-xs font-medium text-tx-muted mb-1">Observações</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Observações</label>
           <textarea
             value={fees.notes || ''}
             onChange={(e) => setFees(prev => ({ ...prev, notes: e.target.value || null }))}
             rows={3}
             maxLength={1000}
-            className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none resize-none"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none resize-none"
             placeholder="Notas sobre taxas específicas deste cliente..."
           />
         </div>
@@ -2269,19 +2269,19 @@ function FeeInput({ label, value, onChange, prefix, suffix }: {
 }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-tx-muted mb-1">{label}</label>
+      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
       <div className="relative">
-        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-tx-muted">{prefix}</span>}
+        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">{prefix}</span>}
         <input
           type="number"
           step="0.01"
           min="0"
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full rounded-lg border border-border-DEFAULT bg-surface-page py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none ${prefix ? 'pl-8 pr-3' : suffix ? 'pl-3 pr-12' : 'px-3'}`}
+          className={`w-full rounded-lg border border-gray-200 bg-gray-50 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none ${prefix ? 'pl-8 pr-3' : suffix ? 'pl-3 pr-12' : 'px-3'}`}
           placeholder="Padrão"
         />
-        {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-tx-muted">{suffix}</span>}
+        {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">{suffix}</span>}
       </div>
     </div>
   );
@@ -2356,23 +2356,23 @@ function AcquirersTab({ customerId }: { customerId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl bg-surface-card p-6 shadow-sm">
+      <div className="rounded-lg border border-gray-200 bg-white p-5">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-sm font-semibold text-tx-primary">Adquirentes do Cliente</h3>
-            <p className="text-xs text-tx-muted mt-0.5">Ative/desative adquirentes e defina a prioridade (menor = maior prioridade)</p>
+            <h3 className="text-sm font-semibold text-gray-900">Adquirentes do Cliente</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Ative/desative adquirentes e defina a prioridade (menor = maior prioridade)</p>
           </div>
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
           >
             {saveMutation.isPending ? 'Salvando...' : 'Salvar Adquirentes'}
           </button>
@@ -2380,18 +2380,18 @@ function AcquirersTab({ customerId }: { customerId: string }) {
 
         {acquirers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <CreditCardIcon className="h-10 w-10 text-tx-muted" />
-            <p className="mt-3 text-sm text-tx-muted">Nenhum adquirente disponível</p>
+            <CreditCardIcon className="h-10 w-10 text-gray-500" />
+            <p className="mt-3 text-sm text-gray-500">Nenhum adquirente disponível</p>
           </div>
         ) : (
           <div className="space-y-3">
             {acquirers.map((acq) => (
               <div
                 key={acq.acquirer_id}
-                className={`flex items-center justify-between rounded-xl border p-4 transition-colors ${
+                className={`flex items-center justify-between rounded-md border p-4 transition-colors ${
                   acq.is_active
                     ? 'border-green-500/30 bg-green-500/5'
-                    : 'border-border-DEFAULT bg-surface-page'
+                    : 'border-gray-200 bg-gray-50'
                 }`}
               >
                 <div className="flex items-center gap-4">
@@ -2408,16 +2408,16 @@ function AcquirersTab({ customerId }: { customerId: string }) {
                     />
                   </button>
                   <div>
-                    <p className="text-sm font-medium text-tx-primary">{acq.name}</p>
+                    <p className="text-sm font-medium text-gray-900">{acq.name}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-xs text-tx-muted font-mono">{acq.slug}</span>
+                      <span className="text-xs text-gray-500 font-mono">{acq.slug}</span>
                       {acq.supported_methods.length > 0 && (
-                        <span className="text-xs text-tx-muted">
+                        <span className="text-xs text-gray-500">
                           · {acq.supported_methods.join(', ')}
                         </span>
                       )}
                       {!acq.is_active_global && (
-                        <span className="inline-flex rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-500">
+                        <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
                           Desativado Globalmente
                         </span>
                       )}
@@ -2427,14 +2427,14 @@ function AcquirersTab({ customerId }: { customerId: string }) {
 
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
-                    <label className="text-xs text-tx-muted">Prioridade:</label>
+                    <label className="text-xs text-gray-500">Prioridade:</label>
                     <input
                       type="number"
                       min="0"
                       max="99"
                       value={acq.priority}
                       onChange={(e) => updatePriority(acq.acquirer_id, parseInt(e.target.value) || 0)}
-                      className="w-16 rounded-lg border border-border-DEFAULT bg-surface-page px-2 py-1 text-center text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-16 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1 text-center text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                       disabled={!acq.is_active}
                     />
                   </div>

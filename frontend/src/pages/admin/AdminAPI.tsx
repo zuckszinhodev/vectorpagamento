@@ -7,12 +7,9 @@ import {
   PlusIcon,
   XMarkIcon,
   ClipboardDocumentIcon,
-  GlobeAltIcon,
   ArrowPathIcon,
   TrashIcon,
-  ShieldCheckIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -45,155 +42,88 @@ export default function AdminAPI() {
   const [showWebhookModal, setShowWebhookModal] = useState(false);
   const [newKey, setNewKey] = useState<string | null>(null);
 
-  // Fetch API Keys
   const { data: apiKeys = [], isLoading: loadingKeys } = useQuery<ApiKey[]>({
     queryKey: ['admin-api-keys'],
-    queryFn: async () => {
-      const response = await api.get('/admin/api-keys');
-      return response.data?.data || [];
-    },
+    queryFn: async () => { const r = await api.get('/admin/api-keys'); return r.data?.data || []; },
   });
 
-  // Fetch Webhooks
   const { data: webhooks = [], isLoading: loadingWebhooks } = useQuery<Webhook[]>({
     queryKey: ['admin-webhooks'],
-    queryFn: async () => {
-      const response = await api.get('/admin/webhooks');
-      return response.data?.data || [];
-    },
+    queryFn: async () => { const r = await api.get('/admin/webhooks'); return r.data?.data || []; },
   });
 
-  // Create API Key
   const createKeyMutation = useMutation({
     mutationFn: async (data: { name: string; type: 'live' | 'test' }) => {
-      const response = await api.post('/admin/api-keys', data);
-      return response.data?.data?.key;
+      const r = await api.post('/admin/api-keys', data);
+      return r.data?.data?.key;
     },
-    onSuccess: (key) => {
-      setNewKey(key);
-      queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] });
-    },
+    onSuccess: (key) => { setNewKey(key); queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] }); },
     onError: () => toast.error('Erro ao criar chave'),
   });
 
-  // Revoke API Key
   const revokeKeyMutation = useMutation({
-    mutationFn: async (keyId: string) => {
-      await api.delete(`/admin/api-keys/${keyId}`);
-    },
-    onSuccess: () => {
-      toast.success('Chave revogada');
-      queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] });
-    },
-    onError: () => toast.error('Erro ao revogar chave'),
+    mutationFn: async (keyId: string) => { await api.delete(`/admin/api-keys/${keyId}`); },
+    onSuccess: () => { toast.success('Chave revogada'); queryClient.invalidateQueries({ queryKey: ['admin-api-keys'] }); },
+    onError: () => toast.error('Erro ao revogar'),
   });
 
-  // Create Webhook
   const createWebhookMutation = useMutation({
     mutationFn: async (data: { url: string; events: string[] }) => {
-      const response = await api.post('/admin/webhooks', data);
-      return response.data?.data;
+      await api.post('/admin/webhooks', data);
     },
-    onSuccess: () => {
-      toast.success('Webhook criado');
-      setShowWebhookModal(false);
-      queryClient.invalidateQueries({ queryKey: ['admin-webhooks'] });
-    },
+    onSuccess: () => { toast.success('Webhook criado'); setShowWebhookModal(false); queryClient.invalidateQueries({ queryKey: ['admin-webhooks'] }); },
     onError: () => toast.error('Erro ao criar webhook'),
   });
 
-  // Delete Webhook
   const deleteWebhookMutation = useMutation({
-    mutationFn: async (webhookId: string) => {
-      await api.delete(`/admin/webhooks/${webhookId}`);
-    },
-    onSuccess: () => {
-      toast.success('Webhook removido');
-      queryClient.invalidateQueries({ queryKey: ['admin-webhooks'] });
-    },
-    onError: () => toast.error('Erro ao remover webhook'),
+    mutationFn: async (id: string) => { await api.delete(`/admin/webhooks/${id}`); },
+    onSuccess: () => { toast.success('Webhook removido'); queryClient.invalidateQueries({ queryKey: ['admin-webhooks'] }); },
+    onError: () => toast.error('Erro ao remover'),
   });
 
-  // Regenerate Webhook Secret
   const regenerateSecretMutation = useMutation({
-    mutationFn: async (webhookId: string) => {
-      const response = await api.post(`/admin/webhooks/${webhookId}/regenerate-secret`);
-      return response.data?.data?.secret;
-    },
-    onSuccess: (secret) => {
-      toast.success('Secret regenerado');
-      queryClient.invalidateQueries({ queryKey: ['admin-webhooks'] });
-    },
-    onError: () => toast.error('Erro ao regenerar secret'),
+    mutationFn: async (id: string) => { await api.post(`/admin/webhooks/${id}/regenerate-secret`); },
+    onSuccess: () => { toast.success('Secret regenerado'); queryClient.invalidateQueries({ queryKey: ['admin-webhooks'] }); },
+    onError: () => toast.error('Erro ao regenerar'),
   });
 
-  const isWebhookActive = (webhook: Webhook) => webhook.active ?? webhook.is_active ?? false;
+  const isWebhookActive = (w: Webhook) => w.active ?? w.is_active ?? false;
 
   return (
     <AdminPageShell>
-      <AdminPageHeader
-        icon={KeyIcon}
-        title="API & Webhooks"
-        subtitle="Gerencie chaves de API e configuracoes de webhooks da plataforma"
-      />
+      <AdminPageHeader title="API & Webhooks" subtitle="Chaves de API e configurações de webhooks" />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* API Keys Section */}
-        <div className="rounded-2xl bg-surface-card p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-green-500/10 p-2.5">
-                <KeyIcon className="h-6 w-6 text-green-500" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-tx-primary">Chaves de API</h2>
-                <p className="text-sm text-tx-muted">{apiKeys.length} chave(s) ativa(s)</p>
-              </div>
+        {/* API Keys */}
+        <div className="rounded-lg border border-gray-200 bg-white p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Chaves de API</h2>
+              <p className="text-xs text-gray-500">{apiKeys.length} chave(s)</p>
             </div>
-            <button
-              onClick={() => setShowKeyModal(true)}
-              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
-            >
-              <PlusIcon className="h-4 w-4" />
-              Nova Chave
+            <button onClick={() => setShowKeyModal(true)} className="flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800">
+              <PlusIcon className="h-3.5 w-3.5" /> Nova Chave
             </button>
           </div>
 
           {loadingKeys ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
-            </div>
+            <div className="flex justify-center py-8"><div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" /></div>
           ) : apiKeys.length === 0 ? (
-            <div className="text-center py-8">
-              <KeyIcon className="h-12 w-12 text-tx-muted mx-auto mb-3" />
-              <p className="text-sm text-tx-muted">Nenhuma chave de API criada</p>
-            </div>
+            <p className="py-8 text-center text-sm text-gray-500">Nenhuma chave criada</p>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {apiKeys.map((key) => (
-                <div key={key.id} className="flex items-center justify-between p-4 rounded-xl bg-surface-page">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${key.type === 'test' ? 'bg-amber-500/10' : 'bg-emerald-500/10'}`}>
-                      <KeyIcon className={`h-5 w-5 ${key.type === 'test' ? 'text-amber-500' : 'text-emerald-500'}`} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-tx-primary">{key.name}</p>
-                      <p className="text-xs font-mono text-tx-muted">{key.key_prefix || key.key?.substring(0, 12)}...</p>
-                    </div>
+                <div key={key.id} className="flex items-center justify-between rounded-md border border-gray-100 px-3 py-2.5">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{key.name}</p>
+                    <p className="text-xs font-mono text-gray-400">{key.key_prefix || key.key?.substring(0, 12)}...</p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                      key.type === 'test' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
-                    }`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${key.type === 'test' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
                       {key.type === 'test' ? 'Teste' : 'Produção'}
                     </span>
-                    <button
-                      onClick={() => revokeKeyMutation.mutate(key.id)}
-                      disabled={revokeKeyMutation.isPending}
-                      className="p-2 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
-                      title="Revogar chave"
-                    >
-                      <TrashIcon className="h-4 w-4" />
+                    <button onClick={() => revokeKeyMutation.mutate(key.id)} className="rounded p-1 text-gray-400 hover:text-red-600">
+                      <TrashIcon className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
@@ -202,246 +132,124 @@ export default function AdminAPI() {
           )}
         </div>
 
-        {/* Webhooks Section */}
-        <div className="rounded-2xl bg-surface-card p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-blue-500/10 p-2.5">
-                <GlobeAltIcon className="h-6 w-6 text-blue-500" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-tx-primary">Webhooks Globais</h2>
-                <p className="text-sm text-tx-muted">{webhooks.length} webhook(s) configurado(s)</p>
-              </div>
+        {/* Webhooks */}
+        <div className="rounded-lg border border-gray-200 bg-white p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Webhooks</h2>
+              <p className="text-xs text-gray-500">{webhooks.length} configurado(s)</p>
             </div>
-            <button
-              onClick={() => setShowWebhookModal(true)}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="h-4 w-4" />
-              Novo Webhook
+            <button onClick={() => setShowWebhookModal(true)} className="flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-800">
+              <PlusIcon className="h-3.5 w-3.5" /> Novo
             </button>
           </div>
 
           {loadingWebhooks ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
-            </div>
+            <div className="flex justify-center py-8"><div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" /></div>
           ) : webhooks.length === 0 ? (
-            <div className="text-center py-8">
-              <GlobeAltIcon className="h-12 w-12 text-tx-muted mx-auto mb-3" />
-              <p className="text-sm text-tx-muted">Nenhum webhook configurado</p>
-            </div>
+            <p className="py-8 text-center text-sm text-gray-500">Nenhum webhook configurado</p>
           ) : (
-            <div className="space-y-3">
-              {webhooks.map((webhook) => {
-                const isActive = isWebhookActive(webhook);
-                return (
-                <div key={webhook.id} className="p-4 rounded-xl bg-surface-page">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm font-mono text-tx-primary truncate max-w-[200px]">{webhook.url}</p>
-                    <div className="flex items-center gap-2">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        isActive ? 'bg-emerald-500/10 text-emerald-500' : 'bg-gray-500/10 text-gray-500'
-                      }`}>
-                        {isActive ? 'Ativo' : 'Inativo'}
+            <div className="space-y-2">
+              {webhooks.map((wh) => (
+                <div key={wh.id} className="rounded-md border border-gray-100 px-3 py-2.5">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs font-mono text-gray-700 truncate max-w-[200px]">{wh.url}</p>
+                    <div className="flex items-center gap-1">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${isWebhookActive(wh) ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {isWebhookActive(wh) ? 'Ativo' : 'Inativo'}
                       </span>
-                      <button
-                        onClick={() => regenerateSecretMutation.mutate(webhook.id)}
-                        className="p-1.5 rounded-lg text-tx-muted hover:bg-surface-hover transition-colors"
-                        title="Regenerar secret"
-                      >
-                        <ArrowPathIcon className="h-4 w-4" />
+                      <button onClick={() => regenerateSecretMutation.mutate(wh.id)} className="rounded p-1 text-gray-400 hover:text-gray-700" title="Regenerar secret">
+                        <ArrowPathIcon className="h-3.5 w-3.5" />
                       </button>
-                      <button
-                        onClick={() => deleteWebhookMutation.mutate(webhook.id)}
-                        className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors"
-                        title="Remover webhook"
-                      >
-                        <TrashIcon className="h-4 w-4" />
+                      <button onClick={() => deleteWebhookMutation.mutate(wh.id)} className="rounded p-1 text-gray-400 hover:text-red-600" title="Remover">
+                        <TrashIcon className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {webhook.events.slice(0, 3).map((event) => (
-                      <span key={event} className="rounded-full bg-surface-hover px-2 py-0.5 text-xs text-tx-muted">
-                        {event}
-                      </span>
+                  <div className="flex flex-wrap gap-1">
+                    {wh.events.slice(0, 3).map((ev) => (
+                      <span key={ev} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">{ev}</span>
                     ))}
-                    {webhook.events.length > 3 && (
-                      <span className="rounded-full bg-surface-hover px-2 py-0.5 text-xs text-tx-muted">
-                        +{webhook.events.length - 3}
-                      </span>
-                    )}
+                    {wh.events.length > 3 && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">+{wh.events.length - 3}</span>}
                   </div>
                 </div>
-                );
-              })}
+              ))}
             </div>
           )}
         </div>
 
-        {/* Rate Limiting Info */}
-        <div className="rounded-2xl bg-surface-card p-6 shadow-sm lg:col-span-2">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-amber-500/10 p-2.5">
-              <ShieldCheckIcon className="h-6 w-6 text-amber-500" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-tx-primary">Rate Limiting & Segurança</h2>
-              <p className="text-sm text-tx-muted">Configurações de limite de requisições</p>
-            </div>
-          </div>
-
+        {/* Rate Limiting */}
+        <div className="rounded-lg border border-gray-200 bg-white p-5 lg:col-span-2">
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Rate Limiting</h2>
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="p-4 rounded-xl bg-surface-page">
-              <p className="text-sm text-tx-muted mb-1">API Pública</p>
-              <p className="text-2xl font-bold text-tx-primary">30</p>
-              <p className="text-xs text-tx-muted">requisições/segundo</p>
+            <div className="rounded-md bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">API Pública</p>
+              <p className="text-xl font-semibold text-gray-900">30 <span className="text-xs font-normal text-gray-500">req/s</span></p>
             </div>
-            <div className="p-4 rounded-xl bg-surface-page">
-              <p className="text-sm text-tx-muted mb-1">Autenticação</p>
-              <p className="text-2xl font-bold text-tx-primary">5</p>
-              <p className="text-xs text-tx-muted">requisições/segundo</p>
+            <div className="rounded-md bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Autenticação</p>
+              <p className="text-xl font-semibold text-gray-900">5 <span className="text-xs font-normal text-gray-500">req/s</span></p>
             </div>
-            <div className="p-4 rounded-xl bg-surface-page">
-              <p className="text-sm text-tx-muted mb-1">Timeout Webhook</p>
-              <p className="text-2xl font-bold text-tx-primary">30</p>
-              <p className="text-xs text-tx-muted">segundos</p>
+            <div className="rounded-md bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Timeout Webhook</p>
+              <p className="text-xl font-semibold text-gray-900">30 <span className="text-xs font-normal text-gray-500">seg</span></p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Create API Key Modal */}
-      {showKeyModal && (
-        <CreateKeyModal
-          onClose={() => {
-            setShowKeyModal(false);
-            setNewKey(null);
-          }}
-          onCreate={(data) => createKeyMutation.mutate(data)}
-          isCreating={createKeyMutation.isPending}
-          newKey={newKey}
-        />
-      )}
+      {/* Create Key Modal */}
+      {showKeyModal && <CreateKeyModal onClose={() => { setShowKeyModal(false); setNewKey(null); }} onCreate={(d) => createKeyMutation.mutate(d)} isCreating={createKeyMutation.isPending} newKey={newKey} />}
 
       {/* Create Webhook Modal */}
-      {showWebhookModal && (
-        <CreateWebhookModal
-          onClose={() => setShowWebhookModal(false)}
-          onCreate={(data) => createWebhookMutation.mutate(data)}
-          isCreating={createWebhookMutation.isPending}
-        />
-      )}
+      {showWebhookModal && <CreateWebhookModal onClose={() => setShowWebhookModal(false)} onCreate={(d) => createWebhookMutation.mutate(d)} isCreating={createWebhookMutation.isPending} />}
     </AdminPageShell>
   );
 }
 
-function CreateKeyModal({ 
-  onClose, 
-  onCreate, 
-  isCreating, 
-  newKey 
-}: { 
-  onClose: () => void; 
-  onCreate: (data: { name: string; type: 'live' | 'test' }) => void;
-  isCreating: boolean; 
-  newKey: string | null;
-}) {
+function CreateKeyModal({ onClose, onCreate, isCreating, newKey }: { onClose: () => void; onCreate: (d: { name: string; type: 'live' | 'test' }) => void; isCreating: boolean; newKey: string | null }) {
   const [form, setForm] = useState({ name: '', type: 'live' as 'live' | 'test' });
 
-  const copyToClipboard = () => {
-    if (newKey) {
-      navigator.clipboard.writeText(newKey);
-      toast.success('Chave copiada!');
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-surface-card p-6 shadow-xl">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-tx-primary">
-            {newKey ? 'Chave Criada' : 'Nova Chave de API'}
-          </h2>
-          <button onClick={onClose} className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover">
-            <XMarkIcon className="h-5 w-5" />
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-gray-900">{newKey ? 'Chave Criada' : 'Nova Chave de API'}</h2>
+          <button onClick={onClose} className="rounded p-1 text-gray-400 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
         </div>
 
         {newKey ? (
-          <div className="space-y-4">
-            <div className="rounded-xl bg-amber-500/10 p-4">
-              <div className="flex items-start gap-3">
-                <ExclamationTriangleIcon className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-600">
-                  Copie esta chave agora. Ela não será exibida novamente.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 mt-3">
-                <code className="flex-1 text-xs font-mono text-tx-primary bg-surface-page p-2.5 rounded-lg overflow-x-auto">
-                  {newKey}
-                </code>
-                <button
-                  onClick={copyToClipboard}
-                  className="p-2 rounded-lg bg-surface-hover hover:bg-border-DEFAULT transition-colors"
-                >
-                  <ClipboardDocumentIcon className="h-5 w-5 text-tx-secondary" />
-                </button>
+          <div className="space-y-3">
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+              <div className="flex items-start gap-2">
+                <ExclamationTriangleIcon className="h-4 w-4 text-amber-600 mt-0.5" />
+                <p className="text-xs text-amber-700">Copie esta chave agora. Ela não será exibida novamente.</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
-            >
-              Entendi, fechar
-            </button>
+            <div className="flex items-center gap-2 rounded-md bg-gray-50 p-3">
+              <code className="flex-1 text-xs font-mono text-gray-900 break-all">{newKey}</code>
+              <button onClick={() => { navigator.clipboard.writeText(newKey); toast.success('Copiada!'); }} className="rounded p-1.5 text-gray-500 hover:bg-gray-200">
+                <ClipboardDocumentIcon className="h-4 w-4" />
+              </button>
+            </div>
+            <button onClick={onClose} className="w-full rounded-md bg-gray-900 py-2 text-sm font-medium text-white hover:bg-gray-800">Fechar</button>
           </div>
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-tx-secondary mb-1">Nome</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="ex: Integração Webhook"
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
-              />
+              <label className="block text-xs font-medium text-gray-500 mb-1">Nome</label>
+              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ex: Integração ERP" className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-tx-secondary mb-1">Tipo</label>
-              <select
-                value={form.type}
-                onChange={(e) => setForm({ ...form, type: e.target.value as 'live' | 'test' })}
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
-              >
-                <option value="live">Produção (pk_live_)</option>
-                <option value="test">Teste (pk_test_)</option>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Tipo</label>
+              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'live' | 'test' })} className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none">
+                <option value="live">Produção</option>
+                <option value="test">Teste</option>
               </select>
-              <p className="text-xs text-tx-muted mt-1">
-                {form.type === 'live'
-                  ? 'Use em integrações de produção.'
-                  : 'Use para homologação e testes internos.'}
-              </p>
             </div>
-
-            <div className="flex gap-3 pt-2">
-              <button
-                onClick={onClose}
-                className="flex-1 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => onCreate(form)}
-                disabled={isCreating || !form.name}
-                className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-              >
-                {isCreating ? 'Criando...' : 'Criar Chave'}
-              </button>
-            </div>
+            <button onClick={() => onCreate(form)} disabled={!form.name.trim() || isCreating} className="w-full rounded-md bg-gray-900 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
+              {isCreating ? 'Criando...' : 'Criar Chave'}
+            </button>
           </div>
         )}
       </div>
@@ -449,116 +257,40 @@ function CreateKeyModal({
   );
 }
 
-function CreateWebhookModal({ 
-  onClose, 
-  onCreate, 
-  isCreating 
-}: { 
-  onClose: () => void; 
-  onCreate: (data: { url: string; events: string[] }) => void; 
-  isCreating: boolean;
-}) {
+function CreateWebhookModal({ onClose, onCreate, isCreating }: { onClose: () => void; onCreate: (d: { url: string; events: string[] }) => void; isCreating: boolean }) {
   const [url, setUrl] = useState('');
-  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const [events, setEvents] = useState<string[]>([]);
 
-  const availableEvents = [
-    { id: 'charge.created', label: 'Cobrança Criada' },
-    { id: 'charge.paid', label: 'Cobrança Paga' },
-    { id: 'charge.failed', label: 'Cobrança Falhou' },
-    { id: 'charge.refunded', label: 'Cobrança Estornada' },
-    { id: 'charge.canceled', label: 'Cobrança Cancelada' },
-    { id: 'withdrawal.requested', label: 'Saque Solicitado' },
-    { id: 'withdrawal.completed', label: 'Saque Concluído' },
-    { id: 'kyc.approved', label: 'KYC Aprovado' },
-    { id: 'kyc.rejected', label: 'KYC Rejeitado' },
-    { id: 'account.created', label: 'Conta Criada' },
-  ];
-
-  const toggleEvent = (eventId: string) => {
-    setSelectedEvents((prev) =>
-      prev.includes(eventId) ? prev.filter((e) => e !== eventId) : [...prev, eventId]
-    );
-  };
-
-  const selectAll = () => setSelectedEvents(availableEvents.map((e) => e.id));
-  const clearAll = () => setSelectedEvents([]);
+  const availableEvents = ['payment.created', 'payment.approved', 'payment.failed', 'payment.refunded', 'withdrawal.requested', 'withdrawal.processed', 'kyc.approved', 'kyc.rejected'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-surface-card p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-tx-primary">Novo Webhook</h2>
-          <button onClick={onClose} className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover">
-            <XMarkIcon className="h-5 w-5" />
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-gray-900">Novo Webhook</h2>
+          <button onClick={onClose} className="rounded p-1 text-gray-400 hover:text-gray-600"><XMarkIcon className="h-5 w-5" /></button>
         </div>
-
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-tx-secondary mb-1">URL do Webhook</label>
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com/webhook"
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
-            />
+            <label className="block text-xs font-medium text-gray-500 mb-1">URL</label>
+            <input type="url" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://..." className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none" />
           </div>
-
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-tx-secondary">Eventos</label>
-              <div className="flex gap-2">
-                <button onClick={selectAll} className="text-xs text-green-500 hover:underline">
-                  Selecionar todos
-                </button>
-                <span className="text-tx-muted">|</span>
-                <button onClick={clearAll} className="text-xs text-tx-muted hover:underline">
-                  Limpar
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {availableEvents.map((event) => (
-                <label
-                  key={event.id}
-                  className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedEvents.includes(event.id)
-                      ? 'bg-green-500/10 border border-green-500/30'
-                      : 'bg-surface-page hover:bg-surface-hover'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedEvents.includes(event.id)}
-                    onChange={() => toggleEvent(event.id)}
-                    className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
-                  />
-                  <span className="text-xs text-tx-primary">{event.label}</span>
+            <label className="block text-xs font-medium text-gray-500 mb-2">Eventos</label>
+            <div className="grid grid-cols-2 gap-1.5">
+              {availableEvents.map((ev) => (
+                <label key={ev} className="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" checked={events.includes(ev)} onChange={(e) => setEvents(e.target.checked ? [...events, ev] : events.filter((x) => x !== ev))} className="h-3.5 w-3.5 rounded border-gray-300 text-gray-900" />
+                  <span className="text-xs text-gray-700">{ev}</span>
                 </label>
               ))}
             </div>
           </div>
-
-          <div className="flex gap-3 pt-2">
-            <button
-              onClick={onClose}
-              className="flex-1 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={() => onCreate({ url, events: selectedEvents })}
-              disabled={isCreating || !url || selectedEvents.length === 0}
-              className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-            >
-              {isCreating ? 'Criando...' : 'Criar Webhook'}
-            </button>
-          </div>
+          <button onClick={() => onCreate({ url, events })} disabled={!url.trim() || events.length === 0 || isCreating} className="w-full rounded-md bg-gray-900 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
+            {isCreating ? 'Criando...' : 'Criar Webhook'}
+          </button>
         </div>
       </div>
     </div>
   );
 }
-
-

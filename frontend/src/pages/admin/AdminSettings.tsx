@@ -2,17 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
-import {
-  Cog6ToothIcon,
-  BellIcon,
-  EnvelopeIcon,
-  ShieldCheckIcon,
-  ServerIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  CheckCircleIcon,
-  XMarkIcon,
-} from '@heroicons/react/24/outline';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 interface PlatformSettingsResponse {
@@ -62,49 +52,11 @@ interface PlatformSettingsResponse {
 }
 
 const defaultSettings: PlatformSettingsResponse = {
-  general: {
-    platform_name: 'Vector Pagamentos',
-    support_email: '',
-    support_phone: '',
-    default_currency: 'BRL',
-    timezone: 'America/Sao_Paulo',
-    maintenance_mode: false,
-  },
-  email: {
-    smtp_host: '',
-    smtp_port: 587,
-    smtp_username: '',
-    smtp_password: '',
-    smtp_encryption: 'tls',
-    from_name: 'Vector Pagamentos',
-    from_email: '',
-  },
-  payments: {
-    pix_enabled: true,
-    credit_card_enabled: true,
-    boleto_enabled: true,
-    max_installments: 12,
-    min_installment_value: 10,
-    default_gateway_fee: 4.99,
-    pix_expiration_minutes: 30,
-  },
-  security: {
-    require_mfa: false,
-    session_timeout_minutes: 60,
-    max_login_attempts: 5,
-    password_min_length: 8,
-    require_kyc: true,
-    ip_whitelist_enabled: false,
-    ip_whitelist: '',
-  },
-  features: {
-    affiliates_enabled: true,
-    marketplace_enabled: true,
-    member_area_enabled: true,
-    custom_domains_enabled: true,
-    webhooks_enabled: true,
-    api_access_enabled: true,
-  },
+  general: { platform_name: 'Vector Pagamentos', support_email: '', support_phone: '', default_currency: 'BRL', timezone: 'America/Sao_Paulo', maintenance_mode: false },
+  email: { smtp_host: '', smtp_port: 587, smtp_username: '', smtp_password: '', smtp_encryption: 'tls', from_name: 'Vector Pagamentos', from_email: '' },
+  payments: { pix_enabled: true, credit_card_enabled: true, boleto_enabled: true, max_installments: 12, min_installment_value: 10, default_gateway_fee: 4.99, pix_expiration_minutes: 30 },
+  security: { require_mfa: false, session_timeout_minutes: 60, max_login_attempts: 5, password_min_length: 8, require_kyc: true, ip_whitelist_enabled: false, ip_whitelist: '' },
+  features: { affiliates_enabled: true, marketplace_enabled: true, member_area_enabled: true, custom_domains_enabled: true, webhooks_enabled: true, api_access_enabled: true },
 };
 
 export default function AdminSettings() {
@@ -127,350 +79,191 @@ export default function AdminSettings() {
       toast.success('Configurações salvas');
       queryClient.invalidateQueries({ queryKey: ['platform-settings'] });
     },
-    onError: () => {
-      toast.error('Erro ao salvar configuracoes');
-    },
+    onError: () => toast.error('Erro ao salvar'),
   });
 
   if (isLoading || !settings) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
       </div>
     );
   }
 
   const tabs = [
-    { id: 'general', label: 'Geral', icon: Cog6ToothIcon },
-    { id: 'email', label: 'Email', icon: EnvelopeIcon },
-    { id: 'payments', label: 'Pagamentos', icon: ServerIcon },
-    { id: 'security', label: 'Seguranca', icon: ShieldCheckIcon },
-    { id: 'features', label: 'Recursos', icon: BellIcon },
+    { id: 'general', label: 'Geral' },
+    { id: 'email', label: 'Email' },
+    { id: 'payments', label: 'Pagamentos' },
+    { id: 'security', label: 'Segurança' },
+    { id: 'features', label: 'Recursos' },
   ] as const;
 
   return (
     <AdminPageShell>
-      <AdminPageHeader
-        icon={Cog6ToothIcon}
-        title="Configurações da plataforma"
-        subtitle="Gerencie as configuracoes globais do sistema"
-      />
+      <AdminPageHeader title="Configurações" subtitle="Configurações globais da plataforma" />
 
       <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="lg:w-56">
-          <nav className="flex flex-row lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
-                  activeTab === tab.id ? 'bg-green-500 text-white' : 'text-tx-secondary hover:bg-surface-hover'
-                }`}
-              >
-                <tab.icon className="h-5 w-5" />
-                {tab.label}
-              </button>
-            ))}
-          </nav>
-        </div>
+        <nav className="flex flex-row gap-1 overflow-x-auto lg:w-48 lg:flex-col">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
+                activeTab === tab.id ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
 
-        <div className="flex-1 rounded-2xl bg-surface-card p-6 shadow-sm">
-          {activeTab === 'general' && (
-            <GeneralSettings
-              settings={settings.general}
-              onSave={(data) => updateSettingsMutation.mutate({ general: data })}
-              isSaving={updateSettingsMutation.isPending}
-            />
-          )}
-          {activeTab === 'email' && (
-            <EmailSettings
-              settings={settings.email}
-              onSave={(data) => updateSettingsMutation.mutate({ email: data })}
-              isSaving={updateSettingsMutation.isPending}
-            />
-          )}
-          {activeTab === 'payments' && (
-            <PaymentSettings
-              settings={settings.payments}
-              onSave={(data) => updateSettingsMutation.mutate({ payments: data })}
-              isSaving={updateSettingsMutation.isPending}
-            />
-          )}
-          {activeTab === 'security' && (
-            <SecuritySettings
-              settings={settings.security}
-              onSave={(data) => updateSettingsMutation.mutate({ security: data })}
-              isSaving={updateSettingsMutation.isPending}
-            />
-          )}
-          {activeTab === 'features' && (
-            <FeatureSettings
-              settings={settings.features}
-              onSave={(data) => updateSettingsMutation.mutate({ features: data })}
-              isSaving={updateSettingsMutation.isPending}
-            />
-          )}
+        <div className="flex-1 rounded-lg border border-gray-200 bg-white p-6">
+          {activeTab === 'general' && <GeneralSettings settings={settings.general} onSave={(data) => updateSettingsMutation.mutate({ general: data })} isSaving={updateSettingsMutation.isPending} />}
+          {activeTab === 'email' && <EmailSettings settings={settings.email} onSave={(data) => updateSettingsMutation.mutate({ email: data })} isSaving={updateSettingsMutation.isPending} />}
+          {activeTab === 'payments' && <PaymentSettings settings={settings.payments} onSave={(data) => updateSettingsMutation.mutate({ payments: data })} isSaving={updateSettingsMutation.isPending} />}
+          {activeTab === 'security' && <SecuritySettings settings={settings.security} onSave={(data) => updateSettingsMutation.mutate({ security: data })} isSaving={updateSettingsMutation.isPending} />}
+          {activeTab === 'features' && <FeatureSettings settings={settings.features} onSave={(data) => updateSettingsMutation.mutate({ features: data })} isSaving={updateSettingsMutation.isPending} />}
         </div>
       </div>
     </AdminPageShell>
   );
 }
 
-function GeneralSettings({
-  settings,
-  onSave,
-  isSaving,
-}: {
-  settings: PlatformSettingsResponse['general'];
-  onSave: (data: Partial<PlatformSettingsResponse['general']>) => void;
-  isSaving: boolean;
-}) {
+function GeneralSettings({ settings, onSave, isSaving }: { settings: PlatformSettingsResponse['general']; onSave: (data: any) => void; isSaving: boolean }) {
   const [form, setForm] = useState(settings);
-
   return (
-    <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-tx-primary">Configurações gerais</h2>
-
+    <div className="space-y-5">
+      <h2 className="text-base font-semibold text-gray-900">Geral</h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Nome da Plataforma" value={form.platform_name} onChange={(value) => setForm({ ...form, platform_name: value })} />
-        <Input label="Moeda Padrao" value={form.default_currency} onChange={(value) => setForm({ ...form, default_currency: value })} />
-        <Input label="Email de Suporte" value={form.support_email} onChange={(value) => setForm({ ...form, support_email: value })} />
-        <Input label="Telefone de Suporte" value={form.support_phone} onChange={(value) => setForm({ ...form, support_phone: value })} />
-        <Input label="Fuso Horario" value={form.timezone} onChange={(value) => setForm({ ...form, timezone: value })} />
+        <Field label="Nome da Plataforma" value={form.platform_name} onChange={(v) => setForm({ ...form, platform_name: v })} />
+        <Field label="Moeda" value={form.default_currency} onChange={(v) => setForm({ ...form, default_currency: v })} />
+        <Field label="Email de Suporte" value={form.support_email} onChange={(v) => setForm({ ...form, support_email: v })} />
+        <Field label="Telefone" value={form.support_phone} onChange={(v) => setForm({ ...form, support_phone: v })} />
+        <Field label="Fuso Horário" value={form.timezone} onChange={(v) => setForm({ ...form, timezone: v })} />
       </div>
-
-      <label className="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={form.maintenance_mode}
-          onChange={(e) => setForm({ ...form, maintenance_mode: e.target.checked })}
-          className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
-        />
-        <span className="text-sm text-tx-primary">Modo de manutencao</span>
-      </label>
-
-      <SaveButton isSaving={isSaving} onClick={() => onSave(form)} />
+      <Toggle label="Modo de manutenção" checked={form.maintenance_mode} onChange={(c) => setForm({ ...form, maintenance_mode: c })} />
+      <SaveBtn isSaving={isSaving} onClick={() => onSave(form)} />
     </div>
   );
 }
 
-function EmailSettings({
-  settings,
-  onSave,
-  isSaving,
-}: {
-  settings: PlatformSettingsResponse['email'];
-  onSave: (data: Partial<PlatformSettingsResponse['email']>) => void;
-  isSaving: boolean;
-}) {
+function EmailSettings({ settings, onSave, isSaving }: { settings: PlatformSettingsResponse['email']; onSave: (data: any) => void; isSaving: boolean }) {
   const [form, setForm] = useState({ ...settings, smtp_password: '' });
-  const [showPassword, setShowPassword] = useState(false);
-
+  const [showPw, setShowPw] = useState(false);
   return (
-    <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-tx-primary">Configurações de email</h2>
-
+    <div className="space-y-5">
+      <h2 className="text-base font-semibold text-gray-900">Email (SMTP)</h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Nome do Remetente" value={form.from_name} onChange={(value) => setForm({ ...form, from_name: value })} />
-        <Input label="Email do Remetente" value={form.from_email} onChange={(value) => setForm({ ...form, from_email: value })} />
-        <Input label="Host SMTP" value={form.smtp_host} onChange={(value) => setForm({ ...form, smtp_host: value })} />
-        <Input label="Porta SMTP" type="number" value={String(form.smtp_port)} onChange={(value) => setForm({ ...form, smtp_port: Number(value) || 0 })} />
-        <Input label="Usuario SMTP" value={form.smtp_username} onChange={(value) => setForm({ ...form, smtp_username: value })} />
-
+        <Field label="Remetente (nome)" value={form.from_name} onChange={(v) => setForm({ ...form, from_name: v })} />
+        <Field label="Remetente (email)" value={form.from_email} onChange={(v) => setForm({ ...form, from_email: v })} />
+        <Field label="Host SMTP" value={form.smtp_host} onChange={(v) => setForm({ ...form, smtp_host: v })} />
+        <Field label="Porta" value={String(form.smtp_port)} onChange={(v) => setForm({ ...form, smtp_port: Number(v) || 0 })} />
+        <Field label="Usuário" value={form.smtp_username} onChange={(v) => setForm({ ...form, smtp_username: v })} />
         <div>
-          <label className="block text-sm font-medium text-tx-secondary mb-1">Senha SMTP</label>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Senha SMTP</label>
           <div className="relative">
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={form.smtp_password}
-              onChange={(e) => setForm({ ...form, smtp_password: e.target.value })}
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 pr-10 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-tx-muted hover:text-tx-primary"
-            >
-              {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+            <input type={showPw ? 'text' : 'password'} value={form.smtp_password} onChange={(e) => setForm({ ...form, smtp_password: e.target.value })} className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 pr-9 text-sm text-gray-900 focus:border-gray-400 focus:outline-none" />
+            <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400">
+              {showPw ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
             </button>
           </div>
         </div>
-
-        <Input label="Criptografia" value={form.smtp_encryption} onChange={(value) => setForm({ ...form, smtp_encryption: value })} />
+        <Field label="Criptografia" value={form.smtp_encryption} onChange={(v) => setForm({ ...form, smtp_encryption: v })} />
       </div>
-
-      <SaveButton isSaving={isSaving} onClick={() => onSave(form)} />
+      <SaveBtn isSaving={isSaving} onClick={() => onSave(form)} />
     </div>
   );
 }
 
-function PaymentSettings({
-  settings,
-  onSave,
-  isSaving,
-}: {
-  settings: PlatformSettingsResponse['payments'];
-  onSave: (data: Partial<PlatformSettingsResponse['payments']>) => void;
-  isSaving: boolean;
-}) {
+function PaymentSettings({ settings, onSave, isSaving }: { settings: PlatformSettingsResponse['payments']; onSave: (data: any) => void; isSaving: boolean }) {
   const [form, setForm] = useState(settings);
-
   return (
-    <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-tx-primary">Configurações de pagamento</h2>
-
+    <div className="space-y-5">
+      <h2 className="text-base font-semibold text-gray-900">Pagamentos</h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Maximo de Parcelas" type="number" value={String(form.max_installments)} onChange={(value) => setForm({ ...form, max_installments: Number(value) || 1 })} />
-        <Input label="Valor Minimo por Parcela" type="number" value={String(form.min_installment_value)} onChange={(value) => setForm({ ...form, min_installment_value: Number(value) || 0 })} />
-        <Input label="Taxa Padrao do Gateway (%)" type="number" value={String(form.default_gateway_fee)} onChange={(value) => setForm({ ...form, default_gateway_fee: Number(value) || 0 })} />
-        <Input label="Expiracao PIX (min)" type="number" value={String(form.pix_expiration_minutes)} onChange={(value) => setForm({ ...form, pix_expiration_minutes: Number(value) || 0 })} />
+        <Field label="Máx. Parcelas" value={String(form.max_installments)} onChange={(v) => setForm({ ...form, max_installments: Number(v) || 1 })} />
+        <Field label="Valor Mín. Parcela" value={String(form.min_installment_value)} onChange={(v) => setForm({ ...form, min_installment_value: Number(v) || 0 })} />
+        <Field label="Taxa Gateway (%)" value={String(form.default_gateway_fee)} onChange={(v) => setForm({ ...form, default_gateway_fee: Number(v) || 0 })} />
+        <Field label="Expiração PIX (min)" value={String(form.pix_expiration_minutes)} onChange={(v) => setForm({ ...form, pix_expiration_minutes: Number(v) || 0 })} />
       </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Toggle label="PIX habilitado" checked={form.pix_enabled} onChange={(checked) => setForm({ ...form, pix_enabled: checked })} />
-        <Toggle label="Cartao habilitado" checked={form.credit_card_enabled} onChange={(checked) => setForm({ ...form, credit_card_enabled: checked })} />
-        <Toggle label="Boleto habilitado" checked={form.boleto_enabled} onChange={(checked) => setForm({ ...form, boleto_enabled: checked })} />
+      <div className="flex flex-wrap gap-4">
+        <Toggle label="PIX" checked={form.pix_enabled} onChange={(c) => setForm({ ...form, pix_enabled: c })} />
+        <Toggle label="Cartão" checked={form.credit_card_enabled} onChange={(c) => setForm({ ...form, credit_card_enabled: c })} />
+        <Toggle label="Boleto" checked={form.boleto_enabled} onChange={(c) => setForm({ ...form, boleto_enabled: c })} />
       </div>
-
-      <SaveButton isSaving={isSaving} onClick={() => onSave(form)} />
+      <SaveBtn isSaving={isSaving} onClick={() => onSave(form)} />
     </div>
   );
 }
 
-function SecuritySettings({
-  settings,
-  onSave,
-  isSaving,
-}: {
-  settings: PlatformSettingsResponse['security'];
-  onSave: (data: Partial<PlatformSettingsResponse['security']>) => void;
-  isSaving: boolean;
-}) {
+function SecuritySettings({ settings, onSave, isSaving }: { settings: PlatformSettingsResponse['security']; onSave: (data: any) => void; isSaving: boolean }) {
   const [form, setForm] = useState(settings);
-
   return (
-    <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-tx-primary">Configurações de segurança</h2>
-
+    <div className="space-y-5">
+      <h2 className="text-base font-semibold text-gray-900">Segurança</h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Timeout de Sessao (min)" type="number" value={String(form.session_timeout_minutes)} onChange={(value) => setForm({ ...form, session_timeout_minutes: Number(value) || 0 })} />
-        <Input label="Maximo de Tentativas de Login" type="number" value={String(form.max_login_attempts)} onChange={(value) => setForm({ ...form, max_login_attempts: Number(value) || 0 })} />
-        <Input label="Tamanho Minimo de Senha" type="number" value={String(form.password_min_length)} onChange={(value) => setForm({ ...form, password_min_length: Number(value) || 0 })} />
-        <Input label="Whitelist de IP (csv)" value={form.ip_whitelist} onChange={(value) => setForm({ ...form, ip_whitelist: value })} />
+        <Field label="Timeout Sessão (min)" value={String(form.session_timeout_minutes)} onChange={(v) => setForm({ ...form, session_timeout_minutes: Number(v) || 0 })} />
+        <Field label="Máx. Tentativas Login" value={String(form.max_login_attempts)} onChange={(v) => setForm({ ...form, max_login_attempts: Number(v) || 0 })} />
+        <Field label="Tamanho Mín. Senha" value={String(form.password_min_length)} onChange={(v) => setForm({ ...form, password_min_length: Number(v) || 0 })} />
+        <Field label="Whitelist IP (csv)" value={form.ip_whitelist} onChange={(v) => setForm({ ...form, ip_whitelist: v })} />
       </div>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Toggle label="MFA obrigatorio" checked={form.require_mfa} onChange={(checked) => setForm({ ...form, require_mfa: checked })} />
-        <Toggle label="KYC obrigatorio" checked={form.require_kyc} onChange={(checked) => setForm({ ...form, require_kyc: checked })} />
-        <Toggle label="Whitelist de IP ativa" checked={form.ip_whitelist_enabled} onChange={(checked) => setForm({ ...form, ip_whitelist_enabled: checked })} />
+      <div className="flex flex-wrap gap-4">
+        <Toggle label="MFA obrigatório" checked={form.require_mfa} onChange={(c) => setForm({ ...form, require_mfa: c })} />
+        <Toggle label="KYC obrigatório" checked={form.require_kyc} onChange={(c) => setForm({ ...form, require_kyc: c })} />
+        <Toggle label="Whitelist IP" checked={form.ip_whitelist_enabled} onChange={(c) => setForm({ ...form, ip_whitelist_enabled: c })} />
       </div>
-
-      <SaveButton isSaving={isSaving} onClick={() => onSave(form)} />
+      <SaveBtn isSaving={isSaving} onClick={() => onSave(form)} />
     </div>
   );
 }
 
-function FeatureSettings({
-  settings,
-  onSave,
-  isSaving,
-}: {
-  settings: PlatformSettingsResponse['features'];
-  onSave: (data: Partial<PlatformSettingsResponse['features']>) => void;
-  isSaving: boolean;
-}) {
+function FeatureSettings({ settings, onSave, isSaving }: { settings: PlatformSettingsResponse['features']; onSave: (data: any) => void; isSaving: boolean }) {
   const [form, setForm] = useState(settings);
-
   const features = [
-    { key: 'affiliates_enabled', label: 'Sistema de Afiliados' },
+    { key: 'affiliates_enabled', label: 'Afiliados' },
     { key: 'marketplace_enabled', label: 'Marketplace' },
-    { key: 'member_area_enabled', label: 'Area de Membros' },
-    { key: 'custom_domains_enabled', label: 'Dominios Customizados' },
-    { key: 'webhooks_enabled', label: 'Webhooks Globais' },
+    { key: 'member_area_enabled', label: 'Área de Membros' },
+    { key: 'custom_domains_enabled', label: 'Domínios Custom' },
+    { key: 'webhooks_enabled', label: 'Webhooks' },
     { key: 'api_access_enabled', label: 'Acesso API' },
   ] as const;
-
   return (
-    <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-tx-primary">Recursos da Plataforma</h2>
-
-      <div className="space-y-3">
-        {features.map((feature) => (
-          <label key={feature.key} className="flex items-center gap-3 p-4 rounded-xl bg-surface-page cursor-pointer hover:bg-surface-hover transition-colors">
-            <input
-              type="checkbox"
-              checked={form[feature.key]}
-              onChange={(e) => setForm({ ...form, [feature.key]: e.target.checked })}
-              className="h-5 w-5 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
-            />
-            <div className="flex-1">
-              <span className="text-sm font-medium text-tx-primary">{feature.label}</span>
-            </div>
-            {form[feature.key] ? <CheckCircleIcon className="h-5 w-5 text-emerald-500" /> : <XMarkIcon className="h-5 w-5 text-tx-muted" />}
-          </label>
+    <div className="space-y-5">
+      <h2 className="text-base font-semibold text-gray-900">Recursos</h2>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {features.map((f) => (
+          <Toggle key={f.key} label={f.label} checked={(form as any)[f.key]} onChange={(c) => setForm({ ...form, [f.key]: c })} />
         ))}
       </div>
-
-      <SaveButton isSaving={isSaving} onClick={() => onSave(form)} />
+      <SaveBtn isSaving={isSaving} onClick={() => onSave(form)} />
     </div>
   );
 }
 
-function Input({
-  label,
-  value,
-  onChange,
-  type = 'text',
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: 'text' | 'number';
-}) {
+function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-tx-secondary mb-1">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
-      />
+      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
+      <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none" />
     </div>
   );
 }
 
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (c: boolean) => void }) {
   return (
-    <label className="flex items-center gap-3 cursor-pointer rounded-lg bg-surface-page p-3">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
-      />
-      <span className="text-sm text-tx-primary">{label}</span>
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-500" />
+      <span className="text-sm text-gray-700">{label}</span>
     </label>
   );
 }
 
-function SaveButton({ isSaving, onClick }: { isSaving: boolean; onClick: () => void }) {
+function SaveBtn({ isSaving, onClick }: { isSaving: boolean; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={isSaving}
-      className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-    >
-      {isSaving ? 'Salvando...' : 'Salvar Alteracoes'}
-    </button>
+    <div className="pt-2">
+      <button onClick={onClick} disabled={isSaving} className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50">
+        {isSaving ? 'Salvando...' : 'Salvar'}
+      </button>
+    </div>
   );
 }
-

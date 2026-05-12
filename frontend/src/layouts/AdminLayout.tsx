@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef, Fragment } from 'react';
+import { useState, Fragment } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, Transition } from '@headlessui/react';
 import { useAuthStore } from '@/stores/authStore';
-import { useThemeStore } from '@/stores/themeStore';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import {
@@ -10,14 +9,11 @@ import {
   XMarkIcon,
   ChartBarIcon,
   BuildingStorefrontIcon,
-  UsersIcon,
   BanknotesIcon,
   Cog6ToothIcon,
   DocumentTextIcon,
   ComputerDesktopIcon,
   BellIcon,
-  MoonIcon,
-  SunIcon,
   ArrowRightOnRectangleIcon,
   UserCircleIcon,
   ChevronDownIcon,
@@ -82,7 +78,7 @@ const navigationGroups: NavGroup[] = [
     ],
   },
   {
-    title: 'Governanca e Plataforma',
+    title: 'Plataforma',
     items: [
       { name: 'Adquirentes', href: '/admin/acquirers', icon: ServerIcon, permission: 'admin.acquirers.manage' },
       { name: 'Segurança', href: '/admin/security', icon: ShieldCheckIcon, permission: 'admin.security.monitor' },
@@ -100,11 +96,7 @@ export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout: authLogout } = useAuthStore();
-  const { theme, toggleTheme } = useThemeStore();
 
-  const isDark = theme === 'dark';
-
-  // Notifications query
   const { data: notificationsData } = useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
@@ -125,66 +117,57 @@ export default function AdminLayout() {
     refetchInterval: 20000,
   });
 
-  const pulseStateClass =
-    pulseData?.state === 'critical'
-      ? 'bg-red-500/10 text-red-600 border-red-500/30'
-      : pulseData?.state === 'attention'
-        ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
-        : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30';
-
   const handleLogout = async () => {
     try {
       await api.post('/auth/logout');
     } catch {
-      // Ignore errors
+      // Ignore
     }
     authLogout();
     navigate('/login');
   };
 
   const isActiveRoute = (href: string) => {
-    if (href === '/admin') {
-      return location.pathname === '/admin';
-    }
+    if (href === '/admin') return location.pathname === '/admin';
     return location.pathname.startsWith(href);
   };
 
   const currentPageTitle =
     flatNavigation.find((item) => location.pathname === item.href)?.name ||
     flatNavigation.find((item) => item.href !== '/admin' && location.pathname.startsWith(item.href))?.name ||
-    'Painel Administrativo';
+    'Admin';
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surface-page admin-layout-root">
-      {/* Mobile sidebar backdrop */}
+    <div className="flex h-screen overflow-hidden bg-gray-50">
+      {/* Mobile sidebar */}
       <Transition.Root show={sidebarOpen} as={Fragment}>
         <div className="relative z-50 lg:hidden">
           <Transition.Child
             as={Fragment}
-            enter="transition-opacity ease-linear duration-300"
+            enter="transition-opacity ease-linear duration-200"
             enterFrom="opacity-0"
             enterTo="opacity-100"
-            leave="transition-opacity ease-linear duration-300"
+            leave="transition-opacity ease-linear duration-200"
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-gray-900/80" onClick={() => setSidebarOpen(false)} />
+            <div className="fixed inset-0 bg-black/30" onClick={() => setSidebarOpen(false)} />
           </Transition.Child>
 
           <div className="fixed inset-0 flex">
             <Transition.Child
               as={Fragment}
-              enter="transition ease-in-out duration-300 transform"
+              enter="transition ease-in-out duration-200 transform"
               enterFrom="-translate-x-full"
               enterTo="translate-x-0"
-              leave="transition ease-in-out duration-300 transform"
+              leave="transition ease-in-out duration-200 transform"
               leaveFrom="translate-x-0"
               leaveTo="-translate-x-full"
             >
-              <div className="relative mr-16 flex w-full max-w-xs flex-1">
+              <div className="relative mr-16 flex w-full max-w-[272px] flex-1">
                 <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
                   <button type="button" className="-m-2.5 p-2.5" onClick={() => setSidebarOpen(false)}>
-                    <XMarkIcon className="h-6 w-6 text-white" />
+                    <XMarkIcon className="h-6 w-6 text-gray-600" />
                   </button>
                 </div>
                 <SidebarContent isActiveRoute={isActiveRoute} pulseData={pulseData} />
@@ -195,156 +178,91 @@ export default function AdminLayout() {
       </Transition.Root>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
+      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-[272px] lg:flex-col">
         <SidebarContent isActiveRoute={isActiveRoute} pulseData={pulseData} />
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col lg:pl-72">
+      <div className="flex flex-1 flex-col lg:pl-[272px]">
         {/* Top bar */}
-        <div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-border-DEFAULT bg-surface-page/85 px-4 backdrop-blur sm:gap-x-6 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-40 flex h-14 items-center gap-x-4 border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8">
           <button
             type="button"
-            className="-m-2.5 p-2.5 text-tx-muted lg:hidden"
+            className="-m-2.5 p-2.5 text-gray-500 lg:hidden"
             onClick={() => setSidebarOpen(true)}
           >
-            <Bars3Icon className="h-6 w-6" />
+            <Bars3Icon className="h-5 w-5" />
           </button>
 
-          {/* Separator */}
-          <div className="h-6 w-px bg-border-DEFAULT lg:hidden" />
+          <div className="h-5 w-px bg-gray-200 lg:hidden" />
 
-          <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-            {/* Page title */}
-            <div className="flex items-center">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-tx-muted">Painel Administrativo</p>
-                <h1 className="text-base font-semibold text-tx-primary sm:text-lg">{currentPageTitle}</h1>
-              </div>
-            </div>
+          <h1 className="text-sm font-semibold text-gray-900">{currentPageTitle}</h1>
 
-            <div className="flex flex-1 items-center justify-end gap-x-4 lg:gap-x-6">
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="rounded-lg border border-border-DEFAULT bg-surface-card p-2 text-tx-secondary hover:bg-surface-hover"
-                title={isDark ? 'Ativar tema claro' : 'Ativar tema escuro'}
-              >
-                {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
-              </button>
-
-              <button
-                type="button"
-                className="relative rounded-lg border border-border-DEFAULT bg-surface-card p-2 text-tx-secondary hover:bg-surface-hover"
-                title="Notificacoes"
-              >
-                <BellIcon className="h-5 w-5" />
-                {unreadCount > 0 ? (
-                  <span className="absolute -right-1.5 -top-1.5 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                ) : null}
-              </button>
-
-              {/* Separator */}
-              <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-border-DEFAULT" />
-
-              {/* Profile dropdown */}
-              <Menu as="div" className="relative">
-                <Menu.Button className="-m-1.5 flex items-center p-1.5 gap-3 rounded-lg hover:bg-surface-hover transition-colors">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-sm font-semibold text-white">
-                    {user?.name?.charAt(0)?.toUpperCase() || 'A'}
-                  </div>
-                  <div className="hidden lg:flex lg:items-center">
-                    <span className="text-sm font-medium text-tx-primary">{user?.name || 'Admin'}</span>
-                    <ChevronDownIcon className="ml-2 h-4 w-4 text-tx-muted" />
-                  </div>
-                </Menu.Button>
-
-                <Transition
-                  as={Fragment}
-                  enter="transition ease-out duration-100"
-                  enterFrom="transform opacity-0 scale-95"
-                  enterTo="transform opacity-100 scale-100"
-                  leave="transition ease-in duration-75"
-                  leaveFrom="transform opacity-100 scale-100"
-                  leaveTo="transform opacity-0 scale-95"
-                >
-                  <Menu.Items className="absolute right-0 z-10 mt-2.5 w-48 origin-top-right rounded-xl bg-surface-card py-2 shadow-lg ring-1 ring-border-DEFAULT focus:outline-none">
-                    <Menu.Item>
-                      {({ active }) => (
-                        <Link
-                          to="/dashboard"
-                          className={`${
-                            active ? 'bg-surface-hover' : ''
-                          } flex items-center gap-3 px-4 py-2 text-sm text-tx-primary`}
-                        >
-                          <UserCircleIcon className="h-5 w-5 text-tx-muted" />
-                          Meu Dashboard
-                        </Link>
-                      )}
-                    </Menu.Item>
-                    <Menu.Item>
-                      {({ active }) => (
-                        <button
-                          onClick={handleLogout}
-                          className={`${
-                            active ? 'bg-surface-hover' : ''
-                          } flex w-full items-center gap-3 px-4 py-2 text-sm text-red-500`}
-                        >
-                          <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                          Sair
-                        </button>
-                      )}
-                    </Menu.Item>
-                  </Menu.Items>
-                </Transition>
-              </Menu>
-            </div>
-          </div>
-        </div>
-
-        {pulseData ? (
-          <div className="border-b border-border-DEFAULT bg-surface-card/70 px-4 py-2 sm:px-6 lg:px-8">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className={`rounded-full border px-2.5 py-1 font-semibold ${pulseStateClass}`}>
-                Operacao {pulseData.state === 'healthy' ? 'estavel' : pulseData.state === 'attention' ? 'em atencao' : 'critica'} ({pulseData.health_score}%)
-              </span>
-
-              <Link to="/admin/finance" className="rounded-full bg-blue-500/10 px-2.5 py-1 font-medium text-blue-600 hover:bg-blue-500/20">
-                Saques pendentes: {pulseData.queues.pending_withdrawals}
-              </Link>
-
-              <Link to="/admin/control-tower" className="rounded-full bg-green-500/10 px-2.5 py-1 font-medium text-green-600 hover:bg-green-500/20">
-                Abrir control tower
-              </Link>
-
-              <Link to="/admin/approvals" className="rounded-full bg-emerald-500/10 px-2.5 py-1 font-medium text-emerald-600 hover:bg-emerald-500/20">
-                Aprovacoes: {pulseData.queues.pending_approvals}
-              </Link>
-
-              <Link to="/admin/kyc" className="rounded-full bg-cyan-500/10 px-2.5 py-1 font-medium text-cyan-600 hover:bg-cyan-500/20">
-                KYC pendente: {pulseData.queues.pending_kyc}
-              </Link>
-
-              {!pulseData.switches.withdrawal_processing_enabled ? (
-                <span className="rounded-full bg-red-500/10 px-2.5 py-1 font-medium text-red-600">
-                  Processamento de saque pausado
+          <div className="ml-auto flex items-center gap-x-3">
+            {/* Notifications */}
+            <button
+              type="button"
+              className="relative rounded-md p-1.5 text-gray-400 hover:text-gray-600"
+            >
+              <BellIcon className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
-              ) : null}
+              )}
+            </button>
 
-              {!pulseData.switches.payments_enabled ? (
-                <span className="rounded-full bg-red-500/10 px-2.5 py-1 font-medium text-red-600">
-                  Pagamentos pausados
-                </span>
-              ) : null}
-            </div>
+            {/* Profile */}
+            <Menu as="div" className="relative">
+              <Menu.Button className="flex items-center gap-2 rounded-md p-1.5 hover:bg-gray-50">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-900 text-xs font-medium text-white">
+                  {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+                </div>
+                <span className="hidden text-sm font-medium text-gray-700 lg:block">{user?.name || 'Admin'}</span>
+                <ChevronDownIcon className="hidden h-4 w-4 text-gray-400 lg:block" />
+              </Menu.Button>
+
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+              >
+                <Menu.Items className="absolute right-0 z-10 mt-2 w-44 origin-top-right rounded-lg bg-white py-1 shadow-lg ring-1 ring-gray-200 focus:outline-none">
+                  <Menu.Item>
+                    {({ active }) => (
+                      <Link
+                        to="/dashboard"
+                        className={`${active ? 'bg-gray-50' : ''} flex items-center gap-2 px-3 py-2 text-sm text-gray-700`}
+                      >
+                        <UserCircleIcon className="h-4 w-4 text-gray-400" />
+                        Meu Dashboard
+                      </Link>
+                    )}
+                  </Menu.Item>
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={handleLogout}
+                        className={`${active ? 'bg-gray-50' : ''} flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600`}
+                      >
+                        <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                        Sair
+                      </button>
+                    )}
+                  </Menu.Item>
+                </Menu.Items>
+              </Transition>
+            </Menu>
           </div>
-        ) : null}
+        </header>
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto max-w-[1400px] p-4 sm:p-6 lg:p-8">
             <Outlet />
           </div>
         </main>
@@ -385,27 +303,42 @@ function SidebarContent({
     }))
     .filter((group) => group.items.length > 0);
 
+  const pulseColor =
+    pulseData?.state === 'critical' ? 'bg-red-500' :
+    pulseData?.state === 'attention' ? 'bg-amber-500' : 'bg-emerald-500';
+
   return (
-    <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-white/10 bg-slate-950 px-6 pb-4">
+    <div className="flex grow flex-col overflow-y-auto border-r border-gray-200 bg-white px-4 pb-4">
       {/* Logo */}
-      <div className="flex h-16 shrink-0 items-center">
-        <Link to="/admin" className="flex items-center">
-          <span className="text-lg font-bold text-white">Vector Pagamentos</span>
-          <span className="ml-2 rounded bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-300">
+      <div className="flex h-14 shrink-0 items-center px-2">
+        <Link to="/admin" className="flex items-center gap-2">
+          <span className="text-base font-semibold text-gray-900">Vector</span>
+          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500">
             Admin
           </span>
         </Link>
       </div>
 
+      {/* Pulse indicator */}
+      {pulseData && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+          <span className={`h-2 w-2 rounded-full ${pulseColor}`} />
+          <span className="text-xs font-medium text-gray-600">
+            {pulseData.state === 'healthy' ? 'Operação estável' : pulseData.state === 'attention' ? 'Atenção' : 'Crítico'}
+          </span>
+          <span className="ml-auto text-xs text-gray-400">{pulseData.health_score}%</span>
+        </div>
+      )}
+
       {/* Navigation */}
       <nav className="flex flex-1 flex-col">
-        <ul role="list" className="flex flex-1 flex-col gap-y-4">
+        <ul role="list" className="flex flex-1 flex-col gap-y-5">
           {visibleNavigationGroups.map((group) => (
             <li key={group.title}>
-              <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-slate-500">
+              <p className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                 {group.title}
               </p>
-              <ul className="space-y-1">
+              <ul className="space-y-0.5">
                 {group.items.map((item) => {
                   const active = isActiveRoute(item.href);
                   const dynamicBadge =
@@ -421,20 +354,20 @@ function SidebarContent({
                     <li key={item.name}>
                       <Link
                         to={item.href}
-                        className={`group flex items-center gap-x-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all ${
+                        className={`group flex items-center gap-x-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors ${
                           active
-                            ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg shadow-blue-900/30'
-                            : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                            ? 'bg-gray-100 text-gray-900'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                         }`}
                       >
                         <item.icon
-                          className={`h-5 w-5 shrink-0 ${
-                            active ? 'text-white' : 'text-slate-400 group-hover:text-white'
+                          className={`h-[18px] w-[18px] shrink-0 ${
+                            active ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'
                           }`}
                         />
                         {item.name}
                         {dynamicBadge && dynamicBadge > 0 && (
-                          <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-bold text-white">
+                          <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gray-900 px-1.5 text-[10px] font-medium text-white">
                             {dynamicBadge > 99 ? '99+' : dynamicBadge}
                           </span>
                         )}
@@ -446,19 +379,6 @@ function SidebarContent({
             </li>
           ))}
         </ul>
-
-        {/* Footer */}
-        <div className="mt-auto border-t border-white/10 pt-4">
-          <div className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-green-600 text-xs font-bold text-white">
-              W
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-medium text-white">Vector Pagamentos Gateway</p>
-              <p className="truncate text-xs text-slate-400">Sistema Administrativo</p>
-            </div>
-          </div>
-        </div>
       </nav>
     </div>
   );

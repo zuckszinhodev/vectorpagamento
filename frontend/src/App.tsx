@@ -368,18 +368,17 @@ function App() {
 
   useLayoutEffect(() => {
     const isAdminRoute = location.pathname.startsWith('/admin');
-    const effectiveTheme = isAdminRoute ? theme : 'dark';
+    const effectiveTheme = isAdminRoute ? 'light' : 'dark';
 
     document.documentElement.classList.toggle('app-admin-route', isAdminRoute);
     document.documentElement.classList.toggle('app-dark-forced', !isAdminRoute);
 
-    // Apply theme. Non-admin pages are always dark by default.
     if (effectiveTheme === 'dark') {
       document.documentElement.classList.add('dark');
       document.body.style.backgroundColor = '#0a0a0a';
     } else {
       document.documentElement.classList.remove('dark');
-      document.body.style.backgroundColor = '#FAFAFA';
+      document.body.style.backgroundColor = '#F9FAFB';
     }
   }, [theme, location.pathname]);
 

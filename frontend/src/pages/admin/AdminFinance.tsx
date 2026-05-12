@@ -222,7 +222,7 @@ export default function AdminFinance() {
     switch (status) {
       case 'completed':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
             <CheckCircleIcon className="h-3.5 w-3.5" />
             Concluido
           </span>
@@ -230,14 +230,14 @@ export default function AdminFinance() {
       case 'approved':
       case 'processing':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
             <ArrowPathIcon className="h-3.5 w-3.5" />
             Processando
           </span>
         );
       case 'pending':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
             <ClockIcon className="h-3.5 w-3.5" />
             Pendente
           </span>
@@ -245,7 +245,7 @@ export default function AdminFinance() {
       case 'rejected':
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
             <XCircleIcon className="h-3.5 w-3.5" />
             {status === 'rejected' ? 'Rejeitado' : 'Cancelado'}
           </span>
@@ -269,7 +269,7 @@ export default function AdminFinance() {
     switch (status) {
       case 'approved':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
             <CheckCircleIcon className="h-3.5 w-3.5" />
             Aprovado
           </span>
@@ -277,7 +277,7 @@ export default function AdminFinance() {
       case 'pending':
       case 'processing':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
             <ClockIcon className="h-3.5 w-3.5" />
             {status === 'pending' ? 'Pendente' : 'Processando'}
           </span>
@@ -285,14 +285,14 @@ export default function AdminFinance() {
       case 'refunded':
       case 'partially_refunded':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
             <ArrowPathIcon className="h-3.5 w-3.5" />
             {status === 'refunded' ? 'Reembolsado' : 'Reembolso Parcial'}
           </span>
         );
       case 'chargeback':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
             <XCircleIcon className="h-3.5 w-3.5" />
             Chargeback
           </span>
@@ -302,13 +302,13 @@ export default function AdminFinance() {
       case 'cancelled':
       case 'expired':
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
             <XCircleIcon className="h-3.5 w-3.5" />
             {status === 'declined' ? 'Recusado' : status === 'failed' ? 'Falhou' : status === 'cancelled' ? 'Cancelado' : 'Expirado'}
           </span>
         );
       default:
-        return <span className="text-xs text-tx-muted">{status}</span>;
+        return <span className="text-xs text-gray-500">{status}</span>;
     }
   };
 
@@ -324,7 +324,7 @@ export default function AdminFinance() {
   return (
     <AdminPageShell>
       <AdminPageHeader
-        icon={BanknotesIcon}
+        
         title="Financeiro"
         subtitle="Gerencie saques, transacoes e configuracoes financeiras"
         actions={
@@ -332,7 +332,7 @@ export default function AdminFinance() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowConfigModal(true)}
-                className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 transition-colors"
+                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
                 Configurações
               </button>
@@ -352,20 +352,20 @@ export default function AdminFinance() {
       />
 
       {/* Main Tabs */}
-      <div className="flex items-center gap-1 rounded-xl bg-surface-card p-1 shadow-sm">
+      <div className="flex items-center gap-1 rounded-md bg-white p-1 shadow-sm">
         <button
           onClick={() => setActiveMainTab('transactions')}
           className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
             activeMainTab === 'transactions'
               ? 'bg-green-600 text-white shadow-sm'
-              : 'text-tx-secondary hover:bg-surface-hover'
+              : 'text-gray-600 hover:bg-gray-100'
           }`}
         >
           <DocumentTextIcon className="h-4 w-4" />
           Transações
           {chargesPagination.total > 0 && (
             <span className={`rounded-full px-2 py-0.5 text-xs ${
-              activeMainTab === 'transactions' ? 'bg-white/20' : 'bg-green-500/10 text-green-600'
+              activeMainTab === 'transactions' ? 'bg-white/20' : 'bg-green-50 text-green-600'
             }`}>
               {chargesPagination.total}
             </span>
@@ -376,7 +376,7 @@ export default function AdminFinance() {
           className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
             activeMainTab === 'withdrawals'
               ? 'bg-green-600 text-white shadow-sm'
-              : 'text-tx-secondary hover:bg-surface-hover'
+              : 'text-gray-600 hover:bg-gray-100'
           }`}
         >
           <BanknotesIcon className="h-4 w-4" />
@@ -388,48 +388,48 @@ export default function AdminFinance() {
         <>
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded-xl bg-amber-500/10 p-4">
+        <div className="rounded-md bg-amber-50 p-4">
           <p className="text-xs text-amber-600 mb-1">Saques Pendentes</p>
           <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>
         </div>
-        <div className="rounded-xl bg-orange-500/10 p-4">
+        <div className="rounded-md bg-orange-500/10 p-4">
           <p className="text-xs text-orange-600 mb-1">Total Pendente</p>
           <p className="text-2xl font-bold text-orange-600">{formatCurrency(pendingTotal)}</p>
         </div>
-        <div className="rounded-xl bg-emerald-500/10 p-4">
+        <div className="rounded-md bg-emerald-50 p-4">
           <p className="text-xs text-emerald-600 mb-1">Taxa de Saque</p>
           <p className="text-2xl font-bold text-emerald-600">
             {config?.fee_percentage || 0}% + {formatCurrency(config?.fee_fixed || 0)}
           </p>
         </div>
-        <div className="rounded-xl bg-green-500/10 p-4">
+        <div className="rounded-md bg-green-50 p-4">
           <p className="text-xs text-green-600 mb-1">Limite Auto-Aprovação</p>
           <p className="text-2xl font-bold text-green-600">
             {config?.auto_approve_limit ? formatCurrency(config.auto_approve_limit) : 'Manual'}
           </p>
         </div>
-        <div className="rounded-xl bg-blue-500/10 p-4">
+        <div className="rounded-md bg-blue-50 p-4">
           <p className="text-xs text-blue-600 mb-1">Saque Automático</p>
           <p className="text-2xl font-bold text-blue-600">
             {config?.auto_withdrawal_enabled ? (
               <span className="text-emerald-600">Ativo</span>
             ) : (
-              <span className="text-tx-muted">Desativado</span>
+              <span className="text-gray-500">Desativado</span>
             )}
           </p>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-xl bg-emerald-500/10 p-4">
+        <div className="rounded-md bg-emerald-50 p-4">
           <p className="text-xs text-emerald-600 mb-1">Taxa de Aprovação (transações filtradas)</p>
           <p className="text-2xl font-bold text-emerald-600">{successRate}%</p>
         </div>
-        <div className="rounded-xl bg-sky-500/10 p-4">
+        <div className="rounded-md bg-sky-500/10 p-4">
           <p className="text-xs text-sky-600 mb-1">Saques Concluídos (página atual)</p>
           <p className="text-2xl font-bold text-sky-600">{formatCurrency(completedWithdrawalsTotal)}</p>
         </div>
-        <div className="rounded-xl bg-red-500/10 p-4">
+        <div className="rounded-md bg-red-50 p-4">
           <p className="text-xs text-red-600 mb-1">Alertas Operacionais</p>
           <p className="text-sm font-semibold text-red-600 mt-1">
             {pendingCount > 20 ? 'Fila de saques acima do ideal' : 'Sem alertas críticos'}
@@ -438,11 +438,11 @@ export default function AdminFinance() {
       </div>
 
       {/* Filters */}
-      <div className="rounded-2xl bg-surface-card p-4 shadow-sm">
+      <div className="rounded-lg border border-gray-200 bg-white p-4">
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
             <div className="relative flex-1">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
               <input
                 type="text"
                 placeholder="Buscar por nome, email ou ID..."
@@ -451,19 +451,19 @@ export default function AdminFinance() {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none focus:ring-0"
               />
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <FunnelIcon className="h-4 w-4 text-tx-muted" />
+              <FunnelIcon className="h-4 w-4 text-gray-500" />
               <select
                 value={statusFilter}
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
               >
                 <option value="all">Todos os status</option>
                 <option value="pending">Pendentes</option>
@@ -478,7 +478,7 @@ export default function AdminFinance() {
                   setMethodFilter(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
               >
                 <option value="all">Todos os métodos</option>
                 <option value="pix">PIX</option>
@@ -487,7 +487,7 @@ export default function AdminFinance() {
 
               <button
                 onClick={() => refetch()}
-                className="flex items-center gap-2 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-secondary hover:bg-border-DEFAULT transition-colors"
+                className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-border-DEFAULT transition-colors"
               >
                 <ArrowPathIcon className="h-4 w-4" />
                 Atualizar
@@ -497,19 +497,19 @@ export default function AdminFinance() {
 
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
-              <CalendarDaysIcon className="h-4 w-4 text-tx-muted" />
+              <CalendarDaysIcon className="h-4 w-4 text-gray-500" />
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
               />
-              <span className="text-sm text-tx-muted">até</span>
+              <span className="text-sm text-gray-500">até</span>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
               />
             </div>
             {(search || statusFilter !== 'all' || methodFilter !== 'all' || dateFrom || dateTo) && (
@@ -522,13 +522,13 @@ export default function AdminFinance() {
                   setDateTo('');
                   setPage(1);
                 }}
-                className="flex items-center gap-1 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/20 transition-colors"
+                className="flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-500/20 transition-colors"
               >
                 <XMarkIcon className="h-3.5 w-3.5" />
                 Limpar filtros
               </button>
             )}
-            <span className="text-xs text-tx-muted ml-auto">
+            <span className="text-xs text-gray-500 ml-auto">
               {pagination.total} saques encontrados
             </span>
           </div>
@@ -536,38 +536,38 @@ export default function AdminFinance() {
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
           </div>
         ) : withdrawals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <BanknotesIcon className="h-12 w-12 text-tx-muted" />
-            <p className="mt-4 text-sm text-tx-muted">Nenhum saque encontrado</p>
+            <BanknotesIcon className="h-12 w-12 text-gray-500" />
+            <p className="mt-4 text-sm text-gray-500">Nenhum saque encontrado</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-border-DEFAULT bg-surface-page">
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Cliente
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Valor
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Método
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Data
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Ações
                     </th>
                   </tr>
@@ -576,21 +576,21 @@ export default function AdminFinance() {
                   {withdrawals.map((withdrawal: Withdrawal) => (
                     <tr
                       key={withdrawal.id}
-                      className="hover:bg-surface-hover transition-colors"
+                      className="hover:bg-gray-100 transition-colors"
                     >
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-sm font-medium text-tx-primary">{withdrawal.customer_name}</p>
-                          <p className="text-xs text-tx-muted">{withdrawal.customer_email}</p>
+                          <p className="text-sm font-medium text-gray-900">{withdrawal.customer_name}</p>
+                          <p className="text-xs text-gray-500">{withdrawal.customer_email}</p>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div>
-                          <p className="text-sm font-semibold text-tx-primary">
+                          <p className="text-sm font-semibold text-gray-900">
                             {formatCurrency(withdrawal.amount)}
                           </p>
                           {withdrawal.fee && withdrawal.fee > 0 && (
-                            <p className="text-xs text-tx-muted">
+                            <p className="text-xs text-gray-500">
                               Taxa: {formatCurrency(withdrawal.fee)}
                             </p>
                           )}
@@ -599,9 +599,9 @@ export default function AdminFinance() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           {withdrawal.is_instant && (
-                            <BoltIcon className="h-4 w-4 text-amber-500" title="Saque Instantâneo" />
+                            <BoltIcon className="h-4 w-4 text-amber-700" title="Saque Instantâneo" />
                           )}
-                          <span className="text-sm text-tx-primary">
+                          <span className="text-sm text-gray-900">
                             {withdrawal.method === 'pix' ? 'PIX' : 'TED'}
                           </span>
                         </div>
@@ -610,14 +610,14 @@ export default function AdminFinance() {
                         <div className="space-y-1">
                           {getStatusBadge(withdrawal.status)}
                           {(withdrawal.status === 'cancelled' || withdrawal.status === 'rejected') && (withdrawal.failure_reason || withdrawal.notes || withdrawal.cancel_reason) && (
-                            <p className="max-w-[280px] truncate text-xs text-tx-muted" title={withdrawal.failure_reason || withdrawal.notes || withdrawal.cancel_reason}>
+                            <p className="max-w-[280px] truncate text-xs text-gray-500" title={withdrawal.failure_reason || withdrawal.notes || withdrawal.cancel_reason}>
                               Motivo: {withdrawal.failure_reason || withdrawal.notes || withdrawal.cancel_reason}
                             </p>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-sm text-tx-muted">
+                        <span className="text-sm text-gray-500">
                           {formatDate(withdrawal.requested_at)}
                         </span>
                       </td>
@@ -628,7 +628,7 @@ export default function AdminFinance() {
                               setSelectedWithdrawal(withdrawal);
                               setShowDetailModal(true);
                             }}
-                            className="rounded-lg bg-surface-hover p-1.5 text-tx-muted hover:text-tx-primary transition-colors"
+                            className="rounded-lg bg-gray-100 p-1.5 text-gray-500 hover:text-gray-900 transition-colors"
                             title="Ver detalhes"
                           >
                             <EyeIcon className="h-4 w-4" />
@@ -663,22 +663,22 @@ export default function AdminFinance() {
 
             {/* Pagination */}
             {pagination.last_page > 1 && (
-              <div className="flex items-center justify-between border-t border-border-DEFAULT px-6 py-4">
-                <p className="text-sm text-tx-muted">
+              <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
+                <p className="text-sm text-gray-500">
                   Página {pagination.current_page} de {pagination.last_page}
                 </p>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setPage(page - 1)}
                     disabled={page === 1}
-                    className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover disabled:opacity-50"
+                    className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50"
                   >
                     <ChevronLeftIcon className="h-5 w-5" />
                   </button>
                   <button
                     onClick={() => setPage(page + 1)}
                     disabled={page >= pagination.last_page}
-                    className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover disabled:opacity-50"
+                    className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50"
                   >
                     <ChevronRightIcon className="h-5 w-5" />
                   </button>
@@ -695,17 +695,17 @@ export default function AdminFinance() {
       {activeMainTab === 'transactions' && (
         <>
           {/* Filters */}
-          <div className="rounded-2xl bg-surface-card p-4 shadow-sm">
+          <div className="rounded-lg border border-gray-200 bg-white p-4">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
                 <div className="relative flex-1">
-                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" />
                   <input
                     type="text"
                     placeholder="Buscar por ID, cliente..."
                     value={txSearch}
                     onChange={(e) => { setTxSearch(e.target.value); setTxPage(1); }}
-                    className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none focus:ring-0"
                   />
                 </div>
 
@@ -713,7 +713,7 @@ export default function AdminFinance() {
                   <select
                     value={txStatus}
                     onChange={(e) => { setTxStatus(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                   >
                     <option value="all">Todos os status</option>
                     <option value="approved">Aprovados</option>
@@ -730,7 +730,7 @@ export default function AdminFinance() {
                   <select
                     value={txMethod}
                     onChange={(e) => { setTxMethod(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                   >
                     <option value="all">Todos os métodos</option>
                     <option value="pix">PIX</option>
@@ -741,7 +741,7 @@ export default function AdminFinance() {
                   <select
                     value={txAcquirer}
                     onChange={(e) => { setTxAcquirer(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                   >
                     <option value="all">Todos os gateways</option>
                     <option value="payfort">PayFort</option>
@@ -756,7 +756,7 @@ export default function AdminFinance() {
 
                   <button
                     onClick={() => refetchCharges()}
-                    className="flex items-center gap-2 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-secondary hover:bg-border-DEFAULT transition-colors"
+                    className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-border-DEFAULT transition-colors"
                   >
                     <ArrowPathIcon className="h-4 w-4" />
                     Atualizar
@@ -766,19 +766,19 @@ export default function AdminFinance() {
 
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <CalendarDaysIcon className="h-4 w-4 text-tx-muted" />
+                  <CalendarDaysIcon className="h-4 w-4 text-gray-500" />
                   <input
                     type="date"
                     value={txDateFrom}
                     onChange={(e) => { setTxDateFrom(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                   />
-                  <span className="text-sm text-tx-muted">até</span>
+                  <span className="text-sm text-gray-500">até</span>
                   <input
                     type="date"
                     value={txDateTo}
                     onChange={(e) => { setTxDateTo(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                   />
                 </div>
                 {(txSearch || txStatus !== 'all' || txMethod !== 'all' || txAcquirer !== 'all' || txDateFrom || txDateTo) && (
@@ -792,7 +792,7 @@ export default function AdminFinance() {
                       setTxDateTo('');
                       setTxPage(1);
                     }}
-                    className="flex items-center gap-1 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/20 transition-colors"
+                    className="flex items-center gap-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-500/20 transition-colors"
                   >
                     <XMarkIcon className="h-3.5 w-3.5" />
                     Limpar filtros
@@ -803,90 +803,90 @@ export default function AdminFinance() {
           </div>
 
           {/* Transactions Table */}
-          <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
+          <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
             {isLoadingCharges ? (
               <div className="flex items-center justify-center py-20">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
+                <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
               </div>
             ) : charges.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
-                <DocumentTextIcon className="h-12 w-12 text-tx-muted" />
-                <p className="mt-4 text-sm text-tx-muted">Nenhuma transação encontrada</p>
+                <DocumentTextIcon className="h-12 w-12 text-gray-500" />
+                <p className="mt-4 text-sm text-gray-500">Nenhuma transação encontrada</p>
               </div>
             ) : (
               <>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-border-DEFAULT bg-surface-page">
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                           Cliente
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                           Vendedor
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                           Produto
                         </th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
                           Valor
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                           Método
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                           Gateway
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                           Status
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                           Data
                         </th>
-                        <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                        <th className="px-6 py-4 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
                           Ações
                         </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border-DEFAULT">
                       {charges.map((charge: any) => (
-                        <tr key={charge.id} className="hover:bg-surface-hover transition-colors cursor-pointer" onClick={() => { setSelectedCharge(charge); setShowChargeDetailModal(true); }}>
+                        <tr key={charge.id} className="hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => { setSelectedCharge(charge); setShowChargeDetailModal(true); }}>
                           <td className="px-6 py-4">
                             <div>
-                              <p className="text-sm font-medium text-tx-primary">{charge.customer_name || '—'}</p>
-                              <p className="text-xs text-tx-muted">{charge.customer_email || ''}</p>
+                              <p className="text-sm font-medium text-gray-900">{charge.customer_name || '—'}</p>
+                              <p className="text-xs text-gray-500">{charge.customer_email || ''}</p>
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm text-tx-primary">{charge.account_name}</span>
+                            <span className="text-sm text-gray-900">{charge.account_name}</span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm text-tx-primary truncate max-w-[150px] block">{charge.product_name || '—'}</span>
+                            <span className="text-sm text-gray-900 truncate max-w-[150px] block">{charge.product_name || '—'}</span>
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div>
-                              <p className="text-sm font-semibold text-tx-primary">{formatCurrency(charge.amount)}</p>
+                              <p className="text-sm font-semibold text-gray-900">{formatCurrency(charge.amount)}</p>
                               {charge.fee_amount > 0 && (
-                                <p className="text-xs text-tx-muted">
+                                <p className="text-xs text-gray-500">
                                   Taxa: {formatCurrency(charge.fee_amount)}
                                 </p>
                               )}
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm text-tx-primary">
+                            <span className="text-sm text-gray-900">
                               {getPaymentMethodLabel(charge.payment_method)}
                               {charge.installments > 1 && ` ${charge.installments}x`}
                             </span>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-xs text-tx-muted">{charge.acquirer || '—'}</span>
+                            <span className="text-xs text-gray-500">{charge.acquirer || '—'}</span>
                           </td>
                           <td className="px-6 py-4">
                             {getChargeStatusBadge(charge.status)}
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm text-tx-muted">{formatDate(charge.created_at)}</span>
+                            <span className="text-sm text-gray-500">{formatDate(charge.created_at)}</span>
                           </td>
                           <td className="px-6 py-4 text-center">
                             <button
@@ -895,7 +895,7 @@ export default function AdminFinance() {
                                 setSelectedCharge(charge);
                                 setShowChargeDetailModal(true);
                               }}
-                              className="rounded-lg p-2 text-green-500 hover:bg-green-50 transition-colors"
+                              className="rounded-lg p-2 text-green-700 hover:bg-green-50 transition-colors"
                               title="Ver detalhes"
                             >
                               <EyeIcon className="h-4 w-4" />
@@ -909,22 +909,22 @@ export default function AdminFinance() {
 
                 {/* Pagination */}
                 {chargesPagination.last_page > 1 && (
-                  <div className="flex items-center justify-between border-t border-border-DEFAULT px-6 py-4">
-                    <p className="text-sm text-tx-muted">
+                  <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
+                    <p className="text-sm text-gray-500">
                       Página {chargesPagination.current_page} de {chargesPagination.last_page} ({chargesPagination.total} transações)
                     </p>
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setTxPage(txPage - 1)}
                         disabled={txPage === 1}
-                        className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover disabled:opacity-50"
+                        className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50"
                       >
                         <ChevronLeftIcon className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => setTxPage(txPage + 1)}
                         disabled={txPage >= chargesPagination.last_page}
-                        className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover disabled:opacity-50"
+                        className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50"
                       >
                         <ChevronRightIcon className="h-5 w-5" />
                       </button>
@@ -940,12 +940,12 @@ export default function AdminFinance() {
       {/* Charge Detail Modal */}
       {showChargeDetailModal && selectedCharge && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowChargeDetailModal(false)}>
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-surface-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-tx-primary">Detalhes da Transação</h2>
+              <h2 className="text-lg font-bold text-gray-900">Detalhes da Transação</h2>
               <button
                 onClick={() => setShowChargeDetailModal(false)}
-                className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover"
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
@@ -953,12 +953,12 @@ export default function AdminFinance() {
 
             <div className="space-y-4">
               {/* Status & Amount */}
-              <div className="flex items-center justify-between rounded-xl bg-surface-page p-4">
+              <div className="flex items-center justify-between rounded-md bg-gray-50 p-4">
                 <div>
-                  <p className="text-xs text-tx-muted mb-1">Valor</p>
-                  <p className="text-2xl font-bold text-tx-primary">{formatCurrency(selectedCharge.amount)}</p>
+                  <p className="text-xs text-gray-500 mb-1">Valor</p>
+                  <p className="text-2xl font-bold text-gray-900">{formatCurrency(selectedCharge.amount)}</p>
                   {selectedCharge.fee_amount > 0 && (
-                    <p className="text-xs text-tx-muted mt-1">
+                    <p className="text-xs text-gray-500 mt-1">
                       Taxa: {formatCurrency(selectedCharge.fee_amount)} | Líquido: {formatCurrency(selectedCharge.amount - selectedCharge.fee_amount)}
                     </p>
                   )}
@@ -968,126 +968,126 @@ export default function AdminFinance() {
 
               {/* IDs */}
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-surface-page p-4">
-                  <p className="text-xs text-tx-muted mb-1">ID da Transação</p>
-                  <p className="text-sm font-mono text-tx-primary break-all">{selectedCharge.id}</p>
+                <div className="rounded-md bg-gray-50 p-4">
+                  <p className="text-xs text-gray-500 mb-1">ID da Transação</p>
+                  <p className="text-sm font-mono text-gray-900 break-all">{selectedCharge.id}</p>
                 </div>
                 {selectedCharge.external_id && (
-                  <div className="rounded-xl bg-surface-page p-4">
-                    <p className="text-xs text-tx-muted mb-1">ID Externo</p>
-                    <p className="text-sm font-mono text-tx-primary break-all">{selectedCharge.external_id}</p>
+                  <div className="rounded-md bg-gray-50 p-4">
+                    <p className="text-xs text-gray-500 mb-1">ID Externo</p>
+                    <p className="text-sm font-mono text-gray-900 break-all">{selectedCharge.external_id}</p>
                   </div>
                 )}
               </div>
 
               {/* Customer Info */}
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider mb-3">Cliente</p>
+              <div className="rounded-md bg-gray-50 p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Cliente</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-tx-muted">Nome</p>
-                    <p className="text-sm font-medium text-tx-primary">{selectedCharge.customer_name || '—'}</p>
+                    <p className="text-xs text-gray-500">Nome</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedCharge.customer_name || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-tx-muted">Email</p>
-                    <p className="text-sm text-tx-primary">{selectedCharge.customer_email || '—'}</p>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="text-sm text-gray-900">{selectedCharge.customer_email || '—'}</p>
                   </div>
                   {selectedCharge.customer_document && (
                     <div>
-                      <p className="text-xs text-tx-muted">Documento</p>
-                      <p className="text-sm text-tx-primary">{selectedCharge.customer_document}</p>
+                      <p className="text-xs text-gray-500">Documento</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.customer_document}</p>
                     </div>
                   )}
                   {selectedCharge.customer_phone && (
                     <div>
-                      <p className="text-xs text-tx-muted">Telefone</p>
-                      <p className="text-sm text-tx-primary">{selectedCharge.customer_phone}</p>
+                      <p className="text-xs text-gray-500">Telefone</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.customer_phone}</p>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Seller & Product */}
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider mb-3">Vendedor & Produto</p>
+              <div className="rounded-md bg-gray-50 p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Vendedor & Produto</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-tx-muted">Vendedor</p>
-                    <p className="text-sm font-medium text-tx-primary">{selectedCharge.account_name || '—'}</p>
+                    <p className="text-xs text-gray-500">Vendedor</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedCharge.account_name || '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-tx-muted">Produto</p>
-                    <p className="text-sm text-tx-primary">{selectedCharge.product_name || '—'}</p>
+                    <p className="text-xs text-gray-500">Produto</p>
+                    <p className="text-sm text-gray-900">{selectedCharge.product_name || '—'}</p>
                   </div>
                   {selectedCharge.checkout_name && (
                     <div>
-                      <p className="text-xs text-tx-muted">Checkout</p>
-                      <p className="text-sm text-tx-primary">{selectedCharge.checkout_name}</p>
+                      <p className="text-xs text-gray-500">Checkout</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.checkout_name}</p>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Payment Details */}
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider mb-3">Pagamento</p>
+              <div className="rounded-md bg-gray-50 p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Pagamento</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-tx-muted">Método</p>
-                    <p className="text-sm font-medium text-tx-primary">
+                    <p className="text-xs text-gray-500">Método</p>
+                    <p className="text-sm font-medium text-gray-900">
                       {getPaymentMethodLabel(selectedCharge.payment_method)}
                       {selectedCharge.installments > 1 && ` ${selectedCharge.installments}x`}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-tx-muted">Gateway</p>
-                    <p className="text-sm text-tx-primary">{selectedCharge.acquirer || '—'}</p>
+                    <p className="text-xs text-gray-500">Gateway</p>
+                    <p className="text-sm text-gray-900">{selectedCharge.acquirer || '—'}</p>
                   </div>
                   {selectedCharge.card_brand && (
                     <div>
-                      <p className="text-xs text-tx-muted">Bandeira</p>
-                      <p className="text-sm text-tx-primary">{selectedCharge.card_brand}</p>
+                      <p className="text-xs text-gray-500">Bandeira</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.card_brand}</p>
                     </div>
                   )}
                   {selectedCharge.card_last4 && (
                     <div>
-                      <p className="text-xs text-tx-muted">Cartão</p>
-                      <p className="text-sm text-tx-primary">**** {selectedCharge.card_last4}</p>
+                      <p className="text-xs text-gray-500">Cartão</p>
+                      <p className="text-sm text-gray-900">**** {selectedCharge.card_last4}</p>
                     </div>
                   )}
                   {selectedCharge.pix_txid && (
                     <div className="col-span-2">
-                      <p className="text-xs text-tx-muted">PIX TxID</p>
-                      <p className="text-sm font-mono text-tx-primary break-all">{selectedCharge.pix_txid}</p>
+                      <p className="text-xs text-gray-500">PIX TxID</p>
+                      <p className="text-sm font-mono text-gray-900 break-all">{selectedCharge.pix_txid}</p>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Dates */}
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider mb-3">Datas</p>
+              <div className="rounded-md bg-gray-50 p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Datas</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-xs text-tx-muted">Criado em</p>
-                    <p className="text-sm text-tx-primary">{formatDate(selectedCharge.created_at)}</p>
+                    <p className="text-xs text-gray-500">Criado em</p>
+                    <p className="text-sm text-gray-900">{formatDate(selectedCharge.created_at)}</p>
                   </div>
                   {selectedCharge.paid_at && (
                     <div>
-                      <p className="text-xs text-tx-muted">Pago em</p>
-                      <p className="text-sm text-tx-primary">{formatDate(selectedCharge.paid_at)}</p>
+                      <p className="text-xs text-gray-500">Pago em</p>
+                      <p className="text-sm text-gray-900">{formatDate(selectedCharge.paid_at)}</p>
                     </div>
                   )}
                   {selectedCharge.refunded_at && (
                     <div>
-                      <p className="text-xs text-tx-muted">Reembolsado em</p>
-                      <p className="text-sm text-tx-primary">{formatDate(selectedCharge.refunded_at)}</p>
+                      <p className="text-xs text-gray-500">Reembolsado em</p>
+                      <p className="text-sm text-gray-900">{formatDate(selectedCharge.refunded_at)}</p>
                     </div>
                   )}
                   {selectedCharge.updated_at && selectedCharge.updated_at !== selectedCharge.created_at && (
                     <div>
-                      <p className="text-xs text-tx-muted">Atualizado em</p>
-                      <p className="text-sm text-tx-primary">{formatDate(selectedCharge.updated_at)}</p>
+                      <p className="text-xs text-gray-500">Atualizado em</p>
+                      <p className="text-sm text-gray-900">{formatDate(selectedCharge.updated_at)}</p>
                     </div>
                   )}
                 </div>
@@ -1095,17 +1095,17 @@ export default function AdminFinance() {
 
               {/* Affiliate */}
               {selectedCharge.affiliate_name && (
-                <div className="rounded-xl bg-surface-page p-4">
-                  <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider mb-3">Afiliado</p>
+                <div className="rounded-md bg-gray-50 p-4">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Afiliado</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-xs text-tx-muted">Nome</p>
-                      <p className="text-sm font-medium text-tx-primary">{selectedCharge.affiliate_name}</p>
+                      <p className="text-xs text-gray-500">Nome</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedCharge.affiliate_name}</p>
                     </div>
                     {selectedCharge.affiliate_commission != null && (
                       <div>
-                        <p className="text-xs text-tx-muted">Comissão</p>
-                        <p className="text-sm text-tx-primary">{formatCurrency(selectedCharge.affiliate_commission)}</p>
+                        <p className="text-xs text-gray-500">Comissão</p>
+                        <p className="text-sm text-gray-900">{formatCurrency(selectedCharge.affiliate_commission)}</p>
                       </div>
                     )}
                   </div>
@@ -1114,9 +1114,9 @@ export default function AdminFinance() {
 
               {/* Metadata / Notes */}
               {selectedCharge.notes && (
-                <div className="rounded-xl bg-surface-page p-4">
-                  <p className="text-xs text-tx-muted mb-1">Observações</p>
-                  <p className="text-sm text-tx-primary">{selectedCharge.notes}</p>
+                <div className="rounded-md bg-gray-50 p-4">
+                  <p className="text-xs text-gray-500 mb-1">Observações</p>
+                  <p className="text-sm text-gray-900">{selectedCharge.notes}</p>
                 </div>
               )}
             </div>
@@ -1124,7 +1124,7 @@ export default function AdminFinance() {
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setShowChargeDetailModal(false)}
-                className="rounded-lg bg-surface-hover px-5 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
+                className="rounded-lg bg-gray-100 px-5 py-2.5 text-sm font-medium text-gray-900 hover:bg-border-DEFAULT transition-colors"
               >
                 Fechar
               </button>
@@ -1136,16 +1136,16 @@ export default function AdminFinance() {
       {/* Reject Modal */}
       {showDetailModal && selectedWithdrawal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-          <div className="w-full max-w-lg rounded-2xl bg-surface-card p-6 shadow-xl my-8">
+          <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl my-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-tx-primary">Detalhes do Saque</h2>
+              <h2 className="text-lg font-bold text-gray-900">Detalhes do Saque</h2>
               <button
                 onClick={() => {
                   setShowDetailModal(false);
                   setSelectedWithdrawal(null);
                   setRejectReason('');
                 }}
-                className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover"
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
@@ -1153,82 +1153,82 @@ export default function AdminFinance() {
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-surface-page p-3">
-                  <p className="text-xs text-tx-muted mb-0.5">Cliente</p>
-                  <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.customer_name}</p>
+                <div className="rounded-md bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-0.5">Cliente</p>
+                  <p className="text-sm font-medium text-gray-900">{selectedWithdrawal.customer_name}</p>
                   {selectedWithdrawal.customer_email && (
-                    <p className="text-xs text-tx-muted">{selectedWithdrawal.customer_email}</p>
+                    <p className="text-xs text-gray-500">{selectedWithdrawal.customer_email}</p>
                   )}
                 </div>
-                <div className="rounded-xl bg-surface-page p-3">
-                  <p className="text-xs text-tx-muted mb-0.5">Status</p>
+                <div className="rounded-md bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-0.5">Status</p>
                   {getStatusBadge(selectedWithdrawal.status)}
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-xl bg-surface-page p-3">
-                  <p className="text-xs text-tx-muted mb-0.5">Valor</p>
-                  <p className="text-sm font-bold text-tx-primary">{formatCurrency(selectedWithdrawal.amount)}</p>
+                <div className="rounded-md bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-0.5">Valor</p>
+                  <p className="text-sm font-bold text-gray-900">{formatCurrency(selectedWithdrawal.amount)}</p>
                 </div>
-                <div className="rounded-xl bg-surface-page p-3">
-                  <p className="text-xs text-tx-muted mb-0.5">Taxa</p>
-                  <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.fee ? formatCurrency(selectedWithdrawal.fee) : 'R$ 0'}</p>
+                <div className="rounded-md bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-0.5">Taxa</p>
+                  <p className="text-sm font-medium text-gray-900">{selectedWithdrawal.fee ? formatCurrency(selectedWithdrawal.fee) : 'R$ 0'}</p>
                 </div>
-                <div className="rounded-xl bg-surface-page p-3">
-                  <p className="text-xs text-tx-muted mb-0.5">Líquido</p>
+                <div className="rounded-md bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-0.5">Líquido</p>
                   <p className="text-sm font-bold text-emerald-600">{formatCurrency(selectedWithdrawal.net_amount || (selectedWithdrawal.amount - (selectedWithdrawal.fee || 0)))}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-surface-page p-3">
-                  <p className="text-xs text-tx-muted mb-0.5">Método</p>
-                  <p className="text-sm font-medium text-tx-primary">
+                <div className="rounded-md bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-0.5">Método</p>
+                  <p className="text-sm font-medium text-gray-900">
                     {selectedWithdrawal.method === 'pix' ? 'PIX' : 'TED'}
                     {selectedWithdrawal.is_instant && ' (Instantâneo)'}
                   </p>
                 </div>
-                <div className="rounded-xl bg-surface-page p-3">
-                  <p className="text-xs text-tx-muted mb-0.5">Data</p>
-                  <p className="text-sm font-medium text-tx-primary">{formatDate(selectedWithdrawal.requested_at)}</p>
+                <div className="rounded-md bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-0.5">Data</p>
+                  <p className="text-sm font-medium text-gray-900">{formatDate(selectedWithdrawal.requested_at)}</p>
                 </div>
               </div>
 
               {selectedWithdrawal.pix_key && (
-                <div className="rounded-xl bg-surface-page p-3">
-                  <p className="text-xs text-tx-muted mb-0.5">Chave PIX</p>
-                  <p className="text-sm font-mono text-tx-primary">{selectedWithdrawal.pix_key}</p>
+                <div className="rounded-md bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500 mb-0.5">Chave PIX</p>
+                  <p className="text-sm font-mono text-gray-900">{selectedWithdrawal.pix_key}</p>
                 </div>
               )}
 
               {selectedWithdrawal.bank_name && (
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-surface-page p-3">
-                    <p className="text-xs text-tx-muted mb-0.5">Banco</p>
-                    <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.bank_name}</p>
+                  <div className="rounded-md bg-gray-50 p-3">
+                    <p className="text-xs text-gray-500 mb-0.5">Banco</p>
+                    <p className="text-sm font-medium text-gray-900">{selectedWithdrawal.bank_name}</p>
                   </div>
-                  <div className="rounded-xl bg-surface-page p-3">
-                    <p className="text-xs text-tx-muted mb-0.5">Conta</p>
-                    <p className="text-sm font-mono text-tx-primary">{selectedWithdrawal.bank_agency} / {selectedWithdrawal.bank_account}</p>
+                  <div className="rounded-md bg-gray-50 p-3">
+                    <p className="text-xs text-gray-500 mb-0.5">Conta</p>
+                    <p className="text-sm font-mono text-gray-900">{selectedWithdrawal.bank_agency} / {selectedWithdrawal.bank_account}</p>
                   </div>
                 </div>
               )}
 
               {(selectedWithdrawal.failure_reason || selectedWithdrawal.notes || selectedWithdrawal.cancel_reason) && (
-                <div className="rounded-xl bg-red-500/5 border border-red-500/20 p-3">
-                  <p className="text-xs text-red-500 mb-0.5">Motivo</p>
-                  <p className="text-sm text-tx-primary">{selectedWithdrawal.failure_reason || selectedWithdrawal.notes || selectedWithdrawal.cancel_reason}</p>
+                <div className="rounded-md bg-red-500/5 border border-red-500/20 p-3">
+                  <p className="text-xs text-red-700 mb-0.5">Motivo</p>
+                  <p className="text-sm text-gray-900">{selectedWithdrawal.failure_reason || selectedWithdrawal.notes || selectedWithdrawal.cancel_reason}</p>
                 </div>
               )}
 
-              <div className="rounded-xl bg-surface-page p-3">
-                <p className="text-xs text-tx-muted mb-0.5">ID</p>
+              <div className="rounded-md bg-gray-50 p-3">
+                <p className="text-xs text-gray-500 mb-0.5">ID</p>
                 <div className="flex items-center gap-2">
-                  <p className="text-xs font-mono text-tx-muted">{selectedWithdrawal.id}</p>
+                  <p className="text-xs font-mono text-gray-500">{selectedWithdrawal.id}</p>
                   <button
                     onClick={() => { navigator.clipboard.writeText(selectedWithdrawal.id); toast.success('ID copiado'); }}
-                    className="text-green-500 hover:text-green-400"
+                    className="text-green-700 hover:text-green-400"
                   >
                     <ClipboardDocumentIcon className="h-3.5 w-3.5" />
                   </button>
@@ -1237,9 +1237,9 @@ export default function AdminFinance() {
 
               {selectedWithdrawal.status === 'pending' && (
                 <>
-                  <hr className="border-border-DEFAULT" />
+                  <hr className="border-gray-200" />
                   <div>
-                    <label className="block text-sm font-medium text-tx-secondary mb-2">
+                    <label className="block text-sm font-medium text-gray-600 mb-2">
                       Motivo da rejeição
                     </label>
                     <textarea
@@ -1247,7 +1247,7 @@ export default function AdminFinance() {
                       onChange={(e) => setRejectReason(e.target.value)}
                       placeholder="Informe o motivo..."
                       rows={3}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none"
                     />
                   </div>
 
@@ -1278,7 +1278,7 @@ export default function AdminFinance() {
                 <div className="flex justify-end pt-2">
                   <button
                     onClick={() => { setShowDetailModal(false); setSelectedWithdrawal(null); }}
-                    className="rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
+                    className="rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-900 hover:bg-border-DEFAULT transition-colors"
                   >
                     Fechar
                   </button>
@@ -1354,20 +1354,20 @@ function ConfigModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl bg-surface-card shadow-xl">
+      <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-lg bg-white shadow-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border-DEFAULT">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h2 className="text-lg font-bold text-tx-primary">Configurações de Saque</h2>
-            <p className="text-xs text-tx-muted mt-0.5">Configure taxas, limites, liquidação e automação</p>
+            <h2 className="text-lg font-bold text-gray-900">Configurações de Saque</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Configure taxas, limites, liquidação e automação</p>
           </div>
-          <button onClick={onClose} className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover">
+          <button onClick={onClose} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-border-DEFAULT px-6 overflow-x-auto">
+        <div className="flex border-b border-gray-200 px-6 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -1375,7 +1375,7 @@ function ConfigModal({
               className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-tx-muted hover:text-tx-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-900'
               }`}
             >
               <tab.icon className="h-4 w-4" />
@@ -1390,10 +1390,10 @@ function ConfigModal({
           {activeTab === 'fees' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-tx-primary mb-3">Taxa de Saque Padrão</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Taxa de Saque Padrão</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Taxa Percentual (%)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Taxa Percentual (%)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -1401,55 +1401,55 @@ function ConfigModal({
                       max="100"
                       value={localConfig.fee_percentage}
                       onChange={(e) => setLocalConfig({ ...localConfig, fee_percentage: parseFloat(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">Aplicada sobre o valor do saque</p>
+                    <p className="text-xs text-gray-500 mt-1">Aplicada sobre o valor do saque</p>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Taxa Fixa (centavos)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Taxa Fixa (centavos)</label>
                     <input
                       type="number"
                       min="0"
                       value={localConfig.fee_fixed}
                       onChange={(e) => setLocalConfig({ ...localConfig, fee_fixed: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">Ex: 200 = R$ 2,00</p>
+                    <p className="text-xs text-gray-500 mt-1">Ex: 200 = R$ 2,00</p>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-border-DEFAULT pt-6">
-                <h3 className="text-sm font-semibold text-tx-primary mb-3">Taxa por Método</h3>
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Taxa por Método</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Taxa PIX (centavos)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Taxa PIX (centavos)</label>
                     <input
                       type="number"
                       min="0"
                       value={localConfig.standard_withdrawal_fee_pix}
                       onChange={(e) => setLocalConfig({ ...localConfig, standard_withdrawal_fee_pix: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">Taxa adicional para saque via PIX</p>
+                    <p className="text-xs text-gray-500 mt-1">Taxa adicional para saque via PIX</p>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Taxa TED (centavos)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Taxa TED (centavos)</label>
                     <input
                       type="number"
                       min="0"
                       value={localConfig.standard_withdrawal_fee_bank}
                       onChange={(e) => setLocalConfig({ ...localConfig, standard_withdrawal_fee_bank: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">Taxa adicional para saque via TED</p>
+                    <p className="text-xs text-gray-500 mt-1">Taxa adicional para saque via TED</p>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-border-DEFAULT pt-6">
+              <div className="border-t border-gray-200 pt-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-tx-primary">Saque Instantâneo</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">Saque Instantâneo</h3>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
@@ -1463,18 +1463,18 @@ function ConfigModal({
                 {localConfig.instant_withdrawal_enabled && (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="block text-xs font-medium text-tx-secondary mb-1">Tipo da Taxa</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Tipo da Taxa</label>
                       <select
                         value={localConfig.instant_withdrawal_fee_type}
                         onChange={(e) => setLocalConfig({ ...localConfig, instant_withdrawal_fee_type: e.target.value as 'percentage' | 'fixed' })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                       >
                         <option value="percentage">Percentual (%)</option>
                         <option value="fixed">Valor Fixo (centavos)</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-tx-secondary mb-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
                         Valor da Taxa {localConfig.instant_withdrawal_fee_type === 'percentage' ? '(%)' : '(centavos)'}
                       </label>
                       <input
@@ -1483,7 +1483,7 @@ function ConfigModal({
                         min="0"
                         value={localConfig.instant_withdrawal_fee_value}
                         onChange={(e) => setLocalConfig({ ...localConfig, instant_withdrawal_fee_value: parseFloat(e.target.value) || 0 })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1496,45 +1496,45 @@ function ConfigModal({
           {activeTab === 'limits' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-tx-primary mb-3">Limites de Saque</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Limites de Saque</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Mínimo por Saque (centavos)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Mínimo por Saque (centavos)</label>
                     <input
                       type="number"
                       min="0"
                       value={localConfig.withdrawal_min_amount}
                       onChange={(e) => setLocalConfig({ ...localConfig, withdrawal_min_amount: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">Ex: 1000 = R$ 10,00</p>
+                    <p className="text-xs text-gray-500 mt-1">Ex: 1000 = R$ 10,00</p>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Máximo por Saque (centavos)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Máximo por Saque (centavos)</label>
                     <input
                       type="number"
                       min="0"
                       value={localConfig.withdrawal_max_amount}
                       onChange={(e) => setLocalConfig({ ...localConfig, withdrawal_max_amount: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">0 = sem limite</p>
+                    <p className="text-xs text-gray-500 mt-1">0 = sem limite</p>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-border-DEFAULT pt-6">
-                <h3 className="text-sm font-semibold text-tx-primary mb-3">Auto-Aprovação</h3>
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Auto-Aprovação</h3>
                 <div>
-                  <label className="block text-xs font-medium text-tx-secondary mb-1">Limite Auto-Aprovação (centavos)</label>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Limite Auto-Aprovação (centavos)</label>
                   <input
                     type="number"
                     min="0"
                     value={localConfig.auto_approve_limit}
                     onChange={(e) => setLocalConfig({ ...localConfig, auto_approve_limit: parseInt(e.target.value) || 0 })}
-                    className="w-full max-w-xs rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                    className="w-full max-w-xs rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                   />
-                  <p className="text-xs text-tx-muted mt-1">Saques abaixo desse valor são aprovados automaticamente. 0 = aprovação manual sempre</p>
+                  <p className="text-xs text-gray-500 mt-1">Saques abaixo desse valor são aprovados automaticamente. 0 = aprovação manual sempre</p>
                 </div>
               </div>
             </div>
@@ -1544,13 +1544,13 @@ function ConfigModal({
           {activeTab === 'controls' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-tx-primary mb-3">Controles Operacionais</h3>
-                <p className="text-xs text-tx-muted mb-4">Esses controles aplicam bloqueio e governança em tempo real para pagamentos e saques.</p>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Controles Operacionais</h3>
+                <p className="text-xs text-gray-500 mb-4">Esses controles aplicam bloqueio e governança em tempo real para pagamentos e saques.</p>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between rounded-xl border border-border-DEFAULT bg-surface-page p-4">
+                  <div className="flex items-center justify-between rounded-md border border-gray-100 bg-gray-50 p-4">
                     <div>
-                      <p className="text-sm font-medium text-tx-primary">Aceitar Novos Saques</p>
-                      <p className="text-xs text-tx-muted">Desative para congelar solicitações de saque no painel do seller/API.</p>
+                      <p className="text-sm font-medium text-gray-900">Aceitar Novos Saques</p>
+                      <p className="text-xs text-gray-500">Desative para congelar solicitações de saque no painel do seller/API.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -1563,10 +1563,10 @@ function ConfigModal({
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between rounded-xl border border-border-DEFAULT bg-surface-page p-4">
+                  <div className="flex items-center justify-between rounded-md border border-gray-100 bg-gray-50 p-4">
                     <div>
-                      <p className="text-sm font-medium text-tx-primary">Processar Saques Automaticamente</p>
-                      <p className="text-xs text-tx-muted">Desative para pausar envio PIX OUT e manter saques em fila de contingência.</p>
+                      <p className="text-sm font-medium text-gray-900">Processar Saques Automaticamente</p>
+                      <p className="text-xs text-gray-500">Desative para pausar envio PIX OUT e manter saques em fila de contingência.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -1579,10 +1579,10 @@ function ConfigModal({
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-between rounded-xl border border-border-DEFAULT bg-surface-page p-4">
+                  <div className="flex items-center justify-between rounded-md border border-gray-100 bg-gray-50 p-4">
                     <div>
-                      <p className="text-sm font-medium text-tx-primary">Aceitar Novos Pagamentos</p>
-                      <p className="text-xs text-tx-muted">Kill switch global para checkout público e cobranças via API.</p>
+                      <p className="text-sm font-medium text-gray-900">Aceitar Novos Pagamentos</p>
+                      <p className="text-xs text-gray-500">Kill switch global para checkout público e cobranças via API.</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
@@ -1597,57 +1597,57 @@ function ConfigModal({
                 </div>
               </div>
 
-              <div className="border-t border-border-DEFAULT pt-6">
-                <h3 className="text-sm font-semibold text-tx-primary mb-3">Proteções de Risco</h3>
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Proteções de Risco</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Limite Diário por Conta (centavos)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Limite Diário por Conta (centavos)</label>
                     <input
                       type="number"
                       min="0"
                       value={localConfig.daily_withdrawal_limit}
                       onChange={(e) => setLocalConfig({ ...localConfig, daily_withdrawal_limit: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">0 desabilita o limite diário.</p>
+                    <p className="text-xs text-gray-500 mt-1">0 desabilita o limite diário.</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Limiar de Aprovação Manual (centavos)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Limiar de Aprovação Manual (centavos)</label>
                     <input
                       type="number"
                       min="0"
                       value={localConfig.large_withdrawal_threshold}
                       onChange={(e) => setLocalConfig({ ...localConfig, large_withdrawal_threshold: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">Saques acima desse valor entram em pending_approval.</p>
+                    <p className="text-xs text-gray-500 mt-1">Saques acima desse valor entram em pending_approval.</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Cooldown Entre Saques (segundos)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Cooldown Entre Saques (segundos)</label>
                     <input
                       type="number"
                       min="0"
                       max="3600"
                       value={localConfig.withdrawal_cooldown_seconds}
                       onChange={(e) => setLocalConfig({ ...localConfig, withdrawal_cooldown_seconds: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">0 desativa cooldown.</p>
+                    <p className="text-xs text-gray-500 mt-1">0 desativa cooldown.</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Máximo de Saques em Aberto por Conta</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Máximo de Saques em Aberto por Conta</label>
                     <input
                       type="number"
                       min="0"
                       max="500"
                       value={localConfig.max_pending_withdrawals_per_account}
                       onChange={(e) => setLocalConfig({ ...localConfig, max_pending_withdrawals_per_account: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">0 remove o limite.</p>
+                    <p className="text-xs text-gray-500 mt-1">0 remove o limite.</p>
                   </div>
                 </div>
               </div>
@@ -1658,44 +1658,44 @@ function ConfigModal({
           {activeTab === 'settlement' && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-sm font-semibold text-tx-primary mb-3">Dias para Liquidação</h3>
-                <p className="text-xs text-tx-muted mb-4">Tempo que o saldo do vendedor fica retido após a venda antes de ficar disponível para saque</p>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3">Dias para Liquidação</h3>
+                <p className="text-xs text-gray-500 mb-4">Tempo que o saldo do vendedor fica retido após a venda antes de ficar disponível para saque</p>
                 <div className="grid gap-4 sm:grid-cols-3">
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">PIX (dias)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">PIX (dias)</label>
                     <input
                       type="number"
                       min="0"
                       max="30"
                       value={localConfig.settlement_days_pix}
                       onChange={(e) => setLocalConfig({ ...localConfig, settlement_days_pix: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">Vendas via PIX</p>
+                    <p className="text-xs text-gray-500 mt-1">Vendas via PIX</p>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">TED/Boleto (dias)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">TED/Boleto (dias)</label>
                     <input
                       type="number"
                       min="0"
                       max="30"
                       value={localConfig.settlement_days_ted}
                       onChange={(e) => setLocalConfig({ ...localConfig, settlement_days_ted: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">Vendas via TED/Boleto</p>
+                    <p className="text-xs text-gray-500 mt-1">Vendas via TED/Boleto</p>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-tx-secondary mb-1">Processamento (dias)</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Processamento (dias)</label>
                     <input
                       type="number"
                       min="0"
                       max="30"
                       value={localConfig.processing_days}
                       onChange={(e) => setLocalConfig({ ...localConfig, processing_days: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                     />
-                    <p className="text-xs text-tx-muted mt-1">Dias para processar o saque</p>
+                    <p className="text-xs text-gray-500 mt-1">Dias para processar o saque</p>
                   </div>
                 </div>
               </div>
@@ -1708,8 +1708,8 @@ function ConfigModal({
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-tx-primary">Saque Automático</h3>
-                    <p className="text-xs text-tx-muted mt-0.5">Transfere automaticamente o saldo disponível para o vendedor</p>
+                    <h3 className="text-sm font-semibold text-gray-900">Saque Automático</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">Transfere automaticamente o saldo disponível para o vendedor</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -1725,11 +1725,11 @@ function ConfigModal({
                 {localConfig.auto_withdrawal_enabled && (
                   <div className="grid gap-4 sm:grid-cols-2 mt-4">
                     <div>
-                      <label className="block text-xs font-medium text-tx-secondary mb-1">Frequência</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Frequência</label>
                       <select
                         value={localConfig.auto_withdrawal_schedule}
                         onChange={(e) => setLocalConfig({ ...localConfig, auto_withdrawal_schedule: e.target.value as WithdrawalConfig['auto_withdrawal_schedule'] })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                       >
                         <option value="daily">Diário</option>
                         <option value="weekly">Semanal</option>
@@ -1738,15 +1738,15 @@ function ConfigModal({
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-tx-secondary mb-1">Valor Mínimo (centavos)</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Valor Mínimo (centavos)</label>
                       <input
                         type="number"
                         min="0"
                         value={localConfig.auto_withdrawal_min_amount}
                         onChange={(e) => setLocalConfig({ ...localConfig, auto_withdrawal_min_amount: parseInt(e.target.value) || 0 })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                       />
-                      <p className="text-xs text-tx-muted mt-1">Saldo mínimo para disparar saque automático</p>
+                      <p className="text-xs text-gray-500 mt-1">Saldo mínimo para disparar saque automático</p>
                     </div>
                   </div>
                 )}
@@ -1760,8 +1760,8 @@ function ConfigModal({
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-tx-primary">Holdback / Reserva</h3>
-                    <p className="text-xs text-tx-muted mt-0.5">Retém uma porcentagem do saldo como reserva contra chargebacks</p>
+                    <h3 className="text-sm font-semibold text-gray-900">Holdback / Reserva</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">Retém uma porcentagem do saldo como reserva contra chargebacks</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -1777,7 +1777,7 @@ function ConfigModal({
                 {localConfig.holdback_enabled && (
                   <div className="grid gap-4 sm:grid-cols-2 mt-4">
                     <div>
-                      <label className="block text-xs font-medium text-tx-secondary mb-1">Porcentagem Retida (%)</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Porcentagem Retida (%)</label>
                       <input
                         type="number"
                         step="0.01"
@@ -1785,20 +1785,20 @@ function ConfigModal({
                         max="100"
                         value={localConfig.holdback_percentage}
                         onChange={(e) => setLocalConfig({ ...localConfig, holdback_percentage: parseFloat(e.target.value) || 0 })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-tx-secondary mb-1">Dias de Retenção</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Dias de Retenção</label>
                       <input
                         type="number"
                         min="0"
                         max="365"
                         value={localConfig.holdback_days}
                         onChange={(e) => setLocalConfig({ ...localConfig, holdback_days: parseInt(e.target.value) || 0 })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                       />
-                      <p className="text-xs text-tx-muted mt-1">Após esse período a reserva é liberada</p>
+                      <p className="text-xs text-gray-500 mt-1">Após esse período a reserva é liberada</p>
                     </div>
                   </div>
                 )}
@@ -1808,17 +1808,17 @@ function ConfigModal({
         </div>
 
         {/* Footer */}
-        <div className="flex gap-3 p-6 border-t border-border-DEFAULT">
+        <div className="flex gap-3 p-6 border-t border-gray-200">
           <button
             onClick={onClose}
-            className="flex-1 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
+            className="flex-1 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-900 hover:bg-border-DEFAULT transition-colors"
           >
             Cancelar
           </button>
           <button
             onClick={() => onSave(localConfig)}
             disabled={isSaving}
-            className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+            className="flex-1 rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 transition-colors"
           >
             {isSaving ? 'Salvando...' : 'Salvar Configurações'}
           </button>
