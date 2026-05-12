@@ -14,7 +14,6 @@ import {
   ClockIcon,
   CpuChipIcon,
   CreditCardIcon,
-  DocumentCheckIcon,
   DocumentTextIcon,
   ExclamationTriangleIcon,
   QrCodeIcon,
@@ -84,15 +83,6 @@ interface AdminWithdrawal {
   requested_at: string;
 }
 
-interface AdminApproval {
-  id: string;
-  action_key: string;
-  resource_type: string;
-  request_reason: string | null;
-  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'consumed';
-  requested_at: string;
-}
-
 interface AdminActivity {
   id: string;
   type: string;
@@ -122,7 +112,6 @@ interface AdminPulse {
   queues: {
     pending_withdrawals: number;
     pending_withdrawals_amount: number;
-    pending_approvals: number;
     pending_kyc: number;
   };
   switches: {
@@ -193,13 +182,6 @@ const getActivityTone = (status?: string) => {
   return 'bg-blue-500/10 text-blue-500';
 };
 
-const getApprovalStatusTone = (status: AdminApproval['status']) => {
-  if (status === 'pending') return 'bg-amber-500/10 text-amber-500';
-  if (status === 'approved') return 'bg-emerald-500/10 text-emerald-500';
-  if (status === 'rejected') return 'bg-red-500/10 text-red-500';
-  return 'bg-slate-500/10 text-slate-500';
-};
-
 export default function AdminDashboard() {
   const [period, setPeriod] = useState<DashboardPeriod>('month');
 
@@ -239,15 +221,6 @@ export default function AdminDashboard() {
     refetchInterval: 30000,
   });
 
-  const approvalsQuery = useQuery<PaginatedResponse<AdminApproval>>({
-    queryKey: ['admin-dashboard-approvals-v2'],
-    queryFn: async () => {
-      const response = await api.get<PaginatedResponse<AdminApproval>>('/admin/approvals?status=pending&per_page=8');
-      return response.data;
-    },
-    refetchInterval: 30000,
-  });
-
   const withdrawalsQuery = useQuery<PaginatedResponse<AdminWithdrawal>>({
     queryKey: ['admin-dashboard-withdrawals-v2'],
     queryFn: async () => {
@@ -280,8 +253,6 @@ export default function AdminDashboard() {
   const methods = methodsQuery.data ?? [];
   const activities = activitiesQuery.data ?? [];
   const recentActivities = activities.slice(0, 5);
-  const pendingApprovals = approvalsQuery.data?.data ?? [];
-  const pendingApprovalsCount = approvalsQuery.data?.meta?.total ?? 0;
   const pendingWithdrawals = withdrawalsQuery.data?.data ?? [];
   const pendingWithdrawalsCount = withdrawalsQuery.data?.meta?.total ?? 0;
   const controls = controlsQuery.data ?? {};
@@ -299,7 +270,6 @@ export default function AdminDashboard() {
     let penalty = 0;
     if (stats.success_rate < 92) penalty += (92 - stats.success_rate) * 1.2;
     if (stats.pending_kyc > 20) penalty += Math.min(20, (stats.pending_kyc - 20) * 1.5);
-    if (pendingApprovalsCount > 10) penalty += Math.min(20, (pendingApprovalsCount - 10) * 1.8);
     if (pendingWithdrawalsCount > 15) penalty += Math.min(20, (pendingWithdrawalsCount - 15) * 1.2);
     if (controls.payments_enabled === false || controls.withdrawals_enabled === false) penalty += 25;
 
@@ -307,7 +277,6 @@ export default function AdminDashboard() {
   }, [
     controls.payments_enabled,
     controls.withdrawals_enabled,
-    pendingApprovalsCount,
     pendingWithdrawalsCount,
     stats.pending_kyc,
     stats.success_rate,
@@ -320,7 +289,7 @@ export default function AdminDashboard() {
       if (pulseData.state === 'critical') {
         return {
           title: 'Incident Mode',
-          detail: pulseData.critical_alerts[0] ?? 'Operacao em contingencia.',
+          detail: pulseData.critical_alerts[0] ?? 'Operação em contingência.',
           tone: 'bg-red-500/15 text-red-300 border-red-400/30',
         };
       }
@@ -343,12 +312,12 @@ export default function AdminDashboard() {
     if (controls.payments_enabled === false) {
       return {
         title: 'Incident Mode',
-        detail: 'Pagamentos desativados globalmente. Operacao em contingencia.',
+        detail: 'Pagamentos desativados globalmente. Operação em contingência.',
         tone: 'bg-red-500/15 text-red-300 border-red-400/30',
       };
     }
 
-    if (operationalHealth < 70 || pendingApprovalsCount > 20 || pendingWithdrawalsCount > 25) {
+    if (operationalHealth < 70 || pendingWithdrawalsCount > 25) {
       return {
         title: 'Atencao Operacional',
         detail: 'Fila elevada ou indicadores abaixo da meta. Requer acao do time.',
@@ -361,7 +330,7 @@ export default function AdminDashboard() {
       detail: 'Roteamento, compliance e liquidez dentro do esperado.',
       tone: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/40',
     };
-  }, [controls.payments_enabled, fallbackOperationalHealth, pendingApprovalsCount, pendingWithdrawalsCount, pulseData]);
+  }, [controls.payments_enabled, fallbackOperationalHealth, pendingWithdrawalsCount, pulseData]);
 
   const operationalAlerts = useMemo(() => {
     if (pulseData) {
@@ -410,14 +379,6 @@ export default function AdminDashboard() {
       });
     }
 
-    if (pendingApprovalsCount > 15) {
-      alerts.push({
-        title: 'Fila de dupla aprovacao elevada',
-        description: `${pendingApprovalsCount} solicitacoes aguardando revisao.`,
-        tone: 'border-amber-400/30 bg-amber-500/10 text-amber-300',
-      });
-    }
-
     if (alerts.length === 0) {
       alerts.push({
         title: 'Sem alertas criticos',
@@ -430,7 +391,6 @@ export default function AdminDashboard() {
   }, [
     controls.withdrawals_enabled,
     controls.withdrawal_processing_enabled,
-    pendingApprovalsCount,
     stats.success_rate,
     pulseData,
   ]);
@@ -553,7 +513,6 @@ export default function AdminDashboard() {
                   chartQuery.refetch();
                   methodsQuery.refetch();
                   activitiesQuery.refetch();
-                  approvalsQuery.refetch();
                   withdrawalsQuery.refetch();
                   controlsQuery.refetch();
                   pulseQuery.refetch();
@@ -605,10 +564,6 @@ export default function AdminDashboard() {
                   <p className="mt-0.5 text-sm font-semibold text-white">{pendingWithdrawalsCount}</p>
                 </div>
                 <div className="rounded-lg bg-white/5 px-2.5 py-2">
-                  <p className="text-slate-400">Aprovacoes</p>
-                  <p className="mt-0.5 text-sm font-semibold text-white">{pendingApprovalsCount}</p>
-                </div>
-                <div className="rounded-lg bg-white/5 px-2.5 py-2">
                   <p className="text-slate-400">Valor em fila</p>
                   <p className="mt-0.5 text-sm font-semibold text-white">{formatCurrency(pendingWithdrawalsAmount)}</p>
                 </div>
@@ -642,7 +597,7 @@ export default function AdminDashboard() {
           value={formatCurrency(stats.seller_payout)}
           change={stats.payout_change}
           icon={ShoppingBagIcon}
-          tone="emerald"
+          tone="violet"
         />
         <MetricCard
           title="Saldo em Risco/Pendente"
@@ -674,13 +629,6 @@ export default function AdminDashboard() {
           subtitle="Fila de saque / receita"
           icon={ExclamationTriangleIcon}
           tone={payoutPressure >= 20 ? 'amber' : 'emerald'}
-        />
-        <SimpleMetric
-          title="Fila Dual Control"
-          value={pendingApprovalsCount.toString()}
-          subtitle="Aguardando revisao"
-          icon={DocumentCheckIcon}
-          tone={pendingApprovalsCount > 10 ? 'amber' : 'emerald'}
         />
       </section>
 
@@ -778,47 +726,6 @@ export default function AdminDashboard() {
           </Link>
         </div>
 
-        <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-tx-primary">Fila de Aprovacoes</h3>
-              <p className="text-xs text-tx-muted">Acoes criticas sob politica de dual control</p>
-            </div>
-            <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-600">
-              {pendingApprovalsCount} pendentes
-            </span>
-          </div>
-
-          {pendingApprovals.length === 0 ? (
-            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-sm text-emerald-600">
-              Nenhuma aprovacao pendente.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {pendingApprovals.slice(0, 6).map((approval) => (
-                <div key={approval.id} className="rounded-xl border border-border-DEFAULT bg-surface-page p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-tx-primary">{approval.action_key}</p>
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${getApprovalStatusTone(approval.status)}`}>
-                      {approval.status}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-tx-muted">
-                    {approval.request_reason || 'Sem motivo informado'}
-                  </p>
-                  <div className="mt-2 text-xs text-tx-muted">{formatDate(approval.requested_at)}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <Link
-            to="/admin/approvals"
-            className="mt-4 inline-flex w-full items-center justify-center rounded-xl border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm font-semibold text-tx-primary hover:bg-surface-hover"
-          >
-            Revisar aprovacoes
-          </Link>
-        </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-3">
@@ -917,16 +824,10 @@ export default function AdminDashboard() {
           href="/admin/control-tower"
         />
         <QuickActionCard
-          title="Operacao Financeira"
+          title="Operação financeira"
           subtitle="Ajustar limites, filas e processamento"
           icon={BanknotesIcon}
           href="/admin/finance"
-        />
-        <QuickActionCard
-          title="Fila de Aprovacoes"
-          subtitle="Revisar acoes criticas com dual control"
-          icon={DocumentCheckIcon}
-          href="/admin/approvals"
         />
         <QuickActionCard
           title="KYC e Compliance"
@@ -935,7 +836,7 @@ export default function AdminDashboard() {
           href="/admin/kyc"
         />
         <QuickActionCard
-          title="Gestao de Sellers"
+          title="Gestão de sellers"
           subtitle="Suporte operacional e risco por conta"
           icon={UsersIcon}
           href="/admin/sellers"
@@ -956,11 +857,12 @@ function MetricCard({
   value: string;
   change: number;
   icon: typeof BanknotesIcon;
-  tone: 'blue' | 'emerald' | 'amber';
+  tone: 'blue' | 'emerald' | 'violet' | 'amber';
 }) {
   const toneClasses: Record<string, string> = {
     blue: 'bg-blue-500/10 text-blue-500',
     emerald: 'bg-emerald-500/10 text-emerald-500',
+    violet: 'bg-green-500/10 text-green-500',
     amber: 'bg-amber-500/10 text-amber-500',
   };
 
@@ -994,11 +896,12 @@ function SimpleMetric({
   value: string;
   subtitle: string;
   icon: typeof BanknotesIcon;
-  tone: 'blue' | 'emerald' | 'amber';
+  tone: 'blue' | 'emerald' | 'violet' | 'amber';
 }) {
   const toneClasses: Record<string, string> = {
     blue: 'bg-blue-500/10 text-blue-500',
     emerald: 'bg-emerald-500/10 text-emerald-500',
+    violet: 'bg-green-500/10 text-green-500',
     amber: 'bg-amber-500/10 text-amber-500',
   };
 
@@ -1054,3 +957,4 @@ function QuickActionCard({
     </Link>
   );
 }
+

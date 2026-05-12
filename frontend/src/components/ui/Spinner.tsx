@@ -33,29 +33,12 @@ export function Spinner({ text, size = 'lg', className = '' }: SpinnerProps) {
 /** Full-page centered spinner (h-screen) */
 export function PageSpinner({ text }: { text?: string }) {
   return (
-    <div className="flex h-screen items-center justify-center px-6">
-      <div className="brand-loader-stage text-center">
-        <div className="brand-loader-aura brand-loader-aura--left" aria-hidden="true" />
-        <div className="brand-loader-aura brand-loader-aura--right" aria-hidden="true" />
-
-        <div className="brand-loader-wordmark-shell">
-          <div className="brand-loader-wordmark brand-loader-wordmark--sheen text-5xl font-black tracking-tight sm:text-6xl md:text-7xl" aria-hidden="true">
-            <span className="brand-loader-wazer">Wazer</span>
-            <span className="brand-loader-pay">Pay</span>
-          </div>
-
-          <div className="brand-loader-wordmark brand-loader-wordmark--main text-5xl font-black tracking-tight sm:text-6xl md:text-7xl">
-            <span className="brand-loader-wazer">Wazer</span>
-            <span className="brand-loader-pay">Pay</span>
-          </div>
-        </div>
-
-        {text && (
-          <p className="brand-loader-caption mt-4 text-sm text-tx-muted">
-            {text}
-          </p>
-        )}
-      </div>
+    <div className="flex h-screen items-center justify-center bg-surface-page px-6">
+      <img
+        src="/img/logo.png"
+        alt={text || 'Vector'}
+        className="h-auto w-48 max-w-[70vw] sm:w-56"
+      />
     </div>
   );
 }

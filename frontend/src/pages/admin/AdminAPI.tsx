@@ -142,8 +142,8 @@ export default function AdminAPI() {
         <div className="rounded-2xl bg-surface-card p-6 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-emerald-500/10 p-2.5">
-                <KeyIcon className="h-6 w-6 text-emerald-500" />
+              <div className="rounded-xl bg-green-500/10 p-2.5">
+                <KeyIcon className="h-6 w-6 text-green-500" />
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-tx-primary">Chaves de API</h2>
@@ -152,7 +152,7 @@ export default function AdminAPI() {
             </div>
             <button
               onClick={() => setShowKeyModal(true)}
-              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+              className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
             >
               <PlusIcon className="h-4 w-4" />
               Nova Chave
@@ -161,7 +161,7 @@ export default function AdminAPI() {
 
           {loadingKeys ? (
             <div className="flex items-center justify-center py-8">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
             </div>
           ) : apiKeys.length === 0 ? (
             <div className="text-center py-8">
@@ -393,7 +393,7 @@ function CreateKeyModal({
             </div>
             <button
               onClick={onClose}
-              className="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
+              className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
             >
               Entendi, fechar
             </button>
@@ -407,7 +407,7 @@ function CreateKeyModal({
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="ex: Integração Webhook"
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
               />
             </div>
             <div>
@@ -415,7 +415,7 @@ function CreateKeyModal({
               <select
                 value={form.type}
                 onChange={(e) => setForm({ ...form, type: e.target.value as 'live' | 'test' })}
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
               >
                 <option value="live">Produção (pk_live_)</option>
                 <option value="test">Teste (pk_test_)</option>
@@ -437,7 +437,7 @@ function CreateKeyModal({
               <button
                 onClick={() => onCreate(form)}
                 disabled={isCreating || !form.name}
-                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
               >
                 {isCreating ? 'Criando...' : 'Criar Chave'}
               </button>
@@ -501,7 +501,7 @@ function CreateWebhookModal({
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com/webhook"
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
             />
           </div>
 
@@ -509,7 +509,7 @@ function CreateWebhookModal({
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-tx-secondary">Eventos</label>
               <div className="flex gap-2">
-                <button onClick={selectAll} className="text-xs text-emerald-500 hover:underline">
+                <button onClick={selectAll} className="text-xs text-green-500 hover:underline">
                   Selecionar todos
                 </button>
                 <span className="text-tx-muted">|</span>
@@ -524,7 +524,7 @@ function CreateWebhookModal({
                   key={event.id}
                   className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors ${
                     selectedEvents.includes(event.id)
-                      ? 'bg-emerald-500/10 border border-emerald-500/30'
+                      ? 'bg-green-500/10 border border-green-500/30'
                       : 'bg-surface-page hover:bg-surface-hover'
                   }`}
                 >
@@ -532,7 +532,7 @@ function CreateWebhookModal({
                     type="checkbox"
                     checked={selectedEvents.includes(event.id)}
                     onChange={() => toggleEvent(event.id)}
-                    className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
+                    className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
                   />
                   <span className="text-xs text-tx-primary">{event.label}</span>
                 </label>
@@ -550,7 +550,7 @@ function CreateWebhookModal({
             <button
               onClick={() => onCreate({ url, events: selectedEvents })}
               disabled={isCreating || !url || selectedEvents.length === 0}
-              className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+              className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
               {isCreating ? 'Criando...' : 'Criar Webhook'}
             </button>
@@ -560,3 +560,5 @@ function CreateWebhookModal({
     </div>
   );
 }
+
+

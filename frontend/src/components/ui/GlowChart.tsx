@@ -236,6 +236,18 @@ const PALETTE = {
     grid: { dark: 'rgba(16, 185, 129, 0.08)', light: 'rgba(16, 185, 129, 0.06)' },
     tick: { dark: 'rgba(168, 162, 186, 0.6)', light: 'rgba(100, 100, 130, 0.6)' },
   },
+  violet: {
+    line: 'rgb(139, 92, 246)',
+    lineHover: 'rgb(167, 139, 250)',
+    gradientTop: { dark: 'rgba(139, 92, 246, 0.28)', light: 'rgba(139, 92, 246, 0.16)' },
+    gradientMid: { dark: 'rgba(139, 92, 246, 0.08)', light: 'rgba(139, 92, 246, 0.05)' },
+    gradientBot: { dark: 'rgba(139, 92, 246, 0)', light: 'rgba(139, 92, 246, 0)' },
+    point: 'rgb(139, 92, 246)',
+    pointBorder: { dark: 'rgb(22, 22, 22)', light: '#ffffff' },
+    tooltip: { bg: '#1e1b4b', border: 'rgba(139, 92, 246, 0.4)' },
+    grid: { dark: 'rgba(139, 92, 246, 0.08)', light: 'rgba(139, 92, 246, 0.06)' },
+    tick: { dark: 'rgba(168, 162, 186, 0.6)', light: 'rgba(100, 100, 130, 0.6)' },
+  },
   rose: {
     line: 'rgb(225, 29, 72)',
     lineHover: 'rgb(244, 63, 94)',

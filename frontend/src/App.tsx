@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
-import { useEffect, useRef, useState, lazy, Suspense } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, lazy, Suspense } from 'react';
 import { api } from '@/lib/api';
 import { isCustomDomain } from '@/lib/domain';
 import { PageSpinner } from '@/components/ui/Spinner';
@@ -11,7 +11,6 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import AdminLayout from '@/layouts/AdminLayout';
 
-// Loading spinner reutilizavel
 const PageLoader = () => <PageSpinner />;
 
 // Auth Pages (lazy)
@@ -45,13 +44,11 @@ const AdminCustomerDetail = lazy(() => import('@/pages/admin/AdminCustomerDetail
 const AdminKYC = lazy(() => import('@/pages/admin/AdminKYC'));
 const AdminFinance = lazy(() => import('@/pages/admin/AdminFinance'));
 const AdminAcquirers = lazy(() => import('@/pages/admin/AdminAcquirers'));
-const AdminSecurity = lazy(() => import('@/pages/admin/AdminSecurity'));
 const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
 const AdminBranding = lazy(() => import('@/pages/admin/AdminBranding'));
 const AdminAPI = lazy(() => import('@/pages/admin/AdminAPI'));
 const AdminMonitoring = lazy(() => import('@/pages/admin/AdminMonitoring'));
 const AdminChargebacks = lazy(() => import('@/pages/admin/AdminChargebacks'));
-const AdminApprovals = lazy(() => import('@/pages/admin/AdminApprovals'));
 const LandingPagesPage = lazy(() => import('@/pages/LandingPagesPage'));
 const LandingPageEditorPage = lazy(() => import('@/pages/LandingPageEditorPage'));
 const MemberAreaPage = lazy(() => import('@/pages/MemberAreaPage'));
@@ -66,8 +63,6 @@ const ReportsPage = lazy(() => import('@/pages/ReportsPage'));
 const SplitManagement = lazy(() => import('@/pages/SplitManagement'));
 const WebhookLogsPage = lazy(() => import('@/pages/WebhookLogsPage'));
 const VectorIAPage = lazy(() => import('@/pages/WazerIAPage'));
-
-const BRAND_LOADER_MIN_DURATION_MS = 1200;
 
 // Public Pages (lazy)
 const PublicCheckoutPage = lazy(() => import('@/pages/public/CheckoutPage'));
@@ -317,7 +312,6 @@ function App() {
   const { checkAuth, isAuthenticated, user, resetAdminMfaVerification, startImpersonation } = useAuthStore();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [isBootLoading, setIsBootLoading] = useState(true);
 
   // Handle impersonation token from URL
   useEffect(() => {
@@ -372,26 +366,22 @@ function App() {
     fetchBranding();
   }, [setPrimaryColor, setPlatformName]);
 
-  useEffect(() => {
-    // Apply theme
-    if (theme === 'dark') {
+  useLayoutEffect(() => {
+    const isAdminRoute = location.pathname.startsWith('/admin');
+    const effectiveTheme = isAdminRoute ? theme : 'dark';
+
+    document.documentElement.classList.toggle('app-admin-route', isAdminRoute);
+    document.documentElement.classList.toggle('app-dark-forced', !isAdminRoute);
+
+    // Apply theme. Non-admin pages are always dark by default.
+    if (effectiveTheme === 'dark') {
       document.documentElement.classList.add('dark');
+      document.body.style.backgroundColor = '#0a0a0a';
     } else {
       document.documentElement.classList.remove('dark');
+      document.body.style.backgroundColor = '#FAFAFA';
     }
-  }, [theme]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setIsBootLoading(false);
-    }, BRAND_LOADER_MIN_DURATION_MS);
-
-    return () => clearTimeout(timeout);
-  }, []);
-
-  if (isBootLoading) {
-    return <PageSpinner />;
-  }
+  }, [theme, location.pathname]);
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -473,8 +463,8 @@ function App() {
         <Route path="kyc" element={<AdminKYC />} />
         <Route path="acquirers" element={<AdminAcquirers />} />
         <Route path="chargebacks" element={<AdminChargebacks />} />
-        <Route path="approvals" element={<AdminApprovals />} />
-        <Route path="security" element={<AdminSecurity />} />
+        <Route path="approvals" element={<AdminFinance />} />
+        <Route path="security" element={<AdminMonitoring />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="api" element={<AdminAPI />} />
         <Route path="branding" element={<AdminBranding />} />

@@ -19,6 +19,7 @@ import {
   EyeIcon,
   IdentificationIcon,
   KeyIcon,
+  MagnifyingGlassIcon,
   ShieldCheckIcon,
   SignalIcon,
   UserCircleIcon,
@@ -191,6 +192,7 @@ export default function AdminCustomerDetail() {
   const [activeTab, setActiveTab] = useState<Tab>('info');
   const [chargesPage, setChargesPage] = useState(1);
   const [chargesStatus, setChargesStatus] = useState('all');
+  const [chargesSearch, setChargesSearch] = useState('');
   const [withdrawalsPage, setWithdrawalsPage] = useState(1);
   const [logsPage, setLogsPage] = useState(1);
 
@@ -206,12 +208,13 @@ export default function AdminCustomerDetail() {
 
   // Fetch charges
   const { data: chargesData, isLoading: chargesLoading } = useQuery({
-    queryKey: ['admin-customer-charges', customerId, chargesPage, chargesStatus],
+    queryKey: ['admin-customer-charges', customerId, chargesPage, chargesStatus, chargesSearch],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('page', chargesPage.toString());
       params.append('per_page', '15');
       if (chargesStatus !== 'all') params.append('status', chargesStatus);
+      if (chargesSearch) params.append('search', chargesSearch);
       const response = await api.get(`/admin/customers/${customerId}/charges?${params.toString()}`);
       return response.data;
     },
@@ -281,17 +284,7 @@ export default function AdminCustomerDetail() {
         return;
       }
 
-      if (payload?.error?.code === 'dual_control_required') {
-        const approvalId = payload?.error?.approval_id;
-        if (approvalId) {
-          navigator.clipboard?.writeText(approvalId).catch(() => undefined);
-        }
-        toast.success(
-          approvalId
-            ? `Impersonação enviada para aprovação dupla. ID: ${approvalId} (copiado).`
-            : 'Impersonação enviada para aprovação dupla.'
-        );
-      }
+      toast.error('Não foi possível gerar o token de impersonação');
     },
     onError: () => toast.error('Erro ao gerar token de impersonação'),
   });
@@ -321,7 +314,7 @@ export default function AdminCustomerDetail() {
       approved: 'bg-emerald-500/10 text-emerald-500',
       pending: 'bg-amber-500/10 text-amber-500',
       processing: 'bg-blue-500/10 text-blue-500',
-      refunded: 'bg-emerald-500/10 text-emerald-500',
+      refunded: 'bg-green-500/10 text-green-500',
       failed: 'bg-red-500/10 text-red-500',
       cancelled: 'bg-gray-500/10 text-gray-500',
     };
@@ -357,7 +350,7 @@ export default function AdminCustomerDetail() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
       </div>
     );
   }
@@ -366,7 +359,7 @@ export default function AdminCustomerDetail() {
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <p className="text-tx-muted">Cliente não encontrado</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-emerald-500 hover:underline">Voltar</button>
+        <button onClick={() => navigate(-1)} className="mt-4 text-green-500 hover:underline">Voltar</button>
       </div>
     );
   }
@@ -401,7 +394,7 @@ export default function AdminCustomerDetail() {
             {customer.phone && <p className="text-xs text-tx-muted">{customer.phone}</p>}
             <p className="text-xs text-tx-muted mt-1">
               ID: <span className="font-mono">{customer.id}</span>
-              <button onClick={() => copyToClipboard(customer.id)} className="ml-1 text-emerald-500 hover:text-emerald-400">
+              <button onClick={() => copyToClipboard(customer.id)} className="ml-1 text-green-500 hover:text-green-400">
                 <ClipboardDocumentIcon className="inline h-3 w-3" />
               </button>
             </p>
@@ -431,7 +424,7 @@ export default function AdminCustomerDetail() {
               }
             }}
             disabled={impersonateMutation.isPending}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
             <KeyIcon className="h-3.5 w-3.5" />
             Login como Vendedor
@@ -445,9 +438,9 @@ export default function AdminCustomerDetail() {
           <p className="text-xs text-emerald-600 mb-1">Saldo Disponível</p>
           <p className="text-xl font-bold text-emerald-600">{formatCurrency(customer.financials.available_balance)}</p>
         </div>
-        <div className="rounded-xl bg-emerald-500/10 p-4">
-          <p className="text-xs text-emerald-600 mb-1">Faturamento Total</p>
-          <p className="text-xl font-bold text-emerald-600">{formatCurrency(customer.financials.total_revenue)}</p>
+        <div className="rounded-xl bg-green-500/10 p-4">
+          <p className="text-xs text-green-600 mb-1">Faturamento Total</p>
+          <p className="text-xl font-bold text-green-600">{formatCurrency(customer.financials.total_revenue)}</p>
         </div>
         <div className="rounded-xl bg-blue-500/10 p-4">
           <p className="text-xs text-blue-600 mb-1">Total Sacado</p>
@@ -470,9 +463,9 @@ export default function AdminCustomerDetail() {
           <p className="text-xs text-cyan-600 mb-1">MFA</p>
           <p className="text-sm font-bold text-cyan-700">{customer.mfa_enabled ? 'Ativo' : 'Desativado'}</p>
         </div>
-        <div className="rounded-xl bg-emerald-500/10 p-4">
-          <p className="text-xs text-emerald-600 mb-1">Último Login</p>
-          <p className="text-sm font-bold text-emerald-700">{customer.last_login_at ? formatDate(customer.last_login_at) : 'Sem registro'}</p>
+        <div className="rounded-xl bg-green-500/10 p-4">
+          <p className="text-xs text-green-600 mb-1">Último Login</p>
+          <p className="text-sm font-bold text-green-700">{customer.last_login_at ? formatDate(customer.last_login_at) : 'Sem registro'}</p>
         </div>
         <div className="rounded-xl bg-red-500/10 p-4">
           <p className="text-xs text-red-600 mb-1">Risco Operacional</p>
@@ -491,7 +484,7 @@ export default function AdminCustomerDetail() {
               onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
-                  ? 'border-emerald-500 text-emerald-600'
+                  ? 'border-green-500 text-green-600'
                   : 'border-transparent text-tx-muted hover:text-tx-primary'
               }`}
             >
@@ -514,6 +507,8 @@ export default function AdminCustomerDetail() {
           setPage={setChargesPage}
           statusFilter={chargesStatus}
           setStatusFilter={(s) => { setChargesStatus(s); setChargesPage(1); }}
+          searchQuery={chargesSearch}
+          setSearchQuery={(s) => { setChargesSearch(s); setChargesPage(1); }}
           getStatusBadge={getChargeStatusBadge}
           onChargeStatusChanged={() => {
             queryClient.invalidateQueries({ queryKey: ['admin-customer-charges', customerId] });
@@ -559,7 +554,7 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
       {/* Personal Info */}
       <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
         <h3 className="text-sm font-semibold text-tx-primary mb-4 flex items-center gap-2">
-          <UserCircleIcon className="h-4 w-4 text-emerald-500" />
+          <UserCircleIcon className="h-4 w-4 text-green-500" />
           Dados Pessoais
         </h3>
         <div className="space-y-3">
@@ -579,7 +574,7 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
       {/* KYC Info */}
       <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
         <h3 className="text-sm font-semibold text-tx-primary mb-4 flex items-center gap-2">
-          <IdentificationIcon className="h-4 w-4 text-emerald-500" />
+          <IdentificationIcon className="h-4 w-4 text-green-500" />
           KYC / Verificação
         </h3>
         {customer.kyc ? (
@@ -631,7 +626,7 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
                     </div>
                   </div>
                   {doc.file_url && (
-                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-500 hover:underline">
+                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-green-500 hover:underline">
                       <EyeIcon className="h-4 w-4" />
                     </a>
                   )}
@@ -645,7 +640,7 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
       {/* Payment Info */}
       <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
         <h3 className="text-sm font-semibold text-tx-primary mb-4 flex items-center gap-2">
-          <BanknotesIcon className="h-4 w-4 text-emerald-500" />
+          <BanknotesIcon className="h-4 w-4 text-green-500" />
           Dados de Pagamento
         </h3>
         <div className="space-y-4">
@@ -661,7 +656,7 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
                       <p className="text-sm font-mono text-tx-primary">{key.pix_key}</p>
                     </div>
                     <button onClick={() => { navigator.clipboard.writeText(key.pix_key); toast.success('Copiado!'); }}>
-                      <ClipboardDocumentIcon className="h-4 w-4 text-tx-muted hover:text-emerald-500" />
+                      <ClipboardDocumentIcon className="h-4 w-4 text-tx-muted hover:text-green-500" />
                     </button>
                   </div>
                 ))}
@@ -703,14 +698,14 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
             <StatMini label="Total Cobranças" value={customer.financials.total_charges.toString()} />
             <StatMini label="Aprovadas" value={customer.financials.approved_charges.toString()} color="emerald" />
             <StatMini label="Pendentes" value={customer.financials.pending_charges.toString()} color="amber" />
-            <StatMini label="Reembolsadas" value={customer.financials.refunded_charges.toString()} color="emerald" />
+            <StatMini label="Reembolsadas" value={customer.financials.refunded_charges.toString()} color="purple" />
           </div>
         </div>
 
         {/* Status Control */}
         <div className="rounded-2xl bg-surface-card p-5 shadow-sm">
           <h3 className="text-sm font-semibold text-tx-primary mb-4 flex items-center gap-2">
-            <ShieldCheckIcon className="h-4 w-4 text-emerald-500" />
+            <ShieldCheckIcon className="h-4 w-4 text-green-500" />
             Controle de Conta
           </h3>
 
@@ -730,7 +725,7 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
                 value={blockReason}
                 onChange={(e) => setBlockReason(e.target.value)}
                 placeholder="Motivo para suspensão/bloqueio..."
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
               />
             </div>
             <div className="flex gap-2">
@@ -770,7 +765,7 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
             <div className="space-y-3">
               {customer.logs.map((log, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                  <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-green-500" />
                   <div>
                     <p className="text-xs font-medium text-tx-primary">{log.event}</p>
                     <p className="text-xs text-tx-muted">{log.date ? formatDate(log.date) : '-'}{log.ip ? ` · IP: ${log.ip}` : ''}</p>
@@ -796,6 +791,8 @@ function ChargesTab({
   setPage,
   statusFilter,
   setStatusFilter,
+  searchQuery,
+  setSearchQuery,
   getStatusBadge,
   onChargeStatusChanged,
 }: {
@@ -807,6 +804,8 @@ function ChargesTab({
   setPage: (p: number) => void;
   statusFilter: string;
   setStatusFilter: (s: string) => void;
+  searchQuery: string;
+  setSearchQuery: (s: string) => void;
   getStatusBadge: (status: string) => JSX.Element;
   onChargeStatusChanged: () => void;
 }) {
@@ -874,11 +873,21 @@ function ChargesTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative flex-1">
+          <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
+          <input
+            type="text"
+            placeholder="Buscar por ID, nome, email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-9 pr-4 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+          />
+        </div>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+          className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
         >
           <option value="all">Todos os status</option>
           <option value="approved">Aprovados</option>
@@ -892,7 +901,7 @@ function ChargesTab({
       <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
           </div>
         ) : charges.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
@@ -933,7 +942,7 @@ function ChargesTab({
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => openDetailModal(charge)}
-                          className="rounded-lg p-2 text-emerald-500 hover:bg-emerald-50 transition-colors"
+                          className="rounded-lg p-2 text-green-500 hover:bg-green-50 transition-colors"
                           title="Ver detalhes"
                         >
                           <EyeIcon className="h-4 w-4" />
@@ -1062,7 +1071,7 @@ function ChargesTab({
                               navigator.clipboard.writeText(selectedCharge.pix_emv!);
                               toast.success('Código PIX copiado!');
                             }}
-                            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 transition-colors"
+                            className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 transition-colors"
                           >
                             Copiar
                           </button>
@@ -1093,7 +1102,7 @@ function ChargesTab({
                               navigator.clipboard.writeText(selectedCharge.boleto_barcode!);
                               toast.success('Código de barras copiado!');
                             }}
-                            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 transition-colors"
+                            className="rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 transition-colors"
                           >
                             Copiar
                           </button>
@@ -1105,7 +1114,7 @@ function ChargesTab({
                         href={selectedCharge.boleto_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 transition-colors"
+                        className="inline-flex items-center gap-2 rounded-lg bg-green-500 px-4 py-2 text-sm font-medium text-white hover:bg-green-600 transition-colors"
                       >
                         <DocumentTextIcon className="h-4 w-4" />
                         Visualizar Boleto
@@ -1127,7 +1136,7 @@ function ChargesTab({
                     <select
                       value={targetStatus}
                       onChange={(e) => setTargetStatus(e.target.value)}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-white px-3 py-2 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-white px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     >
                       {manualStatusOptions.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>
@@ -1144,7 +1153,7 @@ function ChargesTab({
                       value={mfaCode}
                       onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="000000"
-                      className="w-full rounded-lg border border-border-DEFAULT bg-white px-3 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-white px-3 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -1156,7 +1165,7 @@ function ChargesTab({
                     value={changeReason}
                     onChange={(e) => setChangeReason(e.target.value)}
                     placeholder="Descreva o motivo operacional/compliance para a troca de status..."
-                    className="w-full rounded-lg border border-border-DEFAULT bg-white px-3 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
+                    className="w-full rounded-lg border border-border-DEFAULT bg-white px-3 py-2 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
                   />
                 </div>
 
@@ -1284,7 +1293,7 @@ function WithdrawalsTab({
       <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
           </div>
         ) : withdrawals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
@@ -1619,7 +1628,7 @@ function WithdrawalsTab({
                 onChange={(event) => setCancelReason(event.target.value)}
                 rows={4}
                 placeholder="Explique ao vendedor por que o saque foi cancelado"
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
               />
               <p className="mt-2 text-xs text-tx-muted">Mínimo de 5 caracteres.</p>
             </div>
@@ -1805,7 +1814,7 @@ function LogsTab({
           <div className="space-y-3">
             {activityLogs.map((log, i) => (
               <div key={i} className="flex items-start gap-3">
-                <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-green-500" />
                 <div>
                   <p className="text-xs font-medium text-tx-primary">{log.event}</p>
                   <p className="text-xs text-tx-muted">{log.date ? formatDate(log.date) : '-'}{log.ip ? ` · IP: ${log.ip}` : ''}</p>
@@ -1848,18 +1857,18 @@ function LogsTab({
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 placeholder="Buscar ação, IP, correlation..."
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-emerald-500 focus:outline-none"
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-green-500 focus:outline-none"
               />
               <input
                 value={endpointFilter}
                 onChange={(e) => setEndpointFilter(e.target.value)}
                 placeholder="Filtrar endpoint"
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-emerald-500 focus:outline-none"
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-green-500 focus:outline-none"
               />
               <select
                 value={riskFilter}
                 onChange={(e) => setRiskFilter(e.target.value as 'all' | 'low' | 'medium' | 'high')}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-emerald-500 focus:outline-none"
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-green-500 focus:outline-none"
               >
                 <option value="all">Risco: Todos</option>
                 <option value="low">Risco: Baixo</option>
@@ -1869,7 +1878,7 @@ function LogsTab({
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as 'all' | '2xx' | '4xx' | '5xx')}
-                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-emerald-500 focus:outline-none"
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-xs text-tx-primary focus:border-green-500 focus:outline-none"
               >
                 <option value="all">Status HTTP: Todos</option>
                 <option value="2xx">Status HTTP: 2xx</option>
@@ -1888,7 +1897,7 @@ function LogsTab({
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
           </div>
         ) : logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16">
@@ -1921,7 +1930,7 @@ function LogsTab({
                   {filteredLogs.map((log) => (
                     <tr key={log.id} className="hover:bg-surface-hover transition-colors">
                       <td className="px-4 py-3">
-                        <span className="inline-flex rounded bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-500">
+                        <span className="inline-flex rounded bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-500">
                           {log.action}
                         </span>
                         <p className="mt-1 text-[11px] text-tx-muted">
@@ -2037,7 +2046,7 @@ function InfoRow({ label, value, mono, badge }: { label: string; value?: string 
 }
 
 function StatMini({ label, value, color }: { label: string; value: string; color?: string }) {
-  const colorClass = color === 'emerald' ? 'text-emerald-500' : color === 'amber' ? 'text-amber-500' : color === 'emerald' ? 'text-emerald-500' : 'text-tx-primary';
+  const colorClass = color === 'emerald' ? 'text-emerald-500' : color === 'amber' ? 'text-amber-500' : color === 'purple' ? 'text-green-500' : 'text-tx-primary';
   return (
     <div className="rounded-lg bg-surface-page p-3">
       <p className="text-xs text-tx-muted mb-0.5">{label}</p>
@@ -2148,7 +2157,7 @@ function FeesTab({ customerId }: { customerId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
       </div>
     );
   }
@@ -2164,7 +2173,7 @@ function FeesTab({ customerId }: { customerId: string }) {
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
             {saveMutation.isPending ? 'Salvando...' : 'Salvar Taxas'}
           </button>
@@ -2242,7 +2251,7 @@ function FeesTab({ customerId }: { customerId: string }) {
             onChange={(e) => setFees(prev => ({ ...prev, notes: e.target.value || null }))}
             rows={3}
             maxLength={1000}
-            className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none resize-none"
+            className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none resize-none"
             placeholder="Notas sobre taxas específicas deste cliente..."
           />
         </div>
@@ -2269,7 +2278,7 @@ function FeeInput({ label, value, onChange, prefix, suffix }: {
           min="0"
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full rounded-lg border border-border-DEFAULT bg-surface-page py-2 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none ${prefix ? 'pl-8 pr-3' : suffix ? 'pl-3 pr-12' : 'px-3'}`}
+          className={`w-full rounded-lg border border-border-DEFAULT bg-surface-page py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none ${prefix ? 'pl-8 pr-3' : suffix ? 'pl-3 pr-12' : 'px-3'}`}
           placeholder="Padrão"
         />
         {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-tx-muted">{suffix}</span>}
@@ -2347,7 +2356,7 @@ function AcquirersTab({ customerId }: { customerId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
       </div>
     );
   }
@@ -2363,7 +2372,7 @@ function AcquirersTab({ customerId }: { customerId: string }) {
           <button
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
             {saveMutation.isPending ? 'Salvando...' : 'Salvar Adquirentes'}
           </button>
@@ -2381,7 +2390,7 @@ function AcquirersTab({ customerId }: { customerId: string }) {
                 key={acq.acquirer_id}
                 className={`flex items-center justify-between rounded-xl border p-4 transition-colors ${
                   acq.is_active
-                    ? 'border-emerald-500/30 bg-emerald-500/5'
+                    ? 'border-green-500/30 bg-green-500/5'
                     : 'border-border-DEFAULT bg-surface-page'
                 }`}
               >
@@ -2389,7 +2398,7 @@ function AcquirersTab({ customerId }: { customerId: string }) {
                   <button
                     onClick={() => toggleAcquirer(acq.acquirer_id)}
                     className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-                      acq.is_active ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-600'
+                      acq.is_active ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
                     <span
@@ -2425,7 +2434,7 @@ function AcquirersTab({ customerId }: { customerId: string }) {
                       max="99"
                       value={acq.priority}
                       onChange={(e) => updatePriority(acq.acquirer_id, parseInt(e.target.value) || 0)}
-                      className="w-16 rounded-lg border border-border-DEFAULT bg-surface-page px-2 py-1 text-center text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-16 rounded-lg border border-border-DEFAULT bg-surface-page px-2 py-1 text-center text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                       disabled={!acq.is_active}
                     />
                   </div>
@@ -2438,3 +2447,5 @@ function AcquirersTab({ customerId }: { customerId: string }) {
     </div>
   );
 }
+
+

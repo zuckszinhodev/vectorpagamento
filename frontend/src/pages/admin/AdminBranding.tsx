@@ -47,7 +47,7 @@ export default function AdminBranding() {
     platform_name: '',
     logo_url: '',
     favicon_url: '',
-    primary_color: '#7C3AED',
+    primary_color: '#16a34a',
     secondary_color: '#4F46E5',
     custom_css: '',
   });
@@ -60,7 +60,7 @@ export default function AdminBranding() {
       platform_name: settings.platform_name || '',
       logo_url: settings.logo_url || '',
       favicon_url: settings.favicon_url || '',
-      primary_color: settings.primary_color || '#7C3AED',
+      primary_color: settings.primary_color || '#16a34a',
       secondary_color: settings.secondary_color || '#4F46E5',
       custom_css: settings.custom_css || '',
     });
@@ -69,7 +69,7 @@ export default function AdminBranding() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
       </div>
     );
   }
@@ -86,8 +86,8 @@ export default function AdminBranding() {
         {/* Logo & Identity */}
         <div className="rounded-2xl bg-surface-card p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-emerald-500/10 p-2.5">
-              <PhotoIcon className="h-6 w-6 text-emerald-500" />
+            <div className="rounded-xl bg-green-500/10 p-2.5">
+              <PhotoIcon className="h-6 w-6 text-green-500" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-tx-primary">Identidade Visual</h2>
@@ -103,7 +103,7 @@ export default function AdminBranding() {
                 value={form.platform_name}
                 onChange={(e) => setForm({ ...form, platform_name: e.target.value })}
                 placeholder="Vector Pagamentos"
-                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
+                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
               />
             </div>
 
@@ -115,7 +115,7 @@ export default function AdminBranding() {
                   value={form.logo_url}
                   onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
                   placeholder="https://example.com/logo.png"
-                  className="flex-1 rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
+                  className="flex-1 rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
                 />
                 {form.logo_url && (
                   <div className="h-12 w-12 rounded-lg border border-border-DEFAULT p-2 bg-white">
@@ -133,7 +133,7 @@ export default function AdminBranding() {
                   value={form.favicon_url}
                   onChange={(e) => setForm({ ...form, favicon_url: e.target.value })}
                   placeholder="https://example.com/favicon.ico"
-                  className="flex-1 rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
+                  className="flex-1 rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
                 />
                 {form.favicon_url && (
                   <div className="h-10 w-10 rounded-lg border border-border-DEFAULT p-1.5 bg-white">
@@ -148,8 +148,8 @@ export default function AdminBranding() {
         {/* Colors */}
         <div className="rounded-2xl bg-surface-card p-6 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-emerald-500/10 p-2.5">
-              <SwatchIcon className="h-6 w-6 text-emerald-500" />
+            <div className="rounded-xl bg-green-500/10 p-2.5">
+              <SwatchIcon className="h-6 w-6 text-green-500" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-tx-primary">Esquema de Cores</h2>
@@ -171,7 +171,7 @@ export default function AdminBranding() {
                   type="text"
                   value={form.primary_color}
                   onChange={(e) => setForm({ ...form, primary_color: e.target.value })}
-                  className="w-28 rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary font-mono focus:border-emerald-500 focus:outline-none"
+                  className="w-28 rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary font-mono focus:border-green-500 focus:outline-none"
                 />
                 <div 
                   className="h-12 flex-1 rounded-lg" 
@@ -193,7 +193,7 @@ export default function AdminBranding() {
                   type="text"
                   value={form.secondary_color}
                   onChange={(e) => setForm({ ...form, secondary_color: e.target.value })}
-                  className="w-28 rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary font-mono focus:border-emerald-500 focus:outline-none"
+                  className="w-28 rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary font-mono focus:border-green-500 focus:outline-none"
                 />
                 <div 
                   className="h-12 flex-1 rounded-lg" 
@@ -226,8 +226,8 @@ export default function AdminBranding() {
         {/* Custom CSS */}
         <div className="rounded-2xl bg-surface-card p-6 shadow-sm lg:col-span-2">
           <div className="flex items-center gap-3 mb-6">
-            <div className="rounded-xl bg-emerald-500/10 p-2.5">
-              <SwatchIcon className="h-6 w-6 text-emerald-500" />
+            <div className="rounded-xl bg-green-500/10 p-2.5">
+              <SwatchIcon className="h-6 w-6 text-green-500" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-tx-primary">CSS Personalizado</h2>
@@ -240,7 +240,7 @@ export default function AdminBranding() {
             onChange={(e) => setForm({ ...form, custom_css: e.target.value })}
             placeholder="/* Adicione seu CSS personalizado aqui */"
             rows={8}
-            className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm font-mono text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
+            className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm font-mono text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
           />
         </div>
       </div>
@@ -250,7 +250,7 @@ export default function AdminBranding() {
         <button
           onClick={() => updateMutation.mutate(form)}
           disabled={updateMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
         >
           {updateMutation.isPending ? (
             <>
@@ -268,3 +268,5 @@ export default function AdminBranding() {
     </AdminPageShell>
   );
 }
+
+

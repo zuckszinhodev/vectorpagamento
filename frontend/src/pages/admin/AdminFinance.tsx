@@ -82,6 +82,9 @@ export default function AdminFinance() {
   const [activeMainTab, setActiveMainTab] = useState<'withdrawals' | 'transactions'>('transactions');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('pending');
+  const [methodFilter, setMethodFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -101,7 +104,7 @@ export default function AdminFinance() {
 
   // Fetch withdrawals
   const { data: withdrawalsData, isLoading, refetch } = useQuery({
-    queryKey: ['admin-withdrawals', search, statusFilter, page],
+    queryKey: ['admin-withdrawals', search, statusFilter, methodFilter, dateFrom, dateTo, page],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('page', page.toString());
@@ -110,6 +113,9 @@ export default function AdminFinance() {
       if (statusFilter !== 'all') {
         params.append('status', statusFilter === 'rejected' ? 'cancelled' : statusFilter);
       }
+      if (methodFilter !== 'all') params.append('method', methodFilter);
+      if (dateFrom) params.append('date_from', dateFrom);
+      if (dateTo) params.append('date_to', dateTo);
 
       const response = await api.get(`/admin/withdrawals?${params.toString()}`);
       return response.data;
@@ -163,23 +169,11 @@ export default function AdminFinance() {
       return response.data;
     },
     onSuccess: (payload, variables) => {
-      if (payload?.success === false && payload?.error?.code === 'dual_control_required') {
-        const approvalId = payload?.error?.approval_id;
-        if (approvalId) {
-          navigator.clipboard?.writeText(approvalId).catch(() => undefined);
-        }
-        toast.success(
-          approvalId
-            ? `Ação crítica enviada para aprovação dupla. ID: ${approvalId} (copiado).`
-            : 'Ação crítica enviada para aprovação dupla.'
-        );
+      if (variables.action === 'reject') {
+        const cancelReason = payload?.cancel_reason || payload?.data?.failure_reason || payload?.data?.notes || variables.notes;
+        toast.success(cancelReason ? `Saque cancelado. Motivo: ${cancelReason}` : 'Saque cancelado com sucesso.');
       } else {
-          if (variables.action === 'reject') {
-            const cancelReason = payload?.cancel_reason || payload?.data?.failure_reason || payload?.data?.notes || variables.notes;
-            toast.success(cancelReason ? `Saque cancelado. Motivo: ${cancelReason}` : 'Saque cancelado com sucesso.');
-          } else {
-            toast.success('Operação concluída com sucesso.');
-          }
+        toast.success('Operação concluída com sucesso.');
       }
 
       queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
@@ -199,19 +193,7 @@ export default function AdminFinance() {
       return response.data;
     },
     onSuccess: (payload) => {
-      if (payload?.success === false && payload?.error?.code === 'dual_control_required') {
-        const approvalId = payload?.error?.approval_id;
-        if (approvalId) {
-          navigator.clipboard?.writeText(approvalId).catch(() => undefined);
-        }
-        toast.success(
-          approvalId
-            ? `Lote enviado para aprovação dupla. ID: ${approvalId} (copiado).`
-            : 'Lote enviado para aprovação dupla.'
-        );
-      } else {
-        toast.success(payload?.message || 'Processamento em lote executado.');
-      }
+      toast.success(payload?.message || 'Processamento em lote executado.');
       queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
     },
     onError: (error: any) => {
@@ -352,7 +334,7 @@ export default function AdminFinance() {
                 onClick={() => setShowConfigModal(true)}
                 className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 transition-colors"
               >
-                Configuracoes
+                Configurações
               </button>
               {pendingCount > 0 && (
                 <button
@@ -375,7 +357,7 @@ export default function AdminFinance() {
           onClick={() => setActiveMainTab('transactions')}
           className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
             activeMainTab === 'transactions'
-              ? 'bg-emerald-600 text-white shadow-sm'
+              ? 'bg-green-600 text-white shadow-sm'
               : 'text-tx-secondary hover:bg-surface-hover'
           }`}
         >
@@ -383,7 +365,7 @@ export default function AdminFinance() {
           Transações
           {chargesPagination.total > 0 && (
             <span className={`rounded-full px-2 py-0.5 text-xs ${
-              activeMainTab === 'transactions' ? 'bg-white/20' : 'bg-emerald-500/10 text-emerald-600'
+              activeMainTab === 'transactions' ? 'bg-white/20' : 'bg-green-500/10 text-green-600'
             }`}>
               {chargesPagination.total}
             </span>
@@ -393,7 +375,7 @@ export default function AdminFinance() {
           onClick={() => setActiveMainTab('withdrawals')}
           className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
             activeMainTab === 'withdrawals'
-              ? 'bg-emerald-600 text-white shadow-sm'
+              ? 'bg-green-600 text-white shadow-sm'
               : 'text-tx-secondary hover:bg-surface-hover'
           }`}
         >
@@ -420,9 +402,9 @@ export default function AdminFinance() {
             {config?.fee_percentage || 0}% + {formatCurrency(config?.fee_fixed || 0)}
           </p>
         </div>
-        <div className="rounded-xl bg-emerald-500/10 p-4">
-          <p className="text-xs text-emerald-600 mb-1">Limite Auto-Aprovação</p>
-          <p className="text-2xl font-bold text-emerald-600">
+        <div className="rounded-xl bg-green-500/10 p-4">
+          <p className="text-xs text-green-600 mb-1">Limite Auto-Aprovação</p>
+          <p className="text-2xl font-bold text-green-600">
             {config?.auto_approve_limit ? formatCurrency(config.auto_approve_limit) : 'Manual'}
           </p>
         </div>
@@ -457,46 +439,99 @@ export default function AdminFinance() {
 
       {/* Filters */}
       <div className="rounded-2xl bg-surface-card p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-          <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
-            <input
-              type="text"
-              placeholder="Buscar por nome ou email..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+            <div className="relative flex-1">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
+              <input
+                type="text"
+                placeholder="Buscar por nome, email ou ID..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <FunnelIcon className="h-4 w-4 text-tx-muted" />
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              >
+                <option value="all">Todos os status</option>
+                <option value="pending">Pendentes</option>
+                <option value="processing">Processando</option>
+                <option value="completed">Concluídos</option>
+                <option value="cancelled">Cancelados</option>
+              </select>
+
+              <select
+                value={methodFilter}
+                onChange={(e) => {
+                  setMethodFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              >
+                <option value="all">Todos os métodos</option>
+                <option value="pix">PIX</option>
+                <option value="bank_transfer">TED</option>
+              </select>
+
+              <button
+                onClick={() => refetch()}
+                className="flex items-center gap-2 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-secondary hover:bg-border-DEFAULT transition-colors"
+              >
+                <ArrowPathIcon className="h-4 w-4" />
+                Atualizar
+              </button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <FunnelIcon className="h-4 w-4 text-tx-muted" />
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
-            >
-              <option value="all">Todos os status</option>
-              <option value="pending">Pendentes</option>
-              <option value="processing">Processando</option>
-              <option value="completed">Concluídos</option>
-              <option value="cancelled">Cancelados</option>
-            </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <CalendarDaysIcon className="h-4 w-4 text-tx-muted" />
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              />
+              <span className="text-sm text-tx-muted">até</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
+              />
+            </div>
+            {(search || statusFilter !== 'all' || methodFilter !== 'all' || dateFrom || dateTo) && (
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('pending');
+                  setMethodFilter('all');
+                  setDateFrom('');
+                  setDateTo('');
+                  setPage(1);
+                }}
+                className="flex items-center gap-1 rounded-lg bg-red-500/10 px-3 py-2 text-xs font-medium text-red-500 hover:bg-red-500/20 transition-colors"
+              >
+                <XMarkIcon className="h-3.5 w-3.5" />
+                Limpar filtros
+              </button>
+            )}
+            <span className="text-xs text-tx-muted ml-auto">
+              {pagination.total} saques encontrados
+            </span>
           </div>
-
-          <button
-            onClick={() => refetch()}
-            className="flex items-center gap-2 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-secondary hover:bg-border-DEFAULT transition-colors"
-          >
-            <ArrowPathIcon className="h-4 w-4" />
-            Atualizar
-          </button>
         </div>
       </div>
 
@@ -504,7 +539,7 @@ export default function AdminFinance() {
       <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
           </div>
         ) : withdrawals.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
@@ -588,6 +623,16 @@ export default function AdminFinance() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedWithdrawal(withdrawal);
+                              setShowDetailModal(true);
+                            }}
+                            className="rounded-lg bg-surface-hover p-1.5 text-tx-muted hover:text-tx-primary transition-colors"
+                            title="Ver detalhes"
+                          >
+                            <EyeIcon className="h-4 w-4" />
+                          </button>
                           {withdrawal.status === 'pending' && (
                             <>
                               <button
@@ -599,6 +644,7 @@ export default function AdminFinance() {
                               <button
                                 onClick={() => {
                                   setSelectedWithdrawal(withdrawal);
+                                  setRejectReason('');
                                   setShowDetailModal(true);
                                 }}
                                 className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600 transition-colors"
@@ -659,7 +705,7 @@ export default function AdminFinance() {
                     placeholder="Buscar por ID, cliente..."
                     value={txSearch}
                     onChange={(e) => { setTxSearch(e.target.value); setTxPage(1); }}
-                    className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                   />
                 </div>
 
@@ -667,7 +713,7 @@ export default function AdminFinance() {
                   <select
                     value={txStatus}
                     onChange={(e) => { setTxStatus(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                   >
                     <option value="all">Todos os status</option>
                     <option value="approved">Aprovados</option>
@@ -684,7 +730,7 @@ export default function AdminFinance() {
                   <select
                     value={txMethod}
                     onChange={(e) => { setTxMethod(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                   >
                     <option value="all">Todos os métodos</option>
                     <option value="pix">PIX</option>
@@ -695,7 +741,7 @@ export default function AdminFinance() {
                   <select
                     value={txAcquirer}
                     onChange={(e) => { setTxAcquirer(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                   >
                     <option value="all">Todos os gateways</option>
                     <option value="payfort">PayFort</option>
@@ -725,14 +771,14 @@ export default function AdminFinance() {
                     type="date"
                     value={txDateFrom}
                     onChange={(e) => { setTxDateFrom(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                   />
                   <span className="text-sm text-tx-muted">até</span>
                   <input
                     type="date"
                     value={txDateTo}
                     onChange={(e) => { setTxDateTo(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                    className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                   />
                 </div>
                 {(txSearch || txStatus !== 'all' || txMethod !== 'all' || txAcquirer !== 'all' || txDateFrom || txDateTo) && (
@@ -760,7 +806,7 @@ export default function AdminFinance() {
           <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
             {isLoadingCharges ? (
               <div className="flex items-center justify-center py-20">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
               </div>
             ) : charges.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
@@ -849,7 +895,7 @@ export default function AdminFinance() {
                                 setSelectedCharge(charge);
                                 setShowChargeDetailModal(true);
                               }}
-                              className="rounded-lg p-2 text-emerald-500 hover:bg-emerald-50 transition-colors"
+                              className="rounded-lg p-2 text-green-500 hover:bg-green-50 transition-colors"
                               title="Ver detalhes"
                             >
                               <EyeIcon className="h-4 w-4" />
@@ -1089,10 +1135,10 @@ export default function AdminFinance() {
 
       {/* Reject Modal */}
       {showDetailModal && selectedWithdrawal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-2xl bg-surface-card p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl bg-surface-card p-6 shadow-xl my-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-bold text-tx-primary">Rejeitar Saque</h2>
+              <h2 className="text-lg font-bold text-tx-primary">Detalhes do Saque</h2>
               <button
                 onClick={() => {
                   setShowDetailModal(false);
@@ -1106,50 +1152,138 @@ export default function AdminFinance() {
             </div>
 
             <div className="space-y-4">
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs text-tx-muted mb-1">Cliente</p>
-                <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.customer_name}</p>
-              </div>
-              <div className="rounded-xl bg-surface-page p-4">
-                <p className="text-xs text-tx-muted mb-1">Valor</p>
-                <p className="text-lg font-bold text-tx-primary">{formatCurrency(selectedWithdrawal.amount)}</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-tx-secondary mb-2">
-                  Motivo da rejeição
-                </label>
-                <textarea
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Informe o motivo..."
-                  rows={3}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Cliente</p>
+                  <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.customer_name}</p>
+                  {selectedWithdrawal.customer_email && (
+                    <p className="text-xs text-tx-muted">{selectedWithdrawal.customer_email}</p>
+                  )}
+                </div>
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Status</p>
+                  {getStatusBadge(selectedWithdrawal.status)}
+                </div>
               </div>
 
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => {
-                    setShowDetailModal(false);
-                    setRejectReason('');
-                  }}
-                  className="flex-1 rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => processMutation.mutate({
-                    withdrawalId: selectedWithdrawal.id,
-                    action: 'reject',
-                    notes: rejectReason,
-                  })}
-                  disabled={processMutation.isPending}
-                  className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
-                >
-                  {processMutation.isPending ? 'Rejeitando...' : 'Confirmar Rejeição'}
-                </button>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Valor</p>
+                  <p className="text-sm font-bold text-tx-primary">{formatCurrency(selectedWithdrawal.amount)}</p>
+                </div>
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Taxa</p>
+                  <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.fee ? formatCurrency(selectedWithdrawal.fee) : 'R$ 0'}</p>
+                </div>
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Líquido</p>
+                  <p className="text-sm font-bold text-emerald-600">{formatCurrency(selectedWithdrawal.net_amount || (selectedWithdrawal.amount - (selectedWithdrawal.fee || 0)))}</p>
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Método</p>
+                  <p className="text-sm font-medium text-tx-primary">
+                    {selectedWithdrawal.method === 'pix' ? 'PIX' : 'TED'}
+                    {selectedWithdrawal.is_instant && ' (Instantâneo)'}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Data</p>
+                  <p className="text-sm font-medium text-tx-primary">{formatDate(selectedWithdrawal.requested_at)}</p>
+                </div>
+              </div>
+
+              {selectedWithdrawal.pix_key && (
+                <div className="rounded-xl bg-surface-page p-3">
+                  <p className="text-xs text-tx-muted mb-0.5">Chave PIX</p>
+                  <p className="text-sm font-mono text-tx-primary">{selectedWithdrawal.pix_key}</p>
+                </div>
+              )}
+
+              {selectedWithdrawal.bank_name && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl bg-surface-page p-3">
+                    <p className="text-xs text-tx-muted mb-0.5">Banco</p>
+                    <p className="text-sm font-medium text-tx-primary">{selectedWithdrawal.bank_name}</p>
+                  </div>
+                  <div className="rounded-xl bg-surface-page p-3">
+                    <p className="text-xs text-tx-muted mb-0.5">Conta</p>
+                    <p className="text-sm font-mono text-tx-primary">{selectedWithdrawal.bank_agency} / {selectedWithdrawal.bank_account}</p>
+                  </div>
+                </div>
+              )}
+
+              {(selectedWithdrawal.failure_reason || selectedWithdrawal.notes || selectedWithdrawal.cancel_reason) && (
+                <div className="rounded-xl bg-red-500/5 border border-red-500/20 p-3">
+                  <p className="text-xs text-red-500 mb-0.5">Motivo</p>
+                  <p className="text-sm text-tx-primary">{selectedWithdrawal.failure_reason || selectedWithdrawal.notes || selectedWithdrawal.cancel_reason}</p>
+                </div>
+              )}
+
+              <div className="rounded-xl bg-surface-page p-3">
+                <p className="text-xs text-tx-muted mb-0.5">ID</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-mono text-tx-muted">{selectedWithdrawal.id}</p>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(selectedWithdrawal.id); toast.success('ID copiado'); }}
+                    className="text-green-500 hover:text-green-400"
+                  >
+                    <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {selectedWithdrawal.status === 'pending' && (
+                <>
+                  <hr className="border-border-DEFAULT" />
+                  <div>
+                    <label className="block text-sm font-medium text-tx-secondary mb-2">
+                      Motivo da rejeição
+                    </label>
+                    <textarea
+                      value={rejectReason}
+                      onChange={(e) => setRejectReason(e.target.value)}
+                      placeholder="Informe o motivo..."
+                      rows={3}
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-3 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => processMutation.mutate({ withdrawalId: selectedWithdrawal.id, action: 'approve' })}
+                      disabled={processMutation.isPending}
+                      className="flex-1 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
+                    >
+                      {processMutation.isPending ? 'Processando...' : 'Aprovar'}
+                    </button>
+                    <button
+                      onClick={() => processMutation.mutate({
+                        withdrawalId: selectedWithdrawal.id,
+                        action: 'reject',
+                        notes: rejectReason,
+                      })}
+                      disabled={processMutation.isPending || !rejectReason.trim()}
+                      className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                    >
+                      {processMutation.isPending ? 'Rejeitando...' : 'Rejeitar'}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {selectedWithdrawal.status !== 'pending' && (
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => { setShowDetailModal(false); setSelectedWithdrawal(null); }}
+                    className="rounded-lg bg-surface-hover px-4 py-2.5 text-sm font-medium text-tx-primary hover:bg-border-DEFAULT transition-colors"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1240,7 +1374,7 @@ function ConfigModal({
               onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.key
-                  ? 'border-emerald-500 text-emerald-600'
+                  ? 'border-green-500 text-green-600'
                   : 'border-transparent text-tx-muted hover:text-tx-primary'
               }`}
             >
@@ -1267,7 +1401,7 @@ function ConfigModal({
                       max="100"
                       value={localConfig.fee_percentage}
                       onChange={(e) => setLocalConfig({ ...localConfig, fee_percentage: parseFloat(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">Aplicada sobre o valor do saque</p>
                   </div>
@@ -1278,7 +1412,7 @@ function ConfigModal({
                       min="0"
                       value={localConfig.fee_fixed}
                       onChange={(e) => setLocalConfig({ ...localConfig, fee_fixed: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">Ex: 200 = R$ 2,00</p>
                   </div>
@@ -1295,7 +1429,7 @@ function ConfigModal({
                       min="0"
                       value={localConfig.standard_withdrawal_fee_pix}
                       onChange={(e) => setLocalConfig({ ...localConfig, standard_withdrawal_fee_pix: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">Taxa adicional para saque via PIX</p>
                   </div>
@@ -1306,7 +1440,7 @@ function ConfigModal({
                       min="0"
                       value={localConfig.standard_withdrawal_fee_bank}
                       onChange={(e) => setLocalConfig({ ...localConfig, standard_withdrawal_fee_bank: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">Taxa adicional para saque via TED</p>
                   </div>
@@ -1323,7 +1457,7 @@ function ConfigModal({
                       onChange={(e) => setLocalConfig({ ...localConfig, instant_withdrawal_enabled: e.target.checked })}
                       className="sr-only peer"
                     />
-                    <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600" />
                   </label>
                 </div>
                 {localConfig.instant_withdrawal_enabled && (
@@ -1333,7 +1467,7 @@ function ConfigModal({
                       <select
                         value={localConfig.instant_withdrawal_fee_type}
                         onChange={(e) => setLocalConfig({ ...localConfig, instant_withdrawal_fee_type: e.target.value as 'percentage' | 'fixed' })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                       >
                         <option value="percentage">Percentual (%)</option>
                         <option value="fixed">Valor Fixo (centavos)</option>
@@ -1349,7 +1483,7 @@ function ConfigModal({
                         min="0"
                         value={localConfig.instant_withdrawal_fee_value}
                         onChange={(e) => setLocalConfig({ ...localConfig, instant_withdrawal_fee_value: parseFloat(e.target.value) || 0 })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1371,7 +1505,7 @@ function ConfigModal({
                       min="0"
                       value={localConfig.withdrawal_min_amount}
                       onChange={(e) => setLocalConfig({ ...localConfig, withdrawal_min_amount: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">Ex: 1000 = R$ 10,00</p>
                   </div>
@@ -1382,7 +1516,7 @@ function ConfigModal({
                       min="0"
                       value={localConfig.withdrawal_max_amount}
                       onChange={(e) => setLocalConfig({ ...localConfig, withdrawal_max_amount: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">0 = sem limite</p>
                   </div>
@@ -1398,7 +1532,7 @@ function ConfigModal({
                     min="0"
                     value={localConfig.auto_approve_limit}
                     onChange={(e) => setLocalConfig({ ...localConfig, auto_approve_limit: parseInt(e.target.value) || 0 })}
-                    className="w-full max-w-xs rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                    className="w-full max-w-xs rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                   />
                   <p className="text-xs text-tx-muted mt-1">Saques abaixo desse valor são aprovados automaticamente. 0 = aprovação manual sempre</p>
                 </div>
@@ -1425,7 +1559,7 @@ function ConfigModal({
                         onChange={(e) => setLocalConfig({ ...localConfig, withdrawals_enabled: e.target.checked })}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" />
+                      <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600" />
                     </label>
                   </div>
 
@@ -1441,7 +1575,7 @@ function ConfigModal({
                         onChange={(e) => setLocalConfig({ ...localConfig, withdrawal_processing_enabled: e.target.checked })}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" />
+                      <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600" />
                     </label>
                   </div>
 
@@ -1457,7 +1591,7 @@ function ConfigModal({
                         onChange={(e) => setLocalConfig({ ...localConfig, payments_enabled: e.target.checked })}
                         className="sr-only peer"
                       />
-                      <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" />
+                      <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600" />
                     </label>
                   </div>
                 </div>
@@ -1473,7 +1607,7 @@ function ConfigModal({
                       min="0"
                       value={localConfig.daily_withdrawal_limit}
                       onChange={(e) => setLocalConfig({ ...localConfig, daily_withdrawal_limit: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">0 desabilita o limite diário.</p>
                   </div>
@@ -1485,7 +1619,7 @@ function ConfigModal({
                       min="0"
                       value={localConfig.large_withdrawal_threshold}
                       onChange={(e) => setLocalConfig({ ...localConfig, large_withdrawal_threshold: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">Saques acima desse valor entram em pending_approval.</p>
                   </div>
@@ -1498,7 +1632,7 @@ function ConfigModal({
                       max="3600"
                       value={localConfig.withdrawal_cooldown_seconds}
                       onChange={(e) => setLocalConfig({ ...localConfig, withdrawal_cooldown_seconds: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">0 desativa cooldown.</p>
                   </div>
@@ -1511,7 +1645,7 @@ function ConfigModal({
                       max="500"
                       value={localConfig.max_pending_withdrawals_per_account}
                       onChange={(e) => setLocalConfig({ ...localConfig, max_pending_withdrawals_per_account: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">0 remove o limite.</p>
                   </div>
@@ -1535,7 +1669,7 @@ function ConfigModal({
                       max="30"
                       value={localConfig.settlement_days_pix}
                       onChange={(e) => setLocalConfig({ ...localConfig, settlement_days_pix: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">Vendas via PIX</p>
                   </div>
@@ -1547,7 +1681,7 @@ function ConfigModal({
                       max="30"
                       value={localConfig.settlement_days_ted}
                       onChange={(e) => setLocalConfig({ ...localConfig, settlement_days_ted: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">Vendas via TED/Boleto</p>
                   </div>
@@ -1559,7 +1693,7 @@ function ConfigModal({
                       max="30"
                       value={localConfig.processing_days}
                       onChange={(e) => setLocalConfig({ ...localConfig, processing_days: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                      className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                     />
                     <p className="text-xs text-tx-muted mt-1">Dias para processar o saque</p>
                   </div>
@@ -1584,7 +1718,7 @@ function ConfigModal({
                       onChange={(e) => setLocalConfig({ ...localConfig, auto_withdrawal_enabled: e.target.checked })}
                       className="sr-only peer"
                     />
-                    <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600" />
                   </label>
                 </div>
 
@@ -1595,7 +1729,7 @@ function ConfigModal({
                       <select
                         value={localConfig.auto_withdrawal_schedule}
                         onChange={(e) => setLocalConfig({ ...localConfig, auto_withdrawal_schedule: e.target.value as WithdrawalConfig['auto_withdrawal_schedule'] })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                       >
                         <option value="daily">Diário</option>
                         <option value="weekly">Semanal</option>
@@ -1610,7 +1744,7 @@ function ConfigModal({
                         min="0"
                         value={localConfig.auto_withdrawal_min_amount}
                         onChange={(e) => setLocalConfig({ ...localConfig, auto_withdrawal_min_amount: parseInt(e.target.value) || 0 })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                       />
                       <p className="text-xs text-tx-muted mt-1">Saldo mínimo para disparar saque automático</p>
                     </div>
@@ -1636,7 +1770,7 @@ function ConfigModal({
                       onChange={(e) => setLocalConfig({ ...localConfig, holdback_enabled: e.target.checked })}
                       className="sr-only peer"
                     />
-                    <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" />
+                    <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600" />
                   </label>
                 </div>
 
@@ -1651,7 +1785,7 @@ function ConfigModal({
                         max="100"
                         value={localConfig.holdback_percentage}
                         onChange={(e) => setLocalConfig({ ...localConfig, holdback_percentage: parseFloat(e.target.value) || 0 })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -1662,7 +1796,7 @@ function ConfigModal({
                         max="365"
                         value={localConfig.holdback_days}
                         onChange={(e) => setLocalConfig({ ...localConfig, holdback_days: parseInt(e.target.value) || 0 })}
-                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+                        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
                       />
                       <p className="text-xs text-tx-muted mt-1">Após esse período a reserva é liberada</p>
                     </div>
@@ -1684,7 +1818,7 @@ function ConfigModal({
           <button
             onClick={() => onSave(localConfig)}
             disabled={isSaving}
-            className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
           >
             {isSaving ? 'Salvando...' : 'Salvar Configurações'}
           </button>
@@ -1693,3 +1827,5 @@ function ConfigModal({
     </div>
   );
 }
+
+

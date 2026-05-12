@@ -155,7 +155,7 @@ export default function AdminCustomers() {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
             />
           </div>
 
@@ -168,7 +168,7 @@ export default function AdminCustomers() {
                 setStatusFilter(e.target.value);
                 setPage(1);
               }}
-              className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+              className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
             >
               <option value="all">Todos os status</option>
               <option value="active">Ativos</option>
@@ -184,7 +184,7 @@ export default function AdminCustomers() {
               setKycFilter(e.target.value);
               setPage(1);
             }}
-            className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+            className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
           >
             <option value="all">Todos KYC</option>
             <option value="approved">KYC Aprovado</option>
@@ -198,7 +198,7 @@ export default function AdminCustomers() {
       <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
           </div>
         ) : customers.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
@@ -263,7 +263,7 @@ export default function AdminCustomers() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => navigate(`/admin/sellers/${customer.id}`)}
-                            className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover hover:text-emerald-500 transition-colors"
+                            className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover hover:text-green-500 transition-colors"
                             title="Ver detalhes"
                           >
                             <EyeIcon className="h-4 w-4" />
@@ -313,3 +313,5 @@ export default function AdminCustomers() {
     </AdminPageShell>
   );
 }
+
+

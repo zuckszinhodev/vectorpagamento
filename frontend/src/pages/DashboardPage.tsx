@@ -833,7 +833,7 @@ export default function DashboardPage() {
                 <GlowLineChart
                   labels={chartData.labels}
                   data={chartData.data}
-                  color="violet"
+                  color="emerald"
                   height="h-full"
                 />
               </div>
@@ -980,5 +980,4 @@ function ActivityItem({
     </div>
   );
 }
-
 

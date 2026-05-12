@@ -124,7 +124,7 @@ export default function AdminSettings() {
       await api.put('/admin/settings', data);
     },
     onSuccess: () => {
-      toast.success('Configuracoes salvas');
+      toast.success('Configurações salvas');
       queryClient.invalidateQueries({ queryKey: ['platform-settings'] });
     },
     onError: () => {
@@ -135,7 +135,7 @@ export default function AdminSettings() {
   if (isLoading || !settings) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-green-500 border-t-transparent" />
       </div>
     );
   }
@@ -152,7 +152,7 @@ export default function AdminSettings() {
     <AdminPageShell>
       <AdminPageHeader
         icon={Cog6ToothIcon}
-        title="Configuracoes da Plataforma"
+        title="Configurações da plataforma"
         subtitle="Gerencie as configuracoes globais do sistema"
       />
 
@@ -164,7 +164,7 @@ export default function AdminSettings() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors ${
-                  activeTab === tab.id ? 'bg-emerald-500 text-white' : 'text-tx-secondary hover:bg-surface-hover'
+                  activeTab === tab.id ? 'bg-green-500 text-white' : 'text-tx-secondary hover:bg-surface-hover'
                 }`}
               >
                 <tab.icon className="h-5 w-5" />
@@ -229,7 +229,7 @@ function GeneralSettings({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-tx-primary">Configuracoes Gerais</h2>
+      <h2 className="text-lg font-semibold text-tx-primary">Configurações gerais</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Nome da Plataforma" value={form.platform_name} onChange={(value) => setForm({ ...form, platform_name: value })} />
@@ -244,7 +244,7 @@ function GeneralSettings({
           type="checkbox"
           checked={form.maintenance_mode}
           onChange={(e) => setForm({ ...form, maintenance_mode: e.target.checked })}
-          className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
+          className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
         />
         <span className="text-sm text-tx-primary">Modo de manutencao</span>
       </label>
@@ -268,7 +268,7 @@ function EmailSettings({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-tx-primary">Configuracoes de Email</h2>
+      <h2 className="text-lg font-semibold text-tx-primary">Configurações de email</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Nome do Remetente" value={form.from_name} onChange={(value) => setForm({ ...form, from_name: value })} />
@@ -284,7 +284,7 @@ function EmailSettings({
               type={showPassword ? 'text' : 'password'}
               value={form.smtp_password}
               onChange={(e) => setForm({ ...form, smtp_password: e.target.value })}
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 pr-10 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 pr-10 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
             />
             <button
               type="button"
@@ -317,7 +317,7 @@ function PaymentSettings({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-tx-primary">Configuracoes de Pagamento</h2>
+      <h2 className="text-lg font-semibold text-tx-primary">Configurações de pagamento</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Maximo de Parcelas" type="number" value={String(form.max_installments)} onChange={(value) => setForm({ ...form, max_installments: Number(value) || 1 })} />
@@ -350,7 +350,7 @@ function SecuritySettings({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold text-tx-primary">Configuracoes de Seguranca</h2>
+      <h2 className="text-lg font-semibold text-tx-primary">Configurações de segurança</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Timeout de Sessao (min)" type="number" value={String(form.session_timeout_minutes)} onChange={(value) => setForm({ ...form, session_timeout_minutes: Number(value) || 0 })} />
@@ -401,7 +401,7 @@ function FeatureSettings({
               type="checkbox"
               checked={form[feature.key]}
               onChange={(e) => setForm({ ...form, [feature.key]: e.target.checked })}
-              className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
+              className="h-5 w-5 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
             />
             <div className="flex-1">
               <span className="text-sm font-medium text-tx-primary">{feature.label}</span>
@@ -434,7 +434,7 @@ function Input({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
+        className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary focus:border-green-500 focus:outline-none"
       />
     </div>
   );
@@ -455,7 +455,7 @@ function Toggle({
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
+        className="h-4 w-4 rounded border-border-DEFAULT text-green-500 focus:ring-green-500"
       />
       <span className="text-sm text-tx-primary">{label}</span>
     </label>
@@ -467,9 +467,10 @@ function SaveButton({ isSaving, onClick }: { isSaving: boolean; onClick: () => v
     <button
       onClick={onClick}
       disabled={isSaving}
-      className="rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+      className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
     >
       {isSaving ? 'Salvando...' : 'Salvar Alteracoes'}
     </button>
   );
 }
+

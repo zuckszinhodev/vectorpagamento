@@ -58,23 +58,33 @@
     <script>
       // Prevent white flash: apply dark mode before first paint
       try {
-        var raw = localStorage.getItem('vectorpagamentos-theme') || '{}';
+        var raw =
+          localStorage.getItem('Vector Pagamentos-theme') ||
+          localStorage.getItem('vectorpagamentos-theme') ||
+          '{}';
         var stored = JSON.parse(raw);
         var theme = stored && stored.state && stored.state.theme;
-        if (theme === 'dark') {
-          document.documentElement.classList.add('dark');
-        } else if (theme === 'light') {
-          document.body.style.backgroundColor = '#FAFAFA';
+        var isAdminRoute = location.pathname.indexOf('/admin') === 0;
+        var effectiveTheme = isAdminRoute ? (theme || 'light') : 'dark';
+        if (isAdminRoute) {
+          document.documentElement.classList.add('app-admin-route');
         } else {
-          // Default to dark
+          document.documentElement.classList.add('app-dark-forced');
+        }
+
+        if (effectiveTheme === 'dark') {
           document.documentElement.classList.add('dark');
+          document.body.style.backgroundColor = '#0a0a0a';
+        } else {
+          document.body.style.backgroundColor = '#FAFAFA';
         }
       } catch(e) {
         document.documentElement.classList.add('dark');
+        document.documentElement.classList.add('app-dark-forced');
+        document.body.style.backgroundColor = '#0a0a0a';
       }
     </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

@@ -90,6 +90,90 @@
   .dark .fixed.inset-0 .bg-surface-card {
     background-color: var(--surface-card-solid, #141414) !important;
   }
+
+  /* Dark-mode bridge for older pages that still use fixed light Tailwind utilities. */
+  .dark.app-dark-forced :where(
+    div.bg-white,
+    section.bg-white,
+    article.bg-white,
+    main.bg-white,
+    aside.bg-white,
+    header.bg-white,
+    footer.bg-white,
+    nav.bg-white,
+    table.bg-white,
+    thead.bg-white,
+    tbody.bg-white,
+    tr.bg-white,
+    td.bg-white,
+    th.bg-white,
+    ul.bg-white,
+    li.bg-white,
+    form.bg-white,
+    input.bg-white,
+    textarea.bg-white,
+    select.bg-white
+  ) {
+    background-color: var(--surface-card) !important;
+  }
+
+  .dark.app-dark-forced :where(.bg-gray-50, .bg-slate-50) {
+    background-color: var(--surface-page) !important;
+  }
+
+  .dark.app-dark-forced :where(
+    .bg-gray-100,
+    .bg-slate-100,
+    .bg-gray-200,
+    .bg-slate-200,
+    .bg-green-50,
+    .bg-green-100,
+    .bg-emerald-50,
+    .bg-emerald-100,
+    .bg-yellow-50,
+    .bg-yellow-100,
+    .bg-amber-50,
+    .bg-amber-100,
+    .bg-blue-50,
+    .bg-blue-100,
+    .bg-red-50,
+    .bg-red-100
+  ) {
+    background-color: var(--surface-hover) !important;
+  }
+
+  .dark.app-dark-forced :where(
+    [class*="from-green-50"],
+    [class*="from-emerald-50"],
+    [class*="from-gray-50"],
+    [class*="from-slate-50"],
+    [class*="to-green-100"],
+    [class*="to-emerald-100"],
+    [class*="to-gray-100"],
+    [class*="to-slate-100"]
+  ) {
+    background: var(--surface-page) !important;
+  }
+
+  .dark.app-dark-forced :where(.border-gray-100, .border-gray-200, .border-gray-300, .border-slate-100, .border-slate-200, .border-slate-300) {
+    border-color: var(--border-default) !important;
+  }
+
+  .dark.app-dark-forced :where(.divide-gray-100, .divide-gray-200, .divide-slate-100, .divide-slate-200) > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--border-default) !important;
+  }
+
+  .dark.app-dark-forced :where(.text-black, .text-gray-900, .text-slate-900) {
+    color: var(--text-primary) !important;
+  }
+
+  .dark.app-dark-forced :where(.text-gray-700, .text-gray-600, .text-slate-700, .text-slate-600) {
+    color: var(--text-secondary) !important;
+  }
+
+  .dark.app-dark-forced :where(.text-gray-500, .text-gray-400, .text-slate-500, .text-slate-400) {
+    color: var(--text-muted) !important;
+  }
 }
 
 @layer components {
@@ -240,194 +324,6 @@
 }
 
 /* ── Brand Loader ─────────────────────────────────────────── */
-@keyframes brand-loader-float {
-  0%, 100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-6px) scale(1.018);
-  }
-}
-
-@keyframes brand-loader-sheen {
-  0% {
-    background-position: 165% 50%;
-  }
-  100% {
-    background-position: -65% 50%;
-  }
-}
-
-@keyframes brand-loader-glow {
-  0%, 100% {
-    opacity: 0.42;
-    filter: blur(16px) saturate(1);
-    transform: translateY(8px) scale(1.01);
-  }
-  50% {
-    opacity: 0.68;
-    filter: blur(24px) saturate(1.18);
-    transform: translateY(2px) scale(1.045);
-  }
-}
-
-@keyframes brand-loader-aura-left {
-  0%, 100% {
-    transform: translate3d(-8px, 0, 0) scale(0.96);
-    opacity: 0.44;
-  }
-  50% {
-    transform: translate3d(12px, -10px, 0) scale(1.06);
-    opacity: 0.72;
-  }
-}
-
-@keyframes brand-loader-aura-right {
-  0%, 100% {
-    transform: translate3d(8px, 0, 0) scale(0.94);
-    opacity: 0.34;
-  }
-  50% {
-    transform: translate3d(-10px, 12px, 0) scale(1.08);
-    opacity: 0.62;
-  }
-}
-
-.brand-loader-stage {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.15rem;
-  padding: 3rem 3.25rem;
-  isolation: isolate;
-}
-
-.brand-loader-wordmark-shell {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-  padding: 0.2rem 0.6rem 0.35rem;
-}
-
-.brand-loader-aura {
-  position: absolute;
-  border-radius: 9999px;
-  z-index: -1;
-  filter: blur(32px);
-  pointer-events: none;
-}
-
-.brand-loader-aura--left {
-  width: 13rem;
-  height: 13rem;
-  left: 12%;
-  top: 16%;
-  background: radial-gradient(circle, rgba(22, 163, 74, 0.18) 0%, rgba(22, 163, 74, 0.08) 36%, transparent 74%);
-  animation: brand-loader-aura-left 4.4s ease-in-out infinite;
-}
-
-.brand-loader-aura--right {
-  width: 11rem;
-  height: 11rem;
-  right: 8%;
-  bottom: 18%;
-  background: radial-gradient(circle, rgba(34, 197, 94, 0.18) 0%, rgba(34, 197, 94, 0.08) 42%, transparent 76%);
-  animation: brand-loader-aura-right 4.8s ease-in-out infinite;
-}
-
-.brand-loader-stack {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-}
-
-.brand-loader-wordmark-shell > .brand-loader-wordmark,
-.brand-loader-stack > .brand-loader-wordmark {
-  grid-area: 1 / 1;
-}
-
-.brand-loader-wordmark {
-  position: relative;
-  display: inline-block;
-  white-space: nowrap;
-  line-height: 0.9;
-  letter-spacing: -0.065em;
-  will-change: transform, opacity, filter, background-position;
-}
-
-.brand-loader-wordmark--main {
-  z-index: 2;
-  animation: brand-loader-float 3.2s ease-in-out infinite;
-}
-
-.brand-loader-wordmark--sheen {
-  z-index: 3;
-  opacity: 0.88;
-  pointer-events: none;
-  animation: brand-loader-float 3.2s ease-in-out infinite;
-}
-
-.brand-loader-wordmark--sheen .brand-loader-wazer,
-.brand-loader-wordmark--sheen .brand-loader-pay {
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  background-size: 220% 100%;
-  background-repeat: no-repeat;
-  background-clip: text;
-  -webkit-background-clip: text;
-  animation: brand-loader-sheen 2.8s linear infinite;
-}
-
-.brand-loader-wordmark--sheen .brand-loader-wazer {
-  background-image: linear-gradient(
-    112deg,
-    transparent 0%,
-    transparent 34%,
-    rgba(255, 255, 255, 0.08) 44%,
-    rgba(255, 255, 255, 0.96) 50%,
-    rgba(255, 255, 255, 0.18) 58%,
-    transparent 68%
-  );
-}
-
-.brand-loader-wordmark--sheen .brand-loader-pay {
-  background-image: linear-gradient(
-    112deg,
-    transparent 0%,
-    transparent 32%,
-    rgba(187, 247, 208, 0.12) 42%,
-    rgba(255, 255, 255, 0.92) 49%,
-    rgba(134, 239, 172, 0.38) 58%,
-    transparent 68%
-  );
-}
-
-.brand-loader-wordmark--main .brand-loader-wazer {
-  color: var(--text-primary);
-  text-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
-}
-
-.dark .brand-loader-wordmark--main .brand-loader-wazer {
-  text-shadow: 0 10px 30px rgba(255, 255, 255, 0.1);
-}
-
-.brand-loader-wordmark--main .brand-loader-pay {
-  color: #16a34a;
-  text-shadow:
-    0 12px 30px rgba(22, 163, 74, 0.26),
-    0 0 22px rgba(34, 197, 94, 0.18);
-}
-
-.brand-loader-caption {
-  position: relative;
-  z-index: 2;
-  letter-spacing: 0.02em;
-}
-
 /* ── Chart Animations ─────────────────────────────────────── */
 @keyframes glow-pulse {
   0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
