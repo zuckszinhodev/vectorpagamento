@@ -12,7 +12,7 @@ cd /var/www/vectorpagamento \
 	&& mkdir -p storage/app/private storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs \
 	&& chown -R www-data:www-data storage bootstrap/cache \
 	&& chmod -R 775 storage bootstrap/cache \
-	&& systemctl restart php8.2-fpm \
+	&& (systemctl restart php8.3-fpm || systemctl restart php8.2-fpm || systemctl restart php8.1-fpm) \
 	&& systemctl restart vectorpagamentos-worker \
 	&& systemctl restart vectorpagamentos-scheduler \
 	&& cd ../frontend \
@@ -34,7 +34,7 @@ cd /var/www/vectorpagamento/backend \
 	&& COMPOSER_ALLOW_SUPERUSER=1 composer install --optimize-autoloader --no-dev --ignore-platform-req=php \
 	&& php artisan config:cache \
 	&& php artisan route:cache \
-	&& systemctl restart php8.2-fpm \
+	&& (systemctl restart php8.3-fpm || systemctl restart php8.2-fpm || systemctl restart php8.1-fpm) \
 	&& systemctl restart vectorpagamentos-worker \
 	&& systemctl restart vectorpagamentos-scheduler
 
