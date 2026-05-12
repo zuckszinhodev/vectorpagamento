@@ -386,14 +386,14 @@ export default function AdminAcquirers() {
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard label="Ativos" value={`${activeCount}/${acquirers.length}`} helper="adquirentes habilitados"  />
-        <SummaryCard label="Cashin" value={cashinCount.toString()} helper="PIX, cartão ou boleto"  />
-        <SummaryCard label="Cashout" value={cashoutCount.toString()} helper="PIX OUT habilitado"  />
+        <SummaryCard label="Ativos" value={`${activeCount}/${acquirers.length}`} helper="adquirentes habilitados" icon={ShieldCheckIcon} />
+        <SummaryCard label="Cashin" value={cashinCount.toString()} helper="PIX, cartão ou boleto" icon={CreditCardIcon} />
+        <SummaryCard label="Cashout" value={cashoutCount.toString()} helper="PIX OUT habilitado" icon={BanknotesIcon} />
         <SummaryCard
           label="Primário"
           value={primaryAcquirer?.nominal_name || primaryAcquirer?.display_name || '-'}
           helper={primaryAcquirer ? `prioridade ${primaryAcquirer.priority}` : 'nenhum definido'}
-          
+          icon={ArrowsUpDownIcon}
         />
       </section>
 
@@ -783,8 +783,10 @@ function SummaryCard({
   label: string;
   value: string;
   helper: string;
-  icon: ComponentType<{ className?: string }>;
+  icon?: ComponentType<{ className?: string }>;
 }) {
+  const CardIcon = Icon ?? CreditCardIcon;
+
   return (
     <div className="rounded-md border border-gray-200 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
@@ -794,7 +796,7 @@ function SummaryCard({
           <p className="mt-1 text-xs text-gray-500">{helper}</p>
         </div>
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-2">
-          <Icon className="h-5 w-5 text-gray-600" />
+          <CardIcon className="h-5 w-5 text-gray-600" />
         </div>
       </div>
     </div>

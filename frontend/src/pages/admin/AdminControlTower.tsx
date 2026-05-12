@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { type ComponentType, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, formatCurrency, formatDate } from '@/lib/api';
@@ -459,28 +459,28 @@ export default function AdminControlTower() {
           title="Saude operacional"
           value={`${pulse?.health_score ?? 0}%`}
           subtitle={pulse?.state === 'critical' ? 'Estado critico' : pulse?.state === 'attention' ? 'Em atencao' : 'Estavel'}
-          
+          icon={ShieldCheckIcon}
           tone={pulse?.state === 'critical' ? 'red' : pulse?.state === 'attention' ? 'amber' : 'emerald'}
         />
         <MetricCard
           title="Volume hoje"
           value={formatCurrency(stats?.volume_today ?? 0)}
           subtitle={`${(stats?.transactions_today ?? 0).toLocaleString('pt-BR')} transacoes`}
-          
+          icon={BanknotesIcon}
           tone="blue"
         />
         <MetricCard
           title="Buffer de liquidez"
           value={formatCurrency(liquidityBuffer)}
           subtitle="Receita - repasse - fila de saques"
-          
+          icon={ScaleIcon}
           tone={liquidityBuffer <= 0 ? 'amber' : 'violet'}
         />
         <MetricCard
           title="Sucesso (30d)"
           value={`${(stats?.success_rate ?? 0).toFixed(1)}%`}
           subtitle="Taxa de aprovacao"
-          
+          icon={CheckCircleIcon}
           tone={(stats?.success_rate ?? 0) < 90 ? 'amber' : 'emerald'}
         />
       </section>
@@ -613,7 +613,7 @@ export default function AdminControlTower() {
       <section className="grid gap-6 xl:grid-cols-3">
         <InfoCard
           title="Risco e fraude"
-          
+          icon={ShieldExclamationIcon}
           lines={[
             `Analisadas: ${(fraud?.total_analyzed ?? 0).toLocaleString('pt-BR')}`,
             `Alto risco: ${(fraud?.high_risk_count ?? 0).toLocaleString('pt-BR')}`,
@@ -626,7 +626,7 @@ export default function AdminControlTower() {
 
         <InfoCard
           title="Reconciliacao"
-          
+          icon={ScaleIcon}
           lines={[
             `Execucoes: ${(reconciliation?.total_reconciliations ?? 0).toLocaleString('pt-BR')}`,
             `Com divergencia: ${(reconciliation?.with_discrepancies ?? 0).toLocaleString('pt-BR')}`,
@@ -639,7 +639,7 @@ export default function AdminControlTower() {
 
         <InfoCard
           title="Seguranca operacional"
-          
+          icon={CpuChipIcon}
           lines={[
             `Ameacas hoje: ${(security?.threats_today ?? 0).toLocaleString('pt-BR')}`,
             `Ameacas 7d: ${(security?.threats_week ?? 0).toLocaleString('pt-BR')}`,
@@ -985,7 +985,7 @@ function MetricCard({
   title: string;
   value: string;
   subtitle: string;
-  icon: typeof ShieldCheckIcon;
+  icon?: ComponentType<{ className?: string }>;
   tone: 'blue' | 'emerald' | 'violet' | 'amber' | 'red';
 }) {
   const toneClasses: Record<string, string> = {
@@ -995,12 +995,13 @@ function MetricCard({
     amber: 'bg-amber-50 text-amber-700',
     red: 'bg-red-50 text-red-700',
   };
+  const CardIcon = Icon ?? ShieldCheckIcon;
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-3">
         <div className={`rounded-md p-2.5 ${toneClasses[tone]}`}>
-          <Icon className="h-5 w-5" />
+          <CardIcon className="h-5 w-5" />
         </div>
         <div>
           <p className="text-xs text-gray-500">{title}</p>
@@ -1181,15 +1182,17 @@ function InfoCard({
   footerLink,
 }: {
   title: string;
-  icon: typeof ClockIcon;
+  icon?: ComponentType<{ className?: string }>;
   lines: string[];
   footerLink: { href: string; label: string };
 }) {
+  const CardIcon = Icon ?? ClockIcon;
+
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-2">
         <div className="rounded-lg bg-blue-50 p-2">
-          <Icon className="h-4 w-4 text-blue-700" />
+          <CardIcon className="h-4 w-4 text-blue-700" />
         </div>
         <h4 className="text-sm font-semibold text-gray-900">{title}</h4>
       </div>

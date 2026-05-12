@@ -58,6 +58,9 @@ const colorMap: Record<string, string> = {
 
 export function GlowLineChart({ labels, data: rawData, datasets: rawDatasets, label, color, height = 250, tension = 0.3, formatTooltip, formatYTick }: GlowLineChartProps) {
   const borderColor = color ? (colorMap[color] || color) : '#111827';
+  const softFill = color === 'emerald' || color === 'green'
+    ? 'rgba(16, 185, 129, 0.12)'
+    : `${borderColor}14`;
   const datasets = rawDatasets || [{ data: rawData || [], label }];
 
   const chartData = {
@@ -67,9 +70,10 @@ export function GlowLineChart({ labels, data: rawData, datasets: rawDatasets, la
       borderWidth: 2,
       tension,
       pointRadius: 0,
-      pointHoverRadius: 4,
+      pointHoverRadius: 5,
+      pointHoverBorderWidth: 2,
       fill: true,
-      backgroundColor: ds.backgroundColor || `${borderColor}0a`,
+      backgroundColor: ds.backgroundColor || softFill,
       borderColor: ds.borderColor || borderColor,
     })),
   };
@@ -87,16 +91,31 @@ export function GlowLineChart({ labels, data: rawData, datasets: rawDatasets, la
           maintainAspectRatio: false,
           plugins: {
             legend: { display: datasets.length > 1 },
-            tooltip: formatTooltip ? {
-              callbacks: { label: (ctx) => formatTooltip(Number(ctx.parsed.y) || 0) },
-            } : undefined,
+            tooltip: {
+              backgroundColor: 'rgba(3, 7, 18, 0.92)',
+              borderColor: 'rgba(16, 185, 129, 0.35)',
+              borderWidth: 1,
+              titleColor: '#e5e7eb',
+              bodyColor: '#d1d5db',
+              displayColors: false,
+              padding: 10,
+              callbacks: formatTooltip
+                ? { label: (ctx) => formatTooltip(Number(ctx.parsed.y) || 0) }
+                : undefined,
+            },
           },
           scales: {
-            x: { grid: { display: false }, ticks: { color: '#9ca3af', font: { size: 11 } } },
+            x: {
+              grid: { display: false },
+              border: { display: false },
+              ticks: { color: 'rgba(156, 163, 175, 0.82)', font: { size: 11 } },
+            },
             y: {
-              grid: { color: '#f3f4f6' },
+              beginAtZero: true,
+              grid: { display: false },
+              border: { display: false },
               ticks: {
-                color: '#9ca3af',
+                color: 'rgba(156, 163, 175, 0.72)',
                 font: { size: 11 },
                 ...(formatYTick ? { callback: (value: any) => formatYTick(Number(value)) } : {}),
               },
