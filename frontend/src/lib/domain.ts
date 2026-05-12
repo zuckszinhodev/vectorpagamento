@@ -7,6 +7,10 @@
 const SYSTEM_HOSTS = [
   'localhost',
   '127.0.0.1',
+  'app.vectorpagamentos.com',
+  'vectorpagamentos.com',
+  'www.vectorpagamentos.com',
+  'api.vectorpagamentos.com',
   'app.vectorpagamentos.com.br',
   'vectorpagamentos.com.br',
   'www.vectorpagamentos.com.br',
@@ -15,7 +19,7 @@ const SYSTEM_HOSTS = [
 
 const SYSTEM_SUBDOMAINS = ['api', 'app', 'www', 'checkout', 'pay', 'members', 'mail', 'ftp', 'admin'];
 
-const VECTOR_PAGAMENTOS_BASE = 'vectorpagamentos.com.br';
+const VECTOR_PAGAMENTOS_BASES = ['vectorpagamentos.com', 'vectorpagamentos.com.br'];
 
 /**
  * Returns true if the current host is a custom domain or Vector Pagamentos subdomain
@@ -30,9 +34,11 @@ export function isCustomDomain(): boolean {
   // Localhost with port → not custom
   if (host === 'localhost' || host === '127.0.0.1') return false;
 
+  const baseDomain = VECTOR_PAGAMENTOS_BASES.find((base) => host.endsWith('.' + base));
+
   // Check if it's a Vector Pagamentos subdomain
-  if (host.endsWith('.' + VECTOR_PAGAMENTOS_BASE)) {
-    const sub = host.slice(0, -(VECTOR_PAGAMENTOS_BASE.length + 1));
+  if (baseDomain) {
+    const sub = host.slice(0, -(baseDomain.length + 1));
     // System subdomains → not custom
     if (SYSTEM_SUBDOMAINS.includes(sub) || sub.includes('.')) return false;
     // User subdomain → custom!
@@ -50,9 +56,10 @@ export function isCustomDomain(): boolean {
  */
 export function getSubdomainSlug(): string | null {
   const host = window.location.hostname.toLowerCase();
-  if (!host.endsWith('.' + VECTOR_PAGAMENTOS_BASE)) return null;
+  const baseDomain = VECTOR_PAGAMENTOS_BASES.find((base) => host.endsWith('.' + base));
+  if (!baseDomain) return null;
 
-  const sub = host.slice(0, -(VECTOR_PAGAMENTOS_BASE.length + 1));
+  const sub = host.slice(0, -(baseDomain.length + 1));
   if (SYSTEM_SUBDOMAINS.includes(sub) || sub.includes('.')) return null;
   return sub;
 }

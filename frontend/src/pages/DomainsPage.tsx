@@ -22,7 +22,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { domainsService, CustomDomain, DomainPurpose, DomainType } from '@/services/api/domains.service';
 
-const VECTOR_PAGAMENTOS_BASE_DOMAIN = 'vectorpagamentos.com.br';
+const VECTOR_PAGAMENTOS_BASE_DOMAIN = 'vectorpagamentos.com';
 
 export default function DomainsPage() {
  const queryClient = useQueryClient();
