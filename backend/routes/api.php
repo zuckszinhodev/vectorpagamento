@@ -445,6 +445,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::delete('/{acquirerId}', [\App\Http\Controllers\Api\V1\AcquirerAdminController::class, 'destroy']);
             Route::post('/{acquirerId}/set-primary', [\App\Http\Controllers\Api\V1\AcquirerAdminController::class, 'setPrimary']);
             Route::post('/{acquirerId}/toggle', [\App\Http\Controllers\Api\V1\AcquirerAdminController::class, 'toggle']);
+            Route::post('/refresh-all-nominals', [\App\Http\Controllers\Api\V1\AcquirerAdminController::class, 'refreshAllNominals']);
             Route::post('/{acquirerId}/refresh-nominal', [\App\Http\Controllers\Api\V1\AcquirerAdminController::class, 'refreshNominal']);
             Route::post('/{acquirerId}/health-check', [\App\Http\Controllers\Api\V1\AcquirerAdminController::class, 'healthCheck']);
         });

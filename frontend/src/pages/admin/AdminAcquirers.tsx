@@ -229,6 +229,22 @@ export default function AdminAcquirers() {
     },
   });
 
+  // Refresh all nominals at once
+  const refreshAllNominalsMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post('/admin/acquirers/refresh-all-nominals');
+      return response.data;
+    },
+    onSuccess: (response) => {
+      toast.success(response?.message || 'Nominais atualizadas');
+      queryClient.invalidateQueries({ queryKey: ['admin-acquirers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Erro ao atualizar nominais');
+    },
+  });
+
   // Delete acquirer
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -375,13 +391,23 @@ export default function AdminAcquirers() {
         title="Adquirentes"
         subtitle="Configure cashin, cashout, roteamento e taxas por adquirente"
         actions={
-          <button
-            onClick={() => refetch()}
-            className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100"
-          >
-            <ArrowPathIcon className="h-4 w-4" />
-            Atualizar
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => refreshAllNominalsMutation.mutate()}
+              disabled={refreshAllNominalsMutation.isPending}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100 disabled:opacity-60"
+            >
+              <ArrowPathIcon className={`h-4 w-4 ${refreshAllNominalsMutation.isPending ? 'animate-spin' : ''}`} />
+              {refreshAllNominalsMutation.isPending ? 'Atualizando...' : 'Atualizar Nominais'}
+            </button>
+            <button
+              onClick={() => refetch()}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100"
+            >
+              <ArrowPathIcon className="h-4 w-4" />
+              Atualizar
+            </button>
+          </div>
         }
       />
 
