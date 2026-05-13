@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use PragmaRX\Google2FA\Google2FA;
 
 /**
  * Admin Dashboard Controller (slim)
@@ -1495,7 +1496,9 @@ class AdminController extends Controller
 
             $query = Charge::with([
                     'product' => fn ($q) => $q->withTrashed()->select('id', 'name'),
-                    'account' => fn ($q) => $q->select('id', 'name'),
+                    'account' => fn ($q) => $q->select('id', 'name', 'email', 'phone', 'document'),
+                    'account.users' => fn ($q) => $q->select('id', 'account_id', 'name', 'email'),
+                    'transactions',
                 ])
                 ->orderBy('created_at', 'desc');
 
@@ -1549,6 +1552,11 @@ class AdminController extends Controller
                     'product_id' => $charge->product_id,
                     'checkout_id' => $charge->checkout_id,
                     'affiliate_id' => $charge->affiliate_id,
+                    'seller_id' => $charge->account?->users?->first()?->id,
+                    'seller_name' => $charge->account?->users?->first()?->name ?? $charge->account?->name,
+                    'seller_email' => $charge->account?->users?->first()?->email ?? $charge->account?->email,
+                    'seller_document' => $charge->account?->document,
+                    'seller_phone' => $charge->account?->phone,
                     'account_name' => $charge->account?->name ?? '—',
                     'amount' => $charge->amount,
                     'fee_amount' => $charge->fee_amount ?? 0,
@@ -1569,6 +1577,17 @@ class AdminController extends Controller
                     'notes' => $metadata['notes'] ?? null,
                     'metadata' => $metadata,
                     'payment_data' => $paymentData,
+                    'transactions' => $charge->transactions->map(fn ($transaction) => [
+                        'id' => $transaction->id,
+                        'type' => $transaction->type,
+                        'status' => $transaction->status,
+                        'amount' => $transaction->amount,
+                        'net_amount' => $transaction->net_amount,
+                        'acquirer_tid' => $transaction->acquirer_tid,
+                        'error_message' => $transaction->error_message,
+                        'processed_at' => $transaction->processed_at,
+                        'created_at' => $transaction->created_at,
+                    ])->values(),
                     'external_id' => $charge->external_id,
                     'acquirer_name' => $charge->acquirer,
                     'acquirer_transaction_id' => $charge->acquirer_transaction_id ?? $charge->external_id,
@@ -1610,6 +1629,178 @@ class AdminController extends Controller
                 'error' => ['code' => 'INTERNAL_ERROR', 'message' => 'Erro ao buscar transações'],
             ], 500);
         }
+    }
+
+    public function updateChargeStatus(Request $request, string $chargeId): JsonResponse
+    {
+        $validated = $request->validate([
+            'status' => ['required', 'in:pending,processing,authorized,approved,refunded,failed,declined,cancelled,expired,chargeback,waiting_payment,blocked'],
+            'reason' => ['required', 'string', 'min:8', 'max:1000'],
+            'mfa_code' => ['required', 'digits:6'],
+        ]);
+
+        $admin = $request->user();
+        if (!$admin || !$admin->mfa_enabled || empty($admin->mfa_secret)) {
+            return response()->json(['success' => false, 'message' => 'MFA obrigatorio para alterar status manualmente.'], 403);
+        }
+
+        if (!(new Google2FA())->verifyKey($admin->mfa_secret, $validated['mfa_code'], 1)) {
+            return response()->json(['success' => false, 'message' => 'Codigo 2FA invalido.'], 422);
+        }
+
+        $charge = Charge::where('id', $chargeId)->first();
+        if (!$charge) {
+            return response()->json(['success' => false, 'message' => 'Cobranca nao encontrada'], 404);
+        }
+
+        $oldStatus = (string) $charge->status;
+        $newStatus = (string) $validated['status'];
+
+        if ($oldStatus === $newStatus) {
+            return response()->json(['success' => false, 'message' => 'A cobranca ja esta com este status.'], 422);
+        }
+
+        $paymentService = app(\App\Services\PaymentService::class);
+        $previousNetAmount = (int) ($charge->net_amount ?? 0);
+        $wasPreviouslyPaid = !empty($charge->paid_at);
+        $becameApproved = $newStatus === 'approved' && $oldStatus !== 'approved';
+        $leftApproved = $oldStatus === 'approved' && $newStatus !== 'approved' && $previousNetAmount > 0;
+        $firstApproval = $becameApproved && !$wasPreviouslyPaid;
+        $becameRefunded = $newStatus === 'refunded' && $oldStatus !== 'refunded';
+        $walletBalanceAction = $becameApproved ? 'credit' : ($leftApproved ? 'debit' : null);
+
+        $metadata = is_array($charge->metadata) ? $charge->metadata : [];
+        $metadata['manual_status_override'] = [
+            'from' => $oldStatus,
+            'to' => $newStatus,
+            'reason' => $validated['reason'],
+            'changed_by' => [
+                'id' => $admin->id,
+                'email' => $admin->email,
+                'name' => $admin->name,
+            ],
+            'changed_at' => now()->toIso8601String(),
+            'source' => 'admin_finance',
+            'requires_2fa' => true,
+        ];
+
+        $statusUpdate = ['status' => $newStatus, 'metadata' => $metadata];
+
+        if ($newStatus === 'approved') {
+            $statusUpdate['paid_at'] = $charge->paid_at ?? now();
+            $statusUpdate['refunded_at'] = null;
+            $statusUpdate['cancelled_at'] = null;
+            $statusUpdate['failure_reason'] = null;
+            $statusUpdate['cancellation_reason'] = null;
+        } elseif ($newStatus === 'refunded') {
+            $statusUpdate['refunded_at'] = $charge->refunded_at ?? now();
+        } elseif (in_array($newStatus, ['failed', 'declined', 'blocked', 'chargeback'], true)) {
+            $statusUpdate['failure_reason'] = $validated['reason'];
+        } elseif (in_array($newStatus, ['cancelled', 'expired'], true)) {
+            $statusUpdate['cancelled_at'] = $charge->cancelled_at ?? now();
+            $statusUpdate['cancellation_reason'] = $validated['reason'];
+        }
+
+        $txStatusMap = [
+            'pending' => 'pending',
+            'processing' => 'processing',
+            'authorized' => 'authorized',
+            'approved' => 'approved',
+            'refunded' => 'refunded',
+            'failed' => 'failed',
+            'declined' => 'failed',
+            'cancelled' => 'cancelled',
+            'expired' => 'cancelled',
+            'chargeback' => 'failed',
+            'waiting_payment' => 'pending',
+            'blocked' => 'failed',
+        ];
+
+        DB::transaction(function () use ($charge, $statusUpdate, $newStatus, $txStatusMap, $validated, $becameApproved, $leftApproved, $firstApproval, $paymentService): void {
+            $charge->update($statusUpdate);
+
+            Transaction::where('charge_id', $charge->id)->get()->each(function (Transaction $transaction) use ($newStatus, $txStatusMap, $validated): void {
+                $mappedTxStatus = $txStatusMap[$newStatus] ?? $newStatus;
+                $txUpdate = ['status' => $mappedTxStatus];
+
+                if ($mappedTxStatus === 'approved') {
+                    $txUpdate['processed_at'] = $transaction->processed_at ?? now();
+                    if ($transaction->type === 'authorization') {
+                        $txUpdate['type'] = 'capture';
+                    }
+                }
+
+                if (in_array($mappedTxStatus, ['failed', 'cancelled'], true)) {
+                    $txUpdate['error_message'] = $validated['reason'];
+                }
+
+                $transaction->update($txUpdate);
+            });
+
+            if ($leftApproved) {
+                $paymentService->updateWalletOnRefund($charge->fresh(), (int) $charge->amount);
+            }
+
+            if ($becameApproved) {
+                $approvedCharge = $charge->fresh();
+                if ((int) ($approvedCharge->net_amount ?? 0) > 0) {
+                    $approvedCharge->update(['net_amount' => 0]);
+                    $approvedCharge->refresh();
+                }
+                $paymentService->updateWalletOnPayment($approvedCharge);
+                if ($firstApproval) {
+                    $paymentService->updateCheckoutOnPayment($approvedCharge);
+                }
+            }
+        });
+
+        $charge->refresh();
+
+        if ($firstApproval) {
+            $paymentService->dispatchApprovedNotifications($charge);
+        } elseif ($becameRefunded) {
+            $paymentService->dispatchRefundNotifications($charge);
+        }
+
+        AuditLog::create([
+            'user_id' => $admin->id,
+            'account_id' => $charge->account_id,
+            'action' => 'admin_charge_status_manual_override',
+            'entity_type' => 'charge',
+            'entity_id' => $charge->id,
+            'old_values' => ['status' => $oldStatus],
+            'new_values' => ['status' => $newStatus, 'reason' => $validated['reason']],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'metadata' => [
+                'source' => 'admin_finance',
+                'requires_2fa' => true,
+                'wallet_balance_action' => $walletBalanceAction,
+            ],
+        ]);
+
+        Log::warning('ALERTA: transacao alterada manualmente pelo admin financeiro', [
+            'admin_id' => $admin->id,
+            'admin_email' => $admin->email,
+            'charge_id' => $charge->id,
+            'account_id' => $charge->account_id,
+            'from_status' => $oldStatus,
+            'to_status' => $newStatus,
+            'wallet_balance_action' => $walletBalanceAction,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status da transacao atualizado com sucesso.',
+            'data' => [
+                'charge_id' => $charge->id,
+                'old_status' => $oldStatus,
+                'new_status' => $newStatus,
+                'wallet_balance_action' => $walletBalanceAction,
+                'net_amount' => $charge->net_amount,
+                'changed_at' => now()->toIso8601String(),
+            ],
+        ]);
     }
 
     private function resolveWindowStart(string $period): Carbon

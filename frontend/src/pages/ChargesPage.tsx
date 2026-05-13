@@ -58,6 +58,8 @@ function normalizeChargeStatus(status: string) {
   return status === 'waiting_payment' ? 'pending' : status;
 }
 
+const HIDDEN_CHARGE_STATUSES = new Set(['failed', 'declined', 'blocked']);
+
 function StatusBadge({ status }: { status: string }) {
   const normalizedStatus = normalizeChargeStatus(status);
   const styles: Record<string, string> = {
@@ -776,7 +778,9 @@ export default function ChargesPage() {
   });
 
   // Usar dados da API
-  const charges: Charge[] = data?.data || [];
+  const charges: Charge[] = (data?.data || []).filter(
+    (charge: Charge) => !HIDDEN_CHARGE_STATUSES.has(normalizeChargeStatus(charge.status))
+  );
   const pagination = data?.meta || { total: 0, last_page: 1 };
 
   const handleViewCharge = (charge: Charge) => {
@@ -826,7 +830,6 @@ export default function ChargesPage() {
               <option value="approved,paid">Pago</option>
               <option value="pending">Pendente</option>
               <option value="expired">Expirado</option>
-              <option value="failed">Falhou</option>
               <option value="refunded">Reembolsado</option>
               <option value="cancelled">Cancelado</option>
             </select>

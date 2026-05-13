@@ -403,6 +403,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
 
             // Admin: All Charges/Transactions
             Route::get('admin/charges', [\App\Http\Controllers\Api\V1\AdminController::class, 'allCharges']);
+            Route::post('admin/charges/{chargeId}/status', [\App\Http\Controllers\Api\V1\AdminController::class, 'updateChargeStatus']);
 
             // Admin: Control Tower advanced operations
             Route::prefix('admin/control-tower')->group(function () {

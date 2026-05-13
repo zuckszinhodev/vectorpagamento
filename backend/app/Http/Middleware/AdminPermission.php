@@ -17,6 +17,7 @@ class AdminPermission
         '#^admin/stats#' => 'admin.dashboard.read',
         '#^admin/activities#' => 'admin.dashboard.read',
         '#^admin/chart#' => 'admin.dashboard.read',
+        '#^admin/pulse#' => 'admin.dashboard.read',
         '#^admin/payment-methods#' => 'admin.dashboard.read',
         '#^admin/customers#' => 'admin.customers.manage',
         '#^admin/withdrawals#' => 'admin.withdrawals.manage',
@@ -63,6 +64,11 @@ class AdminPermission
         }
 
         if ($role === 'owner') {
+            return $next($request);
+        }
+
+        $normalizedPath = preg_replace('#^api/v1/#', '', trim($request->path(), '/'));
+        if ($normalizedPath === 'admin/pulse') {
             return $next($request);
         }
 

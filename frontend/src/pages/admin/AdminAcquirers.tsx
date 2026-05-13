@@ -86,6 +86,7 @@ export default function AdminAcquirers() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [routingForm, setRoutingForm] = useState<RotationSettings | null>(null);
   const [globalGatewayFee, setGlobalGatewayFee] = useState('0');
+  const [draggedAcquirerId, setDraggedAcquirerId] = useState<string | null>(null);
 
   // Fetch acquirers
   const { data: acquirers = [], isLoading, refetch } = useQuery<Acquirer[]>({
@@ -260,6 +261,45 @@ export default function AdminAcquirers() {
     },
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: async (orderedAcquirers: Acquirer[]) => {
+      await api.put('/admin/acquirers/reorder', {
+        acquirers: orderedAcquirers.map((acquirer, index) => ({
+          id: acquirer.id,
+          priority: index,
+        })),
+      });
+    },
+    onMutate: async (orderedAcquirers) => {
+      await queryClient.cancelQueries({ queryKey: ['admin-acquirers'] });
+      const previousAcquirers = queryClient.getQueryData<Acquirer[]>(['admin-acquirers']);
+
+      queryClient.setQueryData<Acquirer[]>(['admin-acquirers'], () =>
+        orderedAcquirers.map((acquirer, index) => ({
+          ...acquirer,
+          priority: index,
+          is_primary: index === 0,
+        }))
+      );
+
+      return { previousAcquirers };
+    },
+    onSuccess: () => {
+      toast.success('Prioridade atualizada');
+      queryClient.invalidateQueries({ queryKey: ['admin-acquirers'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousAcquirers) {
+        queryClient.setQueryData(['admin-acquirers'], context.previousAcquirers);
+      }
+      toast.error('Erro ao reordenar adquirentes');
+    },
+    onSettled: () => {
+      setDraggedAcquirerId(null);
+    },
+  });
+
   const getHealthBadge = (status?: string) => {
     switch (status) {
       case 'healthy':
@@ -311,6 +351,7 @@ export default function AdminAcquirers() {
     ).length;
     const cashoutCount = acquirers.filter((acquirer) => acquirer.is_active && acquirer.supports_pix_out).length;
     const primaryAcquirer = acquirers.find((acquirer) => acquirer.is_primary);
+    const orderedAcquirers = [...acquirers].sort((a, b) => a.priority - b.priority);
 
     const formatFee = (percent?: number, fixed?: number) => {
       const parts: string[] = [];
@@ -382,6 +423,26 @@ export default function AdminAcquirers() {
       }
 
       saveRoutingSettingsMutation.mutate(routingForm);
+    };
+
+    const handleAcquirerDrop = (targetAcquirerId: string) => {
+      if (!draggedAcquirerId || draggedAcquirerId === targetAcquirerId || reorderMutation.isPending) {
+        setDraggedAcquirerId(null);
+        return;
+      }
+
+      const fromIndex = orderedAcquirers.findIndex((acquirer) => acquirer.id === draggedAcquirerId);
+      const toIndex = orderedAcquirers.findIndex((acquirer) => acquirer.id === targetAcquirerId);
+
+      if (fromIndex < 0 || toIndex < 0) {
+        setDraggedAcquirerId(null);
+        return;
+      }
+
+      const nextOrder = [...orderedAcquirers];
+      const [moved] = nextOrder.splice(fromIndex, 1);
+      nextOrder.splice(toIndex, 0, moved);
+      reorderMutation.mutate(nextOrder);
     };
 
   return (
@@ -610,7 +671,7 @@ export default function AdminAcquirers() {
         )}
       </section>
 
-      {/* Acquirers Grid */}
+      {/* Acquirers List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
@@ -621,54 +682,86 @@ export default function AdminAcquirers() {
           <p className="mt-4 text-sm text-gray-500">Nenhum gateway encontrado</p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {acquirers.map((acquirer) => (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Prioridade das adquirentes</h2>
+              <p className="mt-0.5 text-xs text-gray-500">Arraste para mudar a ordem de fallback.</p>
+            </div>
+            {reorderMutation.isPending && (
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                Salvando ordem...
+              </span>
+            )}
+          </div>
+
+          {orderedAcquirers.map((acquirer, index) => (
             <div
               key={acquirer.id}
-              className={`relative rounded-md border border-gray-200 bg-white p-4 transition-colors hover:bg-gray-100/40 ${
+              draggable
+              onDragStart={(event) => {
+                setDraggedAcquirerId(acquirer.id);
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', acquirer.id);
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                handleAcquirerDrop(acquirer.id);
+              }}
+              onDragEnd={() => setDraggedAcquirerId(null)}
+              className={`relative cursor-grab rounded-md border border-gray-200 bg-white p-3 transition-colors active:cursor-grabbing ${
                 acquirer.is_primary ? 'ring-1 ring-green-500' : ''
+              } ${
+                draggedAcquirerId === acquirer.id ? 'border-green-400 bg-green-50/40 opacity-70' : 'hover:bg-gray-100/40'
               }`}
             >
               {acquirer.is_primary && (
-                <div className="absolute -top-2 -right-2 rounded-full bg-green-500 p-1">
-                  <ShieldCheckIcon className="h-4 w-4 text-white" />
+                <div className="absolute -right-1.5 -top-1.5 rounded-full bg-green-500 p-0.5">
+                  <ShieldCheckIcon className="h-3.5 w-3.5 text-white" />
                 </div>
               )}
 
               {/* Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
+              <div className="mb-2 flex items-start justify-between">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-gray-200 bg-gray-50 text-xs font-semibold text-gray-700">
+                    {index + 1}
+                  </div>
                   {acquirer.logo_url ? (
-                    <img src={acquirer.logo_url} alt={acquirer.name} className="h-10 w-10 rounded-lg object-contain" />
+                    <img src={acquirer.logo_url} alt={acquirer.name} className="h-8 w-8 rounded-md object-contain" />
                   ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50">
-                      <CreditCardIcon className="h-5 w-5 text-green-700" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-green-50">
+                      <CreditCardIcon className="h-4 w-4 text-green-700" />
                     </div>
                   )}
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{acquirer.display_name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-semibold text-gray-900">{acquirer.display_name}</h3>
                     <p className="text-xs text-gray-500">{acquirer.slug}</p>
                     {acquirer.nominal_name && (
-                      <p className="text-xs text-green-700 font-medium">Nominal: {acquirer.nominal_name}</p>
+                      <p className="truncate text-xs font-medium text-green-700">Nominal: {acquirer.nominal_name}</p>
                     )}
                   </div>
                 </div>
                 <button
                   onClick={() => toggleStatusMutation.mutate({ id: acquirer.id, is_active: !acquirer.is_active })}
-                  className={`relative h-6 w-11 rounded-full transition-colors ${
+                  className={`relative h-5 w-9 rounded-full transition-colors ${
                     acquirer.is_active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                   }`}
                 >
                   <span
-                    className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                      acquirer.is_active ? 'translate-x-5' : 'translate-x-0'
+                    className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                      acquirer.is_active ? 'translate-x-4' : 'translate-x-0'
                     }`}
                   />
                 </button>
               </div>
 
               {/* Status & Health */}
-              <div className="flex items-center gap-2 mb-4">
+              <div className="mb-2 flex items-center gap-1.5">
                 {getHealthBadge(acquirer.health_status)}
                 {acquirer.sandbox_mode && (
                   <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
@@ -678,53 +771,53 @@ export default function AdminAcquirers() {
               </div>
 
               {/* Supported Methods */}
-              <div className="flex flex-wrap gap-2 mb-4">
+              <div className="mb-2 flex flex-wrap gap-1.5">
                 {acquirer.supports_pix && (
-                  <span className="rounded bg-emerald-50 px-2 py-1 text-xs text-emerald-700">PIX</span>
+                  <span className="rounded bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">PIX</span>
                 )}
                 {acquirer.supports_pix_out && (
-                  <span className="rounded bg-cyan-500/10 px-2 py-1 text-xs text-cyan-500">PIX OUT</span>
+                  <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-xs text-cyan-500">PIX OUT</span>
                 )}
                 {acquirer.supports_credit_card && (
                   <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700">Cartão</span>
                 )}
                 {acquirer.supports_boleto && (
-                  <span className="rounded bg-green-50 px-2 py-1 text-xs text-green-700">Boleto</span>
+                  <span className="rounded bg-green-50 px-2 py-0.5 text-xs text-green-700">Boleto</span>
                 )}
               </div>
 
               {/* Fees */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="rounded-lg bg-gray-50 p-2 text-center">
+              <div className="mb-2 grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+                <div className="rounded-md bg-gray-50 p-1.5 text-center">
                   <p className="text-xs text-gray-500">Taxa Cashin</p>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-xs font-medium text-gray-900">
                     {formatFee(acquirer.acquirer_fee_percentage, acquirer.acquirer_fee_fixed)}
                   </p>
                 </div>
-                <div className="rounded-lg bg-gray-50 p-2 text-center">
+                <div className="rounded-md bg-gray-50 p-1.5 text-center">
                   <p className="text-xs text-gray-500">Taxa Cashout</p>
-                  <p className="text-sm font-medium text-gray-900">
+                  <p className="text-xs font-medium text-gray-900">
                     {formatFee(acquirer.acquirer_fee_pix_out_percentage, acquirer.acquirer_fee_pix_out_fixed)}
                   </p>
                 </div>
-                <div className="rounded-lg bg-gray-50 p-2 text-center">
+                <div className="rounded-md bg-gray-50 p-1.5 text-center">
                   <p className="text-xs text-gray-500">Global Cashin</p>
-                  <p className="text-sm font-medium text-green-700">
+                  <p className="text-xs font-medium text-green-700">
                     {formatFee(acquirer.gateway_fee_percentage, acquirer.gateway_fee_fixed)}
                   </p>
                 </div>
-                <div className="rounded-lg bg-gray-50 p-2 text-center">
+                <div className="rounded-md bg-gray-50 p-1.5 text-center">
                   <p className="text-xs text-gray-500">Global Cashout</p>
-                  <p className="text-sm font-medium text-green-700">
+                  <p className="text-xs font-medium text-green-700">
                     {formatFee(acquirer.gateway_fee_pix_out_percentage, acquirer.gateway_fee_pix_out_fixed)}
                   </p>
                 </div>
               </div>
 
               {/* Priority */}
-              <div className="flex items-center gap-2 mb-4 text-sm text-gray-500">
-                <ArrowsUpDownIcon className="h-4 w-4" />
-                Prioridade: {acquirer.priority}
+              <div className="mb-2 flex items-center gap-1.5 text-xs text-gray-500">
+                <ArrowsUpDownIcon className="h-3.5 w-3.5" />
+                Prioridade: {index}
               </div>
 
               {/* Actions */}
@@ -781,7 +874,7 @@ export default function AdminAcquirers() {
               </div>
             </div>
           ))}
-        </div>
+        </section>
       )}
 
       {/* Edit Modal */}

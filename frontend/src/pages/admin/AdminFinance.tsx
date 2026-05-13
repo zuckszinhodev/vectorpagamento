@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { api, formatCurrency, formatDate } from '@/lib/api';
 import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
 import {
@@ -79,6 +80,7 @@ interface WithdrawalConfig {
 
 export default function AdminFinance() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [activeMainTab, setActiveMainTab] = useState<'withdrawals' | 'transactions'>('transactions');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('pending');
@@ -101,6 +103,11 @@ export default function AdminFinance() {
   const [txPage, setTxPage] = useState(1);
   const [selectedCharge, setSelectedCharge] = useState<any>(null);
   const [showChargeDetailModal, setShowChargeDetailModal] = useState(false);
+  const [chargeStatusForm, setChargeStatusForm] = useState({
+    status: '',
+    reason: '',
+    mfa_code: '',
+  });
 
   // Fetch withdrawals
   const { data: withdrawalsData, isLoading, refetch } = useQuery({
@@ -218,6 +225,55 @@ export default function AdminFinance() {
     },
   });
 
+  const openChargeDetail = (charge: any) => {
+    setSelectedCharge(charge);
+    setChargeStatusForm({ status: charge.status || 'pending', reason: '', mfa_code: '' });
+    setShowChargeDetailModal(true);
+  };
+
+  const updateChargeStatusMutation = useMutation({
+    mutationFn: async ({ chargeId, status, reason, mfa_code }: { chargeId: string; status: string; reason: string; mfa_code: string }) => {
+      const response = await api.post(`/admin/charges/${chargeId}/status`, { status, reason, mfa_code });
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      toast.success('Status da transacao atualizado.');
+      queryClient.invalidateQueries({ queryKey: ['admin-charges'] });
+      setSelectedCharge((current: any) => current ? { ...current, status: variables.status, updated_at: new Date().toISOString() } : current);
+      setChargeStatusForm({ status: variables.status, reason: '', mfa_code: '' });
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || error?.response?.data?.error?.message || 'Erro ao atualizar status da transacao.';
+      toast.error(message);
+    },
+  });
+
+  const chargeStatusOptions = [
+    { value: 'pending', label: 'Pendente' },
+    { value: 'processing', label: 'Processando' },
+    { value: 'authorized', label: 'Autorizado' },
+    { value: 'approved', label: 'Aprovado' },
+    { value: 'refunded', label: 'Reembolsado' },
+    { value: 'failed', label: 'Falhou' },
+    { value: 'declined', label: 'Recusado' },
+    { value: 'cancelled', label: 'Cancelado' },
+    { value: 'expired', label: 'Expirado' },
+    { value: 'chargeback', label: 'Chargeback' },
+    { value: 'waiting_payment', label: 'Aguardando pagamento' },
+    { value: 'blocked', label: 'Bloqueado' },
+  ];
+
+  const compactJson = (value: any) => {
+    if (!value || (typeof value === 'object' && Object.keys(value).length === 0)) return null;
+    return JSON.stringify(value, null, 2);
+  };
+
+  const copyText = async (value?: string | null) => {
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    toast.success('Copiado.');
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed':
@@ -276,10 +332,12 @@ export default function AdminFinance() {
         );
       case 'pending':
       case 'processing':
+      case 'waiting_payment':
+      case 'authorized':
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
             <ClockIcon className="h-3.5 w-3.5" />
-            {status === 'pending' ? 'Pendente' : 'Processando'}
+            {status === 'pending' ? 'Pendente' : status === 'authorized' ? 'Autorizado' : status === 'waiting_payment' ? 'Aguardando pagamento' : 'Processando'}
           </span>
         );
       case 'refunded':
@@ -301,10 +359,11 @@ export default function AdminFinance() {
       case 'failed':
       case 'cancelled':
       case 'expired':
+      case 'blocked':
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
             <XCircleIcon className="h-3.5 w-3.5" />
-            {status === 'declined' ? 'Recusado' : status === 'failed' ? 'Falhou' : status === 'cancelled' ? 'Cancelado' : 'Expirado'}
+            {status === 'declined' ? 'Recusado' : status === 'failed' ? 'Falhou' : status === 'cancelled' ? 'Cancelado' : status === 'blocked' ? 'Bloqueado' : 'Expirado'}
           </span>
         );
       default:
@@ -352,7 +411,7 @@ export default function AdminFinance() {
       />
 
       {/* Main Tabs */}
-      <div className="flex items-center gap-1 rounded-md bg-white p-1 shadow-sm">
+      <div className="flex w-full items-center gap-1 overflow-x-auto rounded-md bg-white p-1 shadow-sm">
         <button
           onClick={() => setActiveMainTab('transactions')}
           className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
@@ -455,7 +514,7 @@ export default function AdminFinance() {
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
               <FunnelIcon className="h-4 w-4 text-gray-500" />
               <select
                 value={statusFilter}
@@ -463,7 +522,7 @@ export default function AdminFinance() {
                   setStatusFilter(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
               >
                 <option value="all">Todos os status</option>
                 <option value="pending">Pendentes</option>
@@ -478,7 +537,7 @@ export default function AdminFinance() {
                   setMethodFilter(e.target.value);
                   setPage(1);
                 }}
-                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
               >
                 <option value="all">Todos os métodos</option>
                 <option value="pix">PIX</option>
@@ -487,7 +546,7 @@ export default function AdminFinance() {
 
               <button
                 onClick={() => refetch()}
-                className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-border-DEFAULT transition-colors"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-border-DEFAULT transition-colors sm:w-auto"
               >
                 <ArrowPathIcon className="h-4 w-4" />
                 Atualizar
@@ -495,21 +554,21 @@ export default function AdminFinance() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="grid grid-cols-[auto_1fr] items-center gap-2 sm:flex">
               <CalendarDaysIcon className="h-4 w-4 text-gray-500" />
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
               />
               <span className="text-sm text-gray-500">até</span>
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-                className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
               />
             </div>
             {(search || statusFilter !== 'all' || methodFilter !== 'all' || dateFrom || dateTo) && (
@@ -528,7 +587,7 @@ export default function AdminFinance() {
                 Limpar filtros
               </button>
             )}
-            <span className="text-xs text-gray-500 ml-auto">
+            <span className="text-xs text-gray-500 sm:ml-auto">
               {pagination.total} saques encontrados
             </span>
           </div>
@@ -549,7 +608,7 @@ export default function AdminFinance() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="min-w-[860px] w-full">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -663,7 +722,7 @@ export default function AdminFinance() {
 
             {/* Pagination */}
             {pagination.last_page > 1 && (
-              <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
+              <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <p className="text-sm text-gray-500">
                   Página {pagination.current_page} de {pagination.last_page}
                 </p>
@@ -709,11 +768,11 @@ export default function AdminFinance() {
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
                   <select
                     value={txStatus}
                     onChange={(e) => { setTxStatus(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
                   >
                     <option value="all">Todos os status</option>
                     <option value="approved">Aprovados</option>
@@ -730,7 +789,7 @@ export default function AdminFinance() {
                   <select
                     value={txMethod}
                     onChange={(e) => { setTxMethod(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
                   >
                     <option value="all">Todos os métodos</option>
                     <option value="pix">PIX</option>
@@ -741,7 +800,7 @@ export default function AdminFinance() {
                   <select
                     value={txAcquirer}
                     onChange={(e) => { setTxAcquirer(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
                   >
                     <option value="all">Todos os gateways</option>
                     <option value="payfort">PayFort</option>
@@ -756,7 +815,7 @@ export default function AdminFinance() {
 
                   <button
                     onClick={() => refetchCharges()}
-                    className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-border-DEFAULT transition-colors"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-border-DEFAULT transition-colors sm:w-auto"
                   >
                     <ArrowPathIcon className="h-4 w-4" />
                     Atualizar
@@ -764,21 +823,21 @@ export default function AdminFinance() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <div className="grid grid-cols-[auto_1fr] items-center gap-2 sm:flex">
                   <CalendarDaysIcon className="h-4 w-4 text-gray-500" />
                   <input
                     type="date"
                     value={txDateFrom}
                     onChange={(e) => { setTxDateFrom(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
                   />
                   <span className="text-sm text-gray-500">até</span>
                   <input
                     type="date"
                     value={txDateTo}
                     onChange={(e) => { setTxDateTo(e.target.value); setTxPage(1); }}
-                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
+                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
                   />
                 </div>
                 {(txSearch || txStatus !== 'all' || txMethod !== 'all' || txAcquirer !== 'all' || txDateFrom || txDateTo) && (
@@ -816,7 +875,7 @@ export default function AdminFinance() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="min-w-[1120px] w-full">
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50">
                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -850,7 +909,7 @@ export default function AdminFinance() {
                     </thead>
                     <tbody className="divide-y divide-border-DEFAULT">
                       {charges.map((charge: any) => (
-                        <tr key={charge.id} className="hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => { setSelectedCharge(charge); setShowChargeDetailModal(true); }}>
+                        <tr key={charge.id} className="hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => openChargeDetail(charge)}>
                           <td className="px-6 py-4">
                             <div>
                               <p className="text-sm font-medium text-gray-900">{charge.customer_name || '—'}</p>
@@ -858,7 +917,7 @@ export default function AdminFinance() {
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm text-gray-900">{charge.account_name}</span>
+                            <span className="text-sm text-gray-900">{charge.seller_name || charge.account_name}</span>
                           </td>
                           <td className="px-6 py-4">
                             <span className="text-sm text-gray-900 truncate max-w-[150px] block">{charge.product_name || '—'}</span>
@@ -892,8 +951,7 @@ export default function AdminFinance() {
                             <button
                               onClick={(event) => {
                                 event.stopPropagation();
-                                setSelectedCharge(charge);
-                                setShowChargeDetailModal(true);
+                                openChargeDetail(charge);
                               }}
                               className="rounded-lg p-2 text-green-700 hover:bg-green-50 transition-colors"
                               title="Ver detalhes"
@@ -909,7 +967,7 @@ export default function AdminFinance() {
 
                 {/* Pagination */}
                 {chargesPagination.last_page > 1 && (
-                  <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
+                  <div className="flex flex-col gap-3 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                     <p className="text-sm text-gray-500">
                       Página {chargesPagination.current_page} de {chargesPagination.last_page} ({chargesPagination.total} transações)
                     </p>
@@ -939,6 +997,309 @@ export default function AdminFinance() {
 
       {/* Charge Detail Modal */}
       {showChargeDetailModal && selectedCharge && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-2 sm:p-4" onClick={() => setShowChargeDetailModal(false)}>
+          <div className="w-full max-w-5xl max-h-[94vh] overflow-y-auto rounded-lg bg-white p-4 shadow-xl sm:p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Detalhes da Transacao</h2>
+                <p className="mt-1 text-sm text-gray-500">Dados completos da cobranca e controles financeiros.</p>
+              </div>
+              <button
+                onClick={() => setShowChargeDetailModal(false)}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-md bg-gray-50 p-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Valor</p>
+                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(selectedCharge.amount)}</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Taxa: {formatCurrency(selectedCharge.fee_amount || 0)} | Liquido: {formatCurrency(selectedCharge.net_amount || (selectedCharge.amount - (selectedCharge.fee_amount || 0)))}
+                    </p>
+                  </div>
+                  {getChargeStatusBadge(selectedCharge.status)}
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                  {[
+                    ['ID da Transacao', selectedCharge.id],
+                    ['ID Externo', selectedCharge.external_id],
+                    ['ID na Adquirente', selectedCharge.acquirer_transaction_id],
+                    ['Conta / Seller Account', selectedCharge.account_id],
+                    ['Produto ID', selectedCharge.product_id],
+                    ['Checkout ID', selectedCharge.checkout_id],
+                    ['Afiliado ID', selectedCharge.affiliate_id],
+                    ['URL de Pagamento', selectedCharge.payment_url],
+                  ].filter(([, value]) => value).map(([label, value]) => (
+                    <div key={label as string} className="rounded-md bg-gray-50 p-4">
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className="text-xs text-gray-500">{label}</p>
+                        <button type="button" onClick={() => copyText(String(value))} className="text-gray-400 hover:text-gray-700">
+                          <ClipboardDocumentIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <p className="break-all font-mono text-sm text-gray-900">{String(value)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-md bg-gray-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Cliente</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <p className="text-xs text-gray-500">Nome</p>
+                      <p className="text-sm font-medium text-gray-900">{selectedCharge.customer_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.customer_email || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Documento</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.customer_document || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Telefone</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.customer_phone || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-md bg-gray-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Seller & Produto</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <p className="text-xs text-gray-500">Seller</p>
+                      {selectedCharge.seller_id ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowChargeDetailModal(false);
+                            navigate(`/admin/sellers/${selectedCharge.seller_id}`);
+                          }}
+                          className="text-left text-sm font-semibold text-green-700 hover:text-green-800 hover:underline"
+                        >
+                          {selectedCharge.seller_name || selectedCharge.account_name || '-'}
+                        </button>
+                      ) : (
+                        <p className="text-sm font-medium text-gray-900">{selectedCharge.seller_name || selectedCharge.account_name || '-'}</p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Email do seller</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.seller_email || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Documento do seller</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.seller_document || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Telefone do seller</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.seller_phone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Produto</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.product_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Checkout</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.checkout_name || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-md bg-gray-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Pagamento</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <p className="text-xs text-gray-500">Metodo</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {getPaymentMethodLabel(selectedCharge.payment_method)}
+                        {selectedCharge.installments > 1 && ` ${selectedCharge.installments}x`}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Gateway</p>
+                      <p className="text-sm text-gray-900">{selectedCharge.acquirer || selectedCharge.acquirer_name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Cartao</p>
+                      <p className="text-sm text-gray-900">
+                        {selectedCharge.card_brand || '-'} {selectedCharge.card_last4 || selectedCharge.card_last_digits ? `**** ${selectedCharge.card_last4 || selectedCharge.card_last_digits}` : ''}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">PIX EndToEnd</p>
+                      <p className="break-all font-mono text-sm text-gray-900">{selectedCharge.pix_end2end_id || '-'}</p>
+                    </div>
+                    {selectedCharge.pix_emv && (
+                      <div className="md:col-span-2">
+                        <div className="mb-1 flex items-center justify-between">
+                          <p className="text-xs text-gray-500">PIX Copia e Cola</p>
+                          <button type="button" onClick={() => copyText(selectedCharge.pix_emv)} className="text-gray-400 hover:text-gray-700">
+                            <ClipboardDocumentIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <p className="break-all font-mono text-xs text-gray-900">{selectedCharge.pix_emv}</p>
+                      </div>
+                    )}
+                    {(selectedCharge.boleto_barcode || selectedCharge.boleto_digitable_line || selectedCharge.boleto_url) && (
+                      <div className="md:col-span-2 grid gap-2 rounded-md bg-white p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Boleto</p>
+                        <p className="break-all text-xs text-gray-700">Codigo: {selectedCharge.boleto_barcode || '-'}</p>
+                        <p className="break-all text-xs text-gray-700">Linha: {selectedCharge.boleto_digitable_line || '-'}</p>
+                        <p className="break-all text-xs text-gray-700">URL: {selectedCharge.boleto_url || '-'}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-md bg-gray-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Datas e motivos</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div><p className="text-xs text-gray-500">Criado em</p><p className="text-sm text-gray-900">{formatDate(selectedCharge.created_at)}</p></div>
+                    <div><p className="text-xs text-gray-500">Atualizado em</p><p className="text-sm text-gray-900">{selectedCharge.updated_at ? formatDate(selectedCharge.updated_at) : '-'}</p></div>
+                    <div><p className="text-xs text-gray-500">Pago em</p><p className="text-sm text-gray-900">{selectedCharge.paid_at ? formatDate(selectedCharge.paid_at) : '-'}</p></div>
+                    <div><p className="text-xs text-gray-500">Expira em</p><p className="text-sm text-gray-900">{selectedCharge.expires_at ? formatDate(selectedCharge.expires_at) : '-'}</p></div>
+                    <div><p className="text-xs text-gray-500">Reembolsado em</p><p className="text-sm text-gray-900">{selectedCharge.refunded_at ? formatDate(selectedCharge.refunded_at) : '-'}</p></div>
+                    <div><p className="text-xs text-gray-500">Cancelado em</p><p className="text-sm text-gray-900">{selectedCharge.cancelled_at ? formatDate(selectedCharge.cancelled_at) : '-'}</p></div>
+                    <div className="md:col-span-2"><p className="text-xs text-gray-500">Motivo de falha/cancelamento</p><p className="text-sm text-gray-900">{selectedCharge.failure_reason || selectedCharge.cancellation_reason || '-'}</p></div>
+                  </div>
+                </div>
+
+                {selectedCharge.transactions?.length > 0 && (
+                  <div className="rounded-md bg-gray-50 p-4">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Transacoes internas</p>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-xs uppercase tracking-wider text-gray-500">
+                            <th className="py-2 pr-3">ID</th>
+                            <th className="py-2 pr-3">Tipo</th>
+                            <th className="py-2 pr-3">Status</th>
+                            <th className="py-2 pr-3">Valor</th>
+                            <th className="py-2 pr-3">TID</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200">
+                          {selectedCharge.transactions.map((transaction: any) => (
+                            <tr key={transaction.id}>
+                              <td className="break-all py-2 pr-3 font-mono text-xs">{transaction.id}</td>
+                              <td className="py-2 pr-3">{transaction.type || '-'}</td>
+                              <td className="py-2 pr-3">{transaction.status || '-'}</td>
+                              <td className="py-2 pr-3">{formatCurrency(transaction.amount || 0)}</td>
+                              <td className="break-all py-2 pr-3 font-mono text-xs">{transaction.acquirer_tid || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {(compactJson(selectedCharge.payment_data) || compactJson(selectedCharge.metadata)) && (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {compactJson(selectedCharge.payment_data) && (
+                      <div className="rounded-md bg-gray-950 p-4 text-gray-100">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Payment data</p>
+                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs">{compactJson(selectedCharge.payment_data)}</pre>
+                      </div>
+                    )}
+                    {compactJson(selectedCharge.metadata) && (
+                      <div className="rounded-md bg-gray-950 p-4 text-gray-100">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Metadata</p>
+                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all text-xs">{compactJson(selectedCharge.metadata)}</pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <aside className="space-y-4">
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    updateChargeStatusMutation.mutate({
+                      chargeId: selectedCharge.id,
+                      status: chargeStatusForm.status,
+                      reason: chargeStatusForm.reason,
+                      mfa_code: chargeStatusForm.mfa_code,
+                    });
+                  }}
+                  className="rounded-md border border-gray-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="mb-4 flex items-center gap-2">
+                    <ShieldCheckIcon className="h-5 w-5 text-green-700" />
+                    <h3 className="text-sm font-semibold text-gray-900">Alterar status</h3>
+                  </div>
+                  <label className="mb-3 block">
+                    <span className="mb-1 block text-xs font-medium text-gray-500">Novo status</span>
+                    <select
+                      value={chargeStatusForm.status}
+                      onChange={(event) => setChargeStatusForm((current) => ({ ...current, status: event.target.value }))}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                    >
+                      {chargeStatusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="mb-3 block">
+                    <span className="mb-1 block text-xs font-medium text-gray-500">Motivo</span>
+                    <textarea
+                      value={chargeStatusForm.reason}
+                      onChange={(event) => setChargeStatusForm((current) => ({ ...current, reason: event.target.value }))}
+                      rows={3}
+                      placeholder="Descreva o motivo da alteracao"
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                    />
+                  </label>
+                  <label className="mb-4 block">
+                    <span className="mb-1 block text-xs font-medium text-gray-500">Codigo 2FA</span>
+                    <input
+                      value={chargeStatusForm.mfa_code}
+                      onChange={(event) => setChargeStatusForm((current) => ({ ...current, mfa_code: event.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                      inputMode="numeric"
+                      maxLength={6}
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm tracking-widest focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={
+                      updateChargeStatusMutation.isPending ||
+                      chargeStatusForm.status === selectedCharge.status ||
+                      chargeStatusForm.reason.trim().length < 8 ||
+                      chargeStatusForm.mfa_code.length !== 6
+                    }
+                    className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {updateChargeStatusMutation.isPending ? 'Atualizando...' : 'Salvar status'}
+                  </button>
+                </form>
+
+                <div className="rounded-md bg-gray-50 p-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Resumo financeiro</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between"><span className="text-gray-500">Bruto</span><span className="font-medium">{formatCurrency(selectedCharge.amount || 0)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Taxa</span><span className="font-medium">{formatCurrency(selectedCharge.fee_amount || 0)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Liquido</span><span className="font-medium">{formatCurrency(selectedCharge.net_amount || 0)}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Reembolsado</span><span className="font-medium">{formatCurrency(selectedCharge.refunded_amount || 0)}</span></div>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Previous Charge Detail Modal kept disabled */}
+      {false && showChargeDetailModal && selectedCharge && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowChargeDetailModal(false)}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">

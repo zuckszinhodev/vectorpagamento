@@ -237,14 +237,35 @@ class PaymentService
             // Route by account-specific acquirer order when configured; otherwise use global admin priority.
             $accountId = $charge->account_id;
             $paymentMethod = $charge->payment_method ?? 'pix';
+            $lockedAccountRouting = $this->resolveLockedAccountAcquirerRouting($accountId, $paymentMethod);
+
+            if (($lockedAccountRouting['locked'] ?? false) && !empty($lockedAccountRouting['error'])) {
+                $charge->update(['status' => 'failed']);
+
+                Log::warning('Payment blocked by account-specific acquirer routing', [
+                    'charge_id' => $charge->id,
+                    'account_id' => $accountId,
+                    'payment_method' => $paymentMethod,
+                    'error' => $lockedAccountRouting['error'],
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => $lockedAccountRouting['error'],
+                ];
+            }
+
             $acquirer = $this->factory->getActiveAcquirerNameForAccount($accountId, $paymentMethod);
+            if (($lockedAccountRouting['locked'] ?? false) && !empty($lockedAccountRouting['order'][0])) {
+                $acquirer = $lockedAccountRouting['order'][0];
+            }
 
             Log::info('PaymentService: processing payment', [
                 'charge_id' => $charge->id,
                 'payment_method' => $paymentMethod,
                 'active_acquirer' => $acquirer,
                 'account_id' => $accountId,
-                'routing_scope' => $accountId ? 'account_then_global' : 'global_admin',
+                'routing_scope' => ($lockedAccountRouting['locked'] ?? false) ? 'account_locked' : ($accountId ? 'account_then_global' : 'global_admin'),
             ]);
 
             $forcedRoutingError = $this->validateForcedAcquirerSupport($paymentMethod, $acquirer);
@@ -264,7 +285,7 @@ class PaymentService
 
             // Route PIX payments with automatic fallback chain based on account acquirers
             if ($charge->payment_method === 'pix') {
-                return $this->processPixWithFallback($charge, $acquirer);
+                return $this->processPixWithFallback($charge, $acquirer, $lockedAccountRouting);
             }
 
             if ($acquirer === 'mock') {
@@ -355,6 +376,74 @@ class PaymentService
         };
     }
 
+    private function resolveLockedAccountAcquirerRouting(?string $accountId, string $paymentMethod): array
+    {
+        if (!$accountId) {
+            return ['locked' => false, 'order' => []];
+        }
+
+        try {
+            $normalizedMethod = match (strtolower(trim($paymentMethod))) {
+                'card', 'cartao', 'creditcard' => 'credit_card',
+                'pixout', 'pix-out', 'withdrawal', 'withdraw' => 'pix_out',
+                default => strtolower(trim($paymentMethod)) ?: 'pix',
+            };
+
+            $assignments = AccountAcquirer::query()
+                ->where('account_acquirers.account_id', $accountId)
+                ->where('account_acquirers.is_active', true)
+                ->join('acquirers', 'acquirers.id', '=', 'account_acquirers.acquirer_id')
+                ->select('account_acquirers.*', 'acquirers.slug as acquirer_slug')
+                ->orderBy('account_acquirers.priority', 'asc')
+                ->get();
+
+            if ($assignments->isEmpty()) {
+                return ['locked' => false, 'order' => []];
+            }
+
+            foreach ($assignments as $assignment) {
+                $slug = strtolower((string) $assignment->acquirer_slug);
+                if ($slug === '') {
+                    continue;
+                }
+
+                $globalConfig = AcquirerConfig::where('acquirer_key', $slug)->first();
+                if (!$globalConfig || !$globalConfig->enabled) {
+                    return [
+                        'locked' => true,
+                        'order' => [$slug],
+                        'error' => 'A adquirente configurada para este seller esta desativada.',
+                    ];
+                }
+
+                $supportedMethods = array_map('strtolower', $globalConfig->supported_methods ?? []);
+                if ($supportedMethods !== [] && !in_array($normalizedMethod, $supportedMethods, true)) {
+                    continue;
+                }
+
+                return ['locked' => true, 'order' => [$slug]];
+            }
+
+            return [
+                'locked' => true,
+                'order' => [],
+                'error' => 'Nenhuma adquirente configurada para este seller suporta este metodo de pagamento.',
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Failed to resolve locked account acquirer routing', [
+                'account_id' => $accountId,
+                'payment_method' => $paymentMethod,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'locked' => true,
+                'order' => [],
+                'error' => 'Erro ao validar a adquirente configurada para este seller.',
+            ];
+        }
+    }
+
     /**
      * Process PIX payment with automatic failover between acquirers
      * 
@@ -362,13 +451,24 @@ class PaymentService
      * Default: PayFort (priority 0) → BluPay → Babylon → Mock
      * If the primary acquirer fails, automatically tries the next one.
      */
-    private function processPixWithFallback(Charge $charge, string $primaryAcquirer): array
+    private function processPixWithFallback(Charge $charge, string $primaryAcquirer, array $lockedAccountRouting = []): array
     {
         $rotationSettings = $this->rotationService?->getSettings() ?? [];
         $failoverEnabled = (bool) ($rotationSettings['failover_enabled'] ?? config('acquirers.routing.failover_enabled', true));
+        $isAccountLocked = (bool) ($lockedAccountRouting['locked'] ?? false);
 
         // Build ordered acquirer list from account priority first, then global admin priority.
-        $acquirerOrder = $this->factory->getPixAcquirerOrderForAccount($charge->account_id, $primaryAcquirer);
+        $acquirerOrder = $isAccountLocked
+            ? array_values(array_filter($lockedAccountRouting['order'] ?? []))
+            : $this->factory->getPixAcquirerOrderForAccount($charge->account_id, $primaryAcquirer);
+
+        if ($isAccountLocked && $acquirerOrder === []) {
+            $charge->update(['status' => 'failed']);
+            return [
+                'success' => false,
+                'error' => $lockedAccountRouting['error'] ?? 'Nenhuma adquirente configurada para este seller conseguiu processar o PIX.',
+            ];
+        }
 
         foreach ($acquirerOrder as $acquirerName) {
             $isEnabled = $this->isAcquirerEnabledForRouting($acquirerName);
@@ -378,6 +478,13 @@ class PaymentService
                     'charge_id' => $charge->id,
                     'acquirer' => $acquirerName,
                 ]);
+                if ($isAccountLocked) {
+                    $charge->update(['status' => 'failed']);
+                    return [
+                        'success' => false,
+                        'error' => 'A adquirente configurada para este seller esta desativada ou sem credenciais.',
+                    ];
+                }
                 continue;
             }
 
@@ -387,6 +494,13 @@ class PaymentService
                     'acquirer' => $acquirerName,
                     'amount' => $charge->amount,
                 ]);
+                if ($isAccountLocked) {
+                    $charge->update(['status' => 'failed']);
+                    return [
+                        'success' => false,
+                        'error' => 'A adquirente configurada para este seller nao aceita o valor desta cobranca.',
+                    ];
+                }
                 continue;
             }
 
@@ -398,14 +512,22 @@ class PaymentService
                     'charge_id' => $charge->id,
                     'acquirer'  => $acquirerName,
                 ]);
+                if ($isAccountLocked) {
+                    $charge->update(['status' => 'failed']);
+                    return [
+                        'success' => false,
+                        'error' => 'A adquirente configurada para este seller esta temporariamente indisponivel.',
+                    ];
+                }
                 continue;
             }
 
             Log::info('Attempting PIX via acquirer', [
                 'charge_id' => $charge->id,
                 'acquirer' => $acquirerName,
-                'is_fallback' => $acquirerName !== $primaryAcquirer,
-            ]);
+                    'is_fallback' => !$isAccountLocked && $acquirerName !== $primaryAcquirer,
+                    'account_locked' => $isAccountLocked,
+                ]);
 
             $result = match ($acquirerName) {
                 'payfort' => $this->factory->payfortForAccount($charge->account_id) ? $this->generatePixViaPayFort($charge) : null,
@@ -452,7 +574,23 @@ class PaymentService
                     'charge_id' => $charge->id,
                     'acquirer' => $acquirerName,
                     'error' => $result['error'] ?? 'Unknown error',
+                    'account_locked' => $isAccountLocked,
                 ]);
+            }
+
+            if ($isAccountLocked) {
+                $charge->update(['status' => 'failed']);
+                Log::warning('Account-specific PIX acquirer failed; fallback blocked', [
+                    'charge_id' => $charge->id,
+                    'account_id' => $charge->account_id,
+                    'acquirer' => $acquirerName,
+                    'error' => $result['error'] ?? 'Acquirer not configured',
+                ]);
+
+                return $result ?? [
+                    'success' => false,
+                    'error' => 'A adquirente configurada para este seller nao conseguiu gerar a cobranca.',
+                ];
             }
 
             // If failover is disabled, don't try the next acquirer
@@ -2512,19 +2650,20 @@ class PaymentService
                 return ['success' => true, 'status' => $charge->status, 'synced' => false];
             }
 
-            $externalStatus = (string) ($response['status'] ?? $charge->status);
+            $payment = is_array($response['data'] ?? null) ? $response['data'] : $response;
+            $externalStatus = (string) ($payment['status'] ?? $response['status'] ?? $charge->status);
             $newStatus = \App\Infrastructure\Acquirers\SharkHubSubAcquirer::mapWebhookPaymentStatus($externalStatus);
 
             if ($newStatus === 'approved' && $charge->status !== 'approved') {
                 $this->handleWebhookPayment($charge, [
                     'id' => $charge->acquirer_transaction_id,
                     'status' => $newStatus,
-                    'amount' => $response['amount'] ?? null,
-                    'paymentMethod' => $response['method'] ?? $charge->payment_method,
-                    'paidAt' => $response['paidAt'] ?? null,
+                    'amount' => $payment['amount'] ?? $response['amount'] ?? null,
+                    'paymentMethod' => $payment['method'] ?? $response['method'] ?? $charge->payment_method,
+                    'paidAt' => $payment['paidAt'] ?? $payment['paid_at'] ?? $response['paidAt'] ?? null,
                     'pix' => [
-                        'endToEndId' => data_get($response, 'data.e2e'),
-                        'copyPaste' => data_get($response, 'data.copypaste'),
+                        'endToEndId' => data_get($payment, 'e2e') ?? data_get($payment, 'pix.endToEndId') ?? data_get($response, 'data.e2e'),
+                        'copyPaste' => data_get($payment, 'copypaste') ?? data_get($payment, 'copyPaste') ?? data_get($response, 'data.copypaste'),
                     ],
                     'metadata' => [
                         'source' => 'sharkhubsub_sync',
@@ -2541,7 +2680,7 @@ class PaymentService
                 $charge->update([
                     'status' => $newStatus,
                     'paid_at' => $newStatus === 'approved' ? ($charge->paid_at ?? now()) : $charge->paid_at,
-                    'pix_end2end_id' => data_get($response, 'data.e2e') ?? $charge->pix_end2end_id,
+                    'pix_end2end_id' => data_get($payment, 'e2e') ?? data_get($payment, 'pix.endToEndId') ?? $charge->pix_end2end_id,
                 ]);
             }
 

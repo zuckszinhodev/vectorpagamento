@@ -224,7 +224,17 @@ class SharkHubSubAcquirer implements AcquirerInterface
         try {
             $response = $this->paymentClient()->get("{$this->baseUrl}/v1/payment/{$paymentId}");
 
-            return $response->successful() ? $this->responseJson($response) : null;
+            if (!$response->successful()) {
+                Log::warning('SharkHubSub: get payment failed', [
+                    'payment_id' => $paymentId,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return null;
+            }
+
+            return $this->responseJson($response);
         } catch (\Throwable $e) {
             Log::warning('SharkHubSub: get payment exception', [
                 'payment_id' => $paymentId,

@@ -10,18 +10,14 @@ import {
   ChartBarIcon,
   BuildingStorefrontIcon,
   BanknotesIcon,
-  Cog6ToothIcon,
   DocumentTextIcon,
   ComputerDesktopIcon,
   BellIcon,
   ArrowRightOnRectangleIcon,
   UserCircleIcon,
   ChevronDownIcon,
-  ShieldCheckIcon,
   DocumentCheckIcon,
   ServerIcon,
-  KeyIcon,
-  SwatchIcon,
   ExclamationTriangleIcon,
   CpuChipIcon,
 } from '@heroicons/react/24/outline';
@@ -81,10 +77,6 @@ const navigationGroups: NavGroup[] = [
     title: 'Plataforma',
     items: [
       { name: 'Adquirentes', href: '/admin/acquirers', icon: ServerIcon, permission: 'admin.acquirers.manage' },
-      { name: 'Segurança', href: '/admin/security', icon: ShieldCheckIcon, permission: 'admin.security.monitor' },
-      { name: 'API & Webhooks', href: '/admin/api', icon: KeyIcon, permission: 'admin.webhooks.manage' },
-      { name: 'Configurações', href: '/admin/settings', icon: Cog6ToothIcon, permission: 'admin.config.manage' },
-      { name: 'Branding', href: '/admin/branding', icon: SwatchIcon, permission: 'admin.config.manage' },
     ],
   },
 ];
@@ -183,7 +175,7 @@ export default function AdminLayout() {
       </div>
 
       {/* Main content */}
-      <div className="flex flex-1 flex-col lg:pl-[272px]">
+      <div className="flex min-w-0 flex-1 flex-col lg:pl-[272px]">
         {/* Top bar */}
         <header className="sticky top-0 z-40 flex h-14 items-center gap-x-4 border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8">
           <button
@@ -196,7 +188,7 @@ export default function AdminLayout() {
 
           <div className="h-5 w-px bg-gray-200 lg:hidden" />
 
-          <h1 className="text-sm font-semibold text-gray-900">{currentPageTitle}</h1>
+          <h1 className="min-w-0 truncate text-sm font-semibold text-gray-900">{currentPageTitle}</h1>
 
           <div className="ml-auto flex items-center gap-x-3">
             {/* Notifications */}
@@ -261,8 +253,8 @@ export default function AdminLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-[1400px] p-4 sm:p-6 lg:p-8">
+        <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="mx-auto w-full max-w-[1400px] min-w-0 p-3 sm:p-6 lg:p-8">
             <Outlet />
           </div>
         </main>
@@ -349,6 +341,7 @@ function SidebarContent({
                         : item.href === '/admin/kyc'
                           ? pulseData?.queues.pending_kyc
                           : item.badge;
+                  const badgeCount = Number(dynamicBadge ?? 0);
 
                   return (
                     <li key={item.name}>
@@ -365,10 +358,10 @@ function SidebarContent({
                             active ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'
                           }`}
                         />
-                        {item.name}
-                        {dynamicBadge && dynamicBadge > 0 && (
+                        <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                        {badgeCount > 0 && (
                           <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gray-900 px-1.5 text-[10px] font-medium text-white">
-                            {dynamicBadge > 99 ? '99+' : dynamicBadge}
+                            {badgeCount > 99 ? '99+' : badgeCount}
                           </span>
                         )}
                       </Link>

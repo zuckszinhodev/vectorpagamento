@@ -37,7 +37,14 @@ class ChargeController extends Controller
         try {
             $accountId = $request->user()->account_id;
 
-        $query = Charge::where('account_id', $accountId);
+        $hiddenFromSellerList = [
+            Charge::STATUS_FAILED,
+            Charge::STATUS_DECLINED,
+            'blocked',
+        ];
+
+        $query = Charge::where('account_id', $accountId)
+            ->whereNotIn('status', $hiddenFromSellerList);
 
         if ($request->query('status')) {
             $status = $request->query('status');

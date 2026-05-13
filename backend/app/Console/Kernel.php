@@ -26,6 +26,13 @@ class Kernel extends ConsoleKernel
             ->onOneServer()
             ->appendOutputTo(storage_path('logs/withdrawal-sync.log'));
 
+        // Sync pending payments that were paid at the acquirer but missed the webhook
+        $schedule->job(new \App\Jobs\SyncPendingChargesJob('sharkhubsub'))
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->appendOutputTo(storage_path('logs/charge-sync.log'));
+
         // Expire pending charges past their expiration time (every 2 minutes)
         $schedule->job(new \App\Jobs\ExpireChargesJob)
             ->everyTwoMinutes()

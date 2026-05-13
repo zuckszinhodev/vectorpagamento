@@ -44,9 +44,6 @@ const AdminCustomerDetail = lazy(() => import('@/pages/admin/AdminCustomerDetail
 const AdminKYC = lazy(() => import('@/pages/admin/AdminKYC'));
 const AdminFinance = lazy(() => import('@/pages/admin/AdminFinance'));
 const AdminAcquirers = lazy(() => import('@/pages/admin/AdminAcquirers'));
-const AdminSettings = lazy(() => import('@/pages/admin/AdminSettings'));
-const AdminBranding = lazy(() => import('@/pages/admin/AdminBranding'));
-const AdminAPI = lazy(() => import('@/pages/admin/AdminAPI'));
 const AdminMonitoring = lazy(() => import('@/pages/admin/AdminMonitoring'));
 const AdminChargebacks = lazy(() => import('@/pages/admin/AdminChargebacks'));
 const LandingPagesPage = lazy(() => import('@/pages/LandingPagesPage'));
@@ -251,9 +248,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     if (clean.startsWith('acquirers')) return 'admin.acquirers.manage';
     if (clean.startsWith('chargebacks')) return 'admin.chargebacks.manage';
     if (clean.startsWith('approvals')) return 'admin.approvals.review';
-    if (clean.startsWith('security') || clean.startsWith('monitoring')) return 'admin.security.monitor';
-    if (clean.startsWith('api')) return 'admin.webhooks.manage';
-    if (clean.startsWith('settings') || clean.startsWith('branding')) return 'admin.config.manage';
+    if (clean.startsWith('monitoring')) return 'admin.security.monitor';
     return null;
   };
 
@@ -463,10 +458,10 @@ function App() {
         <Route path="acquirers" element={<AdminAcquirers />} />
         <Route path="chargebacks" element={<AdminChargebacks />} />
         <Route path="approvals" element={<AdminFinance />} />
-        <Route path="security" element={<AdminMonitoring />} />
-        <Route path="settings" element={<AdminSettings />} />
-        <Route path="api" element={<AdminAPI />} />
-        <Route path="branding" element={<AdminBranding />} />
+        <Route path="security" element={<Navigate to="/admin" replace />} />
+        <Route path="settings" element={<Navigate to="/admin" replace />} />
+        <Route path="api" element={<Navigate to="/admin" replace />} />
+        <Route path="branding" element={<Navigate to="/admin" replace />} />
         <Route path="monitoring" element={<AdminMonitoring />} />
       </Route>
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Account;
 use App\Models\AcquirerConfig;
 use App\Models\Charge;
 use App\Models\Transaction;
@@ -12,6 +13,7 @@ use App\Services\AcquirerRotationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Acquirer Management — extracted from AdminController
@@ -579,9 +581,18 @@ class AcquirerAdminController extends Controller
                 return response()->json(['success' => false, 'message' => 'Adquirente nao encontrado'], 404);
             }
 
+            $account = $this->resolveNominalTestAccount();
+            if (!$account) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nao existe nenhuma conta ativa para gerar o PIX de teste da nominal',
+                ], 422);
+            }
+
             $charge = Charge::create([
-                'account_id' => null,
-                'amount' => 100,
+                'account_id' => $account->id,
+                'idempotency_key' => 'nominal_' . Str::uuid()->toString(),
+                'amount' => 500,
                 'currency' => 'BRL',
                 'payment_method' => 'pix',
                 'status' => 'pending',
@@ -589,8 +600,9 @@ class AcquirerAdminController extends Controller
                 'description' => 'Verificação de nominal',
                 'customer' => [
                     'name' => 'Verificacao Nominal',
-                    'email' => 'nominal@vector.internal',
-                    'document' => '00000000000',
+                    'email' => 'nominal@vectorpagamentos.com',
+                    'document' => '49722485806',
+                    'phone' => '11999999999',
                 ],
                 'expires_at' => now()->addMinutes(5),
             ]);
@@ -657,10 +669,15 @@ class AcquirerAdminController extends Controller
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('AcquirerAdminController::refreshNominal error', [
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'acquirer_id' => $acquirerId,
             ]);
 
-            return response()->json(['success' => false, 'message' => 'Erro ao atualizar nominal'], 500);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao atualizar nominal: ' . $e->getMessage(),
+            ], 500);
         }
     }
 
@@ -678,9 +695,20 @@ class AcquirerAdminController extends Controller
 
             foreach ($configs as $config) {
                 try {
+                    $account = $this->resolveNominalTestAccount();
+                    if (!$account) {
+                        $results[] = [
+                            'acquirer' => $config->acquirer_key,
+                            'success' => false,
+                            'message' => 'Nao existe nenhuma conta ativa para gerar o PIX de teste',
+                        ];
+                        continue;
+                    }
+
                     $charge = Charge::create([
-                        'account_id' => null,
-                        'amount' => 100,
+                        'account_id' => $account->id,
+                        'idempotency_key' => 'nominal_' . Str::uuid()->toString(),
+                        'amount' => 500,
                         'currency' => 'BRL',
                         'payment_method' => 'pix',
                         'status' => 'pending',
@@ -688,8 +716,9 @@ class AcquirerAdminController extends Controller
                         'description' => 'Verificação de nominal',
                         'customer' => [
                             'name' => 'Verificacao Nominal',
-                            'email' => 'nominal@vector.internal',
-                            'document' => '00000000000',
+                            'email' => 'nominal@vectorpagamentos.com',
+                            'document' => '49722485806',
+                            'phone' => '11999999999',
                         ],
                         'expires_at' => now()->addMinutes(5),
                     ]);
@@ -1034,5 +1063,20 @@ class AcquirerAdminController extends Controller
         }
 
         return null;
+    }
+
+    private function resolveNominalTestAccount(): ?Account
+    {
+        $adminAccountId = request()->user()?->account_id;
+
+        if ($adminAccountId) {
+            $account = Account::where('id', $adminAccountId)->first();
+            if ($account) {
+                return $account;
+            }
+        }
+
+        return Account::where('status', 'active')->orderBy('created_at')->first()
+            ?? Account::orderBy('created_at')->first();
     }
 }
