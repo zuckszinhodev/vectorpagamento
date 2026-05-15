@@ -268,7 +268,7 @@ class WebhookDispatchService
             ]);
         } catch (\Exception $e) {
             // Table may not exist yet, just log
-            Log::debug('Could not record webhook attempt', ['error' => $e->getMessage()]);
+            Log::warning('Could not record webhook attempt', ['error' => $e->getMessage()]);
         }
     }
 }

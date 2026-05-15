@@ -22,17 +22,13 @@ class MemberEnrollmentService
     public function createAutomaticEnrollment(Charge $charge): ?Enrollment
     {
         try {
-            // Get product from charge
             $product = $charge->product;
             if (!$product) {
-                Log::debug('No product associated with charge for auto-enrollment', ['charge_id' => $charge->id]);
                 return null;
             }
 
-            // Check if product has an associated course
             $course = Course::where('product_id', $product->id)->first();
             if (!$course) {
-                Log::debug('Product has no associated course', ['product_id' => $product->id]);
                 return null;
             }
 

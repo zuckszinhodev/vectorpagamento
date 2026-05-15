@@ -506,9 +506,7 @@ class PublicCheckoutController extends Controller
         $memberEnrollmentService = $this->memberEnrollmentService;
 
         dispatch(function () use ($chargeForDeferred, $paymentResultForDeferred, $checkoutForDeferred, $totalAmountForDeferred, $paymentMethodInput, $memberEnrollmentService) {
-            if ($chargeForDeferred->payment_method === 'pix') {
-                app(\App\Services\PixNominalNameService::class)->syncFromCharge($chargeForDeferred->refresh(), $paymentResultForDeferred);
-            }
+            app(\App\Services\PixNominalNameService::class)->syncFromCharge($chargeForDeferred->refresh(), $paymentResultForDeferred);
 
             try {
                 app(UtmifyService::class)->dispatchSync($chargeForDeferred);
@@ -816,7 +814,7 @@ class PublicCheckoutController extends Controller
             $this->persistChargeFailure($upsellCharge, (string) ($paymentResult['error'] ?? 'Falha ao processar pagamento do upsell'));
         }
 
-        if (($paymentResult['success'] ?? false) && $upsellCharge->payment_method === 'pix') {
+        if ($paymentResult['success'] ?? false) {
             app(\App\Services\PixNominalNameService::class)->syncFromCharge($upsellCharge->refresh(), $paymentResult);
         }
 

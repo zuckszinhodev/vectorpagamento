@@ -1849,15 +1849,13 @@ class PaymentService
                     'acquirer_transaction_id' => $transactionId,
                 ]);
 
-                if ($charge->payment_method === 'pix') {
-                    try {
-                        app(\App\Services\PixNominalNameService::class)->syncFromCharge($charge);
-                    } catch (\Throwable $e) {
-                        Log::warning('Failed to sync PIX nominal name from webhook', [
-                            'charge_id' => $charge->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
+                try {
+                    app(\App\Services\PixNominalNameService::class)->syncFromCharge($charge);
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to sync nominal name from webhook', [
+                        'charge_id' => $charge->id,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
 
                 // Dispatch ALL notifications asynchronously via job

@@ -308,13 +308,6 @@ class UtmifyService
         $utmifyStatus = self::STATUS_MAP[$charge->status] ?? 'waiting_payment';
         $paymentMethod = self::PAYMENT_METHOD_MAP[$charge->payment_method] ?? 'pix';
 
-        Log::debug('UTMify buildPayload', [
-            'charge_id'      => $charge->id,
-            'charge_status'  => $charge->status,
-            'utmify_status'  => $utmifyStatus,
-            'payment_method' => $paymentMethod,
-        ]);
-
         // Commission values
         $totalPriceInCents      = (int) $charge->amount;
         $gatewayFeeInCents      = (int) ($charge->fee_amount ?? 0);

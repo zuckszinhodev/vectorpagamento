@@ -23,9 +23,9 @@ class WazerAIService
 
     public function __construct()
     {
-        $this->apiKey = config('services.openrouter.api_key', '');
-        $this->model = config('services.openrouter.wazerai_model', 'google/gemini-2.0-flash-001');
-        $this->fastModel = config('services.openrouter.wazerai_fast_model', 'google/gemini-2.0-flash-001');
+        $this->apiKey = (string) config('services.openrouter.api_key', '');
+        $this->model = (string) config('services.openrouter.wazerai_model', 'google/gemini-2.0-flash-001');
+        $this->fastModel = (string) config('services.openrouter.wazerai_fast_model', 'google/gemini-2.0-flash-001');
         $this->actionService = new WazerAIActionService();
     }
 

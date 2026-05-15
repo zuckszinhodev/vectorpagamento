@@ -141,22 +141,11 @@ class WithdrawalController extends Controller
 
         // ── MFA / Second-factor Verification ─────────────────────────────────
         if (($authUser->type ?? null) === 'api_key') {
-            // For API key auth: enforce non-empty IP whitelist as second factor.
-            // A stolen key without IP restrictions would allow unchecked withdrawals.
+            // For API key auth: if IP whitelist is configured, enforce it.
             $account = $account ?? \App\Models\Account::find($accountId);
             $allowedIps = ($account?->settings ?? [])['withdrawal_ip_whitelist'] ?? [];
 
-            if (empty($allowedIps)) {
-                return response()->json([
-                    'success' => false,
-                    'error' => [
-                        'code'    => 'ip_whitelist_required',
-                        'message' => 'Saques via API Key requerem uma lista de IPs autorizados configurada. Configure os IPs permitidos nas configurações da conta.',
-                    ],
-                ], 403);
-            }
-
-            if (!in_array($request->ip(), $allowedIps, true)) {
+            if (!empty($allowedIps) && !in_array($request->ip(), $allowedIps, true)) {
                 Log::warning('Withdrawal blocked: IP not in whitelist', [
                     'account_id' => $accountId,
                     'request_ip' => $request->ip(),

@@ -83,14 +83,12 @@ class AcquirerFactory
             $config = AcquirerConfig::findByKey($acquirerKey);
 
             if (!$config || !$config->enabled) {
-                Log::debug("AcquirerFactory: no enabled DB config for '{$acquirerKey}'");
                 return null;
             }
 
             $dbCreds = $config->getDecryptedCredentials();
 
             if (!$dbCreds) {
-                Log::debug("AcquirerFactory: DB config for '{$acquirerKey}' exists but credentials are empty or cannot be decrypted");
                 return null;
             }
 
@@ -101,7 +99,6 @@ class AcquirerFactory
                 return null;
             }
 
-            Log::debug("AcquirerFactory: valid DB credentials found for '{$acquirerKey}'");
             return $dbCreds;
         } catch (\Exception $e) {
             Log::warning("AcquirerFactory: DB credentials lookup failed for '{$acquirerKey}'", ['error' => $e->getMessage()]);
@@ -932,10 +929,6 @@ class AcquirerFactory
             try {
                 $selected = $this->rotation()->choosePrimaryAcquirer($normalizedMethod, $candidates);
                 if ($selected !== null) {
-                    Log::debug('Active acquirer selected by rotation strategy', [
-                        'acquirer' => $selected,
-                        'payment_method' => $normalizedMethod,
-                    ]);
 
                     return $selected;
                 }

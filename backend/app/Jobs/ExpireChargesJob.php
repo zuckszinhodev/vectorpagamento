@@ -43,12 +43,6 @@ class ExpireChargesJob implements ShouldQueue
                         ]);
                         $count++;
 
-                        Log::debug('Charge expired', [
-                            'charge_id' => $charge->id,
-                            'payment_method' => $charge->payment_method,
-                            'expired_at' => $charge->expires_at,
-                        ]);
-
                         // Dispatch recovery messaging trigger based on payment method
                         $recoveryEvent = match ($charge->payment_method) {
                             'pix' => 'pix.expired',

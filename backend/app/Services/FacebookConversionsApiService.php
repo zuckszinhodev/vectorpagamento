@@ -56,28 +56,16 @@ class FacebookConversionsApiService
             ->first();
 
         if (!$integration) {
-            Log::debug('Facebook CAPI dispatch skipped – no active integration', [
-                'account_id' => $charge->account_id,
-                'charge_id'  => $charge->id,
-            ]);
             return;
         }
 
         $resolvedEvent = $eventName ?? $this->resolveEventName($charge->status);
 
         if (!$resolvedEvent) {
-            Log::debug('Facebook CAPI dispatch skipped – no event mapped for status', [
-                'charge_id' => $charge->id,
-                'status'    => $charge->status,
-            ]);
             return;
         }
 
         if (!$integration->shouldTrack($resolvedEvent)) {
-            Log::debug('Facebook CAPI dispatch skipped – event tracking disabled', [
-                'charge_id' => $charge->id,
-                'event'     => $resolvedEvent,
-            ]);
             return;
         }
 

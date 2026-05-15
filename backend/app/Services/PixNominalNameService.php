@@ -15,13 +15,58 @@ class PixNominalNameService
     {
         $acquirerKey = trim((string) ($paymentResult['acquirer'] ?? $charge->acquirer ?? ''));
 
-        if ($acquirerKey === '' || $charge->payment_method !== 'pix') {
+        if ($acquirerKey === '') {
+            return null;
+        }
+
+        if ($charge->payment_method === 'pix') {
+            $payloads = array_filter([
+                $paymentResult['pix_copy_paste'] ?? null,
+                $paymentResult['pix_qr_code'] ?? null,
+                $charge->pix_copy_paste,
+                $charge->pix_qr_code,
+            ], fn ($value) => is_string($value) && trim($value) !== '');
+
+            foreach ($payloads as $payload) {
+                $nominalName = $this->extractMerchantName((string) $payload);
+
+                if (!$nominalName) {
+                    continue;
+                }
+
+                $this->updateAcquirerNominalName($acquirerKey, $nominalName);
+
+                return $nominalName;
+            }
+        }
+
+        return $this->syncFromLatestPixCharge($acquirerKey);
+    }
+
+    public function syncFromLatestPixCharge(string $acquirerKey): ?string
+    {
+        if ($acquirerKey === '') {
+            return null;
+        }
+
+        $charge = Charge::query()
+            ->where('acquirer', $acquirerKey)
+            ->where('payment_method', 'pix')
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->whereNotNull('pix_copy_paste')->where('pix_copy_paste', '!=', '');
+                })->orWhere(function ($q) {
+                    $q->whereNotNull('pix_qr_code')->where('pix_qr_code', '!=', '');
+                });
+            })
+            ->latest()
+            ->first();
+
+        if (!$charge) {
             return null;
         }
 
         $payloads = array_filter([
-            $paymentResult['pix_copy_paste'] ?? null,
-            $paymentResult['pix_qr_code'] ?? null,
             $charge->pix_copy_paste,
             $charge->pix_qr_code,
         ], fn ($value) => is_string($value) && trim($value) !== '');

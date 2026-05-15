@@ -134,9 +134,6 @@ class DispatchPaymentNotificationsJob implements ShouldQueue
         $recipientPhone = $customer['phone'] ?? $customer['telefone'] ?? null;
 
         if (!$recipientPhone) {
-            Log::debug('DispatchPaymentNotificationsJob: no customer phone for messaging', [
-                'charge_id' => $charge->id,
-            ]);
             return;
         }
 

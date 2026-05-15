@@ -335,9 +335,7 @@ class ChargeController extends Controller
         $chargeForDeferred = $charge;
         $paymentResultForDeferred = $paymentResult;
         dispatch(function () use ($chargeForDeferred, $paymentResultForDeferred) {
-            if ($chargeForDeferred->payment_method === 'pix') {
-                app(\App\Services\PixNominalNameService::class)->syncFromCharge($chargeForDeferred->refresh(), $paymentResultForDeferred);
-            }
+            app(\App\Services\PixNominalNameService::class)->syncFromCharge($chargeForDeferred->refresh(), $paymentResultForDeferred);
 
             try {
                 app(\App\Services\WebhookDispatchService::class)

@@ -4,37 +4,44 @@ namespace App\Providers;
 
 use App\Services\SecurityLogService;
 use Illuminate\Support\ServiceProvider;
-use App\Domain\Auth\Repositories\UserRepositoryInterface;
-use App\Infrastructure\Persistence\Repositories\EloquentUserRepository;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
-        // Register with full namespace
+        // Auth repositories
         $this->app->bind(
             \App\Domain\Auth\Repositories\UserRepositoryInterface::class,
             \Infrastructure\Persistence\Repositories\EloquentUserRepository::class
         );
-        
-        // Register with Domain alias (for imports without App\)
         $this->app->bind(
             \Domain\Auth\Repositories\UserRepositoryInterface::class,
             \Infrastructure\Persistence\Repositories\EloquentUserRepository::class
         );
 
-        // Register SecurityLogService as singleton
+        // Payment repositories
+        $this->app->bind(
+            \App\Domain\Payment\Repositories\ChargeRepositoryInterface::class,
+            \Infrastructure\Persistence\Repositories\EloquentChargeRepository::class
+        );
+        $this->app->bind(
+            \Domain\Payment\Repositories\ChargeRepositoryInterface::class,
+            \Infrastructure\Persistence\Repositories\EloquentChargeRepository::class
+        );
+        $this->app->bind(
+            \App\Domain\Payment\Repositories\TransactionRepositoryInterface::class,
+            \Infrastructure\Persistence\Repositories\EloquentTransactionRepository::class
+        );
+        $this->app->bind(
+            \Domain\Payment\Repositories\TransactionRepositoryInterface::class,
+            \Infrastructure\Persistence\Repositories\EloquentTransactionRepository::class
+        );
+
         $this->app->singleton(SecurityLogService::class, function ($app) {
             return new SecurityLogService();
         });
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         //
