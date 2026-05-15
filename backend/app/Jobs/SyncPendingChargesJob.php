@@ -25,7 +25,7 @@ class SyncPendingChargesJob implements ShouldQueue, ShouldBeUnique
     public int $timeout = 300;
     public int $uniqueFor = 120;
 
-    public function __construct(private readonly ?string $acquirer = 'sharkhubsub')
+    public function __construct(private readonly ?string $acquirer = null)
     {
         $this->onQueue('sync');
     }
@@ -38,7 +38,7 @@ class SyncPendingChargesJob implements ShouldQueue, ShouldBeUnique
     public function handle(PaymentService $paymentService): void
     {
         $query = Charge::query()
-            ->whereIn('status', ['pending', 'processing'])
+            ->whereIn('status', ['pending', 'processing', 'waiting_payment'])
             ->whereNotNull('acquirer_transaction_id')
             ->orderBy('updated_at')
             ->limit(100);

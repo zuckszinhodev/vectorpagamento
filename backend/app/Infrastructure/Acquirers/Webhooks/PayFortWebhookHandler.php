@@ -246,7 +246,7 @@ class PayFortWebhookHandler
         // ─────────────────────────────────────────────────────────────────────
 
         // Find charge by external/acquirer transaction ID
-        $charge = $this->findChargeByExternalId($transactionId);
+        $charge = $this->findChargeByExternalId($transactionId, $transaction);
 
         if (!$charge) {
             Log::warning('PayFort webhook: Charge not found for transaction', [
@@ -404,15 +404,32 @@ class PayFortWebhookHandler
     /**
      * Find charge by PayFort external transaction ID
      */
-    private function findChargeByExternalId(?string $externalId): ?Charge
+    private function findChargeByExternalId(?string $externalId, array $payload = []): ?Charge
     {
-        if (!$externalId) {
-            return null;
+        if ($externalId) {
+            $charge = Charge::where('acquirer_transaction_id', $externalId)
+                ->orWhere('external_id', $externalId)
+                ->first();
+
+            if ($charge) {
+                return $charge;
+            }
         }
 
-        return Charge::where('acquirer_transaction_id', $externalId)
-            ->orWhere('external_id', $externalId)
-            ->first();
+        // Try by metadata.charge_id in the transaction payload
+        $metadata = $payload['metadata'] ?? [];
+        if (is_string($metadata)) {
+            $metadata = json_decode($metadata, true) ?? [];
+        }
+        $chargeId = $metadata['charge_id'] ?? null;
+        if ($chargeId) {
+            $charge = Charge::find($chargeId);
+            if ($charge) {
+                return $charge;
+            }
+        }
+
+        return null;
     }
 
     /**

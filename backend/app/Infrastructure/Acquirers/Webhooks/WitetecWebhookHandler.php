@@ -224,7 +224,8 @@ class WitetecWebhookHandler
         $this->updateChargeFromWebhook($charge, $payload);
 
         // Use PaymentService to handle the status update
-        $this->paymentService->handleWebhookPayment($charge, $payload);
+        $webhookData = array_merge($payload, ['status' => $mappedStatus]);
+        $this->paymentService->handleWebhookPayment($charge, $webhookData);
 
         $freshCharge = $charge->fresh();
 

@@ -2382,6 +2382,11 @@ class PaymentService
             return $this->syncHunterSubChargeStatus($charge);
         } elseif (in_array($acquirer, ['sharkhubsub'])) {
             return $this->syncSharkHubSubChargeStatus($charge);
+        } elseif (in_array($acquirer, ['asaas'])) {
+            return $this->syncAsaasChargeStatus($charge);
+        } elseif (in_array($acquirer, ['turbos', 'ascentpay', 'witetec'])) {
+            // These acquirers don't have a query API — rely on webhooks only
+            return ['success' => true, 'status' => $charge->status, 'synced' => false];
         }
 
         // Default: Babylon sync
@@ -2413,17 +2418,32 @@ class PaymentService
             ];
             $newStatus = $statusMap[strtolower($externalStatus)] ?? $charge->status;
 
-            if ($newStatus !== $charge->status) {
-                $previousStatus = $charge->status;
+            if ($newStatus === 'approved' && $charge->status !== 'approved') {
+                $this->handleWebhookPayment($charge, [
+                    'id' => $charge->acquirer_transaction_id,
+                    'status' => $externalStatus,
+                    'amount' => $response['amount'] ?? null,
+                    'pix' => [
+                        'endToEndId' => data_get($response, 'data.pix.endToEndId')
+                            ?? data_get($response, 'data.pix.end2EndId')
+                            ?? data_get($response, 'pix.endToEndId'),
+                    ],
+                    'metadata' => [
+                        'source' => 'payfort_sync',
+                        'charge_id' => $charge->id,
+                    ],
+                ]);
+
+                $charge->refresh();
+
+                return ['success' => true, 'status' => $charge->status, 'synced' => true, 'side_effects_handled' => true];
+            }
+
+            if ($newStatus !== $charge->status && !in_array($charge->status, ['approved', 'refunded', 'chargeback'], true)) {
                 $charge->update([
                     'status' => $newStatus,
                     'paid_at' => $newStatus === 'approved' ? ($charge->paid_at ?? now()) : $charge->paid_at,
                 ]);
-
-                // Dispatch UTMify event when status changes
-                if ($newStatus === 'approved' && $previousStatus !== 'approved') {
-                    $this->dispatchUtmifyEvent($charge->fresh());
-                }
             }
 
             return ['success' => true, 'status' => $newStatus, 'synced' => true];
@@ -2461,17 +2481,32 @@ class PaymentService
             ];
             $newStatus = $statusMap[strtolower($externalStatus)] ?? $charge->status;
 
-            if ($newStatus !== $charge->status) {
-                $previousStatus = $charge->status;
+            if ($newStatus === 'approved' && $charge->status !== 'approved') {
+                $this->handleWebhookPayment($charge, [
+                    'id' => $charge->acquirer_transaction_id,
+                    'status' => $externalStatus,
+                    'amount' => $response['amount'] ?? null,
+                    'pix' => [
+                        'endToEndId' => data_get($response, 'data.pix.endToEndId')
+                            ?? data_get($response, 'data.pix.end2EndId')
+                            ?? data_get($response, 'pix.endToEndId'),
+                    ],
+                    'metadata' => [
+                        'source' => 'blupay_sync',
+                        'charge_id' => $charge->id,
+                    ],
+                ]);
+
+                $charge->refresh();
+
+                return ['success' => true, 'status' => $charge->status, 'synced' => true, 'side_effects_handled' => true];
+            }
+
+            if ($newStatus !== $charge->status && !in_array($charge->status, ['approved', 'refunded', 'chargeback'], true)) {
                 $charge->update([
                     'status' => $newStatus,
                     'paid_at' => $newStatus === 'approved' ? ($charge->paid_at ?? now()) : $charge->paid_at,
                 ]);
-
-                // Dispatch UTMify event when status changes
-                if ($newStatus === 'approved' && $previousStatus !== 'approved') {
-                    $this->dispatchUtmifyEvent($charge->fresh());
-                }
             }
 
             return ['success' => true, 'status' => $newStatus, 'synced' => true];
@@ -2694,6 +2729,71 @@ class PaymentService
     }
 
     /**
+     * Sync with Asaas API
+     */
+    private function syncAsaasChargeStatus(Charge $charge): array
+    {
+        $asaas = $this->factory->asaas();
+
+        if (!$asaas) {
+            return ['success' => true, 'status' => $charge->status, 'synced' => false];
+        }
+
+        try {
+            $response = $asaas->getPayment($charge->acquirer_transaction_id);
+
+            if (!$response || !($response['success'] ?? true)) {
+                return ['success' => true, 'status' => $charge->status, 'synced' => false];
+            }
+
+            $externalStatus = strtolower((string) ($response['status'] ?? ''));
+            $confirmedStatuses = ['confirmed', 'received', 'received_in_cash'];
+
+            if (in_array($externalStatus, $confirmedStatuses, true) && $charge->status !== 'approved') {
+                $this->handleWebhookPayment($charge, [
+                    'id' => $charge->acquirer_transaction_id,
+                    'status' => 'approved',
+                    'amount' => $response['value'] ?? $response['netValue'] ?? null,
+                    'metadata' => [
+                        'source' => 'asaas_sync',
+                        'charge_id' => $charge->id,
+                    ],
+                ]);
+
+                $charge->refresh();
+
+                return ['success' => true, 'status' => $charge->status, 'synced' => true, 'side_effects_handled' => true];
+            }
+
+            $statusMap = [
+                'pending' => 'pending',
+                'overdue' => 'expired',
+                'refunded' => 'refunded',
+                'refund_requested' => 'refunded',
+                'chargeback_requested' => 'chargeback',
+                'chargeback_dispute' => 'chargeback',
+                'awaiting_chargeback_reversal' => 'chargeback',
+                'dunning_requested' => 'pending',
+                'dunning_received' => 'approved',
+            ];
+            $newStatus = $statusMap[$externalStatus] ?? $charge->status;
+
+            if ($newStatus !== $charge->status && !in_array($charge->status, ['approved', 'refunded', 'chargeback'], true)) {
+                $charge->update(['status' => $newStatus]);
+            }
+
+            return ['success' => true, 'status' => $newStatus, 'synced' => true];
+        } catch (\Throwable $e) {
+            Log::error('Sync Asaas charge status error', [
+                'charge_id' => $charge->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['success' => true, 'status' => $charge->status, 'synced' => false];
+        }
+    }
+
+    /**
      * Sync with Babylon API (legacy)
      */
     private function syncBabylonChargeStatus(Charge $charge): array
@@ -2714,35 +2814,40 @@ class PaymentService
 
             if ($response->successful()) {
                 $data = $response->json();
-                $status = $data['status'] ?? $charge->status;
+                $externalStatus = $data['status'] ?? $charge->status;
 
-                // Map Babylon status to internal status
+                if (in_array(strtolower((string) $externalStatus), ['paid', 'approved', 'confirmed', 'concluida'], true)
+                    && $charge->status !== 'approved') {
+                    $this->handleWebhookPayment($charge, [
+                        'id' => $charge->acquirer_transaction_id,
+                        'status' => $externalStatus,
+                        'amount' => $data['amount'] ?? null,
+                        'pix' => [
+                            'endToEndId' => $data['endToEndId'] ?? $data['end2EndId'] ?? null,
+                        ],
+                        'metadata' => [
+                            'source' => 'babylon_sync',
+                            'charge_id' => $charge->id,
+                        ],
+                    ]);
+
+                    $charge->refresh();
+
+                    return ['success' => true, 'status' => $charge->status, 'synced' => true, 'side_effects_handled' => true];
+                }
+
                 $statusMap = [
-                    'paid' => 'paid',
-                    'approved' => 'paid',
-                    'confirmed' => 'paid',
-                    'CONCLUIDA' => 'paid',
                     'waiting_payment' => 'pending',
                     'pending' => 'pending',
-                    'ATIVA' => 'pending',
+                    'ativa' => 'pending',
                     'expired' => 'expired',
                     'cancelled' => 'cancelled',
                     'refunded' => 'refunded',
                 ];
+                $newStatus = $statusMap[strtolower((string) $externalStatus)] ?? $charge->status;
 
-                $newStatus = $statusMap[$status] ?? $charge->status;
-
-                if ($newStatus !== $charge->status) {
-                    $previousStatus = $charge->status;
-                    $charge->update([
-                        'status' => $newStatus,
-                        'paid_at' => $newStatus === 'paid' ? now() : $charge->paid_at,
-                    ]);
-
-                    // Dispatch UTMify event when status changes to paid
-                    if ($newStatus === 'paid' && $previousStatus !== 'paid') {
-                        $this->dispatchUtmifyEvent($charge->fresh());
-                    }
+                if ($newStatus !== $charge->status && !in_array($charge->status, ['approved', 'refunded', 'chargeback'], true)) {
+                    $charge->update(['status' => $newStatus]);
                 }
 
                 return ['success' => true, 'status' => $newStatus, 'synced' => true];

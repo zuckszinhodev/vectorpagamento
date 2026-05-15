@@ -91,6 +91,14 @@ class EnkiWebhookHandler
             })
             ->first();
 
+        // Fallback: try by metadata.charge_id
+        if (!$charge) {
+            $chargeId = $transaction['metadata']['charge_id'] ?? null;
+            if ($chargeId) {
+                $charge = Charge::find($chargeId);
+            }
+        }
+
         if (!$charge) {
             Log::warning('Enki transaction webhook: charge not found', [
                 'event' => $event,

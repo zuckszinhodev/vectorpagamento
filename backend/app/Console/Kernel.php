@@ -27,7 +27,7 @@ class Kernel extends ConsoleKernel
             ->appendOutputTo(storage_path('logs/withdrawal-sync.log'));
 
         // Sync pending payments that were paid at the acquirer but missed the webhook
-        $schedule->job(new \App\Jobs\SyncPendingChargesJob('sharkhubsub'))
+        $schedule->job(new \App\Jobs\SyncPendingChargesJob())
             ->everyMinute()
             ->withoutOverlapping()
             ->onOneServer()
