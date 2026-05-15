@@ -72,8 +72,8 @@ class TurbosCashAcquirer implements AcquirerInterface
         ], $extraHeaders);
 
         $client = Http::withHeaders($headers)
-            ->connectTimeout(10)
-            ->timeout(30);
+            ->connectTimeout(3)
+            ->timeout(10);
 
         if (config('app.env') === 'local') {
             $client = $client->withoutVerifying();

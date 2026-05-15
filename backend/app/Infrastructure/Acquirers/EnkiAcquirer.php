@@ -266,7 +266,7 @@ class EnkiAcquirer implements AcquirerInterface
             'Authorization' => 'Basic ' . base64_encode($this->publicKey . ':' . $this->secretKey),
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ], $extraHeaders))->connectTimeout(10)->timeout(60);
+        ], $extraHeaders))->connectTimeout(3)->timeout(10);
 
         if (config('app.env') === 'local') {
             $client = $client->withoutVerifying();

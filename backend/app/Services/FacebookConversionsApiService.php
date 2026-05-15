@@ -146,7 +146,7 @@ class FacebookConversionsApiService
         }
 
         try {
-            $response = Http::timeout(15)
+            $response = Http::connectTimeout(3)->timeout(5)
                 ->withToken($integration->access_token)
                 ->post($url, $body);
 
@@ -218,7 +218,7 @@ class FacebookConversionsApiService
         }
 
         try {
-            $response = Http::timeout(15)
+            $response = Http::connectTimeout(3)->timeout(5)
                 ->withToken($accessToken)
                 ->post($url, $body);
 

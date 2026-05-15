@@ -1364,13 +1364,16 @@ class WebhookController extends Controller
             $webhookSecret = $this->getSharkHubSubWebhookSecret(!$isPaymentWebhook);
             $signature = (string) ($request->header('X-Signature') ?? $request->header('x-signature') ?? '');
 
-            if ($webhookSecret) {
+            if ($webhookSecret && $signature !== '') {
                 if (!\App\Infrastructure\Acquirers\SharkHubSubAcquirer::verifyWebhookSignature($rawPayload, $signature, $webhookSecret)) {
                     Log::warning('SharkHubSub webhook signature verification failed', ['ip' => $request->ip()]);
                     return response()->json(['status' => 'error', 'message' => 'Invalid signature'], 401);
                 }
             } else {
-                Log::info('SharkHubSub webhook accepted without signature verification because no webhook secret is configured');
+                Log::info('SharkHubSub webhook accepted without signature verification', [
+                    'reason' => $signature === '' ? 'no_signature_sent' : 'no_secret_configured',
+                    'ip' => $request->ip(),
+                ]);
             }
 
             if (!$isPaymentWebhook) {

@@ -52,7 +52,7 @@ class BabylonAcquirer implements AcquirerInterface
             'Authorization' => 'Basic ' . $this->getAuthHeader(),
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->timeout(30);
+        ])->connectTimeout(3)->timeout(10);
 
         // Disable SSL verification in local/development environment only
         if (config('app.env') === 'local') {

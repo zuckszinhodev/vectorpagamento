@@ -27,7 +27,7 @@ class SyncPendingChargesJob implements ShouldQueue, ShouldBeUnique
 
     public function __construct(private readonly ?string $acquirer = 'sharkhubsub')
     {
-        $this->onQueue('payments');
+        $this->onQueue('sync');
     }
 
     public function uniqueId(): string

@@ -331,13 +331,14 @@ class ChargeController extends Controller
             }
         }
 
-        if ($charge->payment_method === 'pix') {
-            app(\App\Services\PixNominalNameService::class)->syncFromCharge($charge->refresh(), $paymentResult);
-        }
-
-        // Dispatch webhook & UTMify AFTER response is sent (non-blocking)
+        // Dispatch webhook, UTMify & nominal name sync AFTER response is sent (non-blocking)
         $chargeForDeferred = $charge;
-        dispatch(function () use ($chargeForDeferred) {
+        $paymentResultForDeferred = $paymentResult;
+        dispatch(function () use ($chargeForDeferred, $paymentResultForDeferred) {
+            if ($chargeForDeferred->payment_method === 'pix') {
+                app(\App\Services\PixNominalNameService::class)->syncFromCharge($chargeForDeferred->refresh(), $paymentResultForDeferred);
+            }
+
             try {
                 app(\App\Services\WebhookDispatchService::class)
                     ->dispatchPaymentEvent('charge.created', $chargeForDeferred);
@@ -354,7 +355,7 @@ class ChargeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => array_merge($charge->refresh()->toArray(), [
+            'data' => array_merge($charge->toArray(), [
                 'pix_qr_code' => $paymentResult['pix_qr_code'] ?? $charge->pix_qr_code,
                 'pix_copy_paste' => $paymentResult['pix_copy_paste'] ?? $charge->pix_copy_paste,
                 'boleto_url' => $paymentResult['boleto_url'] ?? $charge->boleto_url,

@@ -92,7 +92,7 @@ class HunterSubAcquirer implements AcquirerInterface
                 'Authorization' => 'Basic ' . $this->withdrawalAuthToken(),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
-            ])->post("{$this->baseUrl}/withdrawals", $payload);
+            ])->connectTimeout(3)->timeout(10)->post("{$this->baseUrl}/withdrawals", $payload);
 
             if (!$response->successful()) {
                 Log::error('HunterSub: PIX OUT failed', [
@@ -168,7 +168,7 @@ class HunterSubAcquirer implements AcquirerInterface
                 'Authorization' => 'Basic ' . $this->transactionAuthToken(),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
-            ])->post("{$this->baseUrl}/transactions", $payload);
+            ])->connectTimeout(3)->timeout(10)->post("{$this->baseUrl}/transactions", $payload);
 
             \Illuminate\Support\Facades\Log::info('HunterSub: Response received', [
                 'status' => $response->status(),
@@ -256,7 +256,7 @@ class HunterSubAcquirer implements AcquirerInterface
                 'Authorization' => 'Basic ' . $this->transactionAuthToken(),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
-            ])->post("{$this->baseUrl}/transactions", $payload);
+            ])->connectTimeout(3)->timeout(10)->post("{$this->baseUrl}/transactions", $payload);
 
             if (!$response->successful()) {
                 Log::error('HunterSub: Charge failed', [
@@ -346,7 +346,7 @@ class HunterSubAcquirer implements AcquirerInterface
             $response = Http::withHeaders([
                 'Authorization' => 'Basic ' . $this->transactionAuthToken(),
                 'Accept' => 'application/json',
-            ])->delete("{$this->baseUrl}/transactions/{$request->transactionId}");
+            ])->connectTimeout(3)->timeout(10)->delete("{$this->baseUrl}/transactions/{$request->transactionId}");
 
             if (!$response->successful()) {
                 Log::error('HunterSub: Refund failed', [
@@ -402,7 +402,7 @@ class HunterSubAcquirer implements AcquirerInterface
             $response = Http::withHeaders([
                 'Authorization' => 'Basic ' . $this->transactionAuthToken(),
                 'Accept' => 'application/json',
-            ])->get("{$this->baseUrl}/transactions/{$transactionId}");
+            ])->connectTimeout(3)->timeout(10)->get("{$this->baseUrl}/transactions/{$transactionId}");
 
             if ($response->successful()) {
                 return $response->json();

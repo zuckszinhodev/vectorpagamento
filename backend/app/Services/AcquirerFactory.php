@@ -511,6 +511,7 @@ class AcquirerFactory
                     'base_url'       => config('acquirers.payfort.base_url', 'https://api.payfortbank.com'),
                     'webhook_secret' => config('acquirers.payfort.webhook_secret', ''),
                 ]);
+                $this->payfort->warmAuthToken();
             } else {
                 $creds = self::resolveCredentials('payfort');
                 if ($creds) {
@@ -521,6 +522,7 @@ class AcquirerFactory
                         'base_url'       => $creds['base_url'] ?? config('acquirers.payfort.base_url', 'https://api.payfortbank.com'),
                         'webhook_secret' => $creds['webhook_secret'] ?? '',
                     ]);
+                    $this->payfort->warmAuthToken();
                 }
             }
         }
@@ -543,6 +545,7 @@ class AcquirerFactory
                     'base_url'       => $creds['base_url'] ?? config('acquirers.payfort.base_url', 'https://api.payfortbank.com'),
                     'webhook_secret' => $creds['webhook_secret'] ?? '',
                 ]);
+                $this->payfortByAccount[$accountId]->warmAuthToken();
             } else {
                 $this->payfortByAccount[$accountId] = $this->payfort();
             }

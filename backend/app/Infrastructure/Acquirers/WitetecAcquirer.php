@@ -44,7 +44,7 @@ class WitetecAcquirer implements AcquirerInterface
             'x-api-key' => $this->apiKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->timeout(30);
+        ])->connectTimeout(3)->timeout(10);
 
         if (config('app.env') === 'local') {
             $client = $client->withoutVerifying();

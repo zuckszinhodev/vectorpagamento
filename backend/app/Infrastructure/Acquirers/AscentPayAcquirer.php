@@ -84,7 +84,7 @@ class AscentPayAcquirer implements AcquirerInterface
         $client = Http::withHeaders([
             'Authorization' => 'Basic ' . $this->getAuthHeader(),
             'Accept' => 'application/json',
-        ])->asJson()->timeout(30);
+        ])->asJson()->connectTimeout(3)->timeout(10);
 
         // Disable SSL verification in local/development environment only
         if (config('app.env') === 'local') {

@@ -63,7 +63,7 @@ class BluPayAcquirer implements AcquirerInterface
             'Authorization' => 'Basic ' . $basicAuth,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->timeout(30);
+        ])->connectTimeout(3)->timeout(10);
 
         if (config('app.env') === 'local') {
             $client = $client->withoutVerifying();

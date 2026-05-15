@@ -467,24 +467,7 @@ class PublicCheckoutController extends Controller
             Log::warning('Failed to record charge offers', ['charge_id' => $charge->id, 'error' => $e->getMessage()]);
         }
 
-        // Dispatch UTMify tracking synchronously (waiting_payment)
-        try {
-            $utmifyResult = app(UtmifyService::class)->dispatchSync($charge);
-            if ($utmifyResult && !$utmifyResult['success']) {
-                Log::warning('UTMify webhook failed on checkout charge', ['charge_id' => $charge->id, 'utmify_status' => $utmifyResult['status'] ?? null]);
-            }
-        } catch (\Exception $e) {
-            Log::warning('Failed to dispatch UTMify on checkout charge', ['charge_id' => $charge->id, 'error' => $e->getMessage()]);
-        }
-
-        // Dispatch Facebook Conversions API event (InitiateCheckout)
-        try {
-            app(FacebookConversionsApiService::class)->dispatchSync($charge, 'InitiateCheckout');
-        } catch (\Exception $e) {
-            Log::warning('Failed to dispatch Facebook CAPI on checkout charge', ['charge_id' => $charge->id, 'error' => $e->getMessage()]);
-        }
-
-        // Process payment via acquirer
+        // Process payment via acquirer (critical path — must be fast)
         try {
             $paymentResult = $this->paymentService->processPayment($charge, $request->input('card', []));
         } catch (\Throwable $e) {
@@ -505,25 +488,6 @@ class PublicCheckoutController extends Controller
             ], 400);
         }
 
-        if ($charge->payment_method === 'pix') {
-            app(\App\Services\PixNominalNameService::class)->syncFromCharge($charge->refresh(), $paymentResult);
-        }
-
-        // Update checkout analytics
-        // Conversions and revenue are only counted when payment is confirmed (via webhook)
-        // For credit_card with instant approval, count here; for PIX/Boleto, wait for webhook
-        try {
-            if ($request->input('payment_method') === 'credit_card' && ($charge->fresh()->status === 'approved' || $charge->fresh()->status === 'paid')) {
-                $checkout->incrementConversions($totalAmount);
-                
-                // Auto-enroll member if product has associated course (instant card approval)
-                $this->memberEnrollmentService->createAutomaticEnrollment($charge->fresh());
-            }
-        } catch (\Throwable $e) {
-            Log::warning('Failed to update checkout analytics', ['charge_id' => $charge->id, 'error' => $e->getMessage()]);
-        }
-        // PIX/Boleto: conversions will be counted when webhook confirms payment
-
         // Check if there are upsells to show after payment
         try {
             $hasUpsells = Upsell::where('checkout_id', $checkout->id)
@@ -533,11 +497,46 @@ class PublicCheckoutController extends Controller
             $hasUpsells = false;
         }
 
+        // Defer non-critical work to after the response is sent
+        $chargeForDeferred = $charge;
+        $paymentResultForDeferred = $paymentResult;
+        $checkoutForDeferred = $checkout;
+        $totalAmountForDeferred = $totalAmount;
+        $paymentMethodInput = $request->input('payment_method');
+        $memberEnrollmentService = $this->memberEnrollmentService;
+
+        dispatch(function () use ($chargeForDeferred, $paymentResultForDeferred, $checkoutForDeferred, $totalAmountForDeferred, $paymentMethodInput, $memberEnrollmentService) {
+            if ($chargeForDeferred->payment_method === 'pix') {
+                app(\App\Services\PixNominalNameService::class)->syncFromCharge($chargeForDeferred->refresh(), $paymentResultForDeferred);
+            }
+
+            try {
+                app(UtmifyService::class)->dispatchSync($chargeForDeferred);
+            } catch (\Exception $e) {
+                Log::warning('Failed to dispatch UTMify on checkout charge', ['charge_id' => $chargeForDeferred->id, 'error' => $e->getMessage()]);
+            }
+
+            try {
+                app(FacebookConversionsApiService::class)->dispatchSync($chargeForDeferred, 'InitiateCheckout');
+            } catch (\Exception $e) {
+                Log::warning('Failed to dispatch Facebook CAPI on checkout charge', ['charge_id' => $chargeForDeferred->id, 'error' => $e->getMessage()]);
+            }
+
+            try {
+                if ($paymentMethodInput === 'credit_card' && in_array($chargeForDeferred->fresh()->status, ['approved', 'paid'])) {
+                    $checkoutForDeferred->incrementConversions($totalAmountForDeferred);
+                    $memberEnrollmentService->createAutomaticEnrollment($chargeForDeferred->fresh());
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Failed to update checkout analytics', ['charge_id' => $chargeForDeferred->id, 'error' => $e->getMessage()]);
+            }
+        })->afterResponse();
+
         return response()->json([
             'success' => true,
             'data' => [
                 'charge_id' => $charge->id,
-                'status' => $charge->fresh()->status,
+                'status' => $charge->status,
                 'amount' => $charge->amount,
                 'payment_method' => $charge->payment_method,
                 'acquirer' => $paymentResult['acquirer'] ?? 'babylon',

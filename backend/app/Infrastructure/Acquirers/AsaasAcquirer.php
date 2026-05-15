@@ -62,7 +62,7 @@ class AsaasAcquirer implements AcquirerInterface
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
             'User-Agent' => 'Vector Pagamentos',
-        ])->timeout(30);
+        ])->connectTimeout(3)->timeout(10);
     }
 
     private function makeRequest(string $method, string $endpoint, array $data = []): array

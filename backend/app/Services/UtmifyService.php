@@ -148,7 +148,7 @@ class UtmifyService
     public function send(UtmifyIntegration $integration, array $payload): array
     {
         try {
-            $response = Http::timeout(15)
+            $response = Http::connectTimeout(3)->timeout(5)
                 ->withHeaders([
                     'x-api-token' => $integration->api_token,
                     'Content-Type' => 'application/json',
@@ -252,7 +252,7 @@ class UtmifyService
                 'isTeste' => false,
             ];
 
-            $response = Http::timeout(15)
+            $response = Http::connectTimeout(3)->timeout(5)
                 ->withHeaders([
                     'x-api-token' => $apiToken,
                     'Content-Type' => 'application/json',
@@ -267,7 +267,7 @@ class UtmifyService
                 try {
                     $payload['status'] = 'refunded';
                     $payload['refundedAt'] = now()->utc()->format('Y-m-d H:i:s');
-                    Http::timeout(10)
+                    Http::connectTimeout(3)->timeout(5)
                         ->withHeaders([
                             'x-api-token' => $apiToken,
                             'Content-Type' => 'application/json',

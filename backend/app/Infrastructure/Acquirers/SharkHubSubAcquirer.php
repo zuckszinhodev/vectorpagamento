@@ -345,7 +345,7 @@ class SharkHubSubAcquirer implements AcquirerInterface
             'Authorization' => 'Bearer ' . $this->apiKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->timeout(30);
+        ])->connectTimeout(3)->timeout(10);
     }
 
     private function transferClient()
@@ -354,7 +354,7 @@ class SharkHubSubAcquirer implements AcquirerInterface
             'Authorization' => 'Bearer ' . $this->withdrawalKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->timeout(30);
+        ])->connectTimeout(3)->timeout(10);
     }
 
     private function responseJson($response): array
