@@ -725,15 +725,79 @@ const data = await response.json();`}
                   <span className="text-tx-muted text-sm">- Request Withdrawal</span>
                 </div>
                 <p className="text-tx-secondary text-sm mt-3">
-                  Requests a new withdrawal from available balance.
+                  Solicita um novo saque do saldo disponível via PIX. Você deve especificar a chave PIX de destino.
                 </p>
+
+                {/* Parameters Table */}
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full text-sm border border-border-DEFAULT rounded-lg overflow-hidden">
+                    <thead className="bg-gray-800 text-gray-300">
+                      <tr>
+                        <th className="text-left px-4 py-2 font-medium">Parâmetro</th>
+                        <th className="text-left px-4 py-2 font-medium">Tipo</th>
+                        <th className="text-left px-4 py-2 font-medium">Obrigatório</th>
+                        <th className="text-left px-4 py-2 font-medium">Descrição</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-gray-300 divide-y divide-border-DEFAULT">
+                      <tr className="bg-gray-900/50">
+                        <td className="px-4 py-2 font-mono text-green-400">amount</td>
+                        <td className="px-4 py-2">number</td>
+                        <td className="px-4 py-2">Sim</td>
+                        <td className="px-4 py-2">Valor em centavos (min: 100 = R$1,00)</td>
+                      </tr>
+                      <tr className="bg-gray-900/30">
+                        <td className="px-4 py-2 font-mono text-green-400">method</td>
+                        <td className="px-4 py-2">string</td>
+                        <td className="px-4 py-2">Sim</td>
+                        <td className="px-4 py-2"><code className="text-xs bg-gray-800 px-1 rounded">pix</code></td>
+                      </tr>
+                      <tr className="bg-gray-900/50">
+                        <td className="px-4 py-2 font-mono text-green-400">destination.type</td>
+                        <td className="px-4 py-2">string</td>
+                        <td className="px-4 py-2">Sim</td>
+                        <td className="px-4 py-2"><code className="text-xs bg-gray-800 px-1 rounded">pix</code></td>
+                      </tr>
+                      <tr className="bg-gray-900/30">
+                        <td className="px-4 py-2 font-mono text-green-400">destination.pix_key</td>
+                        <td className="px-4 py-2">string</td>
+                        <td className="px-4 py-2">Sim</td>
+                        <td className="px-4 py-2">Chave PIX de destino</td>
+                      </tr>
+                      <tr className="bg-gray-900/50">
+                        <td className="px-4 py-2 font-mono text-green-400">destination.pix_type</td>
+                        <td className="px-4 py-2">string</td>
+                        <td className="px-4 py-2">Sim</td>
+                        <td className="px-4 py-2"><code className="text-xs bg-gray-800 px-1 rounded">cpf</code>, <code className="text-xs bg-gray-800 px-1 rounded">cnpj</code>, <code className="text-xs bg-gray-800 px-1 rounded">email</code>, <code className="text-xs bg-gray-800 px-1 rounded">phone</code> ou <code className="text-xs bg-gray-800 px-1 rounded">random</code></td>
+                      </tr>
+                      <tr className="bg-gray-900/30">
+                        <td className="px-4 py-2 font-mono text-green-400">notes</td>
+                        <td className="px-4 py-2">string</td>
+                        <td className="px-4 py-2">Não</td>
+                        <td className="px-4 py-2">Observações (máx 500 caracteres)</td>
+                      </tr>
+                      <tr className="bg-gray-900/50">
+                        <td className="px-4 py-2 font-mono text-green-400">idempotency_key</td>
+                        <td className="px-4 py-2">string</td>
+                        <td className="px-4 py-2">Não</td>
+                        <td className="px-4 py-2">Chave de idempotência para evitar duplicatas (máx 120 caracteres)</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
                 <CodeBlock
                   curl={`curl -X POST ${EXTERNAL_API_BASE_URL}/withdrawals \\
   -H "X-API-Key: ${displayKey}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "amount": 50000,
-    "method": "pix"
+    "method": "pix",
+    "destination": {
+      "type": "pix",
+      "pix_key": "email@exemplo.com",
+      "pix_type": "email"
+    }
   }'`}
                   js={`const response = await fetch(
   '${EXTERNAL_API_BASE_URL}/withdrawals',
@@ -746,6 +810,11 @@ const data = await response.json();`}
     body: JSON.stringify({
       amount: 50000,
       method: 'pix',
+      destination: {
+        type: 'pix',
+        pix_key: 'email@exemplo.com',
+        pix_type: 'email',
+      },
     }),
   }
 );
@@ -764,11 +833,17 @@ const data = await response.json();`}
     "net_amount": 50000,
     "method": "pix",
     "status": "pending",
+    "destination": {
+      "type": "pix",
+      "pix_key": "email@exemplo.com",
+      "pix_type": "email"
+    },
     "created_at": "2024-01-01T12:00:00Z"
   }
 }`}</code>
                   </pre>
                 </div>
+
               </div>
 
               {/* Cancel Withdrawal */}
