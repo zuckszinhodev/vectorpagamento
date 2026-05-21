@@ -390,9 +390,9 @@ class SharkHubSubAcquirer implements AcquirerInterface
     private static function normalizeTransferStatus(string $status): string
     {
         return match (strtoupper($status)) {
-            'COMPLETED', 'COMPLETE', 'PAID', 'SUCCESS', 'SUCCEEDED', 'DONE' => 'completed',
+            'COMPLETED', 'COMPLETE', 'PAID', 'APPROVED', 'SUCCESS', 'SUCCEEDED', 'DONE' => 'completed',
             'REFUSED', 'FAILED', 'CANCELLED', 'CANCELED' => 'failed',
-            'IN_QUEUE', 'IN_ANALYSIS', 'APPROVED', 'PROCESSING', 'PENDING', 'CREATED' => 'processing',
+            'IN_QUEUE', 'IN_ANALYSIS', 'PROCESSING', 'PENDING', 'CREATED' => 'processing',
             default => 'processing',
         };
     }

@@ -36,6 +36,7 @@ interface CustomerDetail {
   phone?: string;
   role?: string;
   status: 'active' | 'suspended' | 'blocked';
+  withdrawal_enabled?: boolean;
   block_reason?: string;
   blocked_at?: string;
   kyc_status: 'pending' | 'submitted' | 'under_review' | 'approved' | 'rejected';
@@ -257,6 +258,17 @@ export default function AdminCustomerDetail() {
       queryClient.invalidateQueries({ queryKey: ['admin-customer-detail', customerId] });
     },
     onError: () => toast.error('Erro ao atualizar status'),
+  });
+
+  const updateWithdrawalAccessMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      await api.put(`/admin/customers/${customerId}/withdrawal-access`, { enabled });
+    },
+    onSuccess: () => {
+      toast.success('Controle de saque atualizado');
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-detail', customerId] });
+    },
+    onError: () => toast.error('Erro ao atualizar controle de saque'),
   });
 
   const recalculateBalanceMutation = useMutation({
@@ -496,7 +508,15 @@ export default function AdminCustomerDetail() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'info' && <InfoTab customer={customer} onStatusChange={(status, reason) => updateStatusMutation.mutate({ status, block_reason: reason })} statusLoading={updateStatusMutation.isPending} />}
+      {activeTab === 'info' && (
+        <InfoTab
+          customer={customer}
+          onStatusChange={(status, reason) => updateStatusMutation.mutate({ status, block_reason: reason })}
+          statusLoading={updateStatusMutation.isPending}
+          onWithdrawalAccessChange={(enabled) => updateWithdrawalAccessMutation.mutate(enabled)}
+          withdrawalAccessLoading={updateWithdrawalAccessMutation.isPending}
+        />
+      )}
       {activeTab === 'charges' && (
         <ChargesTab
           customerId={customerId!}
@@ -546,7 +566,19 @@ export default function AdminCustomerDetail() {
 
 // ─── Info Tab ────────────────────────────────────────────────────────────────
 
-function InfoTab({ customer, onStatusChange, statusLoading }: { customer: CustomerDetail; onStatusChange: (status: string, reason?: string) => void; statusLoading: boolean }) {
+function InfoTab({
+  customer,
+  onStatusChange,
+  statusLoading,
+  onWithdrawalAccessChange,
+  withdrawalAccessLoading,
+}: {
+  customer: CustomerDetail;
+  onStatusChange: (status: string, reason?: string) => void;
+  statusLoading: boolean;
+  onWithdrawalAccessChange: (enabled: boolean) => void;
+  withdrawalAccessLoading: boolean;
+}) {
   const [blockReason, setBlockReason] = useState('');
 
   return (
@@ -753,6 +785,22 @@ function InfoTab({ customer, onStatusChange, statusLoading }: { customer: Custom
                 className="flex-1 rounded-lg bg-red-500 px-3 py-2 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-40 transition-colors"
               >
                 Bloquear
+              </button>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-medium text-gray-700">Saques da Empresa</p>
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${customer.withdrawal_enabled !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                  {customer.withdrawal_enabled !== false ? 'Habilitado' : 'Desabilitado'}
+                </span>
+              </div>
+              <button
+                onClick={() => onWithdrawalAccessChange(customer.withdrawal_enabled === false)}
+                disabled={withdrawalAccessLoading}
+                className={`w-full rounded-lg px-3 py-2 text-xs font-medium text-white transition-colors disabled:opacity-40 ${customer.withdrawal_enabled !== false ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}
+              >
+                {customer.withdrawal_enabled !== false ? 'Desabilitar Saques' : 'Habilitar Saques'}
               </button>
             </div>
           </div>

@@ -142,6 +142,53 @@ class CustomerAdminController extends Controller
     }
 
     /**
+     * Enable/disable withdrawals for a specific customer account.
+     */
+    public function updateWithdrawalAccess(Request $request, string $customerId): JsonResponse
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+        ]);
+
+        $user = User::find($customerId);
+
+        if (!$user || !$user->account_id) {
+            return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+        }
+
+        $account = Account::find($user->account_id);
+
+        if (!$account) {
+            return response()->json(['success' => false, 'message' => 'Conta não encontrada'], 404);
+        }
+
+        $settings = is_array($account->settings) ? $account->settings : [];
+        $settings['withdrawal_enabled'] = (bool) $validated['enabled'];
+
+        $account->settings = $settings;
+        $account->save();
+
+        Log::info('Customer withdrawal access updated by admin', [
+            'customer_id' => $user->id,
+            'account_id' => $account->id,
+            'withdrawal_enabled' => (bool) $settings['withdrawal_enabled'],
+            'admin_id' => request()->user()?->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'customer_id' => $user->id,
+                'account_id' => $account->id,
+                'withdrawal_enabled' => (bool) $settings['withdrawal_enabled'],
+            ],
+            'message' => (bool) $settings['withdrawal_enabled']
+                ? 'Saques habilitados para a empresa.'
+                : 'Saques desabilitados para a empresa.',
+        ]);
+    }
+
+    /**
      * Delete a customer (hard delete with cascading cleanup)
      */
     public function destroy(Request $request, string $customerId): JsonResponse
@@ -244,6 +291,7 @@ class CustomerAdminController extends Controller
             $bankInfo = null;
             $pixInfo = null;
             $allPixKeys = [];
+            $withdrawalEnabled = true;
 
             try {
                 $totalWithdrawn = Withdrawal::where('user_id', $user->id)
@@ -258,6 +306,7 @@ class CustomerAdminController extends Controller
                 $account = Account::find($user->account_id);
                 if ($account) {
                     $accountSettings = $account->settings ?? [];
+                    $withdrawalEnabled = (bool) ($accountSettings['withdrawal_enabled'] ?? true);
                     // Check new pix_keys array format (saved from Settings page)
                     if (!empty($accountSettings['pix_keys']) && is_array($accountSettings['pix_keys'])) {
                         $allPixKeys = $accountSettings['pix_keys'];
@@ -459,6 +508,7 @@ class CustomerAdminController extends Controller
                     'bank_info' => $bankInfo ?? null,
                     'pix_info' => $pixInfo ?? null,
                     'pix_keys' => $allPixKeys ?? [],
+                    'withdrawal_enabled' => $withdrawalEnabled,
                     'kyc' => $kycData ?? null,
                     'kyc_documents' => $documents ?? [],
                     'recent_charges' => $recentCharges ?? [],

@@ -87,3 +87,77 @@ it('returns an impersonation token immediately', function () {
         'resource_id' => $customer->id,
     ]);
 });
+
+it('allows admin to toggle withdrawal access for a customer account', function () {
+    $role = Role::create([
+        'id' => Str::uuid()->toString(),
+        'name' => 'Administrador',
+        'slug' => 'admin',
+        'permissions' => [
+            'admin.customers.manage',
+        ],
+    ]);
+
+    $adminAccount = Account::create([
+        'id' => Str::uuid()->toString(),
+        'name' => 'Conta Admin',
+        'document' => '12345678900',
+        'document_type' => 'cpf',
+        'email' => 'admin2@teste.com',
+        'status' => 'active',
+        'kyc_status' => 'approved',
+    ]);
+
+    $customerAccount = Account::create([
+        'id' => Str::uuid()->toString(),
+        'name' => 'Conta Cliente',
+        'document' => '98765432100',
+        'document_type' => 'cpf',
+        'email' => 'cliente2@teste.com',
+        'status' => 'active',
+        'kyc_status' => 'approved',
+        'settings' => ['withdrawal_enabled' => true],
+    ]);
+
+    $admin = User::create([
+        'id' => Str::uuid()->toString(),
+        'account_id' => $adminAccount->id,
+        'email' => 'admin2@teste.com',
+        'password' => bcrypt('password'),
+        'name' => 'Admin User 2',
+        'status' => 'active',
+        'role' => 'admin',
+    ]);
+
+    $admin->forceFill([
+        'role_id' => $role->id,
+        'mfa_enabled' => true,
+        'mfa_secret' => 'JBSWY3DPEHPK3PXP',
+        'kyc_status' => 'approved',
+    ])->save();
+
+    $customer = User::create([
+        'id' => Str::uuid()->toString(),
+        'account_id' => $customerAccount->id,
+        'email' => 'customer2@teste.com',
+        'password' => bcrypt('password'),
+        'name' => 'Customer User 2',
+        'status' => 'active',
+        'role' => 'user',
+        'kyc_status' => 'approved',
+    ]);
+
+    $adminToken = auth()->login($admin);
+
+    $response = $this->withHeader('Authorization', "Bearer {$adminToken}")
+        ->putJson("/api/v1/admin/customers/{$customer->id}/withdrawal-access", [
+            'enabled' => false,
+        ]);
+
+    $response->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.withdrawal_enabled', false);
+
+    $customerAccount->refresh();
+    expect((bool) ($customerAccount->settings['withdrawal_enabled'] ?? true))->toBeFalse();
+});

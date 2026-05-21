@@ -14,6 +14,7 @@ use App\Infrastructure\Acquirers\Webhooks\AsaasWebhookHandler;
 use App\Models\AcquirerConfig;
 use App\Models\Charge;
 use App\Models\Transaction;
+use App\Models\Withdrawal;
 use App\Domain\Acquirer\Entities\Acquirer;
 use App\Services\MemberEnrollmentService;
 use App\Services\PaymentService;
@@ -120,13 +121,47 @@ class WebhookController extends Controller
         }
 
         // SharkHub Subadquirente sends top-level payment/transfer payloads.
-        if (isset($payload['id'], $payload['status'], $payload['method']) && strtoupper((string) $payload['method']) === 'PIX') {
-            $reference = $payload['externalRef'] ?? null;
-            if ($reference) {
-                $charge = Charge::where('id', $reference)
-                    ->orWhere('external_id', $payload['id'])
-                    ->orWhere('acquirer_transaction_id', $payload['id'])
+        if (isset($payload['id'], $payload['status'])) {
+            $eventId = (string) $payload['id'];
+            $method = strtoupper((string) ($payload['method'] ?? ''));
+            $externalRef = (string) ($payload['externalRef']
+                ?? $payload['external_ref']
+                ?? $payload['data']['externalRef']
+                ?? $payload['data']['external_ref']
+                ?? '');
+            $withdrawalRef = (string) ($payload['withdrawal_id']
+                ?? $payload['metadata']['withdrawal_id']
+                ?? $payload['data']['withdrawal_id']
+                ?? $payload['data']['metadata']['withdrawal_id']
+                ?? '');
+
+            $candidateWithdrawalRef = $externalRef !== '' ? $externalRef : $withdrawalRef;
+            if ($candidateWithdrawalRef !== '') {
+                $withdrawal = Withdrawal::where('id', $candidateWithdrawalRef)
+                    ->where('acquirer', 'sharkhubsub')
                     ->first();
+
+                if ($withdrawal) {
+                    return 'sharkhubsub';
+                }
+            }
+
+            if (Withdrawal::where('acquirer_transfer_id', $eventId)->where('acquirer', 'sharkhubsub')->exists()) {
+                return 'sharkhubsub';
+            }
+
+            if ($method === 'PIX') {
+                $charge = null;
+
+                if ($externalRef !== '') {
+                    $charge = Charge::where('id', $externalRef)->first();
+                }
+
+                if (!$charge) {
+                    $charge = Charge::where('external_id', $eventId)
+                        ->orWhere('acquirer_transaction_id', $eventId)
+                        ->first();
+                }
 
                 if ($charge && $charge->acquirer === 'sharkhubsub') {
                     return 'sharkhubsub';
@@ -1340,14 +1375,40 @@ class WebhookController extends Controller
         try {
             $rawPayload = $request->getContent();
             $payload = $request->all();
-            $eventId = (string) ($payload['id'] ?? '');
-            $status = (string) ($payload['status'] ?? '');
+            $eventId = (string) ($payload['id'] ?? $payload['data']['id'] ?? '');
+            $status = (string) ($payload['status'] ?? $payload['data']['status'] ?? '');
+            $externalRef = (string) ($payload['externalRef']
+                ?? $payload['external_ref']
+                ?? $payload['data']['externalRef']
+                ?? $payload['data']['external_ref']
+                ?? '');
+            $withdrawalRef = (string) ($payload['withdrawal_id']
+                ?? $payload['metadata']['withdrawal_id']
+                ?? $payload['data']['withdrawal_id']
+                ?? $payload['data']['metadata']['withdrawal_id']
+                ?? '');
+
+            $chargeByReference = null;
+            if ($externalRef !== '') {
+                $chargeByReference = Charge::where('id', $externalRef)->first();
+            }
+
+            $withdrawalByReference = null;
+            if ($externalRef !== '') {
+                $withdrawalByReference = Withdrawal::where('id', $externalRef)->first();
+            }
+
+            if (!$withdrawalByReference && $eventId !== '') {
+                $withdrawalByReference = Withdrawal::where('acquirer_transfer_id', $eventId)->first();
+            }
 
             Log::info('SharkHubSub webhook received', [
                 'ip' => $request->ip(),
                 'id' => $eventId,
                 'status' => $status,
                 'method' => $payload['method'] ?? null,
+                'external_ref' => $externalRef !== '' ? $externalRef : null,
+                'withdrawal_ref' => $withdrawalRef !== '' ? $withdrawalRef : null,
                 'has_signature' => !empty($request->header('X-Signature') ?? $request->header('x-signature')),
             ]);
 
@@ -1359,9 +1420,14 @@ class WebhookController extends Controller
             $isPaymentWebhook = isset($payload['payer'])
                 || isset($payload['items'])
                 || array_key_exists('paidAt', $payload)
-                || array_key_exists('refundedAt', $payload);
+                || array_key_exists('refundedAt', $payload)
+                || $chargeByReference !== null;
 
-            $webhookSecret = $this->getSharkHubSubWebhookSecret(!$isPaymentWebhook);
+            $isTransferWebhook = !$isPaymentWebhook
+                || $withdrawalByReference !== null
+                || $withdrawalRef !== '';
+
+            $webhookSecret = $this->getSharkHubSubWebhookSecret($isTransferWebhook);
             $signature = (string) ($request->header('X-Signature') ?? $request->header('x-signature') ?? '');
 
             if ($webhookSecret && $signature !== '') {
@@ -1376,10 +1442,17 @@ class WebhookController extends Controller
                 ]);
             }
 
-            if (!$isPaymentWebhook) {
-                $mappedTransferStatus = \App\Infrastructure\Acquirers\SharkHubSubAcquirer::mapWebhookTransferStatus($status);
+            if ($isTransferWebhook) {
+                if ($externalRef !== '') {
+                    $payload['externalRef'] = $externalRef;
+                }
+
+                if ($withdrawalRef !== '') {
+                    $payload['withdrawal_id'] = $withdrawalRef;
+                }
+
                 $handled = app(\App\Services\WithdrawalService::class)
-                    ->handleTransferCompleted($eventId, $mappedTransferStatus, $payload);
+                    ->handleTransferCompleted($eventId, $status, $payload);
 
                 return response()->json([
                     'status' => $handled ? 'success' : 'ok',
@@ -1388,11 +1461,7 @@ class WebhookController extends Controller
                 ]);
             }
 
-            $charge = null;
-            $externalRef = $payload['externalRef'] ?? null;
-            if ($externalRef) {
-                $charge = Charge::where('id', $externalRef)->first();
-            }
+            $charge = $chargeByReference;
 
             if (!$charge) {
                 $charge = Charge::where('external_id', $eventId)

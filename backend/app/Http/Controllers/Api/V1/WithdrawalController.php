@@ -96,10 +96,32 @@ class WithdrawalController extends Controller
         ]);
 
         $accountId = $request->user()->account_id;
+        $account = Account::find($accountId);
+
+        if (!$account) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Conta não encontrada.',
+            ], 404);
+        }
+
         // For API key auth, user()->id equals account_id (not a real user).
         // Use account owner's user_id when authenticated via API key.
         $authUser = $request->user();
         $ownerUser = null;
+
+        $accountSettings = is_array($account->settings) ? $account->settings : [];
+        $accountWithdrawalsEnabled = (bool) ($accountSettings['withdrawal_enabled'] ?? true);
+
+        if (!$accountWithdrawalsEnabled) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'withdrawals_disabled_for_account',
+                    'message' => 'Os saques desta empresa estão temporariamente desabilitados pela administração.',
+                ],
+            ], 403);
+        }
 
         $withdrawalsEnabled = (bool) SystemSetting::get('withdrawals_enabled', true);
         if (!$withdrawalsEnabled) {
@@ -115,7 +137,6 @@ class WithdrawalController extends Controller
         // ── KYC Verification (mandatory for all withdrawal paths) ─────────────
         if (($authUser->type ?? null) === 'api_key') {
             // For API key auth: look up real account KYC status
-            $account = \App\Models\Account::find($accountId);
             if (!$account || ($account->kyc_status ?? '') !== 'approved') {
                 return response()->json([
                     'success' => false,
@@ -258,7 +279,6 @@ class WithdrawalController extends Controller
 
         if (!$destHasPix && !$destHasBank) {
             // Fallback: check if account has pre-registered payment data
-            $account = \App\Models\Account::find($accountId);
             $accountSettings = $account ? ($account->settings ?? []) : [];
             $pixKeys = $accountSettings['pix_keys'] ?? [];
             $legacyPix = $accountSettings['pix']['pix_key'] ?? null;

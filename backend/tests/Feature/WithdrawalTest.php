@@ -215,6 +215,32 @@ it('requires KYC approval for withdrawals', function () {
     $response->assertStatus(403);
 });
 
+it('blocks withdrawal when account withdrawal access is disabled', function () {
+    $this->account->update([
+        'settings' => [
+            'withdrawal_enabled' => false,
+        ],
+    ]);
+
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->postJson('/api/v1/withdrawals', [
+            'amount' => 10000,
+            'method' => 'pix',
+            'mfa_code' => $this->mfaCode,
+            'destination' => [
+                'type' => 'pix',
+                'pix_key' => '12345678900',
+                'pix_type' => 'cpf',
+            ],
+        ]);
+
+    $response->assertStatus(403)
+        ->assertJsonPath('success', false)
+        ->assertJsonPath('error.code', 'withdrawals_disabled_for_account');
+
+    $this->assertDatabaseCount('withdrawals', 0);
+});
+
 it('lists withdrawals for authenticated user', function () {
     Withdrawal::create([
         'id'          => Str::uuid()->toString(),

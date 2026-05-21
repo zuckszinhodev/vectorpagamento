@@ -419,6 +419,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::get('/', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'index']);
             Route::get('/{customerId}', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'show']);
             Route::put('/{customerId}/status', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updateStatus']);
+            Route::put('/{customerId}/withdrawal-access', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updateWithdrawalAccess']);
             Route::delete('/{customerId}', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'destroy']);
             Route::get('/{customerId}/fees', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'getCustomFees']);
             Route::put('/{customerId}/fees', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updateCustomFees']);

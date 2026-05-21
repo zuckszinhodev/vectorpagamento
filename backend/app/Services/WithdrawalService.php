@@ -156,8 +156,25 @@ class WithdrawalService
             ->first();
 
         if (!$withdrawal) {
+            $withdrawalReferences = $this->extractWithdrawalReferences($rawData);
+
+            if ($withdrawalReferences !== []) {
+                $withdrawal = Withdrawal::whereIn('id', $withdrawalReferences)
+                    ->whereIn('status', ['processing', 'pending'])
+                    ->orderByDesc('updated_at')
+                    ->first();
+
+                if ($withdrawal && empty($withdrawal->acquirer_transfer_id) && $transferId !== '') {
+                    $withdrawal->update(['acquirer_transfer_id' => $transferId]);
+                }
+            }
+        }
+
+        if (!$withdrawal) {
             Log::warning('WithdrawalService: no withdrawal found for transfer', [
                 'transfer_id' => $transferId,
+                'external_ref' => $rawData['externalRef'] ?? $rawData['external_ref'] ?? null,
+                'withdrawal_id' => $rawData['withdrawal_id'] ?? $rawData['metadata']['withdrawal_id'] ?? null,
             ]);
             return false;
         }
@@ -631,6 +648,37 @@ class WithdrawalService
             'failed', 'refused', 'error'                => 'failed',
             default                                     => 'processing',
         };
+    }
+
+    /**
+     * Extract candidate withdrawal identifiers from heterogeneous webhook payloads.
+     *
+     * @return array<int, string>
+     */
+    private function extractWithdrawalReferences(array $rawData): array
+    {
+        $candidates = [
+            $rawData['externalRef'] ?? null,
+            $rawData['external_ref'] ?? null,
+            $rawData['withdrawal_id'] ?? null,
+            $rawData['metadata']['withdrawal_id'] ?? null,
+            $rawData['metadata']['externalRef'] ?? null,
+            $rawData['metadata']['external_ref'] ?? null,
+            $rawData['data']['externalRef'] ?? null,
+            $rawData['data']['external_ref'] ?? null,
+            $rawData['data']['withdrawal_id'] ?? null,
+            $rawData['data']['metadata']['withdrawal_id'] ?? null,
+            $rawData['data']['metadata']['externalRef'] ?? null,
+            $rawData['data']['metadata']['external_ref'] ?? null,
+        ];
+
+        return collect($candidates)
+            ->filter(static fn ($value) => is_scalar($value) || $value === null)
+            ->map(static fn ($value) => trim((string) ($value ?? '')))
+            ->filter(static fn (string $value) => $value !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function buildUnsupportedAcquirerCancellationResponse(Withdrawal $withdrawal): array
