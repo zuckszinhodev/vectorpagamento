@@ -401,6 +401,9 @@ class PaymentService
                 return ['locked' => false, 'order' => []];
             }
 
+            $eligibleOrder = [];
+            $hasDisabledAssignment = false;
+
             foreach ($assignments as $assignment) {
                 $slug = strtolower((string) $assignment->acquirer_slug);
                 if ($slug === '') {
@@ -409,11 +412,8 @@ class PaymentService
 
                 $globalConfig = AcquirerConfig::where('acquirer_key', $slug)->first();
                 if (!$globalConfig || !$globalConfig->enabled) {
-                    return [
-                        'locked' => true,
-                        'order' => [$slug],
-                        'error' => 'A adquirente configurada para este seller esta desativada.',
-                    ];
+                    $hasDisabledAssignment = true;
+                    continue;
                 }
 
                 $supportedMethods = array_map('strtolower', $globalConfig->supported_methods ?? []);
@@ -421,7 +421,19 @@ class PaymentService
                     continue;
                 }
 
-                return ['locked' => true, 'order' => [$slug]];
+                $eligibleOrder[] = $slug;
+            }
+
+            if ($eligibleOrder !== []) {
+                return ['locked' => true, 'order' => $eligibleOrder];
+            }
+
+            if ($hasDisabledAssignment) {
+                return [
+                    'locked' => true,
+                    'order' => [],
+                    'error' => 'A adquirente configurada para este seller esta desativada.',
+                ];
             }
 
             return [
@@ -470,7 +482,14 @@ class PaymentService
             ];
         }
 
+        $lockedRemaining = $isAccountLocked ? count($acquirerOrder) : 0;
+        $lastLockedError = null;
+
         foreach ($acquirerOrder as $acquirerName) {
+            if ($isAccountLocked) {
+                $lockedRemaining--;
+            }
+
             $isEnabled = $this->isAcquirerEnabledForRouting($acquirerName);
 
             if (!$isEnabled) {
@@ -479,11 +498,14 @@ class PaymentService
                     'acquirer' => $acquirerName,
                 ]);
                 if ($isAccountLocked) {
-                    $charge->update(['status' => 'failed']);
-                    return [
-                        'success' => false,
-                        'error' => 'A adquirente configurada para este seller esta desativada ou sem credenciais.',
-                    ];
+                    $lastLockedError = 'A adquirente configurada para este seller esta desativada ou sem credenciais.';
+                    if ($lockedRemaining <= 0) {
+                        $charge->update(['status' => 'failed']);
+                        return [
+                            'success' => false,
+                            'error' => $lastLockedError,
+                        ];
+                    }
                 }
                 continue;
             }
@@ -495,11 +517,14 @@ class PaymentService
                     'amount' => $charge->amount,
                 ]);
                 if ($isAccountLocked) {
-                    $charge->update(['status' => 'failed']);
-                    return [
-                        'success' => false,
-                        'error' => 'A adquirente configurada para este seller nao aceita o valor desta cobranca.',
-                    ];
+                    $lastLockedError = 'A adquirente configurada para este seller nao aceita o valor desta cobranca.';
+                    if ($lockedRemaining <= 0) {
+                        $charge->update(['status' => 'failed']);
+                        return [
+                            'success' => false,
+                            'error' => $lastLockedError,
+                        ];
+                    }
                 }
                 continue;
             }
@@ -513,11 +538,14 @@ class PaymentService
                     'acquirer'  => $acquirerName,
                 ]);
                 if ($isAccountLocked) {
-                    $charge->update(['status' => 'failed']);
-                    return [
-                        'success' => false,
-                        'error' => 'A adquirente configurada para este seller esta temporariamente indisponivel.',
-                    ];
+                    $lastLockedError = 'A adquirente configurada para este seller esta temporariamente indisponivel.';
+                    if ($lockedRemaining <= 0) {
+                        $charge->update(['status' => 'failed']);
+                        return [
+                            'success' => false,
+                            'error' => $lastLockedError,
+                        ];
+                    }
                 }
                 continue;
             }
@@ -579,7 +607,7 @@ class PaymentService
             }
 
             if ($isAccountLocked) {
-                $charge->update(['status' => 'failed']);
+                $lastLockedError = $result['error'] ?? 'A adquirente configurada para este seller nao conseguiu gerar a cobranca.';
                 Log::warning('Account-specific PIX acquirer failed; fallback blocked', [
                     'charge_id' => $charge->id,
                     'account_id' => $charge->account_id,
@@ -587,10 +615,15 @@ class PaymentService
                     'error' => $result['error'] ?? 'Acquirer not configured',
                 ]);
 
-                return $result ?? [
-                    'success' => false,
-                    'error' => 'A adquirente configurada para este seller nao conseguiu gerar a cobranca.',
-                ];
+                if ($lockedRemaining <= 0) {
+                    $charge->update(['status' => 'failed']);
+                    return $result ?? [
+                        'success' => false,
+                        'error' => $lastLockedError,
+                    ];
+                }
+
+                continue;
             }
 
             // If failover is disabled, don't try the next acquirer
@@ -598,6 +631,14 @@ class PaymentService
                 Log::info('Failover disabled, not trying next acquirer', ['charge_id' => $charge->id]);
                 return $result ?? ['success' => false, 'error' => 'Acquirer not configured'];
             }
+        }
+
+        if ($isAccountLocked) {
+            $charge->update(['status' => 'failed']);
+            return [
+                'success' => false,
+                'error' => $lastLockedError ?? 'Nenhuma adquirente configurada para este seller conseguiu processar o PIX.',
+            ];
         }
 
         // All acquirers failed → return error
