@@ -142,6 +142,43 @@ npm install
 npm run dev
 ```
 
+### Supabase
+
+O projeto agora pode usar o Supabase em duas frentes:
+
+1. Backend Laravel conectado ao Postgres do Supabase via `backend/.env`
+2. Frontend Vite com cliente Supabase via `frontend/.env`
+
+Exemplo mínimo de backend:
+
+```env
+DB_CONNECTION=pgsql
+DB_HOST=db.<your-project-ref>.supabase.co
+DB_PORT=5432
+DB_DATABASE=postgres
+DB_USERNAME=postgres
+DB_PASSWORD=<database-password>
+DB_SSLMODE=require
+
+SUPABASE_URL=https://<your-project-ref>.supabase.co
+SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+```
+
+Exemplo mínimo de frontend:
+
+```env
+VITE_API_URL=http://127.0.0.1:8000/api/v1
+VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-key>
+```
+
+Observações:
+
+- O fluxo atual de autenticação do sistema continua sendo JWT pelo Laravel.
+- O cliente Supabase do frontend foi adicionado para uso futuro com `Auth`, `Storage` ou `Realtime`, sem quebrar a API existente.
+- Se preferir, o backend também aceita `DATABASE_URL` do Supabase em vez de `DB_HOST`, `DB_PORT` e demais variáveis separadas.
+
 ## 📚 Documentação
 
 - [Arquitetura](docs/architecture/README.md)
