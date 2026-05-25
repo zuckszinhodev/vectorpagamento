@@ -22,14 +22,14 @@ import {
 } from '@heroicons/react/24/outline';
 import { domainsService, CustomDomain, DomainPurpose, DomainType } from '@/services/api/domains.service';
 
-const VECTOR_PAGAMENTOS_BASE_DOMAIN = 'vectorpagamentos.com';
+const WAZERPAY_BASE_DOMAIN = 'wazerpay.com.br';
 
 export default function DomainsPage() {
  const queryClient = useQueryClient();
  const [showAddModal, setShowAddModal] = useState(false);
  const [newDomain, setNewDomain] = useState('');
  const [newSubdomain, setNewSubdomain] = useState('');
- const [newDomainType, setNewDomainType] = useState<DomainType>('Vector Pagamentos');
+ const [newDomainType, setNewDomainType] = useState<DomainType>('wazerpay');
  const [newUseFor, setNewUseFor] = useState<DomainPurpose[]>(['checkout', 'members']);
  const [selectedDomain, setSelectedDomain] = useState<CustomDomain | null>(null);
  const [showTutorial, setShowTutorial] = useState(false);
@@ -58,11 +58,11 @@ export default function DomainsPage() {
  },
  });
 
- // Create Vector Pagamentos subdomain
+ // Create WazerPay subdomain
  const createSubdomainMutation = useMutation({
  mutationFn: ({ subdomain, useFor }: { subdomain: string; useFor: DomainPurpose[] }) => domainsService.createSubdomain(subdomain, useFor),
  onSuccess: (result) => {
- toast.success(result.message || 'Subdomínio Vector Pagamentos criado!');
+ toast.success(result.message || 'Subdomínio WazerPay criado!');
  queryClient.invalidateQueries({ queryKey: ['domains'] });
  closeAddModal();
  },
@@ -75,12 +75,12 @@ export default function DomainsPage() {
  setShowAddModal(false);
  setNewDomain('');
  setNewSubdomain('');
- setNewDomainType('Vector Pagamentos');
+ setNewDomainType('wazerpay');
  setNewUseFor(['checkout', 'members']);
  };
 
  const handleCreate = () => {
- if (newDomainType === 'Vector Pagamentos') {
+ if (newDomainType === 'wazerpay') {
  if (newSubdomain && newUseFor.length > 0) {
  createSubdomainMutation.mutate({ subdomain: newSubdomain, useFor: newUseFor });
  }
@@ -91,7 +91,7 @@ export default function DomainsPage() {
  }
  };
 
- const isCreateDisabled = newDomainType === 'Vector Pagamentos'
+ const isCreateDisabled = newDomainType === 'wazerpay'
  ? !newSubdomain || newUseFor.length === 0 || createSubdomainMutation.isPending
  : !newDomain || newUseFor.length === 0 || createMutation.isPending;
 
@@ -212,7 +212,7 @@ export default function DomainsPage() {
  </div>
  <button
  onClick={() => setShowAddModal(true)}
- className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:from-emerald-700 hover:to-green-700 transition-all"
+ className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:from-purple-700 hover:to-indigo-700 transition-all"
  >
  <PlusIcon className="h-5 w-5" />
  Adicionar Domínio
@@ -226,8 +226,8 @@ export default function DomainsPage() {
  className="w-full flex items-center justify-between p-4 hover:bg-surface-hover transition-colors"
  >
  <div className="flex items-center gap-3">
- <div className="rounded-lg bg-emerald-50 p-2">
- <BookOpenIcon className="h-5 w-5 text-emerald-600" />
+ <div className="rounded-lg bg-purple-50 p-2">
+ <BookOpenIcon className="h-5 w-5 text-purple-600" />
  </div>
  <div className="text-left">
  <p className="text-sm font-semibold text-tx-primary">Tutorial: Como configurar seu domínio personalizado</p>
@@ -246,7 +246,7 @@ export default function DomainsPage() {
  {/* Passo 1 */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">1</span>
+ <span className="flex items-center justify-center h-7 w-7 rounded-full bg-purple-100 text-purple-700 text-sm font-bold">1</span>
  <h3 className="text-base font-semibold text-tx-primary">Escolha seu domínio ou subdomínio</h3>
  </div>
  <p className="text-sm text-tx-secondary ml-0 sm:ml-9">
@@ -256,22 +256,22 @@ export default function DomainsPage() {
  <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider mb-2">Exemplos comuns</p>
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
  <div className="flex items-center gap-2">
- <ShoppingCartIcon className="h-4 w-4 text-emerald-500" />
+ <ShoppingCartIcon className="h-4 w-4 text-purple-500" />
  <code className="text-tx-primary font-mono text-xs">pay.meusite.com.br</code>
  <span className="text-tx-muted text-xs">— Checkout</span>
  </div>
  <div className="flex items-center gap-2">
- <ShoppingCartIcon className="h-4 w-4 text-emerald-500" />
+ <ShoppingCartIcon className="h-4 w-4 text-purple-500" />
  <code className="text-tx-primary font-mono text-xs">comprar.meusite.com.br</code>
  <span className="text-tx-muted text-xs">— Checkout</span>
  </div>
  <div className="flex items-center gap-2">
- <AcademicCapIcon className="h-4 w-4 text-green-500" />
+ <AcademicCapIcon className="h-4 w-4 text-indigo-500" />
  <code className="text-tx-primary font-mono text-xs">alunos.meusite.com.br</code>
  <span className="text-tx-muted text-xs">— Membros</span>
  </div>
  <div className="flex items-center gap-2">
- <AcademicCapIcon className="h-4 w-4 text-green-500" />
+ <AcademicCapIcon className="h-4 w-4 text-indigo-500" />
  <code className="text-tx-primary font-mono text-xs">cursos.meusite.com.br</code>
  <span className="text-tx-muted text-xs">— Membros</span>
  </div>
@@ -282,8 +282,8 @@ export default function DomainsPage() {
  {/* Passo 2 */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">2</span>
- <h3 className="text-base font-semibold text-tx-primary">Adicione o domínio na Vector Pagamentos</h3>
+ <span className="flex items-center justify-center h-7 w-7 rounded-full bg-purple-100 text-purple-700 text-sm font-bold">2</span>
+ <h3 className="text-base font-semibold text-tx-primary">Adicione o domínio na WazerPay</h3>
  </div>
  <p className="text-sm text-tx-secondary ml-0 sm:ml-9">
  Clique em <strong>"Adicionar Domínio"</strong> acima, digite seu domínio e escolha se quer usar no Checkout, Área de Membros ou ambos. Após adicionar, o sistema vai gerar os registros DNS que você precisa configurar.
@@ -293,7 +293,7 @@ export default function DomainsPage() {
  {/* Passo 3 */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">3</span>
+ <span className="flex items-center justify-center h-7 w-7 rounded-full bg-purple-100 text-purple-700 text-sm font-bold">3</span>
  <h3 className="text-base font-semibold text-tx-primary">Configure os registros DNS</h3>
  </div>
  <p className="text-sm text-tx-secondary ml-0 sm:ml-9">
@@ -316,14 +316,14 @@ export default function DomainsPage() {
  <span className="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700">CNAME</span>
  </td>
  <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary">seu-subdominio</td>
- <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary">checkout.Vector Pagamentos.com.br</td>
+ <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary">checkout.wazerpay.com.br</td>
  </tr>
  <tr className="bg-surface-card">
  <td className="px-3 sm:px-4 py-3">
  <span className="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700">TXT</span>
  </td>
- <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary break-all">_Vector Pagamentos-verification.seudominio.com</td>
- <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary break-all">Vector Pagamentos-verify=SEU_TOKEN</td>
+ <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary break-all">_wazerpay-verification.seudominio.com</td>
+ <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary break-all">wazerpay-verify=SEU_TOKEN</td>
  </tr>
  </tbody>
  </table>
@@ -350,10 +350,10 @@ export default function DomainsPage() {
  <ol className="list-decimal list-inside space-y-1.5 text-xs">
  <li>Acesse <strong>dash.cloudflare.com</strong> e selecione seu domínio</li>
  <li>Vá em <strong>DNS → Records → Add Record</strong></li>
- <li>Adicione o registro <strong>CNAME</strong>: Nome = seu subdomínio, Destino = <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.Vector Pagamentos.com.br</code></li>
+ <li>Adicione o registro <strong>CNAME</strong>: Nome = seu subdomínio, Destino = <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.wazerpay.com.br</code></li>
  <li><strong>Ative o proxy (nuvem laranja)</strong> — isso garante SSL automático</li>
- <li>Adicione o registro <strong>TXT</strong>: Nome = <code className="px-1 py-0.5 bg-surface-hover rounded">_Vector Pagamentos-verification.seudominio.com</code>, Conteúdo = seu token</li>
- <li>Aguarde 1-5 minutos e clique em <strong>"Verificar"</strong> na Vector Pagamentos</li>
+ <li>Adicione o registro <strong>TXT</strong>: Nome = <code className="px-1 py-0.5 bg-surface-hover rounded">_wazerpay-verification.seudominio.com</code>, Conteúdo = seu token</li>
+ <li>Aguarde 1-5 minutos e clique em <strong>"Verificar"</strong> na WazerPay</li>
  </ol>
  <div className="mt-2 p-2 rounded bg-green-50 border border-green-200">
  <p className="text-xs text-green-700"><strong>Recomendado:</strong> Cloudflare é o provedor ideal pois fornece SSL gratuito e CDN automaticamente. O proxy (nuvem laranja) DEVE estar ativo.</p>
@@ -364,7 +364,7 @@ export default function DomainsPage() {
  {/* Hostinger */}
  <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
  <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors">
- <span className="flex items-center justify-center h-5 w-5 rounded bg-emerald-600 text-white text-xs font-bold">H</span>
+ <span className="flex items-center justify-center h-5 w-5 rounded bg-purple-600 text-white text-xs font-bold">H</span>
  <span className="text-sm font-medium text-tx-primary">Hostinger</span>
  <ChevronDownIcon className="h-4 w-4 text-tx-muted ml-auto group-open:rotate-180 transition-transform" />
  </summary>
@@ -375,7 +375,7 @@ export default function DomainsPage() {
  <li>Selecione tipo <strong>CNAME</strong>, preencha o nome e destino</li>
  <li>Adicione outro registro tipo <strong>TXT</strong> com o token de verificação</li>
  <li>Salve e aguarde até 15 minutos para propagação</li>
- <li>Volte na Vector Pagamentos e clique em <strong>"Verificar"</strong></li>
+ <li>Volte na WazerPay e clique em <strong>"Verificar"</strong></li>
  </ol>
  </div>
  </details>
@@ -392,8 +392,8 @@ export default function DomainsPage() {
  <li>Acesse <strong>dcc.godaddy.com</strong> e selecione seu domínio</li>
  <li>Vá em <strong>DNS → DNS Records</strong></li>
  <li>Clique em <strong>"Add New Record"</strong></li>
- <li>Tipo: <strong>CNAME</strong>, Nome: seu subdomínio, Valor: <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.Vector Pagamentos.com.br</code></li>
- <li>Adicione outro: Tipo: <strong>TXT</strong>, Nome e Valor conforme exibido na Vector Pagamentos</li>
+ <li>Tipo: <strong>CNAME</strong>, Nome: seu subdomínio, Valor: <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.wazerpay.com.br</code></li>
+ <li>Adicione outro: Tipo: <strong>TXT</strong>, Nome e Valor conforme exibido na WazerPay</li>
  <li>Salve e aguarde entre 15-60 minutos para propagação</li>
  </ol>
  </div>
@@ -431,7 +431,7 @@ export default function DomainsPage() {
  <ol className="list-decimal list-inside space-y-1.5 text-xs">
  <li>Acesse o painel de controle do DNS do seu provedor</li>
  <li>Encontre a seção de <strong>Registros DNS</strong> ou <strong>Zona DNS</strong></li>
- <li>Adicione um registro <strong>CNAME</strong> apontando para <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.Vector Pagamentos.com.br</code></li>
+ <li>Adicione um registro <strong>CNAME</strong> apontando para <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.wazerpay.com.br</code></li>
  <li>Adicione um registro <strong>TXT</strong> com o token de verificação</li>
  <li>Salve e aguarde a propagação DNS (pode variar de minutos a 48h)</li>
  </ol>
@@ -443,7 +443,7 @@ export default function DomainsPage() {
  {/* Passo 4 */}
  <div className="space-y-3">
  <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">4</span>
+ <span className="flex items-center justify-center h-7 w-7 rounded-full bg-purple-100 text-purple-700 text-sm font-bold">4</span>
  <h3 className="text-base font-semibold text-tx-primary">Verifique o domínio</h3>
  </div>
  <p className="text-sm text-tx-secondary ml-9">
@@ -454,7 +454,7 @@ export default function DomainsPage() {
  <CheckCircleIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
  <div>
  <p className="text-xs font-semibold text-green-800">CNAME válido</p>
- <p className="text-xs text-green-700">Seu domínio aponta corretamente para a Vector Pagamentos</p>
+ <p className="text-xs text-green-700">Seu domínio aponta corretamente para a WazerPay</p>
  </div>
  </div>
  <div className="flex items-start gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
@@ -479,13 +479,13 @@ export default function DomainsPage() {
  <div className="ml-9 rounded-lg bg-surface-page border border-border-DEFAULT p-4 space-y-2">
  <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider">Onde seu domínio aparecerá</p>
  <div className="flex flex-col sm:flex-row gap-3">
- <div className="flex items-center gap-2 p-2 rounded bg-emerald-50">
- <ShoppingCartIcon className="h-4 w-4 text-emerald-600" />
- <span className="text-xs text-emerald-800"><strong>Checkout:</strong> Seus clientes pagam via seu domínio</span>
+ <div className="flex items-center gap-2 p-2 rounded bg-purple-50">
+ <ShoppingCartIcon className="h-4 w-4 text-purple-600" />
+ <span className="text-xs text-purple-800"><strong>Checkout:</strong> Seus clientes pagam via seu domínio</span>
  </div>
- <div className="flex items-center gap-2 p-2 rounded bg-green-50">
- <AcademicCapIcon className="h-4 w-4 text-green-600" />
- <span className="text-xs text-green-800"><strong>Membros:</strong> Selecione na configuração da Área de Membros</span>
+ <div className="flex items-center gap-2 p-2 rounded bg-indigo-50">
+ <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
+ <span className="text-xs text-indigo-800"><strong>Membros:</strong> Selecione na configuração da Área de Membros</span>
  </div>
  </div>
  </div>
@@ -524,7 +524,7 @@ export default function DomainsPage() {
  A verificação falhou. O que fazer?
  </summary>
  <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
- Verifique: 1) Se o registro CNAME aponta para <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.Vector Pagamentos.com.br</code> corretamente. 2) Se o registro TXT foi criado com o nome e valor exatos mostrados aqui. 3) Aguarde a propagação e tente novamente. Use <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline">dnschecker.org</a> para verificar se os registros já propagaram.
+ Verifique: 1) Se o registro CNAME aponta para <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.wazerpay.com.br</code> corretamente. 2) Se o registro TXT foi criado com o nome e valor exatos mostrados aqui. 3) Aguarde a propagação e tente novamente. Use <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline">dnschecker.org</a> para verificar se os registros já propagaram.
  </p>
  </details>
  <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
@@ -571,9 +571,9 @@ export default function DomainsPage() {
  <div className="min-w-0">
  <div className="flex items-center gap-2 flex-wrap">
  <span className="font-semibold text-tx-primary break-all">{domain.domain}</span>
- {domain.type === 'Vector Pagamentos' && (
+ {domain.type === 'wazerpay' && (
  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">
- Vector Pagamentos
+ WazerPay
  </span>
  )}
  {domain.is_primary && (
@@ -584,8 +584,8 @@ export default function DomainsPage() {
  )}
  </div>
  <p className="text-sm text-tx-muted">
- {domain.type === 'Vector Pagamentos'
- ? 'Subdomínio Vector Pagamentos • Verificado automaticamente'
+ {domain.type === 'wazerpay'
+ ? 'Subdomínio WazerPay • Verificado automaticamente'
  : domain.verified_at
  ? `Verificado em ${new Date(domain.verified_at).toLocaleDateString('pt-BR')}`
  : 'Aguardando verificação DNS'}
@@ -595,19 +595,19 @@ export default function DomainsPage() {
  <div className="flex items-center gap-2 flex-wrap mt-3 sm:mt-0">
  {/* Use_for badges */}
  {domain.use_for?.includes('checkout') && (
- <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">
+ <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-purple-50 text-purple-700">
  <ShoppingCartIcon className="h-3 w-3" />
  Checkout
  </span>
  )}
  {domain.use_for?.includes('members') && (
- <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-green-50 text-green-700">
+ <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-50 text-indigo-700">
  <AcademicCapIcon className="h-3 w-3" />
  Membros
  </span>
  )}
  {statusBadge(domain.status)}
- {domain.status !== 'verified' && domain.type !== 'Vector Pagamentos' && (
+ {domain.status !== 'verified' && domain.type !== 'wazerpay' && (
  <button
  onClick={(e) => {
  e.stopPropagation();
@@ -648,7 +648,7 @@ export default function DomainsPage() {
  </div>
 
  {/* DNS Config (expandable) - only for custom domains */}
- {selectedDomain?.id === domain.id && domain.dns_config && domain.type !== 'Vector Pagamentos' && (
+ {selectedDomain?.id === domain.id && domain.dns_config && domain.type !== 'wazerpay' && (
  <div className="mt-4 space-y-3 border-t border-border-DEFAULT pt-4">
  <p className="text-sm font-medium text-tx-secondary">
  Configuração DNS necessária:
@@ -750,9 +750,9 @@ export default function DomainsPage() {
  if (updated.length > 0) updateUseForMutation.mutate({ id: domain.id, useFor: updated });
  else toast.error('O domínio deve ter pelo menos um uso');
  }}
- className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+ className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
  />
- <ShoppingCartIcon className="h-4 w-4 text-emerald-600" />
+ <ShoppingCartIcon className="h-4 w-4 text-purple-600" />
  <span className="text-sm text-tx-secondary">Checkout</span>
  </label>
  <label className="flex items-center gap-2 cursor-pointer" onClick={(e) => e.stopPropagation()}>
@@ -767,9 +767,9 @@ export default function DomainsPage() {
  if (updated.length > 0) updateUseForMutation.mutate({ id: domain.id, useFor: updated });
  else toast.error('O domínio deve ter pelo menos um uso');
  }}
- className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+ className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
  />
- <AcademicCapIcon className="h-4 w-4 text-green-600" />
+ <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
  <span className="text-sm text-tx-secondary">Área de Membros</span>
  </label>
  </div>
@@ -806,14 +806,14 @@ export default function DomainsPage() {
  {/* Domain Type Tabs */}
  <div className="flex rounded-lg border border-border-DEFAULT overflow-hidden">
  <button
- onClick={() => setNewDomainType('Vector Pagamentos')}
+ onClick={() => setNewDomainType('wazerpay')}
  className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
- newDomainType === 'Vector Pagamentos'
+ newDomainType === 'wazerpay'
  ? 'bg-emerald-50 text-emerald-700 border-r border-border-DEFAULT'
  : 'bg-surface-page text-tx-muted hover:bg-surface-hover border-r border-border-DEFAULT'
  }`}
  >
- Subdomínio Vector Pagamentos
+ Subdomínio WazerPay
  </button>
  <button
  onClick={() => setNewDomainType('custom')}
@@ -827,8 +827,8 @@ export default function DomainsPage() {
  </button>
  </div>
 
- {/* Vector Pagamentos Subdomain Input */}
- {newDomainType === 'Vector Pagamentos' && (
+ {/* WazerPay Subdomain Input */}
+ {newDomainType === 'wazerpay' && (
  <div>
  <label className="block text-sm font-medium text-tx-secondary mb-1">
  Escolha seu subdomínio
@@ -842,12 +842,12 @@ export default function DomainsPage() {
  className="flex-1 rounded-l-element border border-r-0 border-border-DEFAULT bg-surface-card px-4 py-2.5 text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
  />
  <span className="inline-flex items-center px-3 py-2.5 border border-border-DEFAULT bg-surface-page rounded-r-element text-sm text-tx-muted">
- .{VECTOR_PAGAMENTOS_BASE_DOMAIN}
+ .{WAZERPAY_BASE_DOMAIN}
  </span>
  </div>
  {newSubdomain && (
  <p className="mt-1.5 text-xs text-emerald-600 font-medium">
- Seu endereço será: <strong>{newSubdomain}.{VECTOR_PAGAMENTOS_BASE_DOMAIN}</strong>
+ Seu endereço será: <strong>{newSubdomain}.{WAZERPAY_BASE_DOMAIN}</strong>
  </p>
  )}
  <p className="mt-1 text-xs text-tx-muted">
@@ -855,7 +855,7 @@ export default function DomainsPage() {
  </p>
  <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-200 p-3">
  <p className="text-xs text-emerald-700">
- <strong>Gratuito e instantâneo!</strong> Subdomínios Vector Pagamentos são verificados automaticamente, sem necessidade de configuração DNS.
+ <strong>Gratuito e instantâneo!</strong> Subdomínios WazerPay são verificados automaticamente, sem necessidade de configuração DNS.
  </p>
  </div>
  </div>
@@ -896,9 +896,9 @@ export default function DomainsPage() {
  : prev.filter(u => u !== 'checkout')
  );
  }}
- className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+ className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
  />
- <ShoppingCartIcon className="h-4 w-4 text-emerald-600" />
+ <ShoppingCartIcon className="h-4 w-4 text-purple-600" />
  <span className="text-sm text-tx-secondary">Checkout</span>
  </label>
  <label className="flex items-center gap-2 cursor-pointer">
@@ -912,9 +912,9 @@ export default function DomainsPage() {
  : prev.filter(u => u !== 'members')
  );
  }}
- className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+ className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
  />
- <AcademicCapIcon className="h-4 w-4 text-green-600" />
+ <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
  <span className="text-sm text-tx-secondary">Área de Membros</span>
  </label>
  </div>
@@ -942,12 +942,12 @@ export default function DomainsPage() {
  onClick={handleCreate}
  disabled={isCreateDisabled}
  className={`flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-element transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
- newDomainType === 'Vector Pagamentos'
+ newDomainType === 'wazerpay'
  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700'
- : 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700'
+ : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
  }`}
  >
- {isCreating ? 'Criando...' : newDomainType === 'Vector Pagamentos' ? 'Criar Subdomínio' : 'Adicionar Domínio'}
+ {isCreating ? 'Criando...' : newDomainType === 'wazerpay' ? 'Criar Subdomínio' : 'Adicionar Domínio'}
  </button>
  </div>
  </div>

@@ -148,7 +148,7 @@ function CouponModal({
                 <form onSubmit={handleSubmit(onSubmit)}>
                   <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4">
                     <Dialog.Title className="text-lg font-semibold text-tx-primary flex items-center gap-2">
-                      <TicketIcon className="h-5 w-5 text-emerald-500" />
+                      <TicketIcon className="h-5 w-5 text-purple-500" />
                       {isEditing ? 'Editar Cupom' : 'Novo Cupom'}
                     </Dialog.Title>
                     <button
@@ -202,8 +202,8 @@ function CouponModal({
                         <div className="grid grid-cols-2 gap-2">
                           <label className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
                             watch('type') === 'percentage' 
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-600' 
-                              : 'border-border-DEFAULT hover:border-emerald-300'
+                              ? 'border-purple-500 bg-purple-50 text-purple-600' 
+                              : 'border-border-DEFAULT hover:border-purple-300'
                           }`}>
                             <input
                               {...register('type')}
@@ -215,8 +215,8 @@ function CouponModal({
                           </label>
                           <label className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
                             watch('type') === 'fixed' 
-                              ? 'border-emerald-500 bg-emerald-50 text-emerald-600' 
-                              : 'border-border-DEFAULT hover:border-emerald-300'
+                              ? 'border-purple-500 bg-purple-50 text-purple-600' 
+                              : 'border-border-DEFAULT hover:border-purple-300'
                           }`}>
                             <input
                               {...register('type')}
@@ -338,8 +338,8 @@ function CouponModal({
                           reset({ ...watch(), status: checked ? 'active' : 'inactive' });
                         }}
                         className={`${
-                          watch('status') === 'active' ? 'bg-emerald-500' : 'bg-gray-300'
-                        } relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2`}
+                          watch('status') === 'active' ? 'bg-purple-500' : 'bg-gray-300'
+                        } relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2`}
                       >
                         <span
                           className={`${
@@ -442,7 +442,7 @@ export default function CouponsPage() {
         </div>
         <button
           onClick={handleCreate}
-          className="hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500 text-white font-medium hover:bg-emerald-600 transition-all hover:scale-105 active:scale-95 shadow-lg"
+          className="hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-lg bg-purple-500 text-white font-medium hover:bg-purple-600 transition-all hover:scale-105 active:scale-95 shadow-lg"
         >
           <PlusIcon className="h-5 w-5" />
           Criar Cupom
@@ -453,8 +453,8 @@ export default function CouponsPage() {
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         <div className="card p-4 hover:shadow-md transition-shadow">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
-              <TicketIcon className="h-5 w-5 text-emerald-500" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10">
+              <TicketIcon className="h-5 w-5 text-purple-500" />
             </div>
             <div>
               <p className="text-xs text-tx-muted">Total</p>
@@ -494,7 +494,7 @@ export default function CouponsPage() {
             <input
               type="text"
               placeholder="Buscar cupons..."
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-input pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder-tx-muted focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all"
+              className="w-full rounded-lg border border-border-DEFAULT bg-surface-input pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder-tx-muted focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -513,7 +513,7 @@ export default function CouponsPage() {
       {isLoading ? (
         <div className="card p-12 text-center">
           <div className="flex items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
           </div>
         </div>
       ) : coupons.length === 0 ? (
@@ -534,18 +534,18 @@ export default function CouponsPage() {
           {coupons.map((coupon) => (
             <div
               key={coupon.id}
-              className="card p-4 hover:shadow-lg transition-all border-2 border-transparent hover:border-emerald-500/30"
+              className="card p-4 hover:shadow-lg transition-all border-2 border-transparent hover:border-purple-500/30"
             >
               {/* Header */}
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-lg font-bold text-emerald-600 font-mono truncate">
+                    <h3 className="text-lg font-bold text-purple-600 font-mono truncate">
                       {coupon.code}
                     </h3>
                     <button
                       onClick={() => copyCouponCode(coupon.code)}
-                      className="p-1 rounded hover:bg-surface-hover text-tx-muted hover:text-emerald-500 transition-colors"
+                      className="p-1 rounded hover:bg-surface-hover text-tx-muted hover:text-purple-500 transition-colors"
                       title="Copiar código"
                     >
                       <ClipboardDocumentIcon className="h-4 w-4" />
@@ -620,7 +620,7 @@ export default function CouponsPage() {
       {/* Floating Action Button */}
       <button
         onClick={handleCreate}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 transition-all hover:scale-110 active:scale-95 lg:hidden"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-purple-500 text-white shadow-lg hover:bg-purple-600 transition-all hover:scale-110 active:scale-95 lg:hidden"
         title="Criar Cupom"
       >
         <PlusIcon className="h-6 w-6" />

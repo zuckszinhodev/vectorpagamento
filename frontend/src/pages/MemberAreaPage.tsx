@@ -246,7 +246,7 @@ export default function MemberAreaPage() {
  title="Total de Cursos"
  value={dashboard?.total_courses || 0}
  icon={AcademicCapIcon}
- color="emerald"
+ color="purple"
  />
  <StatCard
  title="Total de Aulas"
@@ -394,7 +394,7 @@ export default function MemberAreaPage() {
 // Stat Card Component
 function StatCard({ title, value, icon: Icon, color }: { title: string; value: string | number; icon: any; color: string }) {
  const colorClasses = {
- emerald: 'bg-accent-subtle text-accent-primary',
+ purple: 'bg-accent-subtle text-accent-primary',
  blue: 'bg-accent-subtle text-accent-primary',
  green: 'bg-status-success-subtle text-status-success',
  yellow: 'bg-status-warning-subtle text-status-warning',

@@ -1102,7 +1102,7 @@ function ProductCard({
  isAffiliating?: boolean;
 }) {
  return (
- <div className="group rounded-2xl bg-surface-card shadow-slate-200/50 border border-border-DEFAULT/50/50 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 hover:border-accent-primary/30">
+ <div className="group rounded-2xl bg-surface-card shadow-slate-200/50 border border-border-DEFAULT/50/50 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 hover:border-accent-primary/30">
  {/* Image */}
  <div className="relative aspect-video overflow-hidden bg-surface-hover ">
  {product.image_url ? (
@@ -1173,7 +1173,7 @@ function ProductCard({
 
  {/* Seller */}
  <div className="flex items-center gap-2 mb-4">
- <div className="h-6 w-6 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold">
+ <div className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold">
  {product.seller.name.charAt(0)}
  </div>
  <span className="text-sm text-tx-secondary">{product.seller.name}</span>
@@ -1200,10 +1200,10 @@ function ProductCard({
  onClick={onPromote}
  disabled={isAffiliating}
  className={clsx(
- "flex-1 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold transition-all",
+ "flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-violet-600 text-white font-semibold transition-all",
  isAffiliating
  ? "opacity-50 cursor-not-allowed"
- : "hover:shadow-lg hover:shadow-emerald-500/25 hover:scale-[1.02]"
+ : "hover:shadow-lg hover:shadow-purple-500/25 hover:scale-[1.02]"
  )}
  >
  {isAffiliating ? (
@@ -1243,7 +1243,7 @@ function ProductListItem({
  isAffiliating?: boolean;
 }) {
  return (
- <div className="group rounded-2xl bg-surface-card shadow-slate-200/50 border border-border-DEFAULT/50/50 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:border-accent-primary/30">
+ <div className="group rounded-2xl bg-surface-card shadow-slate-200/50 border border-border-DEFAULT/50/50 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:border-accent-primary/30">
  <div className="flex flex-col sm:flex-row">
  {/* Image */}
  <div className="relative w-full sm:w-64 h-48 sm:h-auto flex-shrink-0 overflow-hidden bg-surface-hover ">
@@ -1302,7 +1302,7 @@ function ProductListItem({
  {/* Seller & Stats */}
  <div className="flex flex-wrap items-center gap-4 text-sm">
  <div className="flex items-center gap-2">
- <div className="h-6 w-6 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold">
+ <div className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold">
  {product.seller.name.charAt(0)}
  </div>
  <span className="text-tx-secondary">{product.seller.name}</span>
@@ -1343,10 +1343,10 @@ function ProductListItem({
  onClick={onPromote}
  disabled={isAffiliating}
  className={clsx(
- "px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold transition-all",
+ "px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-violet-600 text-white font-semibold transition-all",
  isAffiliating
  ? "opacity-50 cursor-not-allowed"
- : "hover:shadow-lg hover:shadow-emerald-500/25"
+ : "hover:shadow-lg hover:shadow-purple-500/25"
  )}
  >
  {isAffiliating ? 'Afiliando...' : 'Promover'}

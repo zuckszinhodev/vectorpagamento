@@ -98,7 +98,7 @@ function PreviewModal({
  </div>
  <div className="bg-surface-card rounded-element px-4 py-1 text-sm text-tx-secondary flex items-center gap-2">
  <GlobeAltIcon className="h-4 w-4" />
- {landingPage?.slug ? `Vector Pagamentos.com/lp/${landingPage.slug}` : 'Preview'}
+ {landingPage?.slug ? `wazerpay.com/lp/${landingPage.slug}` : 'Preview'}
  </div>
  </div>
  <button
@@ -378,14 +378,14 @@ export default function LandingPagesPage() {
  <div
  className="w-full h-full flex flex-col items-center justify-center p-4 text-center"
  style={{
- background: `linear-gradient(135deg, ${lp.content?.theme?.primaryColor || '#22c55e'}22, ${lp.content?.theme?.secondaryColor || '#22c55e'}22)`,
+ background: `linear-gradient(135deg, ${lp.content?.theme?.primaryColor || '#6366f1'}22, ${lp.content?.theme?.secondaryColor || '#8b5cf6'}22)`,
  }}
  >
  {lp.content?.sections?.[0]?.content?.headline ? (
  <>
  <p
  className="text-sm font-bold line-clamp-2 mb-1"
- style={{ color: lp.content?.theme?.primaryColor || '#22c55e' }}
+ style={{ color: lp.content?.theme?.primaryColor || '#6366f1' }}
  >
  {lp.content.sections[0].content.headline}
  </p>

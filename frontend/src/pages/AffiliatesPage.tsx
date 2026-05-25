@@ -784,7 +784,7 @@ export default function AffiliatesPage() {
  title="Total de Afiliados"
  value={`${statsData?.active_affiliates || 0}/${statsData?.total_affiliates || 0}`}
  icon={UserGroupIcon}
- color="bg-gradient-to-br from-emerald-500 to-emerald-600"
+ color="bg-gradient-to-br from-purple-500 to-purple-600"
  />
  <StatsCard
  title="Vendas Totais"
@@ -975,7 +975,7 @@ export default function AffiliatesPage() {
  </div>
  <div className="h-1.5 w-full rounded-full bg-surface-hover ">
  <div
- className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600"
+ className="h-1.5 rounded-full bg-gradient-to-r from-purple-500 to-purple-600"
  style={{ width: `${Math.min(parseFloat(conversionRate(affiliate)), 100)}%` }}
  />
  </div>

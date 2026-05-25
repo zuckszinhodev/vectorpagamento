@@ -346,7 +346,7 @@ function ChargebackDetailModal({
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl">
-                <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4 bg-gradient-to-r from-emerald-50 to-blue-50">
+                <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4 bg-gradient-to-r from-purple-50 to-blue-50">
                   <div>
                     <Dialog.Title className="text-lg font-semibold text-tx-primary">
                       Gestão Completa de Disputa

@@ -54,14 +54,7 @@ interface ChargeFilters {
   search?: string;
 }
 
-function normalizeChargeStatus(status: string) {
-  return status === 'waiting_payment' ? 'pending' : status;
-}
-
-const HIDDEN_CHARGE_STATUSES = new Set(['failed', 'declined', 'blocked']);
-
 function StatusBadge({ status }: { status: string }) {
-  const normalizedStatus = normalizeChargeStatus(status);
   const styles: Record<string, string> = {
     paid: 'badge-success',
     approved: 'badge-success',
@@ -76,7 +69,7 @@ function StatusBadge({ status }: { status: string }) {
 
   const labels: Record<string, string> = {
     paid: 'Pago',
-    approved: 'Pago',
+    approved: 'Aprovado',
     pending: 'Pendente',
     processing: 'Processando',
     failed: 'Falhou',
@@ -86,11 +79,7 @@ function StatusBadge({ status }: { status: string }) {
     chargeback: 'Chargeback',
   };
 
-  return (
-    <span className={`badge ${styles[normalizedStatus] || 'badge-default'}`}>
-      {labels[normalizedStatus] || normalizedStatus}
-    </span>
-  );
+  return <span className={`badge ${styles[status] || 'badge-default'}`}>{labels[status] || status}</span>;
 }
 
 function NewPixChargeModal({
@@ -127,7 +116,7 @@ function NewPixChargeModal({
       
       // Usar PIX retornado pela API ou gerar código simulado como fallback
       const pixCopyPaste = chargeData.pix_copy_paste || chargeData.pix_qr_code || 
-        `00020126580014br.gov.bcb.pix0136${chargeData.id}@Vector Pagamentos.com52040000530398654${(parseFloat(amount) * 100).toString().padStart(4, '0')}5802BR5913${customerName.substring(0, 13)}6009SAO PAULO62070503***6304`;
+        `00020126580014br.gov.bcb.pix0136${chargeData.id}@wazerpay.com52040000530398654${(parseFloat(amount) * 100).toString().padStart(4, '0')}5802BR5913${customerName.substring(0, 13)}6009SAO PAULO62070503***6304`;
       
       setPixCode(pixCopyPaste);
       
@@ -501,8 +490,8 @@ function ChargeDetailModal({
                       <span className="text-sm text-tx-primary">{charge.payment_method}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-tx-muted">Nominal</span>
-                      <span className="text-sm text-tx-primary">{charge.acquirer_name || ''}</span>
+                      <span className="text-sm text-tx-muted">Adquirente</span>
+                      <span className="text-sm text-tx-primary">{charge.acquirer_name || '-'}</span>
                     </div>
                     <hr className="border-border-DEFAULT" />
                     <div className="flex items-center justify-between">
@@ -527,17 +516,17 @@ function ChargeDetailModal({
                     {charge.metadata?.source === 'split' && (
                       <>
                         <hr className="border-border-DEFAULT" />
-                        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3 space-y-2">
+                        <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 p-3 space-y-2">
                           <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                               SPLIT
                             </span>
-                            <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
                               Recebimento via Split
                             </span>
                           </div>
                           {charge.description && (
-                            <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                            <p className="text-xs text-purple-600 dark:text-purple-400">
                               {charge.description}
                             </p>
                           )}
@@ -674,7 +663,7 @@ function ChargeActionsDropdown({
               <EyeIcon className="mr-3 h-4 w-4" />
               Ver detalhes
             </button>
-            {normalizeChargeStatus(charge.status) === 'pending' && (
+            {charge.status === 'pending' && (
               <button
                 type="button"
                 onClick={() => {
@@ -778,9 +767,7 @@ export default function ChargesPage() {
   });
 
   // Usar dados da API
-  const charges: Charge[] = (data?.data || []).filter(
-    (charge: Charge) => !HIDDEN_CHARGE_STATUSES.has(normalizeChargeStatus(charge.status))
-  );
+  const charges: Charge[] = data?.data || [];
   const pagination = data?.meta || { total: 0, last_page: 1 };
 
   const handleViewCharge = (charge: Charge) => {
@@ -830,6 +817,7 @@ export default function ChargesPage() {
               <option value="approved,paid">Pago</option>
               <option value="pending">Pendente</option>
               <option value="expired">Expirado</option>
+              <option value="failed">Falhou</option>
               <option value="refunded">Reembolsado</option>
               <option value="cancelled">Cancelado</option>
             </select>
@@ -904,7 +892,7 @@ export default function ChargesPage() {
                     {formatCurrency(charge.amount)}
                   </p>
                   {charge.metadata?.source === 'split' && (
-                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                    <span className="inline-flex items-center rounded-full bg-purple-100 px-1.5 py-0.5 text-[9px] font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                       SPLIT
                     </span>
                   )}
@@ -913,9 +901,6 @@ export default function ChargesPage() {
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-border-DEFAULT">
                 <span className="text-xs text-tx-muted">
                   {charge.payment_method === 'credit_card' ? 'Cartão' : charge.payment_method === 'pix' ? 'PIX' : charge.payment_method === 'boleto' ? 'Boleto' : charge.payment_method}
-                </span>
-                <span className="max-w-[40%] truncate text-xs text-tx-muted">
-                  {charge.acquirer_name || ''}
                 </span>
                 <span className="text-xs text-tx-muted">{formatDate(charge.created_at)}</span>
               </div>
@@ -943,9 +928,6 @@ export default function ChargesPage() {
                   Método
                 </th>
                 <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">
-                  Nominal
-                </th>
-                <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">
                   Data
                 </th>
                 <th className="relative px-6 py-3.5">
@@ -956,7 +938,7 @@ export default function ChargesPage() {
             <tbody className="divide-y divide-border-DEFAULT bg-surface-card" style={{ overflow: 'visible' }}>
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-tx-muted">
+                  <td colSpan={6} className="px-6 py-12 text-center text-tx-muted">
                     <div className="flex items-center justify-center">
                       <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-primary border-t-transparent" />
                     </div>
@@ -964,7 +946,7 @@ export default function ChargesPage() {
                 </tr>
               ) : charges.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-tx-muted">
+                  <td colSpan={6} className="px-6 py-12 text-center text-tx-muted">
                     Nenhuma cobrança encontrada
                   </td>
                 </tr>
@@ -991,7 +973,7 @@ export default function ChargesPage() {
                             {formatCurrency(charge.amount)}
                           </span>
                           {charge.metadata?.source === 'split' && (
-                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                               SPLIT
                             </span>
                           )}
@@ -1028,9 +1010,6 @@ export default function ChargesPage() {
                         : charge.payment_method === 'split'
                         ? 'Split'
                         : charge.payment_method}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-tx-muted">
-                      {charge.acquirer_name || ''}
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-tx-muted">
                       {formatDate(charge.created_at)}

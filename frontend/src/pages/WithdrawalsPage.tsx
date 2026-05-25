@@ -486,7 +486,7 @@ export default function WithdrawalsPage() {
  {/* Balance Cards */}
  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
  {/* Saldo Disponível */}
- <div className="rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-600 to-green-700 p-5 sm:p-6 relative overflow-hidden">
+ <div className="rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-5 sm:p-6 relative overflow-hidden">
  <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '20px 20px' }} />
  <div className="relative">
  <div className="flex items-center justify-between mb-2">
