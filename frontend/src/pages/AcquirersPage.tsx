@@ -1,4 +1,4 @@
-import { type ComponentType, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-pangea/dnd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -6,9 +6,6 @@ import { api } from '@/lib/api';
 import {
   ArrowsUpDownIcon,
   Bars3Icon,
-  BanknotesIcon,
-  CheckCircleIcon,
-  ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
 
 interface AcquirerPriorityItem {
@@ -89,40 +86,28 @@ export default function AcquirersPage() {
 
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-[2rem] border border-border-DEFAULT bg-surface-card p-6 shadow-sm sm:p-8">
-        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+      <section className="rounded-2xl border border-border-DEFAULT bg-surface-card p-6 shadow-sm sm:p-7">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-              <ShieldCheckIcon className="h-4 w-4" />
-              Roteamento inteligente
-            </div>
-            <h1 className="mt-5 text-2xl font-bold tracking-tight text-tx-primary sm:text-3xl">Prioridade de nominais</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-tx-secondary">
-              Organize a ordem das nominais usadas nas suas cobrancas. Arraste para cima a nominal que deve ter prioridade; se ela nao puder processar, a proxima da lista sera tentada automaticamente.
+            <h1 className="text-2xl font-bold tracking-tight text-tx-primary sm:text-3xl">Prioridade de nominais</h1>
+            <p className="mt-2 text-sm leading-6 text-tx-secondary">
+              Defina a ordem de prioridade das nominais para tentativas de processamento. A primeira da lista sera usada primeiro e, em caso de indisponibilidade, o sistema tenta automaticamente a proxima.
             </p>
           </div>
 
-          <div className="min-w-0 rounded-3xl border border-border-DEFAULT bg-surface-hover p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-tx-muted">Nominal principal</p>
-            <p className="mt-2 max-w-xs truncate text-lg font-bold text-tx-primary">{primaryNominal}</p>
-            <p className="mt-1 text-xs text-tx-muted">Primeira tentativa nas cobrancas elegiveis</p>
+          <div className="rounded-xl border border-border-DEFAULT bg-surface-hover px-4 py-3 text-sm text-tx-secondary">
+            <span className="font-medium text-tx-primary">Prioridade atual:</span> {primaryNominal}
           </div>
         </div>
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <SummaryCard label="Nominais ativas" value={String(items.length)} icon={ShieldCheckIcon} />
-        <SummaryCard label="Nominal prioridade" value={primaryNominal} icon={BanknotesIcon} />
-        <SummaryCard label="Salvamento" value={reorderMutation.isPending ? 'Salvando...' : 'Automatico'} icon={CheckCircleIcon} />
-      </div>
-
-      <section className="overflow-hidden rounded-[1.75rem] border border-border-DEFAULT bg-surface-card shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-border-DEFAULT bg-gradient-to-r from-emerald-500/5 to-transparent px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+      <section className="overflow-hidden rounded-2xl border border-border-DEFAULT bg-surface-card shadow-sm">
+        <div className="flex flex-col gap-3 border-b border-border-DEFAULT px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-tx-primary">Ordem de prioridade</h2>
             <p className="mt-1 text-sm text-tx-muted">A lista abaixo mostra apenas as nominais disponiveis para sua conta.</p>
           </div>
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border-DEFAULT bg-surface-hover px-3 py-1.5 text-xs font-semibold text-tx-secondary shadow-sm">
+          <div className="inline-flex w-fit items-center gap-2 rounded-md border border-border-DEFAULT bg-surface-hover px-3 py-1.5 text-xs font-medium text-tx-secondary">
             <ArrowsUpDownIcon className="h-4 w-4" />
             Arraste para ordenar
           </div>
@@ -150,8 +135,8 @@ export default function AcquirersPage() {
                         <div
                           ref={dragProvided.innerRef}
                           {...dragProvided.draggableProps}
-                          className={`group rounded-3xl border bg-surface-card p-4 transition-all ${
-                            snapshot.isDragging ? 'scale-[1.01] border-emerald-400 shadow-2xl shadow-emerald-950/10' : 'border-border-DEFAULT shadow-sm hover:-translate-y-0.5 hover:shadow-md'
+                          className={`group rounded-xl border bg-surface-card p-4 transition-all ${
+                            snapshot.isDragging ? 'border-accent-primary shadow-lg' : 'border-border-DEFAULT shadow-sm hover:shadow-md'
                           }`}
                         >
                           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -159,7 +144,7 @@ export default function AcquirersPage() {
                               <button
                                 type="button"
                                 {...dragProvided.dragHandleProps}
-                                className="mt-1 rounded-2xl border border-border-DEFAULT bg-surface-hover p-3 text-tx-muted transition group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700"
+                                className="mt-1 rounded-lg border border-border-DEFAULT bg-surface-hover p-2.5 text-tx-muted transition group-hover:bg-surface-elevated"
                                 aria-label="Arrastar nominal"
                               >
                                 <Bars3Icon className="h-5 w-5" />
@@ -167,13 +152,15 @@ export default function AcquirersPage() {
 
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-slate-950 px-2 text-xs font-bold text-white">
+                                  <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-surface-hover px-2 text-xs font-semibold text-tx-secondary">
                                     {index + 1}
                                   </span>
-                                  <h3 className="truncate text-base font-bold text-tx-primary sm:text-lg">
+                                  <h3 className="truncate text-base font-semibold text-tx-primary sm:text-lg">
                                     {getNominalName(item)}
                                   </h3>
                                 </div>
+
+                                <p className="mt-1 text-xs text-tx-muted">Adquirente: {item.name}</p>
 
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   {item.supported_methods.map((method) => (
@@ -185,8 +172,8 @@ export default function AcquirersPage() {
                               </div>
                             </div>
 
-                            <div className={`rounded-2xl px-4 py-2 text-xs font-bold ${index === 0 ? 'bg-emerald-500/10 text-emerald-700' : 'bg-surface-hover text-tx-muted'}`}>
-                              {index === 0 ? 'Prioridade maxima' : `Alternativa ${index}`}
+                            <div className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${index === 0 ? 'bg-accent-subtle text-accent-primary' : 'bg-surface-hover text-tx-secondary'}`}>
+                              Prioridade {index + 1}
                             </div>
                           </div>
                         </div>
@@ -200,22 +187,6 @@ export default function AcquirersPage() {
           </DragDropContext>
         )}
       </section>
-    </div>
-  );
-}
-
-function SummaryCard({ label, value, icon: Icon }: { label: string; value: string; icon: ComponentType<{ className?: string }> }) {
-  return (
-    <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-4">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wide text-tx-muted">{label}</p>
-          <p className="truncate text-sm font-semibold text-tx-primary">{value}</p>
-        </div>
-      </div>
     </div>
   );
 }

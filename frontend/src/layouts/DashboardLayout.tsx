@@ -10,7 +10,6 @@ import {
   HomeIcon,
   CreditCardIcon,
   ShoppingBagIcon,
-  LinkIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   MoonIcon,
@@ -67,7 +66,6 @@ const navigation: NavItem[] = [
     { name: 'Chargebacks', href: '/chargebacks' },
   ]},
   { name: 'Produtos', href: '/products', icon: ShoppingBagIcon },
-  { name: 'Checkouts', href: '/checkouts', icon: LinkIcon },
   { name: 'Adquirentes', href: '/acquirers', icon: ArrowsRightLeftIcon },
   { name: 'Membros', href: '/member-area', icon: AcademicCapIcon },
   { name: 'Saques', href: '/withdrawals', icon: BanknotesIcon },
@@ -208,9 +206,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* Logo */}
             <div className="flex items-center gap-6">
               <NavLink to="/dashboard" className="flex items-center group">
-                <span className="text-base font-bold text-tx-primary tracking-tight">
-                  <span className="text-emerald-500">Vector</span>Pagamentos
-                </span>
+                <img
+                  src="/img/logo.png"
+                  alt="VectorPagamentos"
+                  className="h-8 w-auto object-contain"
+                />
               </NavLink>
 
               {/* Desktop Navigation */}

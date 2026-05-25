@@ -93,13 +93,13 @@ interface WithdrawalForm {
 }
 
 const statusConfig = {
- pending: { label: 'Pendente', icon: ClockIcon, color: 'text-amber-500 bg-status-warning-subtle' },
- pending_approval: { label: 'Aguardando Aprovação', icon: ShieldCheckIcon, color: 'text-orange-500 bg-orange-100' },
- processing: { label: 'Processando', icon: ArrowPathIcon, color: 'text-blue-500 bg-accent-subtle' },
- approved: { label: 'Aprovado', icon: CheckCircleIcon, color: 'text-emerald-600 bg-emerald-100' },
- completed: { label: 'Concluído', icon: CheckCircleIcon, color: 'text-status-success bg-status-success-subtle' },
- failed: { label: 'Falhou', icon: XCircleIcon, color: 'text-status-error bg-status-error-subtle' },
- cancelled: { label: 'Cancelado', icon: XCircleIcon, color: 'text-tx-muted bg-surface-hover' },
+ pending: { label: 'Pendente', icon: ClockIcon, color: 'text-amber-700 bg-amber-500/10 border border-amber-500/20' },
+ pending_approval: { label: 'Aguardando aprovação', icon: ShieldCheckIcon, color: 'text-orange-700 bg-orange-500/10 border border-orange-500/20' },
+ processing: { label: 'Processando', icon: ArrowPathIcon, color: 'text-blue-700 bg-blue-500/10 border border-blue-500/20' },
+ approved: { label: 'Aprovado', icon: CheckCircleIcon, color: 'text-emerald-700 bg-emerald-500/10 border border-emerald-500/20' },
+ completed: { label: 'Concluído', icon: CheckCircleIcon, color: 'text-emerald-700 bg-emerald-500/10 border border-emerald-500/20' },
+ failed: { label: 'Falhou', icon: XCircleIcon, color: 'text-red-700 bg-red-500/10 border border-red-500/20' },
+ cancelled: { label: 'Cancelado', icon: XCircleIcon, color: 'text-tx-secondary bg-surface-hover border border-border-DEFAULT' },
 };
 
 const banks = [
@@ -460,12 +460,11 @@ export default function WithdrawalsPage() {
  const getWithdrawalReason = (withdrawal: Withdrawal) => withdrawal.failure_reason || withdrawal.notes;
 
  return (
- <div className="space-y-6">
- {/* Header */}
- <div>
- <h1 className="text-2xl font-bold text-tx-primary">Saques</h1>
- <p className="text-sm text-tx-muted mt-1">
- Gerencie suas solicitações de saque
+ <div className="space-y-5">
+ <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-5 sm:p-6">
+ <h1 className="text-2xl font-bold tracking-tight text-tx-primary">Saques</h1>
+ <p className="mt-1 text-sm text-tx-muted">
+ Acompanhe saldo disponível, solicitações e histórico de transferências.
  </p>
  </div>
 
@@ -483,51 +482,44 @@ export default function WithdrawalsPage() {
 
 
 
- {/* Balance Cards */}
- <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
- {/* Saldo Disponível */}
- <div className="rounded-2xl bg-gradient-to-br from-emerald-600 via-emerald-600 to-indigo-700 p-5 sm:p-6 relative overflow-hidden">
- <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '20px 20px' }} />
- <div className="relative">
- <div className="flex items-center justify-between mb-2">
- <span className="text-white/70 text-sm font-medium">Saldo Disponível</span>
+ <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
+ <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-5 sm:p-6">
+ <div className="mb-2 flex items-center justify-between">
+ <span className="text-sm font-medium text-tx-secondary">Saldo disponível</span>
  <button
  onClick={() => refetchSummary()}
  disabled={isFetchingSummary}
  title="Atualizar saldo"
- className="p-1 rounded-full hover:bg-white/15 transition-colors disabled:opacity-50"
+ className="rounded-md p-1 text-tx-muted hover:bg-surface-hover disabled:opacity-50"
  >
- <ArrowPathIcon className={clsx('h-5 w-5 text-white/70', isFetchingSummary && 'animate-spin')} />
+ <ArrowPathIcon className={clsx('h-4 w-4', isFetchingSummary && 'animate-spin')} />
  </button>
  </div>
- <p className="text-2xl sm:text-3xl font-bold font-mono text-white tracking-tight mb-1">{formatCurrency(availableBalance)}</p>
- <p className="text-white/60 text-xs">Disponível para saque</p>
+ <p className="mb-1 font-mono text-2xl font-bold tracking-tight text-tx-primary sm:text-3xl">{formatCurrency(availableBalance)}</p>
+ <p className="text-xs text-tx-muted">Disponível para nova solicitação</p>
+ </div>
+
+ <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-5 sm:p-6">
+ <div className="mb-2 flex items-center justify-between">
+ <span className="text-sm font-medium text-tx-secondary">Em processamento</span>
+ <ClockIcon className="h-5 w-5 text-tx-muted" />
+ </div>
+ <p className="mb-1 font-mono text-2xl font-bold tracking-tight text-tx-primary sm:text-3xl">{formatCurrency(pendingAmount)}</p>
+ <p className="text-xs text-tx-muted">{pendingWithdrawals.length} solicitações ativas</p>
+ </div>
+
+ <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-5 sm:p-6">
+ <div className="mb-2 flex items-center justify-between">
+ <span className="text-sm font-medium text-tx-secondary">Sacado no mês</span>
+ <CheckCircleIcon className="h-5 w-5 text-tx-muted" />
+ </div>
+ <p className="mb-1 font-mono text-2xl font-bold tracking-tight text-tx-primary sm:text-3xl">{formatCurrency(summary?.this_month_withdrawn || 0)}</p>
+ <p className="text-xs text-tx-muted">Total de saques concluídos</p>
  </div>
  </div>
 
- {/* Saques Pendentes */}
- <div className="rounded-2xl bg-surface-card p-5 sm:p-6 border border-border-DEFAULT">
- <div className="flex items-center justify-between mb-2">
- <span className="text-tx-secondary text-sm font-medium">Em Processamento</span>
- <ClockIcon className="h-6 w-6 text-amber-500" />
- </div>
- <p className="text-2xl sm:text-3xl font-bold font-mono text-tx-primary tracking-tight mb-1">{formatCurrency(pendingAmount)}</p>
- <p className="text-tx-muted text-xs">{pendingWithdrawals.length} solicitações</p>
- </div>
-
- {/* Sacado este mês */}
- <div className="rounded-2xl bg-surface-card p-5 sm:p-6 border border-border-DEFAULT">
- <div className="flex items-center justify-between mb-2">
- <span className="text-tx-secondary text-sm font-medium">Sacado este mês</span>
- <CheckCircleIcon className="h-6 w-6 text-status-success" />
- </div>
- <p className="text-2xl sm:text-3xl font-bold font-mono text-tx-primary tracking-tight mb-1">{formatCurrency(summary?.this_month_withdrawn || 0)}</p>
- <p className="text-tx-muted text-xs">Total sacado no mês</p>
- </div>
- </div>
-
- {/* Taxas */}
- <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-xs text-tx-muted">
+ <div className="rounded-xl border border-border-DEFAULT bg-surface-card px-4 py-3">
+ <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-tx-muted">
  {settings?.is_custom && (
  <span className="inline-flex items-center gap-1 text-accent-primary font-medium">
  <span className="h-1.5 w-1.5 rounded-full bg-accent-primary" />
@@ -546,17 +538,17 @@ export default function WithdrawalsPage() {
  </>
  )}
  </div>
+ </div>
 
- {/* Actions */}
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+ <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
  <button
  onClick={() => setSelectedStatus('all')}
  className={clsx(
  'px-4 py-2 rounded-element text-sm font-medium transition-all whitespace-nowrap',
  selectedStatus === 'all'
- ? 'bg-accent-primary text-white'
- : 'bg-surface-hover text-tx-secondary hover:bg-surface-hover'
+ ? 'border border-accent-primary bg-accent-subtle text-accent-primary'
+ : 'border border-border-DEFAULT bg-transparent text-tx-secondary hover:bg-surface-hover'
  )}
  >
  Todos
@@ -566,8 +558,8 @@ export default function WithdrawalsPage() {
  className={clsx(
  'px-4 py-2 rounded-element text-sm font-medium transition-all whitespace-nowrap',
  selectedStatus === 'pending'
- ? 'bg-accent-primary text-white'
- : 'bg-surface-hover text-tx-secondary hover:bg-surface-hover'
+ ? 'border border-accent-primary bg-accent-subtle text-accent-primary'
+ : 'border border-border-DEFAULT bg-transparent text-tx-secondary hover:bg-surface-hover'
  )}
  >
  Pendentes
@@ -577,8 +569,8 @@ export default function WithdrawalsPage() {
  className={clsx(
  'px-4 py-2 rounded-element text-sm font-medium transition-all whitespace-nowrap',
  selectedStatus === 'completed'
- ? 'bg-accent-primary text-white'
- : 'bg-surface-hover text-tx-secondary hover:bg-surface-hover'
+ ? 'border border-accent-primary bg-accent-subtle text-accent-primary'
+ : 'border border-border-DEFAULT bg-transparent text-tx-secondary hover:bg-surface-hover'
  )}
  >
  Concluídos
@@ -588,8 +580,8 @@ export default function WithdrawalsPage() {
  className={clsx(
  'px-4 py-2 rounded-element text-sm font-medium transition-all whitespace-nowrap',
  selectedStatus === 'cancelled'
- ? 'bg-accent-primary text-white'
- : 'bg-surface-hover text-tx-secondary hover:bg-surface-hover'
+ ? 'border border-accent-primary bg-accent-subtle text-accent-primary'
+ : 'border border-border-DEFAULT bg-transparent text-tx-secondary hover:bg-surface-hover'
  )}
  >
  Cancelados
@@ -606,19 +598,18 @@ export default function WithdrawalsPage() {
  setIsWithdrawModalOpen(true);
  }}
  disabled={createWithdrawalMutation.isPending || !withdrawalsEnabled || availableBalance < minWithdrawal}
- className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-2.5 w-full sm:w-auto"
+ className="btn-primary inline-flex w-full items-center justify-center gap-2 px-6 py-2.5 sm:w-auto"
  >
  <ArrowDownTrayIcon className="h-5 w-5" />
  Solicitar Saque
  </button>
  </div>
 
- {/* Withdrawals List */}
  <div className="rounded-2xl bg-surface-card border border-border-DEFAULT overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full">
  <thead>
- <tr className="border-b border-border-DEFAULT">
+ <tr className="border-b border-border-DEFAULT bg-surface-page/60">
  <th className="text-left py-3.5 px-6 text-[11px] font-semibold text-tx-muted uppercase tracking-wider">
  Data
  </th>
@@ -660,7 +651,7 @@ export default function WithdrawalsPage() {
  const withdrawalReason = getWithdrawalReason(withdrawal);
 
  return (
- <tr key={withdrawal.id} className="hover:bg-surface-page/50 transition-colors">
+ <tr key={withdrawal.id} className="transition-colors hover:bg-surface-hover/40">
  <td className="py-4 px-6">
  <div className="flex items-center gap-2 text-sm">
  <CalendarIcon className="h-4 w-4 text-tx-muted" />
@@ -676,17 +667,17 @@ export default function WithdrawalsPage() {
  <div className="flex items-center gap-2">
  {withdrawal.method === 'pix' ? (
  <>
- <PixIcon className="h-5 w-5 text-accent-primary" />
+ <PixIcon className="h-5 w-5 text-accent-primary/90" />
  <span className="text-sm font-medium text-tx-primary">PIX</span>
  </>
  ) : (
  <>
- <BuildingLibraryIcon className="h-5 w-5 text-blue-500" />
+ <BuildingLibraryIcon className="h-5 w-5 text-tx-muted" />
  <span className="text-sm font-medium text-tx-primary">TED</span>
  </>
  )}
  {withdrawal.is_instant && (
- <span className="inline-flex items-center gap-0.5 rounded-full bg-accent-subtle px-1.5 py-0.5 text-[10px] font-semibold text-accent-primary">
+ <span className="inline-flex items-center gap-0.5 rounded-full border border-accent-primary/30 bg-accent-subtle px-1.5 py-0.5 text-[10px] font-semibold text-accent-primary">
  <BoltIcon className="h-2.5 w-2.5" />
  Instant
  </span>
@@ -720,7 +711,7 @@ export default function WithdrawalsPage() {
  </div>
  </td>
  <td className="py-4 px-6 text-right">
- <div className="text-sm font-bold font-mono text-status-success">
+ <div className="text-sm font-bold font-mono text-accent-primary">
  {formatCurrency(withdrawal.net_amount)}
  </div>
  </td>
@@ -748,7 +739,7 @@ export default function WithdrawalsPage() {
  <button
  onClick={() => handleCancelWithdrawal(withdrawal.id)}
  disabled={cancelWithdrawalMutation.isPending}
- className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-element text-xs font-semibold text-status-error hover:bg-status-error-subtle transition-colors disabled:opacity-50"
+ className="inline-flex items-center gap-1.5 rounded-element border border-status-error/30 px-3 py-1.5 text-xs font-semibold text-status-error transition-colors hover:bg-status-error-subtle disabled:opacity-50"
  >
  <XCircleIcon className="h-4 w-4" />
  Cancelar

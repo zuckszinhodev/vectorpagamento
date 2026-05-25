@@ -194,9 +194,6 @@ export default function LoginPage() {
           <h1 className="text-lg font-semibold text-white mb-1">
             Acesso ao Gateway
           </h1>
-          <p className="text-sm text-emerald-300/80">
-            Login seguro para gestão de pagamentos.
-          </p>
         </div>
 
       {/* Form */}

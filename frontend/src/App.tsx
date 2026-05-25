@@ -363,7 +363,7 @@ function App() {
 
   useLayoutEffect(() => {
     const isAdminRoute = location.pathname.startsWith('/admin');
-    const effectiveTheme = theme;
+    const effectiveTheme = isAdminRoute ? 'light' : theme;
 
     document.documentElement.classList.toggle('app-admin-route', isAdminRoute);
     document.documentElement.classList.toggle('app-dark-forced', false);

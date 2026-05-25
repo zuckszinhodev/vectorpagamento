@@ -33,6 +33,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   SwatchIcon,
+  ChartBarIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -278,6 +279,21 @@ export default function ProductsPage() {
       const checkouts = response.data?.data || response.data;
       if (checkouts && checkouts.length > 0) {
         navigate(`/checkout-builder/${checkouts[0].id}`);
+      } else {
+        toast.error('Checkout não encontrado. Crie um checkout para este produto primeiro.');
+      }
+    } catch {
+      toast.error('Erro ao buscar checkout do produto.');
+    }
+  };
+
+  // Abrir Analytics do produto (via checkout vinculado)
+  const openProductAnalytics = async (product: Product) => {
+    try {
+      const response = await api.get('/checkouts', { params: { product_id: product.id } });
+      const checkouts = response.data?.data || response.data;
+      if (checkouts && checkouts.length > 0) {
+        navigate(`/checkouts/${checkouts[0].id}/analytics`);
       } else {
         toast.error('Checkout não encontrado. Crie um checkout para este produto primeiro.');
       }
@@ -583,6 +599,13 @@ export default function ProductsPage() {
                     <EyeIcon className="h-4 w-4 text-gray-700" />
                   </button>
                   <button
+                    onClick={() => openProductAnalytics(product)}
+                    className="p-2 bg-white rounded-full hover:bg-gray-100"
+                    title="Analisar"
+                  >
+                    <ChartBarIcon className="h-4 w-4 text-gray-700" />
+                  </button>
+                  <button
                     onClick={() => copyCheckoutLink(product)}
                     className="p-2 bg-white rounded-full hover:bg-gray-100"
                     title="Copiar link"
@@ -660,6 +683,17 @@ export default function ProductsPage() {
                               >
                                 <LinkIcon className="mr-2 h-4 w-4" />
                                 Copiar link
+                              </button>
+                            )}
+                          </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() => openProductAnalytics(product)}
+                                className={`${active ? 'bg-surface-hover' : ''} flex w-full items-center px-3 py-1.5 text-xs text-tx-secondary`}
+                              >
+                                <ChartBarIcon className="mr-2 h-4 w-4" />
+                                Analytics
                               </button>
                             )}
                           </Menu.Item>
@@ -802,6 +836,13 @@ export default function ProductsPage() {
                         title="Copiar link"
                       >
                         <LinkIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => openProductAnalytics(product)}
+                        className="p-1.5 rounded hover:bg-surface-page text-tx-muted hover:text-tx-primary"
+                        title="Analisar"
+                      >
+                        <ChartBarIcon className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => openCheckoutBuilder(product)}
