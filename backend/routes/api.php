@@ -200,6 +200,10 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::put('/withdrawal-ips', [\App\Http\Controllers\Api\V1\AccountController::class, 'updateWithdrawalIpWhitelist']);
         });
 
+        // Account acquirer priority management
+        Route::get('/acquirers', [\App\Http\Controllers\Api\V1\AccountController::class, 'acquirers']);
+        Route::put('/acquirers/reorder', [\App\Http\Controllers\Api\V1\AccountController::class, 'reorderAcquirers']);
+
         // Users Management (admin only)
         Route::prefix('users')->middleware(['role:admin,owner', 'mfa.enabled', 'admin.audit', 'admin.permission:admin.users.manage', 'admin.rate'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\V1\UserController::class, 'index']);

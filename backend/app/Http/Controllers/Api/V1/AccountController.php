@@ -6,12 +6,16 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Account;
+use App\Models\AccountAcquirer;
 use App\Models\AccountWallet;
 use App\Models\AcquirerConfig;
 use App\Models\AccountCustomFee;
 use App\Models\Charge;
+use App\Domain\Acquirer\Entities\Acquirer as AcquirerEntity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class AccountController extends Controller
 {
@@ -48,6 +52,147 @@ class AccountController extends Controller
                 'success' => false,
                 'error' => ['code' => 'server_error', 'message' => 'Erro interno do servidor.'],
             ], 500);
+        }
+    }
+
+    /**
+     * List globally active acquirers for the current account priority management.
+     */
+    public function acquirers(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (!$user?->account_id) {
+                return response()->json(['success' => false, 'message' => 'Conta não encontrada'], 404);
+            }
+
+            $accountAssignments = AccountAcquirer::where('account_id', $user->account_id)
+                ->where('is_active', true)
+                ->get()
+                ->keyBy('acquirer_id');
+
+            $activeConfigs = AcquirerConfig::where('enabled', true)
+                ->orderBy('priority', 'asc')
+                ->get();
+
+            foreach ($activeConfigs as $config) {
+                AcquirerEntity::updateOrCreate(
+                    ['slug' => $config->acquirer_key],
+                    [
+                        'name' => $config->display_name ?? ucfirst($config->acquirer_key),
+                        'is_active' => true,
+                        'supported_methods' => $config->supported_methods ?? [],
+                        'settings' => [],
+                    ]
+                );
+            }
+
+            if ($accountAssignments->isNotEmpty()) {
+                $slugs = AcquirerEntity::whereIn('id', $accountAssignments->keys())
+                    ->get()
+                    ->sortBy(fn (AcquirerEntity $entity) => $accountAssignments->get($entity->id)?->priority ?? 99)
+                    ->pluck('slug')
+                    ->values();
+            } else {
+                $slugs = $activeConfigs->pluck('acquirer_key')->values();
+            }
+
+            $configs = AcquirerConfig::whereIn('acquirer_key', $slugs)
+                ->get()
+                ->keyBy('acquirer_key');
+
+            $entities = AcquirerEntity::whereIn('slug', $slugs)
+                ->get()
+                ->keyBy('slug');
+
+            $items = $slugs->map(function (string $slug) use ($entities, $configs, $accountAssignments) {
+                $entity = $entities->get($slug);
+                if (!$entity) {
+                    return null;
+                }
+
+                $config = $configs->get($slug);
+                $assignment = $accountAssignments->get($entity->id);
+                $supportedMethods = $config?->supported_methods ?? $entity->supported_methods ?? [];
+
+                return [
+                    'acquirer_id' => $entity->id,
+                    'slug' => $slug,
+                    'name' => $config?->display_name ?? $entity->name,
+                    'nominal_name' => $config?->nominal_name,
+                    'priority' => $assignment?->priority ?? $config?->priority ?? 99,
+                    'is_active' => $assignment?->is_active ?? true,
+                    'supported_methods' => $supportedMethods,
+                    'supports_pix' => in_array('pix', $supportedMethods, true),
+                    'supports_pix_out' => in_array('pix_out', $supportedMethods, true),
+                    'supports_credit_card' => in_array('credit_card', $supportedMethods, true) || in_array('card', $supportedMethods, true),
+                    'supports_boleto' => in_array('boleto', $supportedMethods, true),
+                ];
+            })->filter()->sortBy('priority')->values();
+
+            return response()->json(['success' => true, 'data' => $items]);
+        } catch (\Throwable $e) {
+            Log::error('AccountController::acquirers error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Erro ao carregar adquirentes'], 500);
+        }
+    }
+
+    /**
+     * Persist current account acquirer priority order.
+     */
+    public function reorderAcquirers(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        if (!$user?->account_id) {
+            return response()->json(['success' => false, 'message' => 'Conta não encontrada'], 404);
+        }
+
+        $validated = $request->validate([
+            'acquirers' => ['required', 'array', 'min:1'],
+            'acquirers.*.acquirer_id' => ['required', 'uuid'],
+            'acquirers.*.priority' => ['required', 'integer', 'min:0'],
+        ]);
+
+        try {
+            $accountAssignmentIds = AccountAcquirer::where('account_id', $user->account_id)
+                ->where('is_active', true)
+                ->pluck('acquirer_id');
+
+            if ($accountAssignmentIds->isNotEmpty()) {
+                $allowedEntityIds = $accountAssignmentIds->values()->all();
+            } else {
+                $activeConfigSlugs = AcquirerConfig::where('enabled', true)->pluck('acquirer_key');
+                $allowedEntityIds = AcquirerEntity::whereIn('slug', $activeConfigSlugs)
+                    ->pluck('id')
+                    ->all();
+            }
+
+            DB::transaction(function () use ($validated, $user, $allowedEntityIds) {
+                foreach ($validated['acquirers'] as $item) {
+                    if (!in_array($item['acquirer_id'], $allowedEntityIds, true)) {
+                        continue;
+                    }
+
+                    $assignment = AccountAcquirer::firstOrNew([
+                        'account_id' => $user->account_id,
+                        'acquirer_id' => $item['acquirer_id'],
+                    ]);
+
+                    if (!$assignment->exists) {
+                        $assignment->credentials = encrypt([]);
+                        $assignment->settings = [];
+                    }
+
+                    $assignment->is_active = true;
+                    $assignment->priority = (int) $item['priority'];
+                    $assignment->save();
+                }
+            });
+
+            return response()->json(['success' => true, 'message' => 'Prioridade das nominais atualizada']);
+        } catch (\Throwable $e) {
+            Log::error('AccountController::reorderAcquirers error', ['error' => $e->getMessage(), 'account_id' => $user->account_id]);
+            return response()->json(['success' => false, 'message' => 'Erro ao salvar prioridade das nominais'], 500);
         }
     }
 
