@@ -89,7 +89,7 @@ export default function ForgotPasswordPage() {
             })}
             type="email"
             autoComplete="email"
-            className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+            className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             placeholder="seu@email.com"
           />
           {errors.email && (
@@ -129,7 +129,7 @@ export default function ForgotPasswordPage() {
 
         <p className="text-center text-sm text-gray-400">
           Lembrou a senha?{' '}
-          <Link to="/login" className="text-violet-500 hover:text-violet-400">
+          <Link to="/login" className="text-emerald-500 hover:text-emerald-400">
             Voltar para login
           </Link>
         </p>

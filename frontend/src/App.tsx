@@ -363,10 +363,10 @@ function App() {
 
   useLayoutEffect(() => {
     const isAdminRoute = location.pathname.startsWith('/admin');
-    const effectiveTheme = isAdminRoute ? 'light' : 'dark';
+    const effectiveTheme = theme;
 
     document.documentElement.classList.toggle('app-admin-route', isAdminRoute);
-    document.documentElement.classList.toggle('app-dark-forced', !isAdminRoute);
+    document.documentElement.classList.toggle('app-dark-forced', false);
 
     if (effectiveTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -435,7 +435,8 @@ function App() {
         <Route path="/support" element={<SupportPage />} />
         <Route path="/splits" element={<SplitManagement />} />
         <Route path="/webhook-logs" element={<WebhookLogsPage />} />
-        <Route path="/wazer-ia" element={<VectorIAPage />} />
+        <Route path="/vector-ia" element={<VectorIAPage />} />
+        <Route path="/wazer-ia" element={<Navigate to="/vector-ia" replace />} />
       </Route>
 
       {/* Admin Routes - Full screen with dedicated layout */}

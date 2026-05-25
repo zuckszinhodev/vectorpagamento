@@ -4,8 +4,8 @@ import { api } from '@/lib/api';
 import { Spinner } from '@/components/ui/Spinner';
 
 /**
- * Landing page for custom domains / WazerPay subdomains.
- * When a user visits teste.wazerpay.com.br/ (root), this page:
+ * Landing page for custom domains / VectorPagamentos subdomains.
+ * When a user visits teste.vectorpagamentos.com.br/ (root), this page:
  * 1. Calls the API to get the default checkout for this domain
  * 2. Redirects to /checkout/{slug} or /members/login
  */

@@ -11,7 +11,6 @@ const statusConfig: Record<string, StatusInfo> = {
   // Payment statuses
   pending:    { label: 'Pendente',     bg: 'bg-status-warning-subtle', text: 'text-status-warning', dot: 'bg-status-warning' },
   paid:       { label: 'Pago',         bg: 'bg-status-success-subtle', text: 'text-status-success', dot: 'bg-status-success' },
-  approved:   { label: 'Pago',         bg: 'bg-status-success-subtle', text: 'text-status-success', dot: 'bg-status-success' },
   failed:     { label: 'Falhou',       bg: 'bg-status-error-subtle',   text: 'text-status-error',   dot: 'bg-status-error' },
   canceled:   { label: 'Cancelado',    bg: 'bg-surface-hover',         text: 'text-tx-muted',       dot: 'bg-tx-muted' },
   refunded:   { label: 'Reembolsado',  bg: 'bg-accent-subtle',         text: 'text-accent-primary', dot: 'bg-accent-primary' },

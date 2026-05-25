@@ -118,7 +118,7 @@ export default function WazerIAPage() {
       <div className="flex items-center justify-between border-b border-border-DEFAULT px-6 py-3">
         <div>
           <div>
-            <h1 className="text-base font-semibold text-tx-primary">WazerIA</h1>
+            <h1 className="text-base font-semibold text-tx-primary">VectorIA</h1>
             <p className="text-[11px] text-emerald-600 dark:text-emerald-400">Online</p>
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function WazerIAPage() {
                   <button
                     key={i}
                     onClick={() => sendMessage(s)}
-                    className="rounded-full border border-border-DEFAULT bg-surface-card px-4 py-2 text-xs text-tx-secondary hover:bg-surface-hover hover:border-violet-500/40 transition-all"
+                    className="rounded-full border border-border-DEFAULT bg-surface-card px-4 py-2 text-xs text-tx-secondary hover:bg-surface-hover hover:border-emerald-500/40 transition-all"
                   >
                     {s}
                   </button>
@@ -161,7 +161,7 @@ export default function WazerIAPage() {
               <div key={msg.id} className={`group flex gap-2.5 py-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className="flex-shrink-0 pt-0.5">
                   {msg.role === 'assistant' ? (
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-purple-700 text-[11px] font-semibold text-white">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-700 text-[11px] font-semibold text-white">
                       IA
                     </div>
                   ) : (
@@ -175,16 +175,16 @@ export default function WazerIAPage() {
                   <div
                     className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-gradient-to-br from-violet-600 to-purple-700 text-white rounded-tr-md'
+                        ? 'bg-gradient-to-br from-emerald-600 to-emerald-700 text-white rounded-tr-md'
                         : 'bg-surface-card text-tx-primary border border-border-DEFAULT rounded-tl-md'
                     }`}
                   >
                     {msg.isLoading ? (
                       <div className="flex items-center gap-2 py-0.5">
                         <div className="flex gap-1">
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400" style={{ animationDelay: '0ms' }} />
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400" style={{ animationDelay: '150ms' }} />
-                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400" style={{ animationDelay: '300ms' }} />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400" style={{ animationDelay: '0ms' }} />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400" style={{ animationDelay: '150ms' }} />
+                          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-emerald-400" style={{ animationDelay: '300ms' }} />
                         </div>
                       </div>
                     ) : (
@@ -216,7 +216,7 @@ export default function WazerIAPage() {
       {/* Input */}
       <div className="border-t border-border-DEFAULT px-4 py-3">
         <div className="mx-auto max-w-2xl">
-          <div className="flex items-end gap-2 rounded-xl border border-border-DEFAULT bg-surface-card p-1.5 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-500/20 transition-all">
+          <div className="flex items-end gap-2 rounded-xl border border-border-DEFAULT bg-surface-card p-1.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
             <textarea
               ref={inputRef}
               value={input}
@@ -236,7 +236,7 @@ export default function WazerIAPage() {
             <button
               onClick={() => sendMessage()}
               disabled={!input.trim() || isLoading}
-              className="rounded-lg bg-gradient-to-br from-violet-600 to-purple-700 px-3 py-2 text-xs font-medium text-white transition-all disabled:opacity-40 active:scale-95"
+              className="rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-700 px-3 py-2 text-xs font-medium text-white transition-all disabled:opacity-40 active:scale-95"
             >
               Enviar
             </button>
@@ -265,7 +265,7 @@ function ActionResultBadge({ actionResult }: { actionResult: WazerAIActionResult
         </a>
       )}
       {checkoutSlug && (
-        <a href="/checkouts" className="inline-flex items-center rounded-lg bg-violet-500/20 px-3 py-1.5 text-xs font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-500/30 transition-colors">
+        <a href="/checkouts" className="inline-flex items-center rounded-lg bg-emerald-500/20 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/30 transition-colors">
           Ver Checkout
         </a>
       )}
@@ -292,7 +292,7 @@ function MarkdownContent({ content, isUser }: { content: string; isUser: boolean
   const html = simpleMarkdown(content);
   return (
     <div
-      className={`wazerai-markdown prose prose-sm max-w-none ${isUser ? 'prose-invert' : 'prose-violet'}`}
+      className={`wazerai-markdown prose prose-sm max-w-none ${isUser ? 'prose-invert' : 'prose-emerald'}`}
       dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }}
     />
   );

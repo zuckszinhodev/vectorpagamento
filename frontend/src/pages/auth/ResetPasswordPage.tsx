@@ -107,7 +107,7 @@ export default function ResetPasswordPage() {
             })}
             type="password"
             autoComplete="new-password"
-            className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+            className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             placeholder="••••••••"
           />
           {errors.password && (
@@ -126,7 +126,7 @@ export default function ResetPasswordPage() {
             })}
             type="password"
             autoComplete="new-password"
-            className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+            className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             placeholder="••••••••"
           />
           {errors.password_confirmation && (
@@ -153,7 +153,7 @@ export default function ResetPasswordPage() {
         </button>
 
         <div className="text-center">
-          <Link to="/login" className="text-sm text-violet-500 hover:text-violet-400">
+          <Link to="/login" className="text-sm text-emerald-500 hover:text-emerald-400">
             Voltar para login
           </Link>
         </div>

@@ -18,7 +18,7 @@ export default function SEO({
   type = 'website',
   keywords = SEO_CONFIG.defaultKeywords,
 }: SEOProps) {
-  const fullTitle = title.includes('Vector Pagamentos') ? title : `${title} | Vector Pagamentos`;
+  const fullTitle = title.includes('VectorPagamentos') ? title : `${title} | VectorPagamentos`;
   const fullUrl = url ? getFullUrl(url) : SEO_CONFIG.baseUrl;
   const fullImage = getImageUrl(image);
 

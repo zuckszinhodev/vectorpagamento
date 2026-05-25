@@ -200,7 +200,7 @@ export default function WebhookLogsPage() {
         <button
           onClick={() => setActiveTab('logs')}
           className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
-            activeTab === 'logs' ? 'bg-purple-600 text-white shadow-sm' : 'text-tx-secondary hover:bg-surface-hover'
+            activeTab === 'logs' ? 'bg-emerald-600 text-white shadow-sm' : 'text-tx-secondary hover:bg-surface-hover'
           }`}
         >
           <SignalIcon className="h-4 w-4" /> Logs de Entrega
@@ -208,7 +208,7 @@ export default function WebhookLogsPage() {
         <button
           onClick={() => setActiveTab('config')}
           className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
-            activeTab === 'config' ? 'bg-purple-600 text-white shadow-sm' : 'text-tx-secondary hover:bg-surface-hover'
+            activeTab === 'config' ? 'bg-emerald-600 text-white shadow-sm' : 'text-tx-secondary hover:bg-surface-hover'
           }`}
         >
           <GlobeAltIcon className="h-4 w-4" /> Endpoints ({webhooks.length})
@@ -228,14 +228,14 @@ export default function WebhookLogsPage() {
                   placeholder="Buscar por URL ou evento..."
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                  className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-purple-500 focus:outline-none"
+                  className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
                 >
                   <option value="all">Todos os status</option>
                   <option value="success">Sucesso</option>
@@ -245,7 +245,7 @@ export default function WebhookLogsPage() {
                 <select
                   value={eventFilter}
                   onChange={(e) => { setEventFilter(e.target.value); setPage(1); }}
-                  className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-purple-500 focus:outline-none"
+                  className="rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2.5 text-sm text-tx-primary focus:border-emerald-500 focus:outline-none"
                 >
                   <option value="all">Todos os eventos</option>
                   {availableEvents.filter(e => e.value !== '*').map(e => (
@@ -266,7 +266,7 @@ export default function WebhookLogsPage() {
           <div className="rounded-2xl bg-surface-card shadow-sm overflow-hidden">
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent" />
               </div>
             ) : logs.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20">
@@ -293,7 +293,7 @@ export default function WebhookLogsPage() {
                       {logs.map((log) => (
                         <tr key={log.id} className="hover:bg-surface-hover transition-colors">
                           <td className="px-6 py-4">
-                            <span className="inline-flex rounded-lg bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-600">
+                            <span className="inline-flex rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600">
                               {log.event}
                             </span>
                           </td>
@@ -375,7 +375,7 @@ export default function WebhookLogsPage() {
             {webhooks.length < 5 && (
               <button
                 onClick={() => setShowAddWebhook(true)}
-                className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors"
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
               >
                 <PlusIcon className="h-4 w-4" /> Novo Webhook
               </button>
@@ -393,7 +393,7 @@ export default function WebhookLogsPage() {
                   value={newUrl}
                   onChange={(e) => setNewUrl(e.target.value)}
                   placeholder="https://seu-servidor.com/webhook"
-                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-purple-500 focus:outline-none"
+                  className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-4 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:outline-none"
                 />
               </div>
               <div>
@@ -416,7 +416,7 @@ export default function WebhookLogsPage() {
                             );
                           }
                         }}
-                        className="rounded border-border-DEFAULT text-purple-600 focus:ring-purple-500"
+                        className="rounded border-border-DEFAULT text-emerald-600 focus:ring-emerald-500"
                       />
                       {e.label}
                     </label>
@@ -433,7 +433,7 @@ export default function WebhookLogsPage() {
                 <button
                   onClick={() => createMutation.mutate()}
                   disabled={!newUrl || newEvents.length === 0 || createMutation.isPending}
-                  className="flex-1 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                  className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
                 >
                   {createMutation.isPending ? 'Criando...' : 'Criar Webhook'}
                 </button>
@@ -460,7 +460,7 @@ export default function WebhookLogsPage() {
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {wh.events.map(e => (
-                          <span key={e} className="rounded-lg bg-purple-500/10 px-2 py-0.5 text-[11px] font-medium text-purple-600">
+                          <span key={e} className="rounded-lg bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
                             {e}
                           </span>
                         ))}
@@ -539,7 +539,7 @@ export default function WebhookLogsPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-semibold text-tx-secondary">URL</p>
-                  <button onClick={() => copyToClipboard(selectedLog.webhook_url)} className="text-xs text-purple-500 hover:text-purple-400">
+                  <button onClick={() => copyToClipboard(selectedLog.webhook_url)} className="text-xs text-emerald-500 hover:text-emerald-400">
                     Copiar
                   </button>
                 </div>
@@ -549,7 +549,7 @@ export default function WebhookLogsPage() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-semibold text-tx-secondary">Payload Enviado</p>
-                  <button onClick={() => copyToClipboard(JSON.stringify(selectedLog.payload, null, 2))} className="text-xs text-purple-500 hover:text-purple-400">
+                  <button onClick={() => copyToClipboard(JSON.stringify(selectedLog.payload, null, 2))} className="text-xs text-emerald-500 hover:text-emerald-400">
                     Copiar
                   </button>
                 </div>
@@ -574,7 +574,7 @@ export default function WebhookLogsPage() {
               {selectedLog.status === 'failed' && (
                 <button
                   onClick={() => { retryMutation.mutate(selectedLog.id); setSelectedLog(null); }}
-                  className="flex-1 rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-purple-700 transition-colors"
+                  className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 transition-colors"
                 >
                   Reenviar Webhook
                 </button>

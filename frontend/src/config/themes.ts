@@ -1,5 +1,5 @@
 // Theme definitions for the platform
-// Two themes: Classic (current emerald) and Modern (new design to be built)
+// Two themes: Classic and Modern
 // Color values use space-separated RGB format ("R G B") for Tailwind opacity modifier support.
 
 export type ThemeVariant = 'classic' | 'modern';
@@ -40,20 +40,20 @@ export const themes: Record<ThemeVariant, ThemeDefinition> = {
   classic: {
     id: 'classic',
     name: 'Clássica',
-    description: 'O tema original Vector Pagamentos com tons de verde elegante. Interface consolidada e familiar.',
-    preview: { primary: '#16a34a', accent: '#10b981', bg: '#f0fdf4' },
+    description: 'Tema principal da VectorPagamentos com foco em tons de verde. Interface consolidada e familiar.',
+    preview: { primary: '#16A34A', accent: '#10B981', bg: '#ECFDF5' },
     colors: {
       primary: {
         50: '240 253 244', 100: '220 252 231', 200: '187 247 208',
         300: '134 239 172', 400: '74 222 128', 500: '34 197 94',
-        600: '22 163 74',  700: '21 128 61',  800: '22 101 52',
-        900: '20 83 45',   950: '5 46 22',
+        600: '22 163 74',   700: '21 128 61',   800: '22 101 52',
+        900: '20 83 45',    950: '5 46 22',
       },
       accent: {
         50: '236 253 245', 100: '209 250 229', 200: '167 243 208',
-        300: '110 231 183', 400: '52 211 153', 500: '16 185 129',
-        600: '5 150 105',   700: '4 120 87',   800: '6 95 70',
-        900: '6 78 59',    950: '2 44 34',
+        300: '110 231 183', 400: '52 211 153',  500: '16 185 129',
+        600: '5 150 105',   700: '4 120 87',    800: '6 95 70',
+        900: '6 78 59',     950: '2 44 34',
       },
       dark: {
         DEFAULT: '10 10 10', 50: '38 38 38', 100: '32 32 32',
@@ -62,22 +62,22 @@ export const themes: Record<ThemeVariant, ThemeDefinition> = {
     },
     cssVars: {
       light: {
-        '--theme-primary': '34, 197, 94',
-        '--theme-primary-hover': '22, 163, 74',
-        '--theme-accent': '16, 185, 129',
-        '--theme-card-accent': '34, 197, 94',
-        '--theme-sidebar-active': '34, 197, 94',
-        '--theme-gradient-from': '34, 197, 94',
-        '--theme-gradient-to': '16, 185, 129',
+        '--theme-primary': '16, 185, 129',
+        '--theme-primary-hover': '5, 150, 105',
+        '--theme-accent': '52, 211, 153',
+        '--theme-card-accent': '16, 185, 129',
+        '--theme-sidebar-active': '16, 185, 129',
+        '--theme-gradient-from': '16, 185, 129',
+        '--theme-gradient-to': '52, 211, 153',
       },
       dark: {
-        '--theme-primary': '34, 197, 94',
-        '--theme-primary-hover': '22, 163, 74',
-        '--theme-accent': '16, 185, 129',
-        '--theme-card-accent': '34, 197, 94',
-        '--theme-sidebar-active': '74, 222, 128',
-        '--theme-gradient-from': '34, 197, 94',
-        '--theme-gradient-to': '16, 185, 129',
+        '--theme-primary': '16, 185, 129',
+        '--theme-primary-hover': '5, 150, 105',
+        '--theme-accent': '52, 211, 153',
+        '--theme-card-accent': '16, 185, 129',
+        '--theme-sidebar-active': '52, 211, 153',
+        '--theme-gradient-from': '16, 185, 129',
+        '--theme-gradient-to': '52, 211, 153',
       },
     },
   },
@@ -86,13 +86,13 @@ export const themes: Record<ThemeVariant, ThemeDefinition> = {
     id: 'modern',
     name: 'Moderna',
     description: 'Nova interface moderna e minimalista. Design clean com visual atualizado.',
-    preview: { primary: '#22c55e', accent: '#06b6d4', bg: '#f8fafc' },
+    preview: { primary: '#6366f1', accent: '#06b6d4', bg: '#f8fafc' },
     colors: {
       primary: {
-        50: '240 253 244', 100: '220 252 231', 200: '187 247 208',
-        300: '134 239 172', 400: '74 222 128', 500: '34 197 94',
-        600: '22 163 74',   700: '21 128 61',   800: '22 101 52',
-        900: '20 83 45',    950: '5 46 22',
+        50: '238 242 255', 100: '224 231 255', 200: '199 210 254',
+        300: '165 180 252', 400: '129 140 248', 500: '99 102 241',
+        600: '79 70 229',   700: '67 56 202',   800: '55 48 163',
+        900: '49 46 129',   950: '30 27 75',
       },
       accent: {
         50: '236 254 255', 100: '207 250 254', 200: '165 243 252',
@@ -107,21 +107,21 @@ export const themes: Record<ThemeVariant, ThemeDefinition> = {
     },
     cssVars: {
       light: {
-        '--theme-primary': '34, 197, 94',
-        '--theme-primary-hover': '22, 163, 74',
+        '--theme-primary': '99, 102, 241',
+        '--theme-primary-hover': '79, 70, 229',
         '--theme-accent': '6, 182, 212',
-        '--theme-card-accent': '34, 197, 94',
-        '--theme-sidebar-active': '34, 197, 94',
-        '--theme-gradient-from': '34, 197, 94',
+        '--theme-card-accent': '99, 102, 241',
+        '--theme-sidebar-active': '99, 102, 241',
+        '--theme-gradient-from': '99, 102, 241',
         '--theme-gradient-to': '6, 182, 212',
       },
       dark: {
-        '--theme-primary': '74, 222, 128',
-        '--theme-primary-hover': '34, 197, 94',
+        '--theme-primary': '129, 140, 248',
+        '--theme-primary-hover': '99, 102, 241',
         '--theme-accent': '34, 211, 238',
-        '--theme-card-accent': '74, 222, 128',
-        '--theme-sidebar-active': '74, 222, 128',
-        '--theme-gradient-from': '74, 222, 128',
+        '--theme-card-accent': '129, 140, 248',
+        '--theme-sidebar-active': '129, 140, 248',
+        '--theme-gradient-from': '129, 140, 248',
         '--theme-gradient-to': '34, 211, 238',
       },
     },

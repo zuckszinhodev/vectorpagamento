@@ -37,7 +37,7 @@ export default function AcquirersPage() {
   const queryClient = useQueryClient();
   const [items, setItems] = useState<AcquirerPriorityItem[]>([]);
 
-  const { data: acquirers = [], isLoading } = useQuery<AcquirerPriorityItem[]>({
+  const { data, isLoading } = useQuery<AcquirerPriorityItem[]>({
     queryKey: ['account-acquirers'],
     queryFn: async () => {
       const response = await api.get('/acquirers');
@@ -45,9 +45,11 @@ export default function AcquirersPage() {
     },
   });
 
+  const acquirers = data || [];
+
   useEffect(() => {
     setItems([...acquirers].sort((a, b) => a.priority - b.priority));
-  }, [acquirers]);
+  }, [data]);
 
   const reorderMutation = useMutation({
     mutationFn: async (orderedItems: AcquirerPriorityItem[]) => {
@@ -100,7 +102,7 @@ export default function AcquirersPage() {
             </p>
           </div>
 
-          <div className="min-w-0 rounded-3xl border border-border-DEFAULT bg-gray-50 p-4">
+          <div className="min-w-0 rounded-3xl border border-border-DEFAULT bg-surface-hover p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-tx-muted">Nominal principal</p>
             <p className="mt-2 max-w-xs truncate text-lg font-bold text-tx-primary">{primaryNominal}</p>
             <p className="mt-1 text-xs text-tx-muted">Primeira tentativa nas cobrancas elegiveis</p>
@@ -115,12 +117,12 @@ export default function AcquirersPage() {
       </div>
 
       <section className="overflow-hidden rounded-[1.75rem] border border-border-DEFAULT bg-surface-card shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-border-DEFAULT bg-gradient-to-r from-gray-50 to-white px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-b border-border-DEFAULT bg-gradient-to-r from-emerald-500/5 to-transparent px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-tx-primary">Ordem de prioridade</h2>
             <p className="mt-1 text-sm text-tx-muted">A lista abaixo mostra apenas as nominais disponiveis para sua conta.</p>
           </div>
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border-DEFAULT bg-white px-3 py-1.5 text-xs font-semibold text-tx-secondary shadow-sm">
+          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-border-DEFAULT bg-surface-hover px-3 py-1.5 text-xs font-semibold text-tx-secondary shadow-sm">
             <ArrowsUpDownIcon className="h-4 w-4" />
             Arraste para ordenar
           </div>
@@ -129,7 +131,7 @@ export default function AcquirersPage() {
         {isLoading ? (
           <div className="space-y-3 p-5">
             {[1, 2, 3].map((item) => (
-              <div key={item} className="h-20 animate-pulse rounded-2xl bg-gray-100" />
+              <div key={item} className="h-20 animate-pulse rounded-2xl bg-surface-hover" />
             ))}
           </div>
         ) : items.length === 0 ? (
@@ -148,7 +150,7 @@ export default function AcquirersPage() {
                         <div
                           ref={dragProvided.innerRef}
                           {...dragProvided.draggableProps}
-                          className={`group rounded-3xl border bg-white p-4 transition-all ${
+                          className={`group rounded-3xl border bg-surface-card p-4 transition-all ${
                             snapshot.isDragging ? 'scale-[1.01] border-emerald-400 shadow-2xl shadow-emerald-950/10' : 'border-border-DEFAULT shadow-sm hover:-translate-y-0.5 hover:shadow-md'
                           }`}
                         >
@@ -157,7 +159,7 @@ export default function AcquirersPage() {
                               <button
                                 type="button"
                                 {...dragProvided.dragHandleProps}
-                                className="mt-1 rounded-2xl border border-border-DEFAULT bg-gray-50 p-3 text-tx-muted transition group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700"
+                                className="mt-1 rounded-2xl border border-border-DEFAULT bg-surface-hover p-3 text-tx-muted transition group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700"
                                 aria-label="Arrastar nominal"
                               >
                                 <Bars3Icon className="h-5 w-5" />
@@ -175,7 +177,7 @@ export default function AcquirersPage() {
 
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   {item.supported_methods.map((method) => (
-                                    <span key={method} className="rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-semibold text-tx-secondary">
+                                    <span key={method} className="rounded-full border border-border-DEFAULT bg-surface-hover px-2.5 py-1 text-xs font-semibold text-tx-secondary">
                                       {methodLabels[method] || method}
                                     </span>
                                   ))}
@@ -183,7 +185,7 @@ export default function AcquirersPage() {
                               </div>
                             </div>
 
-                            <div className={`rounded-2xl px-4 py-2 text-xs font-bold ${index === 0 ? 'bg-emerald-500/10 text-emerald-700' : 'bg-gray-50 text-tx-muted'}`}>
+                            <div className={`rounded-2xl px-4 py-2 text-xs font-bold ${index === 0 ? 'bg-emerald-500/10 text-emerald-700' : 'bg-surface-hover text-tx-muted'}`}>
                               {index === 0 ? 'Prioridade maxima' : `Alternativa ${index}`}
                             </div>
                           </div>

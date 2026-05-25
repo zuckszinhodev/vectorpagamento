@@ -58,7 +58,7 @@ interface CourseFormData {
 type EditorTab = 'info' | 'content' | 'students' | 'comments' | 'analytics';
 
 const CONTENT_TYPE_CONFIG = {
-  video: { icon: PlayCircleIcon, label: 'Vídeo', color: 'text-purple-400' },
+  video: { icon: PlayCircleIcon, label: 'Vídeo', color: 'text-emerald-400' },
   text: { icon: DocumentTextIcon, label: 'Texto', color: 'text-blue-400' },
   quiz: { icon: QuestionMarkCircleIcon, label: 'Quiz', color: 'text-amber-400' },
   download: { icon: ArrowDownTrayIcon, label: 'Download', color: 'text-emerald-400' },

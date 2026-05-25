@@ -443,7 +443,7 @@ export default function GenerateLandingPageModal({
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white text-sm">Domínio Padrão</p>
                           <p className="text-xs text-gray-500 mt-0.5">
-                            Sua página será acessível pelo subdomínio Vector Pagamentos.com
+                            Sua página será acessível pelo subdomínio vectorpagamentos.com
                           </p>
                         </div>
                       </button>
@@ -557,7 +557,7 @@ export default function GenerateLandingPageModal({
                           <div>
                             <span className="text-gray-500 dark:text-gray-400">Domínio:</span>
                             <p className="text-gray-900 dark:text-white font-medium">
-                              {selectedDomain === 'default' ? 'Padrão (Vector Pagamentos.com)' : selectedDomain}
+                              {selectedDomain === 'default' ? 'Padrão (vectorpagamentos.com)' : selectedDomain}
                             </p>
                           </div>
                         </div>

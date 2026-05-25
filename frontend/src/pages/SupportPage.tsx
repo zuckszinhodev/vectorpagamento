@@ -36,7 +36,7 @@ const faqItems = [
  'Você pode criar checkouts personalizados com sua marca em Checkouts > Novo Checkout. Defina cores, logo, campos personalizados e o produto. Depois é só compartilhar o link gerado.',
  },
  {
- question: 'Quais são as taxas da WazerPay?',
+ question: 'Quais são as taxas da VectorPagamentos?',
  answer:
  'As taxas variam conforme o método de pagamento: Pix tem taxa fixa por transação, Boleto tem taxa fixa, e Cartão de Crédito tem taxa percentual. Consulte a tabela completa em Configurações > Plano.',
  },
@@ -86,7 +86,7 @@ export default function SupportPage() {
  </a>
 
  <a
- href="https://wazerpay.readme.io/reference"
+ href="https://vectorpagamentos.readme.io/reference"
  target="_blank"
  rel="noopener noreferrer"
  className="bg-surface-card rounded-2xl border border-border-DEFAULT p-5 hover:border-blue-300 transition-all hover:shadow-lg group"

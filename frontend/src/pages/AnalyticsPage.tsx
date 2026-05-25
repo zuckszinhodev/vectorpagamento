@@ -75,7 +75,7 @@ export default function AnalyticsPage() {
  // Customer Type Chart
  const customerLabels = ['Novos', 'Recorrentes'];
  const customerData = [data.customers.new, data.customers.returning];
- const customerColors = ['rgb(147, 51, 234)', 'rgb(217, 70, 239)'];
+ const customerColors = ['rgb(16, 185, 129)', 'rgb(52, 211, 153)'];
 
  const formatCurrency = (value: number) => {
  return new Intl.NumberFormat('pt-BR', {
@@ -116,7 +116,7 @@ export default function AnalyticsPage() {
  </select>
 
  {/* Export Button */}
- <button className="flex items-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-element hover:bg-accent-hover transition-colors hover:shadow-xl hover:shadow-purple-500/30">
+ <button className="flex items-center gap-2 px-4 py-2 bg-accent-primary text-white rounded-element hover:bg-accent-hover transition-colors hover:shadow-xl hover:shadow-emerald-500/30">
  <Download className="w-5 h-5" />
  Exportar
  </button>
@@ -126,11 +126,11 @@ export default function AnalyticsPage() {
  {/* KPI Cards */}
  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
  {/* Revenue */}
- <div className="group relative rounded-2xl bg-surface-card p-3 sm:p-6 shadow-slate-200/50 border border-border-DEFAULT/50/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 overflow-hidden">
- <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-purple-500 to-violet-600 opacity-10 rounded-full blur-3xl group-hover:opacity-30 transition-opacity duration-500 pointer-events-none" />
+ <div className="group relative rounded-2xl bg-surface-card p-3 sm:p-6 shadow-slate-200/50 border border-border-DEFAULT/50/50 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 overflow-hidden">
+ <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-emerald-500 to-emerald-600 opacity-10 rounded-full blur-3xl group-hover:opacity-30 transition-opacity duration-500 pointer-events-none" />
  <div className="relative flex items-center justify-between mb-2">
  <p className="text-xs sm:text-sm text-tx-secondary">Receita Total</p>
- <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center">
+ <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
  <DollarSign className="w-5 h-5 text-white" />
  </div>
  </div>
@@ -143,7 +143,7 @@ export default function AnalyticsPage() {
  </div>
 
  {/* Transactions */}
- <div className="group relative rounded-2xl bg-surface-card p-3 sm:p-6 shadow-slate-200/50 border border-border-DEFAULT/50/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 overflow-hidden">
+ <div className="group relative rounded-2xl bg-surface-card p-3 sm:p-6 shadow-slate-200/50 border border-border-DEFAULT/50/50 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 overflow-hidden">
  <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-blue-500 to-indigo-600 opacity-10 rounded-full blur-3xl group-hover:opacity-30 transition-opacity duration-500 pointer-events-none" />
  <div className="relative flex items-center justify-between mb-2">
  <p className="text-xs sm:text-sm text-tx-secondary">Transações</p>
@@ -160,11 +160,11 @@ export default function AnalyticsPage() {
  </div>
 
  {/* Customers */}
- <div className="group relative rounded-2xl bg-surface-card p-3 sm:p-6 shadow-slate-200/50 border border-border-DEFAULT/50/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 overflow-hidden">
- <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-fuchsia-500 to-purple-600 opacity-10 rounded-full blur-3xl group-hover:opacity-30 transition-opacity duration-500 pointer-events-none" />
+ <div className="group relative rounded-2xl bg-surface-card p-3 sm:p-6 shadow-slate-200/50 border border-border-DEFAULT/50/50 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 overflow-hidden">
+ <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-fuchsia-500 to-emerald-600 opacity-10 rounded-full blur-3xl group-hover:opacity-30 transition-opacity duration-500 pointer-events-none" />
  <div className="relative flex items-center justify-between mb-2">
  <p className="text-xs sm:text-sm text-tx-secondary">Clientes</p>
- <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center">
+ <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-emerald-600 flex items-center justify-center">
  <Users className="w-5 h-5 text-white" />
  </div>
  </div>
@@ -177,7 +177,7 @@ export default function AnalyticsPage() {
  </div>
 
  {/* Average Ticket */}
- <div className="group relative rounded-2xl bg-surface-card p-3 sm:p-6 shadow-slate-200/50 border border-border-DEFAULT/50/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:-translate-y-1 overflow-hidden">
+ <div className="group relative rounded-2xl bg-surface-card p-3 sm:p-6 shadow-slate-200/50 border border-border-DEFAULT/50/50 transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 overflow-hidden">
  <div className="absolute -top-20 -right-20 w-40 h-40 bg-gradient-to-br from-orange-500 to-amber-600 opacity-10 rounded-full blur-3xl group-hover:opacity-30 transition-opacity duration-500 pointer-events-none" />
  <div className="relative flex items-center justify-between mb-2">
  <p className="text-xs sm:text-sm text-tx-secondary">Ticket Médio</p>
@@ -237,7 +237,7 @@ export default function AnalyticsPage() {
  ((data as any).top_products as any[]).map((product: any, i: number) => (
  <div key={product.id || i} className="flex items-center justify-between py-3 border-b border-border-DEFAULT last:border-0 group/item hover:bg-accent-subtle0/5 rounded-element px-2 -mx-2 transition-colors">
  <div className="flex items-center gap-3">
- <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-white font-bold text-xs">
+ <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold text-xs">
  {i + 1}
  </div>
  <div>
@@ -279,7 +279,7 @@ export default function AnalyticsPage() {
  </div>
  <div className="w-full bg-surface-hover rounded-full h-2.5 overflow-hidden">
  <div
- className="h-2.5 rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-500 transition-all duration-1000 ease-out"
+ className="h-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-fuchsia-500 transition-all duration-1000 ease-out"
  style={{ width: `${stage.rate}%` }}
  />
  </div>

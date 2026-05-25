@@ -25,6 +25,7 @@ interface Charge {
   currency: string;
   status: string;
   payment_method: string;
+  acquirer?: string;
   customer: {
     email: string;
     name: string;
@@ -32,6 +33,8 @@ interface Charge {
   created_at: string;
   paid_at?: string;
   acquirer_name?: string;
+  pix_copy_paste?: string;
+  pix_qr_code?: string;
   description?: string;
   has_split?: boolean;
   split_amount?: number;
@@ -82,6 +85,61 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={`badge ${styles[status] || 'badge-default'}`}>{labels[status] || status}</span>;
 }
 
+function extractPixMerchantName(pixPayload?: string): string | null {
+  if (!pixPayload) return null;
+
+  const payload = pixPayload.trim();
+  if (!payload || payload.startsWith('data:') || /^https?:\/\//i.test(payload)) {
+    return null;
+  }
+
+  const fields: Record<string, string> = {};
+  let offset = 0;
+
+  while (offset + 4 <= payload.length) {
+    const id = payload.slice(offset, offset + 2);
+    const rawLength = payload.slice(offset + 2, offset + 4);
+
+    if (!/^\d{2}$/.test(id) || !/^\d{2}$/.test(rawLength)) {
+      break;
+    }
+
+    const valueLength = Number(rawLength);
+    const valueStart = offset + 4;
+    if (valueStart + valueLength > payload.length) {
+      break;
+    }
+
+    fields[id] = payload.slice(valueStart, valueStart + valueLength);
+    offset = valueStart + valueLength;
+  }
+
+  const merchantName = (fields['59'] || '').trim();
+  if (!merchantName) {
+    return null;
+  }
+
+  const normalized = merchantName.replace(/[_\s]+/g, ' ').trim().toLocaleLowerCase('pt-BR');
+  return normalized
+    .split(' ')
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toLocaleUpperCase('pt-BR') + word.slice(1))
+    .join(' ');
+}
+
+function getChargeNominal(charge: Charge): string {
+  const metadataNominal = typeof charge.metadata?.nominal_name === 'string'
+    ? charge.metadata.nominal_name.trim()
+    : '';
+  if (metadataNominal) return metadataNominal;
+
+  const acquirerNominal = (charge.acquirer_name || '').trim();
+  if (acquirerNominal) return acquirerNominal;
+
+  const pixNominal = extractPixMerchantName(charge.pix_copy_paste || charge.pix_qr_code);
+  return pixNominal || '-';
+}
+
 function NewPixChargeModal({
   isOpen,
   onClose,
@@ -116,7 +174,7 @@ function NewPixChargeModal({
       
       // Usar PIX retornado pela API ou gerar código simulado como fallback
       const pixCopyPaste = chargeData.pix_copy_paste || chargeData.pix_qr_code || 
-        `00020126580014br.gov.bcb.pix0136${chargeData.id}@wazerpay.com52040000530398654${(parseFloat(amount) * 100).toString().padStart(4, '0')}5802BR5913${customerName.substring(0, 13)}6009SAO PAULO62070503***6304`;
+        `00020126580014br.gov.bcb.pix0136${chargeData.id}@vectorpagamentos.com52040000530398654${(parseFloat(amount) * 100).toString().padStart(4, '0')}5802BR5913${customerName.substring(0, 13)}6009SAO PAULO62070503***6304`;
       
       setPixCode(pixCopyPaste);
       
@@ -490,8 +548,8 @@ function ChargeDetailModal({
                       <span className="text-sm text-tx-primary">{charge.payment_method}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-tx-muted">Adquirente</span>
-                      <span className="text-sm text-tx-primary">{charge.acquirer_name || '-'}</span>
+                      <span className="text-sm text-tx-muted">Nominal</span>
+                      <span className="text-sm text-tx-primary">{getChargeNominal(charge)}</span>
                     </div>
                     <hr className="border-border-DEFAULT" />
                     <div className="flex items-center justify-between">
@@ -516,17 +574,17 @@ function ChargeDetailModal({
                     {charge.metadata?.source === 'split' && (
                       <>
                         <hr className="border-border-DEFAULT" />
-                        <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 p-3 space-y-2">
+                        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3 space-y-2">
                           <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                               SPLIT
                             </span>
-                            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">
+                            <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
                               Recebimento via Split
                             </span>
                           </div>
                           {charge.description && (
-                            <p className="text-xs text-purple-600 dark:text-purple-400">
+                            <p className="text-xs text-emerald-600 dark:text-emerald-400">
                               {charge.description}
                             </p>
                           )}
@@ -886,13 +944,14 @@ export default function ChargesPage() {
                     )}
                   </div>
                   <p className="text-xs text-tx-muted truncate">{charge.customer?.email}</p>
+                  <p className="text-xs text-tx-muted truncate mt-0.5">Nominal: {getChargeNominal(charge)}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold font-mono text-sm text-tx-primary">
                     {formatCurrency(charge.amount)}
                   </p>
                   {charge.metadata?.source === 'split' && (
-                    <span className="inline-flex items-center rounded-full bg-purple-100 px-1.5 py-0.5 text-[9px] font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                       SPLIT
                     </span>
                   )}
@@ -919,6 +978,9 @@ export default function ChargesPage() {
                   Cliente
                 </th>
                 <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">
+                  Nominal
+                </th>
+                <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">
                   Valor
                 </th>
                 <th className="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">
@@ -938,7 +1000,7 @@ export default function ChargesPage() {
             <tbody className="divide-y divide-border-DEFAULT bg-surface-card" style={{ overflow: 'visible' }}>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-tx-muted">
+                  <td colSpan={7} className="px-6 py-12 text-center text-tx-muted">
                     <div className="flex items-center justify-center">
                       <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-primary border-t-transparent" />
                     </div>
@@ -946,7 +1008,7 @@ export default function ChargesPage() {
                 </tr>
               ) : charges.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-tx-muted">
+                  <td colSpan={7} className="px-6 py-12 text-center text-tx-muted">
                     Nenhuma cobrança encontrada
                   </td>
                 </tr>
@@ -967,13 +1029,16 @@ export default function ChargesPage() {
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
+                      <span className="text-sm text-tx-primary">{getChargeNominal(charge)}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4">
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold font-mono text-tx-primary">
                             {formatCurrency(charge.amount)}
                           </span>
                           {charge.metadata?.source === 'split' && (
-                            <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                            <span className="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                               SPLIT
                             </span>
                           )}

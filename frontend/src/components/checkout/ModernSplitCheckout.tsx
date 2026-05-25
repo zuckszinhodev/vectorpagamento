@@ -729,7 +729,7 @@ export function ModernSplitCheckout({
                             />
                           ) : null}
                           <div 
-                            className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-green-400 flex items-center justify-center text-white font-extrabold text-base flex-shrink-0 shadow-md"
+                            className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-pink-400 flex items-center justify-center text-white font-extrabold text-base flex-shrink-0 shadow-md"
                             style={{ display: testimonial.avatar ? 'none' : 'flex' }}
                           >
                             {testimonial.name?.charAt(0) || '?'}

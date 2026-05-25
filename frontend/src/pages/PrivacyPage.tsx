@@ -7,7 +7,7 @@ export default function PrivacyPage() {
       <div className="max-w-3xl mx-auto px-3 py-6 sm:px-4 sm:py-12">
         <Link
           to="/register"
-          className="inline-flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 mb-5 sm:mb-8 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 mb-5 sm:mb-8 transition-colors"
         >
           <ArrowLeftIcon className="h-4 w-4" />
           Voltar
@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">1. Introdução</h2>
             <p>
-              A WazerPay ("nós", "nosso" ou "Plataforma") está comprometida em proteger a sua privacidade. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações pessoais quando você utiliza nossos serviços.
+              A VectorPagamentos ("nós", "nosso" ou "Plataforma") está comprometida em proteger a sua privacidade. Esta Política de Privacidade descreve como coletamos, usamos, armazenamos e protegemos suas informações pessoais quando você utiliza nossos serviços.
             </p>
           </section>
 
@@ -128,8 +128,8 @@ export default function PrivacyPage() {
             </ul>
             <p className="mt-3">
               Para exercer qualquer desses direitos, entre em contato pelo e-mail:{' '}
-              <a href="mailto:privacidade@wazerpay.com" className="text-purple-400 hover:text-purple-300 hover:underline">
-                privacidade@wazerpay.com
+              <a href="mailto:privacidade@vectorpagamentos.com" className="text-emerald-400 hover:text-emerald-300 hover:underline">
+                privacidade@vectorpagamentos.com
               </a>
             </p>
           </section>
@@ -151,7 +151,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-white mb-3">10. Inteligência Artificial</h2>
             <p>
-              A WazerPay utiliza serviços de inteligência artificial de terceiros para geração de conteúdo (páginas de venda, textos e imagens). Os dados enviados a estes serviços são limitados ao necessário para a geração do conteúdo solicitado e não incluem dados pessoais identificáveis dos usuários.
+              A VectorPagamentos utiliza serviços de inteligência artificial de terceiros para geração de conteúdo (páginas de venda, textos e imagens). Os dados enviados a estes serviços são limitados ao necessário para a geração do conteúdo solicitado e não incluem dados pessoais identificáveis dos usuários.
             </p>
           </section>
 
@@ -175,11 +175,11 @@ export default function PrivacyPage() {
               Para dúvidas sobre esta Política de Privacidade ou sobre o tratamento de seus dados pessoais, entre em contato:
             </p>
             <div className="mt-3 p-3 sm:p-4 rounded-lg bg-gray-900 border border-gray-800">
-              <p className="text-white font-medium">WazerPay - Encarregado de Dados (DPO)</p>
+              <p className="text-white font-medium">VectorPagamentos - Encarregado de Dados (DPO)</p>
               <p className="mt-1">
                 E-mail:{' '}
-                <a href="mailto:contato@wazerpay.com.br" className="text-purple-400 hover:text-purple-300 hover:underline">
-                  contato@wazerpay.com.br
+                <a href="mailto:contato@vectorpagamentos.com.br" className="text-emerald-400 hover:text-emerald-300 hover:underline">
+                  contato@vectorpagamentos.com.br
                 </a>
               </p>
             </div>
@@ -188,7 +188,7 @@ export default function PrivacyPage() {
 
         <div className="mt-8 pt-6 sm:mt-12 sm:pt-8 border-t border-gray-800">
           <p className="text-sm text-gray-400 text-center">
-            © 2026 WazerPay. Todos os direitos reservados.
+            © 2026 VectorPagamentos. Todos os direitos reservados.
           </p>
         </div>
       </div>

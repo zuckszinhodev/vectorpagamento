@@ -2,7 +2,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import toast from 'react-hot-toast';
 
 // Configure API base URL to point to Laravel backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.Vector Pagamentos.com.br/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.vectorpagamentos.com.br/api/v1';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

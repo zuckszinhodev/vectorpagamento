@@ -11,3 +11,6 @@ export { EmptyState } from './EmptyState';
 export { Toast, ToastContainer, useToast } from './Toast';
 export { GlowLineChart, GlowDoughnutChart, ChartCard } from './GlowChart';
 export { Spinner, PageSpinner, SectionSpinner } from './Spinner';
+export { CircuitBackground } from './CircuitBackground';
+export { default as LaserFlow } from './LaserFlow';
+export { default as LightPillar } from './LightPillar';

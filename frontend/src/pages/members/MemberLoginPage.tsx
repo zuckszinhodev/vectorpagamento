@@ -102,7 +102,7 @@ function FloatingInput({
     <div className="relative group">
       <div className={`
         absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300 pointer-events-none
-        ${active ? '-translate-y-[1.85rem] scale-[0.8] text-purple-400' : 'text-gray-500'}
+        ${active ? '-translate-y-[1.85rem] scale-[0.8] text-emerald-400' : 'text-gray-500'}
       `}>
         <div className="flex items-center gap-2">
           <span className="w-4 h-4">{icon}</span>
@@ -121,13 +121,13 @@ function FloatingInput({
           w-full pt-6 pb-3 px-4 bg-white/[0.04] rounded-xl text-white text-sm
           border transition-all duration-300 outline-none
           ${focused
-            ? 'border-purple-500/60 shadow-[0_0_20px_rgba(139,92,246,0.15)] bg-white/[0.06]'
+            ? 'border-emerald-500/60 shadow-[0_0_20px_rgba(139,92,246,0.15)] bg-white/[0.06]'
             : 'border-white/[0.08] hover:border-white/[0.15]'}
         `}
       />
       {/* animated bottom glow */}
       <div className={`
-        absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] rounded-full bg-gradient-to-r from-purple-500 via-violet-400 to-purple-500
+        absolute bottom-0 left-1/2 -translate-x-1/2 h-[2px] rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-500
         transition-all duration-500
         ${focused ? 'w-[90%] opacity-100' : 'w-0 opacity-0'}
       `} />
@@ -197,8 +197,8 @@ export default function MemberLoginPage() {
 
       {/* ── animated gradient orbs ── */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-purple-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '6s' }} />
-        <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-violet-500/10 blur-[140px] animate-pulse" style={{ animationDuration: '8s', animationDelay: '2s' }} />
+        <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-emerald-600/15 blur-[120px] animate-pulse" style={{ animationDuration: '6s' }} />
+        <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-emerald-500/10 blur-[140px] animate-pulse" style={{ animationDuration: '8s', animationDelay: '2s' }} />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-indigo-600/8 blur-[100px] animate-pulse" style={{ animationDuration: '7s', animationDelay: '4s' }} />
       </div>
 
@@ -222,18 +222,18 @@ export default function MemberLoginPage() {
       `}>
 
         {/* ── glow behind card ── */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-purple-600/20 via-violet-500/10 to-purple-600/20 rounded-3xl blur-xl" />
+        <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600/20 via-emerald-500/10 to-emerald-600/20 rounded-3xl blur-xl" />
 
-        <div className="relative bg-white/[0.04] backdrop-blur-2xl rounded-2xl border border-white/[0.08] shadow-2xl shadow-purple-950/30 overflow-hidden">
+        <div className="relative bg-white/[0.04] backdrop-blur-2xl rounded-2xl border border-white/[0.08] shadow-2xl shadow-emerald-950/30 overflow-hidden">
 
           {/* ── top gradient bar ── */}
-          <div className="h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
+          <div className="h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent" />
 
           <div className="p-8 sm:p-10">
 
             {/* ── logo / brand ── */}
             <div className={`text-center mb-8 transition-all duration-700 delay-200 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-violet-500 mb-4 shadow-lg shadow-purple-600/30">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-emerald-500 mb-4 shadow-lg shadow-emerald-600/30">
                 <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" />
                 </svg>
@@ -247,14 +247,14 @@ export default function MemberLoginPage() {
               <button
                 type="button"
                 onClick={() => setIsRegister(false)}
-                className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ${!isRegister ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/25' : 'text-gray-400 hover:text-gray-300'}`}
+                className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ${!isRegister ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25' : 'text-gray-400 hover:text-gray-300'}`}
               >
                 Entrar
               </button>
               <button
                 type="button"
                 onClick={() => setIsRegister(true)}
-                className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ${isRegister ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/25' : 'text-gray-400 hover:text-gray-300'}`}
+                className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 ${isRegister ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/25' : 'text-gray-400 hover:text-gray-300'}`}
               >
                 Criar conta
               </button>
@@ -280,7 +280,7 @@ export default function MemberLoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-purple-400 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-emerald-400 transition-colors"
                 >
                   {showPassword ? (
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -302,8 +302,8 @@ export default function MemberLoginPage() {
                 className="relative w-full group"
               >
                 {/* button glow */}
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-violet-600 rounded-xl blur opacity-40 group-hover:opacity-70 transition-opacity duration-300" />
-                <div className="relative flex items-center justify-center gap-2 py-3.5 px-4 bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white font-semibold text-sm rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-600/25">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-emerald-600 to-emerald-600 rounded-xl blur opacity-40 group-hover:opacity-70 transition-opacity duration-300" />
+                <div className="relative flex items-center justify-center gap-2 py-3.5 px-4 bg-gradient-to-r from-emerald-600 to-emerald-600 hover:from-emerald-500 hover:to-emerald-500 text-white font-semibold text-sm rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-emerald-600/25">
                   {loginMutation.isPending ? (
                     <>
                       <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
@@ -353,9 +353,9 @@ export default function MemberLoginPage() {
         <div className={`text-center mt-6 transition-all duration-700 delay-700 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <p className="text-[11px] text-gray-600">
             Ao entrar, você concorda com nossos{' '}
-            <a href="/terms" className="text-purple-400/80 hover:text-purple-400 transition-colors">Termos</a>
+            <a href="/terms" className="text-emerald-400/80 hover:text-emerald-400 transition-colors">Termos</a>
             {' '}e{' '}
-            <a href="/privacy" className="text-purple-400/80 hover:text-purple-400 transition-colors">Privacidade</a>
+            <a href="/privacy" className="text-emerald-400/80 hover:text-emerald-400 transition-colors">Privacidade</a>
           </p>
         </div>
 

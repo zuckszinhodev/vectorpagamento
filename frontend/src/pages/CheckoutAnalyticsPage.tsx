@@ -100,14 +100,14 @@ const METHOD_LABELS: Record<string, string> = {
 };
 
 const METHOD_COLORS: Record<string, string> = {
-  credit_card: '#8b5cf6', pix: '#22c55e', boleto: '#f97316', debit_card: '#3b82f6',
+  credit_card: '#10b981', pix: '#22c55e', boleto: '#f97316', debit_card: '#3b82f6',
 };
 
 const STATUS_BADGE: Record<string, string> = {
   approved: 'bg-green-500/10 text-green-500', authorized: 'bg-blue-500/10 text-blue-500',
   pending: 'bg-yellow-500/10 text-yellow-500', processing: 'bg-orange-500/10 text-orange-500',
   declined: 'bg-red-500/10 text-red-500', failed: 'bg-red-500/10 text-red-500',
-  cancelled: 'bg-gray-500/10 text-gray-400', refunded: 'bg-purple-500/10 text-purple-500',
+  cancelled: 'bg-gray-500/10 text-gray-400', refunded: 'bg-emerald-500/10 text-emerald-500',
   chargeback: 'bg-red-600/10 text-red-400', expired: 'bg-gray-500/10 text-gray-400',
 };
 
@@ -176,7 +176,7 @@ export default function CheckoutAnalyticsPage() {
       {
         label: 'Receita (R$)',
         data: analytics.daily_chart.map((d) => d.revenue / 100),
-        borderColor: '#8b5cf6',
+        borderColor: '#10b981',
         backgroundColor: 'rgba(139, 92, 246, 0.1)',
         fill: true,
         tension: 0.4,
@@ -214,7 +214,7 @@ export default function CheckoutAnalyticsPage() {
     },
     scales: {
       x: { ticks: { color: '#64748b', maxRotation: 0, maxTicksLimit: 15, font: { size: 10 } }, grid: { display: false } },
-      y: { position: 'left' as const, ticks: { color: '#8b5cf6', callback: (v: any) => `R$ ${v}` }, grid: { color: 'rgba(148,163,184,0.1)' } },
+      y: { position: 'left' as const, ticks: { color: '#10b981', callback: (v: any) => `R$ ${v}` }, grid: { color: 'rgba(148,163,184,0.1)' } },
       y1: { position: 'right' as const, ticks: { color: '#22c55e', stepSize: 1 }, grid: { display: false } },
     },
   };
@@ -240,7 +240,7 @@ export default function CheckoutAnalyticsPage() {
   const installmentEntries = Object.entries(analytics.by_installments);
   const installmentChartData = {
     labels: installmentEntries.map(([k]) => `${k}x`),
-    datasets: [{ label: 'Vendas', data: installmentEntries.map(([, v]) => v), backgroundColor: '#8b5cf6', borderRadius: 6 }],
+    datasets: [{ label: 'Vendas', data: installmentEntries.map(([, v]) => v), backgroundColor: '#10b981', borderRadius: 6 }],
   };
 
   const barOptions = {
@@ -256,7 +256,7 @@ export default function CheckoutAnalyticsPage() {
     { label: 'Visualizações', value: overview.views.toLocaleString('pt-BR'), icon: EyeIcon, color: 'text-blue-500', bg: 'bg-blue-500/10' },
     { label: 'Vendas Aprovadas', value: overview.approved_charges.toLocaleString('pt-BR'), icon: ShoppingCartIcon, color: 'text-green-500', bg: 'bg-green-500/10' },
     { label: 'Taxa de Conversão', value: `${overview.conversion_rate.toFixed(2)}%`, icon: ArrowTrendingUpIcon, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-    { label: 'Receita no Período', value: formatCurrency(overview.period_revenue), icon: CurrencyDollarIcon, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+    { label: 'Receita no Período', value: formatCurrency(overview.period_revenue), icon: CurrencyDollarIcon, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
     { label: 'Ticket Médio', value: formatCurrency(overview.avg_ticket), icon: ReceiptPercentIcon, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
     { label: 'Receita Líquida', value: formatCurrency(overview.net_revenue), icon: BanknotesIcon, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
   ];
@@ -318,7 +318,7 @@ export default function CheckoutAnalyticsPage() {
           <div><p className="text-sm font-semibold text-tx-primary">{overview.failed_charges}</p><p className="text-[10px] text-tx-muted">Falhas</p></div>
         </div>
         <div className="rounded-xl bg-surface-card p-3 flex items-center gap-3">
-          <div className="rounded-lg p-2 bg-purple-500/10"><ArrowPathIcon className="h-4 w-4 text-purple-500" /></div>
+          <div className="rounded-lg p-2 bg-emerald-500/10"><ArrowPathIcon className="h-4 w-4 text-emerald-500" /></div>
           <div><p className="text-sm font-semibold text-tx-primary">{overview.refunded_count}</p><p className="text-[10px] text-tx-muted">Reembolsos ({formatCurrency(overview.refunded_amount)})</p></div>
         </div>
         <div className="rounded-xl bg-surface-card p-3 flex items-center gap-3">

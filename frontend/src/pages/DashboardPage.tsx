@@ -97,7 +97,7 @@ function getDefaultGoalMilestoneState(): GoalMilestoneState {
 }
 
 function getGoalMilestoneStorageKey(userId: string): string {
-  return `wazerpay.goal-milestone.${userId}`;
+  return `vectorpagamentos.goal-milestone.${userId}`;
 }
 
 function normalizeGoalMilestoneState(value: Partial<GoalMilestoneState> | null | undefined): GoalMilestoneState {
@@ -648,8 +648,8 @@ export default function DashboardPage() {
 
   const supportWhatsAppUrl = useMemo(() => {
     const message = user?.name
-      ? `Olá! Sou ${user.name} e bati minha meta de faturamento na WazerPay. Gostaria de falar com o suporte.`
-      : 'Olá! Bati minha meta de faturamento na WazerPay e gostaria de falar com o suporte.';
+      ? `Olá! Sou ${user.name} e bati minha meta de faturamento na VectorPagamentos. Gostaria de falar com o suporte.`
+      : 'Olá! Bati minha meta de faturamento na VectorPagamentos e gostaria de falar com o suporte.';
 
     return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   }, [user?.name]);
@@ -740,19 +740,19 @@ export default function DashboardPage() {
     <div className="space-y-2 sm:space-y-3 pb-4">
       {/* Impersonation Banner */}
       {isImpersonating && (
-        <div className="flex items-center gap-2 sm:gap-3 bg-purple-50 dark:bg-purple-950/40 border border-purple-300 dark:border-purple-700 rounded-lg px-2.5 py-1.5 sm:px-4 sm:py-3">
-          <ShieldExclamationIcon className="h-4 w-4 sm:h-6 sm:w-6 text-purple-500 flex-shrink-0" />
+        <div className="flex items-center gap-2 sm:gap-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 rounded-lg px-2.5 py-1.5 sm:px-4 sm:py-3">
+          <ShieldExclamationIcon className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-500 flex-shrink-0" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs sm:text-sm font-medium text-purple-800 dark:text-purple-200">
+            <p className="text-xs sm:text-sm font-medium text-emerald-800 dark:text-emerald-200">
               Você está logado como <strong>{user?.name}</strong> (modo impersonação)
             </p>
-            <p className="text-[10px] sm:text-xs text-purple-600 dark:text-purple-400 mt-0.5 hidden sm:block">
+            <p className="text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 hidden sm:block">
               Todas as ações serão registradas no audit log.
             </p>
           </div>
           <button
             onClick={() => stopImpersonation()}
-            className="flex-shrink-0 text-[10px] sm:text-xs font-semibold bg-purple-500 hover:bg-purple-600 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-md transition-colors"
+            className="flex-shrink-0 text-[10px] sm:text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-md transition-colors"
           >
             Voltar ao Admin
           </button>
@@ -803,7 +803,7 @@ export default function DashboardPage() {
             {/* Vendas hoje */}
             <div className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                <ShoppingCartIcon className="h-4 w-4 sm:h-6 sm:w-6 text-violet-500" />
+                <ShoppingCartIcon className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-500" />
                 <span className="text-[10px] sm:text-xs text-tx-muted">Faturamento Total</span>
               </div>
               <p className="text-lg sm:text-2xl font-bold text-tx-primary">{formatCurrency(summary.total_revenue || 0)}</p>
@@ -812,7 +812,7 @@ export default function DashboardPage() {
             {/* Ticket médio */}
             <div className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                <TicketIcon className="h-4 w-4 sm:h-6 sm:w-6 text-violet-500" />
+                <TicketIcon className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-500" />
                 <span className="text-[10px] sm:text-xs text-tx-muted">Ticket médio</span>
               </div>
               <p className="text-lg sm:text-2xl font-bold text-tx-primary">{formatCurrency(summary.average_ticket || 0)}</p>
@@ -820,12 +820,12 @@ export default function DashboardPage() {
 
             {/* Alertas de chargeback */}
             <div 
-              className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden col-span-2 sm:col-span-1 cursor-pointer hover:border-violet-500 transition-colors group"
+              className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden col-span-2 sm:col-span-1 cursor-pointer hover:border-emerald-500 transition-colors group"
               onClick={() => navigate('/chargebacks')}
             >
               <div className="flex items-center justify-between mb-0.5 sm:mb-1">
                 <div className="flex items-center gap-1.5 sm:gap-2">
-                  <ExclamationTriangleIcon className="h-4 w-4 sm:h-6 sm:w-6 text-violet-500" />
+                  <ExclamationTriangleIcon className="h-4 w-4 sm:h-6 sm:w-6 text-emerald-500" />
                   <span className="text-[10px] sm:text-xs text-tx-muted">Alertas de chargeback</span>
                 </div>
                 <ArrowTopRightOnSquareIcon className="h-3 w-3 sm:h-4 sm:w-4 text-tx-muted opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -851,34 +851,34 @@ export default function DashboardPage() {
             {/* Vendas pix */}
             <div className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                <div className="flex items-center justify-center h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-violet-500/10">
-                  <PixIcon className="h-3 w-3 sm:h-4 sm:w-4 text-violet-500" />
+                <div className="flex items-center justify-center h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-emerald-500/10">
+                  <PixIcon className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
                 </div>
                 <span className="text-[10px] sm:text-xs text-tx-muted">PIX nas últimas 24h</span>
               </div>
-              <p className="text-base sm:text-xl font-bold text-violet-500">{formatCurrency(pixRevenue24h)}</p>
+              <p className="text-base sm:text-xl font-bold text-emerald-500">{formatCurrency(pixRevenue24h)}</p>
             </div>
 
             {/* Vendas cartão */}
             <div className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                <div className="flex items-center justify-center h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-violet-500/10">
-                  <CreditCardIcon className="h-3 w-3 sm:h-4 sm:w-4 text-violet-500" />
+                <div className="flex items-center justify-center h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-emerald-500/10">
+                  <CreditCardIcon className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
                 </div>
                 <span className="text-[10px] sm:text-xs text-tx-muted">Cartão nas últimas 24h</span>
               </div>
-              <p className="text-base sm:text-xl font-bold text-violet-500">{formatCurrency(cardRevenue24h)}</p>
+              <p className="text-base sm:text-xl font-bold text-emerald-500">{formatCurrency(cardRevenue24h)}</p>
             </div>
 
             {/* Vendas boleto */}
             <div className="relative bg-surface-card border border-border-DEFAULT rounded-lg p-2 sm:p-3 overflow-hidden col-span-2 sm:col-span-1">
               <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                <div className="flex items-center justify-center h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-violet-500/10">
-                  <DocumentTextIcon className="h-3 w-3 sm:h-4 sm:w-4 text-violet-500" />
+                <div className="flex items-center justify-center h-6 w-6 sm:h-8 sm:w-8 rounded-lg bg-emerald-500/10">
+                  <DocumentTextIcon className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
                 </div>
                 <span className="text-[10px] sm:text-xs text-tx-muted">Boleto nas últimas 24h</span>
               </div>
-              <p className="text-base sm:text-xl font-bold text-violet-500">{formatCurrency(boletoRevenue24h)}</p>
+              <p className="text-base sm:text-xl font-bold text-emerald-500">{formatCurrency(boletoRevenue24h)}</p>
             </div>
           </>
         )}
@@ -981,12 +981,12 @@ export default function DashboardPage() {
               </div>
 
               {/* Total sacado */}
-              <div className="bg-surface-card border border-violet-200/50 dark:border-violet-500/20 rounded-lg p-2 lg:p-3 group hover:border-violet-300 dark:hover:border-violet-500/40 transition-colors">
+              <div className="bg-surface-card border border-emerald-200/50 dark:border-emerald-500/20 rounded-lg p-2 lg:p-3 group hover:border-emerald-300 dark:hover:border-emerald-500/40 transition-colors">
                 <div className="flex items-center gap-1 lg:gap-2 mb-0.5 lg:mb-1">
-                  <CurrencyDollarIcon className="h-3.5 w-3.5 lg:h-5 lg:w-5 text-violet-600 dark:text-violet-400 flex-shrink-0" />
+                  <CurrencyDollarIcon className="h-3.5 w-3.5 lg:h-5 lg:w-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                   <span className="text-[10px] lg:text-xs text-tx-muted truncate">Sacado</span>
                 </div>
-                <p className="text-xs lg:text-lg font-bold text-violet-600 dark:text-violet-400 truncate">
+                <p className="text-xs lg:text-lg font-bold text-emerald-600 dark:text-emerald-400 truncate">
                   {showBalance ? formatCurrency(walletSummary?.total_withdrawn || 0) : '••••••'}
                 </p>
               </div>
@@ -996,7 +996,7 @@ export default function DashboardPage() {
             <button
               onClick={() => navigate('/saques')}
               disabled={!walletSummary?.available_balance || walletSummary.available_balance <= 0}
-              className="w-full mt-2 lg:mt-4 px-3 py-2 lg:py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-xs lg:text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-violet-600 disabled:hover:to-indigo-600 disabled:shadow-none"
+              className="w-full mt-2 lg:mt-4 px-3 py-2 lg:py-2.5 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-700 hover:to-indigo-700 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-xs lg:text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-emerald-600 disabled:hover:to-indigo-600 disabled:shadow-none"
             >
               Solicitar saque
             </button>
@@ -1017,16 +1017,16 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
             <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
-                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-violet-200 dark:text-gray-700" />
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
                 <circle 
-                  cx="50%" cy="50%" r="45%" fill="none" stroke="#8b5cf6" strokeWidth="3" 
+                  cx="50%" cy="50%" r="45%" fill="none" stroke="#10b981" strokeWidth="3" 
                   strokeDasharray={`${Math.min((checkoutRevenue / 100) / 10000 * 100, 100) * 2.83} 283`}
                   strokeLinecap="round"
                 />
               </svg>
             </div>
             <div className="min-w-0 text-center sm:text-left">
-              <p className="text-[8px] sm:text-xs font-semibold text-violet-400 uppercase tracking-wide truncate">Checkout</p>
+              <p className="text-[8px] sm:text-xs font-semibold text-emerald-400 uppercase tracking-wide truncate">Checkout</p>
               <p className="text-[10px] sm:text-lg font-bold text-tx-primary">{formatCurrency(checkoutRevenue)}</p>
               <p className="text-[8px] text-tx-muted hidden sm:block">{checkoutCount || 0} vendas</p>
             </div>
@@ -1036,7 +1036,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
             <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
-                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-violet-200 dark:text-gray-700" />
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
                 <circle 
                   cx="50%" cy="50%" r="45%" fill="none" stroke="#f59e0b" strokeWidth="3" 
                   strokeDasharray="0 283"
@@ -1055,7 +1055,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
             <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
-                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-violet-200 dark:text-gray-700" />
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
                 <circle 
                   cx="50%" cy="50%" r="45%" fill="none" stroke="#ec4899" strokeWidth="3" 
                   strokeDasharray="0 283"
@@ -1074,7 +1074,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
             <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
-                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-violet-200 dark:text-gray-700" />
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
                 <circle 
                   cx="50%" cy="50%" r="45%" fill="none" stroke="#06b6d4" strokeWidth="3" 
                   strokeDasharray="0 283"
@@ -1093,7 +1093,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
             <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
-                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-violet-200 dark:text-gray-700" />
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
                 <circle 
                   cx="50%" cy="50%" r="45%" fill="none" stroke="#10b981" strokeWidth="3" 
                   strokeDasharray={`${Math.min((memberAreaRevenue / 100) / 10000 * 100, 100) * 2.83} 283`}
@@ -1112,16 +1112,16 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-3">
             <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
-                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-violet-200 dark:text-gray-700" />
+                <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
                 <circle 
-                  cx="50%" cy="50%" r="45%" fill="none" stroke="#a855f7" strokeWidth="3" 
+                  cx="50%" cy="50%" r="45%" fill="none" stroke="#10b981" strokeWidth="3" 
                   strokeDasharray={`${Math.min(summary.conversion_rate || 0, 100) * 2.83} 283`}
                   strokeLinecap="round"
                 />
               </svg>
             </div>
             <div className="min-w-0 text-center sm:text-left">
-              <p className="text-[8px] sm:text-xs font-semibold text-purple-400 uppercase tracking-wide truncate">Conversão</p>
+              <p className="text-[8px] sm:text-xs font-semibold text-emerald-400 uppercase tracking-wide truncate">Conversão</p>
               <p className="text-[10px] sm:text-lg font-bold text-tx-primary">{(summary.conversion_rate || 0).toFixed(1)}%</p>
               <p className="text-[8px] text-tx-muted hidden sm:block">aprovadas</p>
             </div>
@@ -1131,128 +1131,11 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Faturamento Total + Progress + Pulseira */}
-      <div className="relative p-6 sm:p-10 text-center">
-        {showRevenueHeroSkeleton ? (
-          <DashboardRevenueHeroSkeleton />
-        ) : (
-          <>
-            <div>
-              {/* Label */}
-              <p className="text-sm sm:text-base font-semibold text-tx-muted mb-4 tracking-wide uppercase">
-                Faturamento Total
-              </p>
-              
-              {/* Valor principal */}
-              <div className="mb-8">
-                <p className="text-5xl sm:text-7xl md:text-8xl font-bold text-tx-primary">
-                  {formatCurrency(summary.total_revenue || 0)}
-                </p>
-              </div>
-              
-              {/* Progress bar até 10k */}
-              {!shouldHideGoalProgress && (
-                <div className="max-w-lg mx-auto mb-8">
-                  <div className="flex justify-between text-xs sm:text-sm font-medium mb-4 px-1">
-                    <span className="text-tx-muted">
-                      R$ 0
-                    </span>
-                    <span className="text-tx-muted font-semibold">
-                      Meta: {formatCurrency(firstGoalTargetCents)}
-                    </span>
-                  </div>
-                  
-                  <div className="relative h-3 sm:h-4 bg-surface-secondary rounded-full overflow-hidden border border-border-subtle">
-                    <div 
-                      className="absolute inset-y-0 left-0 bg-violet-600 rounded-full transition-all duration-1000 ease-out"
-                      style={{ 
-                        width: `${goalProgress}%`
-                      }}
-                    />
-                  </div>
-                  
-                  <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <span className="text-xs sm:text-sm font-semibold text-violet-600">
-                      {goalProgress.toFixed(0)}%
-                    </span>
-                    <span className="text-xs text-tx-muted">
-                      {`Faltam ${formatCurrency(remainingToGoalCents)} para a meta`}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-                {shouldHideGoalProgress && (
-                  <div className="mt-4 flex flex-col gap-3 rounded-xl border border-violet-500/20 bg-surface-card/80 px-4 py-3 text-left shadow-[0_12px_32px_rgba(124,58,237,0.08)] backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="inline-flex items-center gap-2 rounded-full bg-violet-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-500">
-                        <TrophyIcon className="h-4 w-4" />
-                        Parabens
-                      </div>
-                      <p className="mt-2 text-sm font-semibold text-tx-primary">
-                        Voce bateu a meta de {formatCurrency(firstGoalTargetCents)}.
-                      </p>
-                      <p className="mt-1 text-xs sm:text-sm text-tx-muted">
-                        Fale com o suporte se quiser seguir para o proximo nivel.
-                      </p>
-                    </div>
-
-                    <a
-                      href={supportWhatsAppUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-violet-700 sm:w-auto"
-                    >
-                      <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-                      WhatsApp
-                    </a>
-                  </div>
-                )}
-              </div>
-
-            {/* Imagens */}
-            <div className="flex items-center justify-center">
-              <img 
-                src="/img/puseira roxa.png" 
-                alt="Pulseira Roxa" 
-                className="max-w-[180px] sm:max-w-[280px] md:max-w-[350px] rounded-lg z-10"
-                style={{
-                  animation: 'float 3s ease-in-out infinite',
-                  filter: 'drop-shadow(0 6px 10px rgba(88, 28, 135, 0.12)) brightness(1.02)',
-                }}
-              />
-              <img 
-                src="/img/placafaturamento.png" 
-                alt="Placa de Faturamento" 
-                className="max-w-[140px] sm:max-w-[200px] md:max-w-[260px] -ml-12 sm:-ml-16 md:-ml-20"
-                style={{
-                  animation: 'floatSlow 4.5s ease-in-out infinite',
-                  transform: 'rotate(-8deg)',
-                  filter: 'drop-shadow(0 8px 12px rgba(76, 29, 149, 0.14))',
-                }}
-              />
-            </div>
-          </>
-        )}
-
-        <style>{`
-          @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-          }
-          @keyframes floatSlow {
-            0%, 100% { transform: translateY(0px) rotate(-8deg); }
-            50% { transform: translateY(-10px) rotate(-8deg); }
-          }
-        `}</style>
-      </div>
-
       {/* Footer */}
       <footer className="border-t border-border-DEFAULT/60 mt-8 pt-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="text-xs text-tx-muted">
-            <p>Wazerpay Intermediadora de Pagamentos</p>
-            <p>CNPJ: 59.690.852/0001-09</p>
+            <p>VectorPagamentos Intermediadora de Pagamentos</p>
             <a 
               href="https://wa.me/5511940968290" 
               target="_blank" 
@@ -1266,7 +1149,7 @@ export default function DashboardPage() {
             <a href="/privacy" className="hover:text-tx-primary transition-colors">
               Política de Privacidade
             </a>
-            <span>WazerPay © 2026</span>
+            <span>VectorPagamentos © 2026</span>
           </div>
         </div>
       </footer>

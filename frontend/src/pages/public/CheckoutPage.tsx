@@ -36,7 +36,7 @@ const LIGHT_MODE_VARS = {
   '--text-secondary': '#52525B',
   '--text-muted': '#A1A1AA',
   '--text-inverted': '#FFFFFF',
-  '--accent-subtle': 'rgba(124,58,237,0.08)',
+  '--accent-subtle': 'rgba(5,150,105,0.08)',
   '--status-success-subtle': 'rgba(34,197,94,0.10)',
   '--status-error-subtle': 'rgba(239,68,68,0.10)',
   '--status-warning-subtle': 'rgba(245,158,11,0.10)',
@@ -644,7 +644,7 @@ function ResultScreen({ result }: { result: PaymentResult }) {
 
 // Default blocks if none configured - matches CheckoutBuilderPage defaults
 const defaultBlocks: CheckoutBlock[] = [
-  { id: 'header', type: 'header', enabled: true, settings: { showLogo: true, showSecureBadge: true, title: 'WazerPay' } },
+  { id: 'header', type: 'header', enabled: true, settings: { showLogo: true, showSecureBadge: true, title: 'VectorPagamentos' } },
   { id: 'product', type: 'product', enabled: true, settings: { showImage: true, showDescription: true, showOriginalPrice: true } },
   { id: 'urgency', type: 'urgency', enabled: true, settings: { 
     style: 'banner',
@@ -1110,7 +1110,7 @@ export default function PublicCheckoutPage() {
 
   // Theme - defaults match CheckoutBuilderPage
   const theme = {
-    primaryColor: themeData.primaryColor || settings.theme_color || '#8b5cf6',
+    primaryColor: themeData.primaryColor || settings.theme_color || '#10b981',
     secondaryColor: themeData.secondaryColor || '#6366f1',
     backgroundColor: themeData.backgroundColor || '#f8fafc',
     cardBackground: themeData.cardBackground || '#ffffff',
@@ -1232,7 +1232,7 @@ export default function PublicCheckoutPage() {
                         className="text-xl font-bold"
                         style={{ color: theme.primaryColor }}
                       >
-                        {block.settings.title || 'WazerPay'}
+                        {block.settings.title || 'VectorPagamentos'}
                       </h1>
                     )}
                     {block.settings.showSecureBadge && (
@@ -1575,7 +1575,7 @@ export default function PublicCheckoutPage() {
                             {item.avatar ? (
                               <img src={item.avatar} alt={item.name} className="h-10 w-10 rounded-full object-cover" />
                             ) : (
-                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white font-bold">
+                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-400 to-pink-400 flex items-center justify-center text-white font-bold">
                                 {item.name.charAt(0)}
                               </div>
                             )}
@@ -1741,7 +1741,7 @@ export default function PublicCheckoutPage() {
 
         {/* Footer */}
         <div className="mt-6 text-center text-xs" style={{ color: theme.mutedColor }}>
-          <p>© {new Date().getFullYear()} Powered by WazerPay</p>
+          <p>© {new Date().getFullYear()} Powered by VectorPagamentos</p>
           <p className="mt-1">
             <a href="#" className="hover:underline">Termos de Uso</a>
             {' · '}
@@ -1819,7 +1819,7 @@ export default function PublicCheckoutPage() {
         }
         
         .checkout-description a {
-          color: #8b5cf6;
+          color: #10b981;
           text-decoration: underline;
         }
         
@@ -1831,7 +1831,7 @@ export default function PublicCheckoutPage() {
         }
         
         .checkout-description blockquote {
-          border-left: 4px solid #8b5cf6;
+          border-left: 4px solid #10b981;
           padding-left: 1em;
           margin: 1em 0;
           font-style: italic;

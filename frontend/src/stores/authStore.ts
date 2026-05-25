@@ -307,7 +307,7 @@ export const useAuthStore = create<AuthState>()(
     };
     },
     {
-      name: 'Vector Pagamentos-auth',
+      name: 'vectorpagamentos-auth',
       partialize: (state) => ({ token: state.token }),
       onRehydrateStorage: () => (state) => {
         // After hydration, sync token to localStorage and validate auth
