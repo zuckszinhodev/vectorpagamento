@@ -34,27 +34,26 @@ class SecurityMonitorController extends Controller
      */
     public function dashboard(Request $request): JsonResponse
     {
-        // Check if tables exist
-        if (!$this->securityTablesReady()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tabelas de segurança ainda não foram criadas. Execute: php artisan migrate',
-                'migration_required' => true,
-            ], 503);
-        }
-
         try {
             $timeframe = $request->input('timeframe', '24h');
             $since = $this->getTimeframeSince($timeframe);
 
-            // Security metrics
+            $totalRequests = $this->getTotalRequestsCount($since);
+            $failedLogins = $this->getFailedLoginsCount($since);
+            $rateLimitHits = $this->getRateLimitedCount($since);
+            $blockedRequests = $this->getBlockedRequestsCount($since) + $rateLimitHits;
+            $securityAlerts = $this->getSecurityAlertsCount($since);
+
+            // Security metrics (legacy/extended payload)
             $metrics = [
-                'blocked_requests' => $this->getBlockedRequestsCount($since),
-                'failed_logins' => $this->getFailedLoginsCount($since),
-                'rate_limited' => $this->getRateLimitedCount($since),
+                'total_requests' => $totalRequests,
+                'blocked_requests' => $blockedRequests,
+                'failed_logins' => $failedLogins,
+                'rate_limited' => $rateLimitHits,
                 'suspicious_activities' => $this->getSuspiciousActivitiesCount($since),
                 'blocked_ips' => $this->getBlockedIpsCount(),
                 'admin_accesses' => $this->getAdminAccessCount($since),
+                'security_alerts' => $securityAlerts,
             ];
 
             // Threat level calculation
@@ -72,27 +71,48 @@ class SecurityMonitorController extends Controller
             // Attack timeline
             $timeline = $this->getAttackTimeline($since);
 
+            $payload = [
+                // Contract used by frontend/src/pages/admin/AdminMonitoring.tsx
+                'total_requests_24h' => $totalRequests,
+                'blocked_requests_24h' => $blockedRequests,
+                'failed_logins_24h' => $failedLogins,
+                'active_sessions' => $this->getActiveSessionsCount(),
+                'blocked_ips' => $metrics['blocked_ips'],
+                'rate_limit_hits' => $rateLimitHits,
+                'security_alerts' => $securityAlerts,
+                'uptime_percentage' => $this->calculateUptimePercentage($since),
+
+                // Legacy/extended payload
+                'threat_level' => $threatLevelData['level'],
+                'threat_score' => $threatLevelData['score'],
+                'metrics' => $metrics,
+                'recent_events' => $recentEvents,
+                'top_attacking_ips' => $topAttackingIps,
+                'geo_distribution' => $geoDistribution,
+                'timeline' => $timeline,
+                'timeframe' => $timeframe,
+                'generated_at' => now()->toIso8601String(),
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $payload,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Security dashboard error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'threat_level' => $threatLevelData['level'],
-                    'threat_score' => $threatLevelData['score'],
-                    'metrics' => $metrics,
-                    'recent_events' => $recentEvents,
-                    'top_attacking_ips' => $topAttackingIps,
-                    'geo_distribution' => $geoDistribution,
-                    'timeline' => $timeline,
-                    'timeframe' => $timeframe,
-                    'generated_at' => now()->toIso8601String(),
+                    'total_requests_24h' => 0,
+                    'blocked_requests_24h' => 0,
+                    'failed_logins_24h' => 0,
+                    'active_sessions' => 0,
+                    'blocked_ips' => 0,
+                    'rate_limit_hits' => 0,
+                    'security_alerts' => 0,
+                    'uptime_percentage' => 99.9,
                 ],
             ]);
-        } catch (\Exception $e) {
-            Log::error('Security dashboard error', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao carregar dashboard de segurança. Verifique se as migrations foram executadas: php artisan migrate',
-                'error' => config('app.debug') ? $e->getMessage() : 'Internal server error',
-            ], 500);
         }
     }
 
@@ -231,37 +251,119 @@ class SecurityMonitorController extends Controller
      */
     public function blockedIps(Request $request): JsonResponse
     {
-        if (!Schema::hasTable('blocked_ips')) {
+        try {
+            $search = (string) $request->input('search', '');
+            $status = (string) $request->input('status', 'active');
+
+            if (Schema::hasTable('blocked_ips')) {
+                $query = DB::table('blocked_ips');
+
+                if (Schema::hasColumn('blocked_ips', 'status') && $status !== '' && $status !== 'all') {
+                    $query->where('status', $status);
+                }
+
+                if ($search !== '') {
+                    $query->where('ip_address', 'like', '%' . addcslashes($search, '%_\\') . '%');
+                }
+
+                $perPage = min((int) $request->input('per_page', 50), 100);
+                $ips = $query->orderByDesc('created_at')->paginate($perPage);
+
+                $data = collect($ips->items())->map(function ($item) {
+                    $blockedAt = $this->toIso8601String($item->created_at ?? null);
+
+                    return [
+                        'id' => (string) $item->id,
+                        'ip' => (string) ($item->ip_address ?? ''),
+                        'ip_address' => (string) ($item->ip_address ?? ''),
+                        'reason' => (string) ($item->reason ?? ''),
+                        'block_type' => isset($item->block_type) ? (string) $item->block_type : 'manual',
+                        'status' => isset($item->status) ? (string) $item->status : 'active',
+                        'blocked_at' => $blockedAt,
+                        'created_at' => $blockedAt,
+                        'expires_at' => $this->toIso8601String($item->expires_at ?? null),
+                    ];
+                })->values()->all();
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $data,
+                    'meta' => [
+                        'current_page' => $ips->currentPage(),
+                        'last_page' => $ips->lastPage(),
+                        'per_page' => $ips->perPage(),
+                        'total' => $ips->total(),
+                    ],
+                ]);
+            }
+
+            // Fallback: use generic blacklist if blocked_ips table does not exist.
+            if (Schema::hasTable('blacklists')) {
+                $query = DB::table('blacklists')
+                    ->where('type', 'ip')
+                    ->where(function ($q) {
+                        $q->whereNull('expires_at')
+                          ->orWhere('expires_at', '>', now());
+                    });
+
+                if ($search !== '') {
+                    $query->where('value', 'like', '%' . addcslashes($search, '%_\\') . '%');
+                }
+
+                $items = $query->orderByDesc('created_at')->limit(100)->get();
+
+                $data = $items->map(function ($item) {
+                    $blockedAt = $this->toIso8601String($item->created_at ?? null);
+
+                    return [
+                        'id' => (string) $item->id,
+                        'ip' => (string) ($item->value ?? ''),
+                        'ip_address' => (string) ($item->value ?? ''),
+                        'reason' => (string) ($item->reason ?? 'Bloqueado na blacklist'),
+                        'block_type' => 'blacklist',
+                        'status' => 'active',
+                        'blocked_at' => $blockedAt,
+                        'created_at' => $blockedAt,
+                        'expires_at' => $this->toIso8601String($item->expires_at ?? null),
+                    ];
+                })->values()->all();
+
+                return response()->json([
+                    'success' => true,
+                    'data' => $data,
+                    'meta' => [
+                        'current_page' => 1,
+                        'last_page' => 1,
+                        'per_page' => count($data),
+                        'total' => count($data),
+                        'source' => 'blacklists',
+                    ],
+                ]);
+            }
+
             return response()->json([
-                'success' => false,
-                'message' => 'Tabela de IPs bloqueados não disponível',
-                'migration_required' => true,
-            ], 503);
+                'success' => true,
+                'data' => [],
+                'meta' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => 0,
+                    'total' => 0,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('SecurityMonitorController::blockedIps error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => true,
+                'data' => [],
+                'meta' => [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => 0,
+                    'total' => 0,
+                ],
+            ]);
         }
-
-        $query = DB::table('blocked_ips');
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        if ($request->filled('search')) {
-            $query->where('ip_address', 'like', '%' . $request->input('search') . '%');
-        }
-
-        $perPage = min((int) $request->input('per_page', 50), 100);
-        $ips = $query->orderBy('created_at', 'desc')->paginate($perPage);
-
-        return response()->json([
-            'success' => true,
-            'data' => $ips->items(),
-            'meta' => [
-                'current_page' => $ips->currentPage(),
-                'last_page' => $ips->lastPage(),
-                'per_page' => $ips->perPage(),
-                'total' => $ips->total(),
-            ],
-        ]);
     }
 
     /**
@@ -490,56 +592,133 @@ class SecurityMonitorController extends Controller
     public function liveActivity(Request $request): JsonResponse
     {
         try {
-            $since = $request->input('since', now()->subMinutes(5)->toIso8601String());
+            $limit = min(max((int) $request->input('limit', 80), 1), 200);
 
-            // Recent security events
-            $events = Schema::hasTable('security_events')
-                ? DB::table('security_events')
-                    ->where('created_at', '>=', $since)
-                    ->orderBy('created_at', 'desc')
-                    ->limit(50)
-                    ->get()
-                : collect([]);
+            $sinceInput = (string) $request->input('since', now()->subMinutes(15)->toIso8601String());
+            try {
+                $since = \Carbon\Carbon::parse($sinceInput)->toDateTimeString();
+            } catch (\Throwable $e) {
+                $since = now()->subMinutes(15)->toDateTimeString();
+            }
 
-            // Recent admin accesses
-            $adminAccesses = Schema::hasTable('admin_access_logs')
-                ? DB::table('admin_access_logs')
+            $activity = collect([]);
+
+            if (Schema::hasTable('admin_access_logs')) {
+                $adminAccesses = DB::table('admin_access_logs')
                     ->where('accessed_at', '>=', $since)
-                    ->orderBy('accessed_at', 'desc')
-                    ->limit(20)
-                    ->get()
-                : collect([]);
+                    ->orderByDesc('accessed_at')
+                    ->limit($limit)
+                    ->get();
 
-            // Current rate limit blocks
-            $rateLimitBlocks = collect([]);
-            if (Schema::hasTable('rate_limit_logs') && Schema::hasColumn('rate_limit_logs', 'blocked') && Schema::hasColumn('rate_limit_logs', 'updated_at')) {
+                $activity = $activity->concat($adminAccesses->map(function ($row) {
+                    $status = isset($row->response_status) ? (int) $row->response_status : 200;
+
+                    return [
+                        'id' => 'admin_' . (string) $row->id,
+                        'type' => $status >= 500 ? 'error' : 'request',
+                        'ip' => (string) ($row->ip_address ?? 'unknown'),
+                        'path' => '/' . ltrim((string) ($row->endpoint ?? ''), '/'),
+                        'status' => $status,
+                        'method' => strtoupper((string) ($row->method ?? 'GET')),
+                        'timestamp' => $this->toIso8601String($row->accessed_at ?? null) ?? now()->toIso8601String(),
+                        'user_agent' => isset($row->user_agent) ? (string) $row->user_agent : null,
+                        'country' => null,
+                    ];
+                }));
+            }
+
+            if (Schema::hasTable('security_events')) {
+                $hasSeverity = Schema::hasColumn('security_events', 'severity');
+                $hasCountryCode = Schema::hasColumn('security_events', 'country_code');
+                $hasDescription = Schema::hasColumn('security_events', 'description');
+                $hasEndpoint = Schema::hasColumn('security_events', 'endpoint');
+                $hasMethod = Schema::hasColumn('security_events', 'method');
+
+                $securityEvents = DB::table('security_events')
+                    ->where('created_at', '>=', $since)
+                    ->select([
+                        'id',
+                        'event_type',
+                        'ip_address',
+                        $hasEndpoint ? 'endpoint' : DB::raw('NULL as endpoint'),
+                        $hasMethod ? 'method' : DB::raw("'GET' as method"),
+                        $hasSeverity ? 'severity' : DB::raw("'low' as severity"),
+                        $hasDescription ? 'description' : DB::raw('NULL as description'),
+                        'user_agent',
+                        $hasCountryCode ? 'country_code' : DB::raw('NULL as country_code'),
+                        'created_at',
+                    ])
+                    ->orderByDesc('created_at')
+                    ->limit($limit)
+                    ->get();
+
+                $activity = $activity->concat($securityEvents->map(function ($row) {
+                    $eventType = (string) ($row->event_type ?? 'security_event');
+                    $severity = isset($row->severity) ? (string) $row->severity : 'low';
+                    $status = $this->statusFromSecurityEvent($eventType, $severity);
+
+                    return [
+                        'id' => 'sec_' . (string) $row->id,
+                        'type' => $this->activityTypeFromSecurityEvent($eventType, $status),
+                        'ip' => (string) ($row->ip_address ?? 'unknown'),
+                        'path' => $this->normalizePath((string) ($row->endpoint ?? '/security/events')),
+                        'status' => $status,
+                        'method' => strtoupper((string) ($row->method ?? 'GET')),
+                        'timestamp' => $this->toIso8601String($row->created_at ?? null) ?? now()->toIso8601String(),
+                        'user_agent' => isset($row->user_agent) ? (string) $row->user_agent : null,
+                        'country' => isset($row->country_code) ? (string) $row->country_code : null,
+                    ];
+                }));
+            }
+
+            if (Schema::hasTable('rate_limit_logs') && Schema::hasColumn('rate_limit_logs', 'blocked')) {
+                $timeColumn = $this->resolveRateLimitTimeColumn();
+
                 $rateLimitBlocks = DB::table('rate_limit_logs')
                     ->where('blocked', true)
-                    ->where('updated_at', '>=', $since)
-                    ->orderBy('updated_at', 'desc')
-                    ->limit(20)
+                    ->where($timeColumn, '>=', $since)
+                    ->orderByDesc($timeColumn)
+                    ->limit($limit)
                     ->get();
+
+                $activity = $activity->concat($rateLimitBlocks->map(function ($row) use ($timeColumn) {
+                    [$method, $path] = $this->parseRateLimitEndpoint((string) ($row->endpoint ?? 'GET:/'));
+
+                    return [
+                        'id' => 'rl_' . (string) $row->id,
+                        'type' => 'block',
+                        'ip' => $this->extractIpFromIdentifier(isset($row->identifier) ? (string) $row->identifier : null) ?? 'unknown',
+                        'path' => $path,
+                        'status' => 429,
+                        'method' => $method,
+                        'timestamp' => $this->toIso8601String($row->{$timeColumn} ?? null) ?? now()->toIso8601String(),
+                        'user_agent' => null,
+                        'country' => null,
+                    ];
+                }));
             }
+
+            $sorted = $activity
+                ->sortByDesc(fn (array $item) => (string) ($item['timestamp'] ?? ''))
+                ->take($limit)
+                ->values()
+                ->all();
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'security_events' => $events,
-                    'admin_accesses' => $adminAccesses,
-                    'rate_limit_blocks' => $rateLimitBlocks,
+                'data' => $sorted,
+                'meta' => [
                     'server_time' => now()->toIso8601String(),
+                    'since' => $since,
+                    'total' => count($sorted),
                 ],
             ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('SecurityMonitorController::liveActivity error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'security_events' => [],
-                    'admin_accesses' => [],
-                    'rate_limit_blocks' => [],
-                    'server_time' => now()->toIso8601String(),
-                ],
+                'data' => [],
+                'meta' => ['server_time' => now()->toIso8601String()],
             ]);
         }
     }
@@ -549,61 +728,109 @@ class SecurityMonitorController extends Controller
      */
     public function alerts(Request $request): JsonResponse
     {
-        if (!Schema::hasTable('security_events')) {
-            return response()->json([
-                'success' => true,
-                'data' => ['alerts' => [], 'critical_count' => 0],
-                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 50, 'total' => 0],
-            ]);
-        }
-
         try {
-            $hasSeverity = Schema::hasColumn('security_events', 'severity');
-            $hasAcknowledged = Schema::hasColumn('security_events', 'acknowledged');
+            $limit = min(max((int) $request->input('limit', 50), 1), 200);
+            $from = (string) $request->input('from', $this->getTimeframeSince('24h'));
+            $includeAcknowledged = $request->boolean('include_acknowledged', false);
 
-            if (!$hasSeverity || !$hasAcknowledged) {
-                return response()->json([
-                    'success' => true,
-                    'data' => ['alerts' => [], 'critical_count' => 0],
-                    'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 50, 'total' => 0],
-                ]);
+            $alerts = collect([]);
+
+            if (Schema::hasTable('security_events')) {
+                $hasSeverity = Schema::hasColumn('security_events', 'severity');
+                $hasAcknowledged = Schema::hasColumn('security_events', 'acknowledged');
+                $hasDescription = Schema::hasColumn('security_events', 'description');
+
+                $query = DB::table('security_events')
+                    ->where('created_at', '>=', $from);
+
+                if ($hasSeverity) {
+                    $query->whereIn('severity', ['critical', 'high']);
+                } else {
+                    $query->whereIn('event_type', [
+                        'failed_login',
+                        'blocked_request',
+                        'request_blocked',
+                        'rate_limited',
+                        'sql_injection_attempt',
+                        'xss_attempt',
+                        'brute_force_detected',
+                        'unauthorized_access',
+                    ]);
+                }
+
+                if (!$includeAcknowledged && $hasAcknowledged) {
+                    $query->where('acknowledged', false);
+                }
+
+                $rows = $query
+                    ->orderByDesc('created_at')
+                    ->limit($limit)
+                    ->get([
+                        'id',
+                        'event_type',
+                        $hasSeverity ? 'severity' : DB::raw("'high' as severity"),
+                        $hasDescription ? 'description' : DB::raw('NULL as description'),
+                        'ip_address',
+                        $hasAcknowledged ? 'acknowledged' : DB::raw('false as acknowledged'),
+                        'created_at',
+                    ]);
+
+                $alerts = $alerts->concat($rows->map(function ($row) {
+                    $eventType = (string) ($row->event_type ?? 'security_event');
+
+                    return [
+                        'id' => (string) $row->id,
+                        'type' => $eventType,
+                        'severity' => $this->normalizeSeverity(isset($row->severity) ? (string) $row->severity : 'high'),
+                        'message' => (string) ($row->description ?: Str::headline(str_replace('_', ' ', $eventType))),
+                        'ip' => isset($row->ip_address) ? (string) $row->ip_address : null,
+                        'timestamp' => $this->toIso8601String($row->created_at ?? null) ?? now()->toIso8601String(),
+                        'acknowledged' => (bool) ($row->acknowledged ?? false),
+                    ];
+                }));
             }
 
-            $query = DB::table('security_events')
-                ->whereIn('severity', ['critical', 'high'])
-                ->where('acknowledged', false);
+            // Fallback when no dedicated security events are available.
+            if ($alerts->isEmpty() && Schema::hasTable('admin_access_logs') && Schema::hasColumn('admin_access_logs', 'response_status')) {
+                $adminAlerts = DB::table('admin_access_logs')
+                    ->where('accessed_at', '>=', $from)
+                    ->where('response_status', '>=', 500)
+                    ->orderByDesc('accessed_at')
+                    ->limit($limit)
+                    ->get();
 
-            if ($request->filled('from')) {
-                $query->where('created_at', '>=', $request->input('from'));
+                $alerts = $alerts->concat($adminAlerts->map(function ($row) {
+                    return [
+                        'id' => 'admin_error_' . (string) $row->id,
+                        'type' => 'admin_error',
+                        'severity' => 'high',
+                        'message' => 'Erro ' . (int) $row->response_status . ' em ' . $this->normalizePath((string) ($row->endpoint ?? '/admin')),
+                        'ip' => isset($row->ip_address) ? (string) $row->ip_address : null,
+                        'timestamp' => $this->toIso8601String($row->accessed_at ?? null) ?? now()->toIso8601String(),
+                        'acknowledged' => false,
+                    ];
+                }));
             }
 
-            $perPage = min((int) $request->input('per_page', 50), 100);
-            $alerts = $query->orderBy('created_at', 'desc')->paginate($perPage);
-
-            $criticalCount = DB::table('security_events')
-                ->where('severity', 'critical')
-                ->where('acknowledged', false)
-                ->count();
+            $result = $alerts
+                ->sortByDesc(fn (array $item) => (string) ($item['timestamp'] ?? ''))
+                ->take($limit)
+                ->values();
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'alerts' => $alerts->items(),
-                    'critical_count' => $criticalCount,
-                ],
+                'data' => $result->all(),
                 'meta' => [
-                    'current_page' => $alerts->currentPage(),
-                    'last_page' => $alerts->lastPage(),
-                    'per_page' => $alerts->perPage(),
-                    'total' => $alerts->total(),
+                    'total' => $result->count(),
+                    'critical_count' => $result->where('severity', 'critical')->count(),
                 ],
             ]);
         } catch (\Throwable $e) {
             Log::error('SecurityMonitorController::alerts error', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => true,
-                'data' => ['alerts' => [], 'critical_count' => 0],
-                'meta' => ['current_page' => 1, 'last_page' => 1, 'per_page' => 50, 'total' => 0],
+                'data' => [],
+                'meta' => ['total' => 0, 'critical_count' => 0],
             ]);
         }
     }
@@ -819,13 +1046,269 @@ class SecurityMonitorController extends Controller
         };
     }
 
+    protected function getTotalRequestsCount(string $since): int
+    {
+        $total = 0;
+
+        if (Schema::hasTable('rate_limit_logs')) {
+            $timeColumn = $this->resolveRateLimitTimeColumn();
+            $query = DB::table('rate_limit_logs')->where($timeColumn, '>=', $since);
+
+            $rateLimitRequests = Schema::hasColumn('rate_limit_logs', 'requests_count')
+                ? (int) ($query->sum('requests_count') ?? 0)
+                : (int) $query->count();
+
+            $total += $rateLimitRequests;
+        }
+
+        if (Schema::hasTable('admin_access_logs') && Schema::hasColumn('admin_access_logs', 'accessed_at')) {
+            $total += (int) DB::table('admin_access_logs')
+                ->where('accessed_at', '>=', $since)
+                ->count();
+        }
+
+        // Fallback for environments where request-level logs are not enabled.
+        if ($total === 0 && Schema::hasTable('audit_logs') && Schema::hasColumn('audit_logs', 'created_at')) {
+            $total = (int) DB::table('audit_logs')
+                ->where('created_at', '>=', $since)
+                ->count();
+        }
+
+        return $total;
+    }
+
+    protected function getSecurityAlertsCount(string $since): int
+    {
+        if (Schema::hasTable('security_events')) {
+            $query = DB::table('security_events')
+                ->where('created_at', '>=', $since);
+
+            if (Schema::hasColumn('security_events', 'severity')) {
+                $query->whereIn('severity', ['high', 'critical']);
+            } else {
+                $query->whereIn('event_type', [
+                    'failed_login',
+                    'blocked_request',
+                    'request_blocked',
+                    'rate_limited',
+                    'sql_injection_attempt',
+                    'xss_attempt',
+                    'brute_force_detected',
+                    'unauthorized_access',
+                ]);
+            }
+
+            if (Schema::hasColumn('security_events', 'acknowledged')) {
+                $query->where('acknowledged', false);
+            }
+
+            return (int) $query->count();
+        }
+
+        if (Schema::hasTable('admin_access_logs') && Schema::hasColumn('admin_access_logs', 'response_status')) {
+            return (int) DB::table('admin_access_logs')
+                ->where('accessed_at', '>=', $since)
+                ->where('response_status', '>=', 500)
+                ->count();
+        }
+
+        return 0;
+    }
+
+    protected function getActiveSessionsCount(): int
+    {
+        $active = 0;
+
+        if (Schema::hasTable('users') && Schema::hasColumn('users', 'last_login_at')) {
+            $query = DB::table('users')
+                ->where('last_login_at', '>=', now()->subMinutes(30));
+
+            if (Schema::hasColumn('users', 'deleted_at')) {
+                $query->whereNull('deleted_at');
+            }
+
+            $active = (int) $query->count();
+        }
+
+        if (Schema::hasTable('admin_access_logs')
+            && Schema::hasColumn('admin_access_logs', 'user_id')
+            && Schema::hasColumn('admin_access_logs', 'accessed_at')) {
+            $adminActive = (int) DB::table('admin_access_logs')
+                ->whereNotNull('user_id')
+                ->where('accessed_at', '>=', now()->subMinutes(30))
+                ->distinct()
+                ->count('user_id');
+
+            $active = max($active, $adminActive);
+        }
+
+        return $active;
+    }
+
+    protected function calculateUptimePercentage(string $since): float
+    {
+        if (Schema::hasTable('admin_access_logs')
+            && Schema::hasColumn('admin_access_logs', 'response_status')
+            && Schema::hasColumn('admin_access_logs', 'accessed_at')) {
+            $total = (int) DB::table('admin_access_logs')
+                ->where('accessed_at', '>=', $since)
+                ->count();
+
+            if ($total > 0) {
+                $serverErrors = (int) DB::table('admin_access_logs')
+                    ->where('accessed_at', '>=', $since)
+                    ->where('response_status', '>=', 500)
+                    ->count();
+
+                $uptime = (($total - $serverErrors) / $total) * 100;
+                return round(max(0, min(100, $uptime)), 2);
+            }
+        }
+
+        return 99.9;
+    }
+
+    protected function resolveRateLimitTimeColumn(): string
+    {
+        if (Schema::hasColumn('rate_limit_logs', 'updated_at')) {
+            return 'updated_at';
+        }
+
+        if (Schema::hasColumn('rate_limit_logs', 'window_start')) {
+            return 'window_start';
+        }
+
+        return 'created_at';
+    }
+
+    protected function normalizePath(string $path): string
+    {
+        $normalized = '/' . ltrim(trim($path), '/');
+        return $normalized === '/' ? '/unknown' : $normalized;
+    }
+
+    protected function parseRateLimitEndpoint(string $endpoint): array
+    {
+        $endpoint = trim($endpoint);
+        if ($endpoint === '') {
+            return ['GET', '/unknown'];
+        }
+
+        if (str_contains($endpoint, ':')) {
+            [$method, $path] = explode(':', $endpoint, 2);
+            $method = strtoupper(trim($method)) ?: 'GET';
+            return [$method, $this->normalizePath($path)];
+        }
+
+        return ['GET', $this->normalizePath($endpoint)];
+    }
+
+    protected function extractIpFromIdentifier(?string $identifier): ?string
+    {
+        if ($identifier === null || $identifier === '') {
+            return null;
+        }
+
+        if (str_starts_with($identifier, 'ip:')) {
+            return substr($identifier, 3);
+        }
+
+        if (filter_var($identifier, FILTER_VALIDATE_IP)) {
+            return $identifier;
+        }
+
+        return null;
+    }
+
+    protected function normalizeSeverity(string $severity): string
+    {
+        return match (strtolower(trim($severity))) {
+            'critical' => 'critical',
+            'high' => 'high',
+            'medium' => 'medium',
+            'low' => 'low',
+            'info' => 'low',
+            default => 'medium',
+        };
+    }
+
+    protected function statusFromSecurityEvent(string $eventType, string $severity): int
+    {
+        $eventType = strtolower($eventType);
+        $severity = strtolower($severity);
+
+        if ($eventType === 'failed_login') {
+            return 401;
+        }
+
+        if (in_array($eventType, ['blocked_request', 'request_blocked', 'ip_blocked', 'rate_limited'], true)) {
+            return 429;
+        }
+
+        if (in_array($eventType, ['unauthorized_access', 'sql_injection_attempt', 'xss_attempt', 'brute_force_detected'], true)) {
+            return 403;
+        }
+
+        return match ($severity) {
+            'critical' => 500,
+            'high' => 403,
+            'medium' => 400,
+            default => 200,
+        };
+    }
+
+    protected function activityTypeFromSecurityEvent(string $eventType, int $status): string
+    {
+        $eventType = strtolower($eventType);
+
+        if (str_contains($eventType, 'login')) {
+            return 'login';
+        }
+
+        if (str_contains($eventType, 'block')
+            || str_contains($eventType, 'rate')
+            || str_contains($eventType, 'unauthorized')
+            || str_contains($eventType, 'sql')
+            || str_contains($eventType, 'xss')
+            || str_contains($eventType, 'brute')) {
+            return 'block';
+        }
+
+        if ($status >= 400) {
+            return 'error';
+        }
+
+        return 'request';
+    }
+
+    protected function toIso8601String(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format(DATE_ATOM);
+        }
+
+        try {
+            return now()->parse((string) $value)->toIso8601String();
+        } catch (\Throwable $e) {
+            return is_string($value) ? $value : null;
+        }
+    }
+
     protected function getBlockedRequestsCount(string $since): int
     {
         if (!Schema::hasTable('security_events')) {
             return 0;
         }
         return DB::table('security_events')
-            ->where('event_type', 'request_blocked')
+            ->whereIn('event_type', [
+                'request_blocked',
+                'blocked_request',
+                'ip_blocked',
+            ])
             ->where('created_at', '>=', $since)
             ->count();
     }
@@ -846,9 +1329,12 @@ class SecurityMonitorController extends Controller
         if (!Schema::hasTable('rate_limit_logs') || !Schema::hasColumn('rate_limit_logs', 'blocked')) {
             return 0;
         }
+
+        $timeColumn = $this->resolveRateLimitTimeColumn();
+
         return DB::table('rate_limit_logs')
             ->where('blocked', true)
-            ->where('created_at', '>=', $since)
+            ->where($timeColumn, '>=', $since)
             ->count();
     }
 
@@ -865,17 +1351,39 @@ class SecurityMonitorController extends Controller
 
     protected function getBlockedIpsCount(): int
     {
-        if (!Schema::hasTable('blocked_ips')) {
-            return 0;
+        if (Schema::hasTable('blocked_ips')) {
+            $query = DB::table('blocked_ips');
+
+            if (Schema::hasColumn('blocked_ips', 'status')) {
+                $query->where('status', 'active');
+            }
+
+            if (Schema::hasColumn('blocked_ips', 'expires_at')) {
+                $query->where(function ($q) {
+                    $q->whereNull('expires_at')
+                      ->orWhere('expires_at', '>', now());
+                });
+            }
+
+            return (int) $query->count();
         }
-        return DB::table('blocked_ips')
-            ->where('status', 'active')
-            ->count();
+
+        if (Schema::hasTable('blacklists')) {
+            return (int) DB::table('blacklists')
+                ->where('type', 'ip')
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')
+                      ->orWhere('expires_at', '>', now());
+                })
+                ->count();
+        }
+
+        return 0;
     }
 
     protected function getAdminAccessCount(string $since): int
     {
-        if (!Schema::hasTable('admin_access_logs')) {
+        if (!Schema::hasTable('admin_access_logs') || !Schema::hasColumn('admin_access_logs', 'accessed_at')) {
             return 0;
         }
         return DB::table('admin_access_logs')

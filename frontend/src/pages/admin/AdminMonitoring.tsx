@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
 import {
@@ -42,6 +43,8 @@ interface SecurityAlert {
 
 export default function AdminMonitoring() {
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [acknowledgingAlertId, setAcknowledgingAlertId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data: stats, refetch: refetchStats } = useQuery<SecurityStats>({
     queryKey: ['security-dashboard'],
@@ -74,6 +77,45 @@ export default function AdminMonitoring() {
   });
 
   const alerts: SecurityAlert[] = Array.isArray(alertsData) ? alertsData : [];
+
+  const acknowledgeAlertMutation = useMutation<void, unknown, string, { previousAlerts: SecurityAlert[] }>({
+    onMutate: async (alertId: string) => {
+      setAcknowledgingAlertId(alertId);
+
+      await queryClient.cancelQueries({ queryKey: ['security-alerts'] });
+
+      const previousAlerts = queryClient.getQueryData<SecurityAlert[]>(['security-alerts']);
+      const safePreviousAlerts = Array.isArray(previousAlerts) ? previousAlerts : [];
+
+      queryClient.setQueryData<SecurityAlert[]>(
+        ['security-alerts'],
+        safePreviousAlerts.filter((alert) => alert.id !== alertId)
+      );
+
+      return { previousAlerts: safePreviousAlerts };
+    },
+    mutationFn: async (alertId: string) => {
+      await api.post(`/admin/security/alerts/${alertId}/acknowledge`);
+    },
+    onError: (_error, _alertId, context) => {
+      if (context?.previousAlerts) {
+        queryClient.setQueryData(['security-alerts'], context.previousAlerts);
+      }
+
+      toast.error('Falha ao reconhecer alerta. Tente novamente.');
+    },
+    onSuccess: async () => {
+      toast.success('Alerta reconhecido com sucesso!');
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['security-alerts'] }),
+        queryClient.invalidateQueries({ queryKey: ['security-dashboard'] }),
+      ]);
+    },
+    onSettled: () => {
+      setAcknowledgingAlertId(null);
+    },
+  });
 
   const { data: blockedIps = [] } = useQuery({
     queryKey: ['blocked-ips'],
@@ -170,6 +212,16 @@ export default function AdminMonitoring() {
                   </div>
                   <p className="text-sm mt-0.5">{alert.message}</p>
                   {alert.ip && <p className="text-xs opacity-70 font-mono mt-0.5">IP: {alert.ip}</p>}
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => acknowledgeAlertMutation.mutate(alert.id)}
+                      disabled={acknowledgingAlertId === alert.id}
+                      className="rounded-md border border-current px-2.5 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {acknowledgingAlertId === alert.id ? 'Reconhecendo...' : 'Reconhecer'}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

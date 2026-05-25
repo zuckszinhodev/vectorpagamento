@@ -34,10 +34,9 @@ export default function AuthLayout() {
               </span>
             </h2>
             <ul className="mt-6 space-y-3 text-lg font-medium text-emerald-100/95">
-              <li>Saque instantaneo para manter seu caixa girando</li>
-              <li>Operacao N2 e N3 com alta disponibilidade</li>
-              <li>Rotacao automatica de nominais para mais aprovacao</li>
-              <li>PIX, cartao e boleto com conciliacao em tempo real</li>
+              <li>* Saque instantaneo para manter seu caixa em movimento continuo</li>
+              <li>* Operacao N2 e N3 com alta disponibilidade 24/7</li>
+              <li>* Rotacao inteligente de nominais para elevar sua aprovacao</li>
             </ul>
           </div>
         </div>

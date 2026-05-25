@@ -192,8 +192,11 @@ export default function LoginPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-lg font-semibold text-white mb-1">
-            Acesso ao Gateway
+            Bem-vindo de volta
           </h1>
+          <p className="text-sm text-gray-400">
+            Faça login para acessar a Vector.
+          </p>
         </div>
 
       {/* Form */}

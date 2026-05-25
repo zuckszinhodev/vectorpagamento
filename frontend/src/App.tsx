@@ -243,6 +243,8 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     const clean = path.replace(/^\/admin\/?/, '');
     if (clean === '') return 'admin.dashboard.read';
     if (clean.startsWith('customers') || clean.startsWith('sellers')) return 'admin.customers.manage';
+    if (clean.startsWith('transactions')) return 'admin.withdrawals.manage';
+    if (clean.startsWith('withdrawals')) return 'admin.withdrawals.manage';
     if (clean.startsWith('finance')) return 'admin.withdrawals.manage';
     if (clean.startsWith('kyc')) return 'admin.kyc.review';
     if (clean.startsWith('acquirers')) return 'admin.acquirers.manage';
@@ -454,11 +456,13 @@ function App() {
         <Route path="customers/:customerId" element={<AdminCustomerDetail />} />
         <Route path="sellers" element={<AdminCustomers />} />
         <Route path="sellers/:customerId" element={<AdminCustomerDetail />} />
-        <Route path="finance" element={<AdminFinance />} />
+        <Route path="transactions" element={<AdminFinance mode="transactions" />} />
+        <Route path="withdrawals" element={<AdminFinance mode="withdrawals" />} />
+        <Route path="finance" element={<Navigate to="/admin/transactions" replace />} />
         <Route path="kyc" element={<AdminKYC />} />
         <Route path="acquirers" element={<AdminAcquirers />} />
         <Route path="chargebacks" element={<AdminChargebacks />} />
-        <Route path="approvals" element={<AdminFinance />} />
+        <Route path="approvals" element={<AdminFinance mode="transactions" />} />
         <Route path="security" element={<Navigate to="/admin" replace />} />
         <Route path="settings" element={<Navigate to="/admin" replace />} />
         <Route path="api" element={<Navigate to="/admin" replace />} />

@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use PragmaRX\Google2FA\Google2FA;
 
 /**
@@ -53,6 +54,26 @@ class AdminController extends Controller
 
             $pendingWithdrawals = (int) (clone $pendingWithdrawalsQuery)->count();
             $pendingWithdrawalsAmount = (int) (clone $pendingWithdrawalsQuery)->sum('amount');
+            $pendingApprovals = (int) Withdrawal::where('status', 'pending_approval')
+                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
+                ->count();
+
+            $paidOrdersLast24h = (int) Charge::whereIn('status', ['approved', 'paid'])
+                ->where(function ($query) {
+                    $query->where('paid_at', '>=', now()->subDay())
+                        ->orWhere(function ($subQuery) {
+                            $subQuery->whereNull('paid_at')
+                                ->where('created_at', '>=', now()->subDay());
+                        });
+                })
+                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
+                ->count();
+
+            $pendingChargebacks = (int) Chargeback::whereIn('status', ['open', 'under_review', 'evidence_sent'])
+                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
+                ->count();
+
+            $systemMemory = $this->resolveSystemMemoryUsage();
 
             $pendingKyc = 0;
             try {
@@ -111,6 +132,9 @@ class AdminController extends Controller
                     'queues' => [
                         'pending_withdrawals' => $pendingWithdrawals,
                         'pending_withdrawals_amount' => $pendingWithdrawalsAmount,
+                        'pending_approvals' => $pendingApprovals,
+                        'paid_orders_24h' => $paidOrdersLast24h,
+                        'pending_chargebacks' => $pendingChargebacks,
                         'pending_kyc' => $pendingKyc,
                     ],
                     'switches' => [
@@ -120,6 +144,7 @@ class AdminController extends Controller
                         'auto_withdrawal_enabled' => $autoWithdrawalEnabled,
                     ],
                     'critical_alerts' => $criticalAlerts,
+                    'system' => $systemMemory,
                     'updated_at' => now()->toIso8601String(),
                 ],
             ]);
@@ -138,6 +163,9 @@ class AdminController extends Controller
                     'queues' => [
                         'pending_withdrawals' => 0,
                         'pending_withdrawals_amount' => 0,
+                        'pending_approvals' => 0,
+                        'paid_orders_24h' => 0,
+                        'pending_chargebacks' => 0,
                         'pending_kyc' => 0,
                     ],
                     'switches' => [
@@ -147,10 +175,86 @@ class AdminController extends Controller
                         'auto_withdrawal_enabled' => false,
                     ],
                     'critical_alerts' => ['Nao foi possivel carregar o pulso operacional.'],
+                    'system' => [
+                        'memory_usage_percent' => null,
+                        'memory_used_mb' => null,
+                        'memory_total_mb' => null,
+                    ],
                     'updated_at' => now()->toIso8601String(),
                 ],
             ]);
         }
+    }
+
+    private function resolveSystemMemoryUsage(): array
+    {
+        $memoryUsagePercent = null;
+        $memoryUsedMb = null;
+        $memoryTotalMb = null;
+
+        try {
+            if (PHP_OS_FAMILY === 'Linux' && is_readable('/proc/meminfo')) {
+                $memInfoLines = @file('/proc/meminfo', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+                if (is_array($memInfoLines)) {
+                    $values = [];
+                    foreach ($memInfoLines as $line) {
+                        if (preg_match('/^([A-Za-z_]+):\s+(\d+)/', $line, $matches)) {
+                            $values[$matches[1]] = (int) $matches[2]; // kB
+                        }
+                    }
+
+                    $totalKb = $values['MemTotal'] ?? 0;
+                    $availableKb = $values['MemAvailable'] ?? ($values['MemFree'] ?? 0);
+                    if ($totalKb > 0) {
+                        $usedKb = max(0, $totalKb - $availableKb);
+                        $memoryUsagePercent = round(($usedKb / $totalKb) * 100, 1);
+                        $memoryUsedMb = (int) round($usedKb / 1024);
+                        $memoryTotalMb = (int) round($totalKb / 1024);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore OS metrics failures and fallback below.
+        }
+
+        if ($memoryUsagePercent === null) {
+            try {
+                $phpUsageBytes = memory_get_usage(true);
+                $phpLimitBytes = $this->convertPhpMemoryLimitToBytes((string) ini_get('memory_limit'));
+
+                if ($phpLimitBytes !== null && $phpLimitBytes > 0) {
+                    $memoryUsagePercent = round(($phpUsageBytes / $phpLimitBytes) * 100, 1);
+                    $memoryUsedMb = (int) round($phpUsageBytes / 1048576);
+                    $memoryTotalMb = (int) round($phpLimitBytes / 1048576);
+                }
+            } catch (\Throwable $e) {
+                // Keep null when no reliable memory source is available.
+            }
+        }
+
+        return [
+            'memory_usage_percent' => $memoryUsagePercent,
+            'memory_used_mb' => $memoryUsedMb,
+            'memory_total_mb' => $memoryTotalMb,
+        ];
+    }
+
+    private function convertPhpMemoryLimitToBytes(string $memoryLimit): ?int
+    {
+        $value = trim($memoryLimit);
+        if ($value === '' || $value === '-1') {
+            return null;
+        }
+
+        $unit = strtolower(substr($value, -1));
+        $numeric = (int) $value;
+
+        return match ($unit) {
+            'g' => $numeric * 1024 * 1024 * 1024,
+            'm' => $numeric * 1024 * 1024,
+            'k' => $numeric * 1024,
+            default => (int) $value,
+        };
     }
 
     /**
@@ -493,6 +597,298 @@ class AdminController extends Controller
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('AdminController::recentActivities error', ['error' => $e->getMessage()]);
             return response()->json(['success' => true, 'data' => []]);
+        }
+    }
+
+    /**
+     * Unified monitoring feed for control tower (all users requests + admin access logs).
+     */
+    public function monitoringFeed(Request $request): JsonResponse
+    {
+        try {
+            $validated = $request->validate([
+                'period' => ['sometimes', 'in:1h,6h,24h,7d'],
+                'search' => ['sometimes', 'string', 'max:120'],
+                'logs_status' => ['sometimes', 'in:all,success,error,blocked'],
+                'requests_page' => ['sometimes', 'integer', 'min:1'],
+                'requests_per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+                'logs_page' => ['sometimes', 'integer', 'min:1'],
+                'logs_per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            ]);
+
+            $period = $validated['period'] ?? '24h';
+            $search = trim((string) ($validated['search'] ?? ''));
+            $logsStatus = $validated['logs_status'] ?? 'all';
+            $requestsPage = (int) ($validated['requests_page'] ?? 1);
+            $requestsPerPage = (int) ($validated['requests_per_page'] ?? 12);
+            $logsPage = (int) ($validated['logs_page'] ?? 1);
+            $logsPerPage = (int) ($validated['logs_per_page'] ?? 12);
+            $windowStart = $this->resolveWindowStart($period);
+            $dbDriver = config('database.default');
+
+            try {
+                $demoAccountIds = Account::where('is_demo', true)->pluck('id');
+            } catch (\Throwable $e) {
+                $demoAccountIds = collect();
+            }
+
+            $requestsQuery = AuditLog::query()
+                ->with(['user:id,name,email'])
+                ->where('created_at', '>=', $windowStart)
+                ->when($demoAccountIds->isNotEmpty(), function ($query) use ($demoAccountIds) {
+                    $query->where(function ($inner) use ($demoAccountIds) {
+                        $inner->whereNull('account_id')->orWhereNotIn('account_id', $demoAccountIds);
+                    });
+                });
+
+            if ($search !== '') {
+                $searchTerm = '%' . addcslashes($search, '%_\\') . '%';
+
+                $requestsQuery->where(function ($query) use ($searchTerm, $dbDriver) {
+                    if ($dbDriver === 'pgsql') {
+                        $query->where('action', 'ilike', $searchTerm)
+                            ->orWhere('entity_type', 'ilike', $searchTerm)
+                            ->orWhere('entity_id', 'ilike', $searchTerm)
+                            ->orWhere('ip_address', 'ilike', $searchTerm)
+                            ->orWhereHas('user', function ($userQuery) use ($searchTerm) {
+                                $userQuery->where('name', 'ilike', $searchTerm)
+                                    ->orWhere('email', 'ilike', $searchTerm);
+                            });
+                    } else {
+                        $query->where('action', 'like', $searchTerm)
+                            ->orWhere('entity_type', 'like', $searchTerm)
+                            ->orWhere('entity_id', 'like', $searchTerm)
+                            ->orWhere('ip_address', 'like', $searchTerm)
+                            ->orWhereHas('user', function ($userQuery) use ($searchTerm) {
+                                $userQuery->where('name', 'like', $searchTerm)
+                                    ->orWhere('email', 'like', $searchTerm);
+                            });
+                    }
+                });
+            }
+
+            $requestsTotal = (int) (clone $requestsQuery)->count();
+            $requestsUniqueUsers = (int) (clone $requestsQuery)
+                ->whereNotNull('user_id')
+                ->distinct()
+                ->count('user_id');
+
+            $requestActionCounters = (clone $requestsQuery)
+                ->select('action')
+                ->selectRaw('COUNT(*) as total')
+                ->groupBy('action')
+                ->pluck('total', 'action');
+
+            $requestsPaginator = (clone $requestsQuery)
+                ->orderBy('created_at', 'desc')
+                ->paginate($requestsPerPage, ['*'], 'requests_page', $requestsPage);
+
+            $requestRows = collect($requestsPaginator->items())
+                ->map(function (AuditLog $auditLog) {
+                    $metadata = is_array($auditLog->metadata) ? $auditLog->metadata : [];
+                    $statusCodeRaw = $metadata['status_code'] ?? null;
+                    $durationRaw = $metadata['duration_ms'] ?? null;
+
+                    return [
+                        'id' => (string) $auditLog->id,
+                        'user_id' => $auditLog->user_id,
+                        'user_name' => $auditLog->user?->name,
+                        'user_email' => $auditLog->user?->email,
+                        'account_id' => $auditLog->account_id,
+                        'action' => (string) ($auditLog->action ?? ''),
+                        'entity_type' => $auditLog->entity_type,
+                        'entity_id' => $auditLog->entity_id,
+                        'method' => strtoupper((string) ($metadata['method'] ?? '')),
+                        'path' => (string) ($metadata['path'] ?? ''),
+                        'status_code' => is_numeric($statusCodeRaw) ? (int) $statusCodeRaw : null,
+                        'duration_ms' => is_numeric($durationRaw) ? (float) $durationRaw : null,
+                        'ip_address' => $auditLog->ip_address,
+                        'created_at' => optional($auditLog->created_at)->toIso8601String(),
+                    ];
+                })
+                ->values();
+
+            $logsTotal = 0;
+            $logsErrors = 0;
+            $logsBlocked = 0;
+            $logsUniqueUsers = 0;
+            $logsUniqueIps = 0;
+            $logsAvgResponseTimeMs = null;
+            $logRows = collect();
+            $logsMeta = [
+                'current_page' => $logsPage,
+                'per_page' => $logsPerPage,
+                'total' => 0,
+                'last_page' => 1,
+            ];
+
+            if (Schema::hasTable('admin_access_logs')) {
+                $hasActorRole = Schema::hasColumn('admin_access_logs', 'actor_role');
+                $hasCorrelationId = Schema::hasColumn('admin_access_logs', 'correlation_id');
+                $hasSecurityFlags = Schema::hasColumn('admin_access_logs', 'security_flags');
+
+                $adminLogsQuery = DB::table('admin_access_logs as logs')
+                    ->leftJoin('users as users', 'users.id', '=', 'logs.user_id')
+                    ->where('logs.accessed_at', '>=', $windowStart)
+                    ->when($demoAccountIds->isNotEmpty(), function ($query) use ($demoAccountIds) {
+                        $query->where(function ($inner) use ($demoAccountIds) {
+                            $inner->whereNull('logs.account_id')->orWhereNotIn('logs.account_id', $demoAccountIds);
+                        });
+                    });
+
+                if ($search !== '') {
+                    $searchTerm = '%' . addcslashes($search, '%_\\') . '%';
+
+                    $adminLogsQuery->where(function ($query) use ($searchTerm, $dbDriver, $hasActorRole) {
+                        if ($dbDriver === 'pgsql') {
+                            $query->where('logs.endpoint', 'ilike', $searchTerm)
+                                ->orWhere('logs.method', 'ilike', $searchTerm)
+                                ->orWhere('logs.ip_address', 'ilike', $searchTerm)
+                                ->orWhere('users.name', 'ilike', $searchTerm)
+                                ->orWhere('users.email', 'ilike', $searchTerm);
+
+                            if ($hasActorRole) {
+                                $query->orWhere('logs.actor_role', 'ilike', $searchTerm);
+                            }
+                        } else {
+                            $query->where('logs.endpoint', 'like', $searchTerm)
+                                ->orWhere('logs.method', 'like', $searchTerm)
+                                ->orWhere('logs.ip_address', 'like', $searchTerm)
+                                ->orWhere('users.name', 'like', $searchTerm)
+                                ->orWhere('users.email', 'like', $searchTerm);
+
+                            if ($hasActorRole) {
+                                $query->orWhere('logs.actor_role', 'like', $searchTerm);
+                            }
+                        }
+                    });
+                }
+
+                if ($logsStatus === 'success') {
+                    $adminLogsQuery->where('logs.response_status', '<', 400);
+                } elseif ($logsStatus === 'error') {
+                    $adminLogsQuery->where('logs.response_status', '>=', 400);
+                } elseif ($logsStatus === 'blocked') {
+                    $adminLogsQuery->where('logs.response_status', 429);
+                }
+
+                $logsTotal = (int) (clone $adminLogsQuery)->count();
+                $logsErrors = (int) (clone $adminLogsQuery)->where('logs.response_status', '>=', 400)->count();
+                $logsBlocked = (int) (clone $adminLogsQuery)->where('logs.response_status', 429)->count();
+                $logsUniqueUsers = (int) (clone $adminLogsQuery)
+                    ->whereNotNull('logs.user_id')
+                    ->distinct()
+                    ->count('logs.user_id');
+                $logsUniqueIps = (int) (clone $adminLogsQuery)
+                    ->whereNotNull('logs.ip_address')
+                    ->distinct()
+                    ->count('logs.ip_address');
+
+                $avgResponseRaw = (clone $adminLogsQuery)
+                    ->whereNotNull('logs.response_time_ms')
+                    ->avg('logs.response_time_ms');
+                $logsAvgResponseTimeMs = is_null($avgResponseRaw) ? null : round((float) $avgResponseRaw, 2);
+
+                $selectColumns = [
+                    'logs.id',
+                    'logs.user_id',
+                    'logs.account_id',
+                    'logs.endpoint',
+                    'logs.method',
+                    'logs.ip_address',
+                    'logs.user_agent',
+                    'logs.response_status',
+                    'logs.response_time_ms',
+                    'logs.accessed_at',
+                    'users.name as user_name',
+                    'users.email as user_email',
+                ];
+
+                $selectColumns[] = $hasActorRole ? 'logs.actor_role' : DB::raw('NULL as actor_role');
+                $selectColumns[] = $hasCorrelationId ? 'logs.correlation_id' : DB::raw('NULL as correlation_id');
+                $selectColumns[] = $hasSecurityFlags ? 'logs.security_flags' : DB::raw('NULL as security_flags');
+
+                $logsPaginator = (clone $adminLogsQuery)
+                    ->orderBy('logs.accessed_at', 'desc')
+                    ->paginate($logsPerPage, $selectColumns, 'logs_page', $logsPage);
+
+                $logsMeta = [
+                    'current_page' => $logsPaginator->currentPage(),
+                    'per_page' => $logsPaginator->perPage(),
+                    'total' => $logsPaginator->total(),
+                    'last_page' => $logsPaginator->lastPage(),
+                ];
+
+                $logRows = collect($logsPaginator->items())
+                    ->map(function ($logRow) {
+                        $securityFlags = $this->decodeJsonArray($logRow->security_flags ?? null);
+
+                        return [
+                            'id' => (string) ($logRow->id ?? ''),
+                            'user_id' => $logRow->user_id ?? null,
+                            'user_name' => $logRow->user_name ?? null,
+                            'user_email' => $logRow->user_email ?? null,
+                            'account_id' => $logRow->account_id ?? null,
+                            'actor_role' => $logRow->actor_role ?? null,
+                            'endpoint' => (string) ($logRow->endpoint ?? ''),
+                            'method' => strtoupper((string) ($logRow->method ?? '')),
+                            'response_status' => isset($logRow->response_status) ? (int) $logRow->response_status : null,
+                            'response_time_ms' => isset($logRow->response_time_ms) ? (float) $logRow->response_time_ms : null,
+                            'ip_address' => $logRow->ip_address ?? null,
+                            'user_agent' => $logRow->user_agent ?? null,
+                            'correlation_id' => $logRow->correlation_id ?? null,
+                            'security_flags' => $securityFlags,
+                            'accessed_at' => $this->toIso8601String($logRow->accessed_at ?? null),
+                        ];
+                    })
+                    ->values();
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'period' => $period,
+                    'window_start' => $windowStart->toIso8601String(),
+                    'generated_at' => now()->toIso8601String(),
+                    'summary' => [
+                        'requests_total' => $requestsTotal,
+                        'requests_unique_users' => $requestsUniqueUsers,
+                        'requests_create_total' => (int) ($requestActionCounters['create'] ?? 0),
+                        'requests_update_total' => (int) ($requestActionCounters['update'] ?? 0),
+                        'requests_delete_total' => (int) ($requestActionCounters['delete'] ?? 0),
+                        'logs_total' => $logsTotal,
+                        'logs_errors' => $logsErrors,
+                        'logs_blocked' => $logsBlocked,
+                        'logs_unique_users' => $logsUniqueUsers,
+                        'logs_unique_ips' => $logsUniqueIps,
+                        'logs_avg_response_time_ms' => $logsAvgResponseTimeMs,
+                    ],
+                    'requests' => [
+                        'data' => $requestRows,
+                        'meta' => [
+                            'current_page' => $requestsPaginator->currentPage(),
+                            'per_page' => $requestsPaginator->perPage(),
+                            'total' => $requestsPaginator->total(),
+                            'last_page' => $requestsPaginator->lastPage(),
+                        ],
+                    ],
+                    'logs' => [
+                        'data' => $logRows,
+                        'meta' => $logsMeta,
+                    ],
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('AdminController::monitoringFeed error', [
+                'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'INTERNAL_ERROR', 'message' => 'Erro ao carregar feed de monitoramento'],
+            ], 500);
         }
     }
 
@@ -1806,11 +2202,46 @@ class AdminController extends Controller
     private function resolveWindowStart(string $period): Carbon
     {
         return match ($period) {
+            '1h' => now()->subHour(),
+            '6h' => now()->subHours(6),
             '24h' => now()->subDay(),
             '7d' => now()->subDays(7)->startOfDay(),
             '90d' => now()->subDays(90)->startOfDay(),
             default => now()->subDays(30)->startOfDay(),
         };
+    }
+
+    private function decodeJsonArray(mixed $value): array
+    {
+        if (is_array($value)) {
+            return array_values(array_filter($value, fn ($item) => is_scalar($item) && (string) $item !== ''));
+        }
+
+        if (is_string($value) && trim($value) !== '') {
+            $decoded = json_decode($value, true);
+            if (is_array($decoded)) {
+                return array_values(array_filter($decoded, fn ($item) => is_scalar($item) && (string) $item !== ''));
+            }
+        }
+
+        return [];
+    }
+
+    private function toIso8601String(mixed $value): ?string
+    {
+        if ($value instanceof Carbon) {
+            return $value->toIso8601String();
+        }
+
+        if (is_string($value) && trim($value) !== '') {
+            try {
+                return Carbon::parse($value)->toIso8601String();
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     private function normalizeAcquirer(string $acquirer): string

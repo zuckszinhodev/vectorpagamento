@@ -412,6 +412,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             // Admin: Control Tower advanced operations
             Route::prefix('admin/control-tower')->group(function () {
                 Route::get('/sla', [\App\Http\Controllers\Api\V1\AdminController::class, 'acquirerSla']);
+                Route::get('/monitoring-feed', [\App\Http\Controllers\Api\V1\AdminController::class, 'monitoringFeed']);
                 Route::get('/risk-matrix', [\App\Http\Controllers\Api\V1\AdminController::class, 'sellerRiskMatrix']);
                 Route::post('/risk-actions/bulk', [\App\Http\Controllers\Api\V1\AdminController::class, 'sellerRiskBulkAction']);
                 Route::post('/playbooks/execute', [\App\Http\Controllers\Api\V1\AdminController::class, 'executeIncidentPlaybook']);

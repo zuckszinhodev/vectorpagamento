@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { api, formatCurrency, formatDate } from '@/lib/api';
@@ -78,10 +78,17 @@ interface WithdrawalConfig {
   holdback_percentage: number;
 }
 
-export default function AdminFinance() {
+type AdminFinanceMode = 'all' | 'transactions' | 'withdrawals';
+
+interface AdminFinanceProps {
+  mode?: AdminFinanceMode;
+}
+
+export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [activeMainTab, setActiveMainTab] = useState<'withdrawals' | 'transactions'>('transactions');
+  const lockedMainTab = mode === 'transactions' ? 'transactions' : mode === 'withdrawals' ? 'withdrawals' : null;
+  const [activeMainTab, setActiveMainTab] = useState<'withdrawals' | 'transactions'>(lockedMainTab ?? 'transactions');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [methodFilter, setMethodFilter] = useState<string>('all');
@@ -109,6 +116,12 @@ export default function AdminFinance() {
     mfa_code: '',
   });
 
+  useEffect(() => {
+    if (lockedMainTab && activeMainTab !== lockedMainTab) {
+      setActiveMainTab(lockedMainTab);
+    }
+  }, [activeMainTab, lockedMainTab]);
+
   // Fetch withdrawals
   const { data: withdrawalsData, isLoading, refetch } = useQuery({
     queryKey: ['admin-withdrawals', search, statusFilter, methodFilter, dateFrom, dateTo, page],
@@ -127,6 +140,7 @@ export default function AdminFinance() {
       const response = await api.get(`/admin/withdrawals?${params.toString()}`);
       return response.data;
     },
+    enabled: activeMainTab === 'withdrawals',
   });
 
   const withdrawals: Withdrawal[] = withdrawalsData?.data ?? [];
@@ -138,6 +152,7 @@ export default function AdminFinance() {
       const response = await api.get('/admin/withdrawals/config');
       return response.data;
     },
+    enabled: activeMainTab === 'withdrawals',
   });
 
   const config: WithdrawalConfig | undefined = configData?.data;
@@ -158,6 +173,7 @@ export default function AdminFinance() {
       const response = await api.get(`/admin/charges?${params.toString()}`);
       return response.data;
     },
+    enabled: activeMainTab === 'transactions',
   });
 
   const charges = chargesData?.data ?? [];
@@ -383,9 +399,12 @@ export default function AdminFinance() {
   return (
     <AdminPageShell>
       <AdminPageHeader
-        
-        title="Financeiro"
-        subtitle="Gerencie saques, transacoes e configuracoes financeiras"
+        title={activeMainTab === 'withdrawals' ? 'Saques' : 'Transações'}
+        subtitle={
+          activeMainTab === 'withdrawals'
+            ? 'Gerenciamento completo de saques do sistema'
+            : 'Monitore e gerencie todas as transações da plataforma'
+        }
         actions={
           activeMainTab === 'withdrawals' ? (
             <div className="flex items-center gap-2">
@@ -411,37 +430,39 @@ export default function AdminFinance() {
       />
 
       {/* Main Tabs */}
-      <div className="flex w-full items-center gap-1 overflow-x-auto rounded-md bg-white p-1 shadow-sm">
-        <button
-          onClick={() => setActiveMainTab('transactions')}
-          className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
-            activeMainTab === 'transactions'
-              ? 'bg-green-600 text-white shadow-sm'
-              : 'text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          <DocumentTextIcon className="h-4 w-4" />
-          Transações
-          {chargesPagination.total > 0 && (
-            <span className={`rounded-full px-2 py-0.5 text-xs ${
-              activeMainTab === 'transactions' ? 'bg-white/20' : 'bg-green-50 text-green-600'
-            }`}>
-              {chargesPagination.total}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveMainTab('withdrawals')}
-          className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
-            activeMainTab === 'withdrawals'
-              ? 'bg-green-600 text-white shadow-sm'
-              : 'text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          <BanknotesIcon className="h-4 w-4" />
-          Saques
-        </button>
-      </div>
+      {mode === 'all' && (
+        <div className="flex w-full items-center gap-1 overflow-x-auto rounded-md bg-white p-1 shadow-sm">
+          <button
+            onClick={() => setActiveMainTab('transactions')}
+            className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
+              activeMainTab === 'transactions'
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <DocumentTextIcon className="h-4 w-4" />
+            Transações
+            {chargesPagination.total > 0 && (
+              <span className={`rounded-full px-2 py-0.5 text-xs ${
+                activeMainTab === 'transactions' ? 'bg-white/20' : 'bg-green-50 text-green-600'
+              }`}>
+                {chargesPagination.total}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveMainTab('withdrawals')}
+            className={`flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors ${
+              activeMainTab === 'withdrawals'
+                ? 'bg-green-600 text-white shadow-sm'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <BanknotesIcon className="h-4 w-4" />
+            Saques
+          </button>
+        </div>
+      )}
 
       {activeMainTab === 'withdrawals' && (
         <>

@@ -38,10 +38,12 @@ interface NavGroup {
 interface AdminPulse {
   health_score: number;
   state: 'healthy' | 'attention' | 'critical';
-  queues: {
+  queues?: {
     pending_withdrawals: number;
     pending_withdrawals_amount: number;
     pending_approvals: number;
+    paid_orders_24h: number;
+    pending_chargebacks: number;
     pending_kyc: number;
   };
   switches: {
@@ -49,6 +51,11 @@ interface AdminPulse {
     withdrawals_enabled: boolean;
     withdrawal_processing_enabled: boolean;
     auto_withdrawal_enabled: boolean;
+  };
+  system?: {
+    memory_usage_percent: number | null;
+    memory_used_mb: number | null;
+    memory_total_mb: number | null;
   };
   critical_alerts: string[];
   updated_at: string;
@@ -67,7 +74,8 @@ const navigationGroups: NavGroup[] = [
     title: 'Operacao',
     items: [
       { name: 'Sellers', href: '/admin/sellers', icon: BuildingStorefrontIcon, permission: 'admin.customers.manage' },
-      { name: 'Financeiro', href: '/admin/finance', icon: BanknotesIcon, permission: 'admin.withdrawals.manage' },
+      { name: 'Transações', href: '/admin/transactions', icon: DocumentTextIcon, permission: 'admin.withdrawals.manage' },
+      { name: 'Saques', href: '/admin/withdrawals', icon: BanknotesIcon, permission: 'admin.withdrawals.manage' },
       { name: 'KYC', href: '/admin/kyc', icon: DocumentCheckIcon, permission: 'admin.kyc.review' },
       { name: 'Disputas', href: '/admin/chargebacks', icon: ExclamationTriangleIcon, permission: 'admin.chargebacks.manage' },
       { name: 'Aprovacoes', href: '/admin/approvals', icon: DocumentTextIcon, permission: 'admin.approvals.review' },
@@ -106,7 +114,7 @@ export default function AdminLayout() {
       const response = await api.get('/admin/pulse');
       return response.data?.data;
     },
-    refetchInterval: 20000,
+    refetchInterval: 10000,
   });
 
   const handleLogout = async () => {
@@ -313,12 +321,14 @@ function SidebarContent({
 
       {/* Pulse indicator */}
       {pulseData && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-          <span className={`h-2 w-2 rounded-full ${pulseColor}`} />
-          <span className="text-xs font-medium text-gray-600">
-            {pulseData.state === 'healthy' ? 'Operação estável' : pulseData.state === 'attention' ? 'Atenção' : 'Crítico'}
-          </span>
-          <span className="ml-auto text-xs text-gray-400">{pulseData.health_score}%</span>
+        <div className="mb-4 rounded-xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${pulseColor}`} />
+            <span className="text-xs font-semibold text-gray-700">
+              {pulseData.state === 'healthy' ? 'Sistema online' : pulseData.state === 'attention' ? 'Atenção operacional' : 'Operação crítica'}
+            </span>
+            <span className="ml-auto text-xs font-semibold text-gray-500">{pulseData.health_score}%</span>
+          </div>
         </div>
       )}
 
@@ -334,12 +344,18 @@ function SidebarContent({
                 {group.items.map((item) => {
                   const active = isActiveRoute(item.href);
                   const dynamicBadge =
-                    item.href === '/admin/finance'
-                      ? pulseData?.queues.pending_withdrawals
+                    item.href === '/admin/transactions'
+                      ? pulseData?.queues?.paid_orders_24h
+                      : item.href === '/admin/withdrawals'
+                        ? pulseData?.queues?.pending_withdrawals
                       : item.href === '/admin/approvals'
-                        ? pulseData?.queues.pending_approvals
+                        ? pulseData?.queues?.pending_approvals
                         : item.href === '/admin/kyc'
-                          ? pulseData?.queues.pending_kyc
+                          ? pulseData?.queues?.pending_kyc
+                          : item.href === '/admin/chargebacks'
+                            ? pulseData?.queues?.pending_chargebacks
+                            : item.href === '/admin/monitoring'
+                              ? pulseData?.critical_alerts?.length
                           : item.badge;
                   const badgeCount = Number(dynamicBadge ?? 0);
 

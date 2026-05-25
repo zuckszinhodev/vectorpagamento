@@ -271,9 +271,8 @@ export default function AdminDashboard() {
     const list: string[] = [];
     if (controls.payments_enabled === false) list.push('Pagamentos desativados globalmente');
     if (controls.withdrawal_processing_enabled === false) list.push('Processamento de saques pausado');
-    if (stats.success_rate < 90) list.push(`Taxa de sucesso abaixo da meta: ${stats.success_rate.toFixed(1)}%`);
     return list;
-  }, [pulseData, controls.payments_enabled, controls.withdrawal_processing_enabled, stats.success_rate]);
+  }, [pulseData, controls.payments_enabled, controls.withdrawal_processing_enabled]);
 
   const refetchAll = () => {
     statsQuery.refetch();
@@ -440,10 +439,10 @@ export default function AdminDashboard() {
             <p>Cooldown: <span className="font-medium text-gray-900">{controls.withdrawal_cooldown_seconds ?? 0}s</span></p>
           </div>
           <Link
-            to="/admin/finance"
+            to="/admin/transactions"
             className="mt-4 block w-full rounded-md bg-gray-900 px-3 py-2 text-center text-sm font-medium text-white hover:bg-gray-800"
           >
-            Gerenciar financeiro
+            Gerenciar transações
           </Link>
         </div>
       </div>

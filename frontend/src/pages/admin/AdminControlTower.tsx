@@ -6,7 +6,6 @@ import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShe
 import {
   ArrowPathIcon,
   BanknotesIcon,
-  BoltIcon,
   CheckCircleIcon,
   ShieldCheckIcon,
   ShieldExclamationIcon,
@@ -23,6 +22,15 @@ import toast from 'react-hot-toast';
 interface WrappedResponse<T> {
   success: boolean;
   data: T;
+}
+
+type MonitoringPeriod = '1h' | '6h' | '24h' | '7d';
+type MonitoringLogsStatus = 'all' | 'success' | 'error' | 'blocked';
+
+interface MonitoringStoredFilters {
+  period: MonitoringPeriod;
+  search: string;
+  logsStatus: MonitoringLogsStatus;
 }
 
 interface AdminPulse {
@@ -166,6 +174,75 @@ interface RiskMatrixResponse {
   };
 }
 
+interface MonitoringPaginationMeta {
+  current_page: number;
+  per_page: number;
+  total: number;
+  last_page: number;
+}
+
+interface MonitoringRequestRow {
+  id: string;
+  user_id: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  account_id: string | null;
+  action: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  method: string;
+  path: string;
+  status_code: number | null;
+  duration_ms: number | null;
+  ip_address: string | null;
+  created_at: string | null;
+}
+
+interface MonitoringLogRow {
+  id: string;
+  user_id: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  account_id: string | null;
+  actor_role: string | null;
+  endpoint: string;
+  method: string;
+  response_status: number | null;
+  response_time_ms: number | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  correlation_id: string | null;
+  security_flags: string[];
+  accessed_at: string | null;
+}
+
+interface ControlTowerMonitoringResponse {
+  period: MonitoringPeriod;
+  window_start: string;
+  generated_at: string;
+  summary: {
+    requests_total: number;
+    requests_unique_users: number;
+    requests_create_total: number;
+    requests_update_total: number;
+    requests_delete_total: number;
+    logs_total: number;
+    logs_errors: number;
+    logs_blocked: number;
+    logs_unique_users: number;
+    logs_unique_ips: number;
+    logs_avg_response_time_ms: number | null;
+  };
+  requests: {
+    data: MonitoringRequestRow[];
+    meta: MonitoringPaginationMeta;
+  };
+  logs: {
+    data: MonitoringLogRow[];
+    meta: MonitoringPaginationMeta;
+  };
+}
+
 const DEFAULT_CONTROLS: WithdrawalConfig = {
   payments_enabled: true,
   withdrawals_enabled: true,
@@ -179,12 +256,129 @@ const DEFAULT_CONTROLS: WithdrawalConfig = {
   holdback_percentage: 0,
 };
 
+const DEFAULT_MONITORING_META: MonitoringPaginationMeta = {
+  current_page: 1,
+  per_page: 12,
+  total: 0,
+  last_page: 1,
+};
+
+const MONITORING_FILTERS_STORAGE_KEY = 'admin-control-tower-monitoring-filters-v1';
+
+function readMonitoringFiltersFromStorage(): MonitoringStoredFilters {
+  const fallback: MonitoringStoredFilters = {
+    period: '24h',
+    search: '',
+    logsStatus: 'all',
+  };
+
+  if (typeof window === 'undefined') {
+    return fallback;
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(MONITORING_FILTERS_STORAGE_KEY);
+    if (!rawValue) {
+      return fallback;
+    }
+
+    const parsedValue = JSON.parse(rawValue) as Partial<MonitoringStoredFilters>;
+
+    const allowedPeriods: MonitoringPeriod[] = ['1h', '6h', '24h', '7d'];
+    const allowedStatuses: MonitoringLogsStatus[] = ['all', 'success', 'error', 'blocked'];
+
+    const period = allowedPeriods.includes(parsedValue.period as MonitoringPeriod)
+      ? (parsedValue.period as MonitoringPeriod)
+      : fallback.period;
+    const logsStatus = allowedStatuses.includes(parsedValue.logsStatus as MonitoringLogsStatus)
+      ? (parsedValue.logsStatus as MonitoringLogsStatus)
+      : fallback.logsStatus;
+
+    return {
+      period,
+      search: typeof parsedValue.search === 'string' ? parsedValue.search : fallback.search,
+      logsStatus,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function persistMonitoringFiltersToStorage(filters: MonitoringStoredFilters): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(MONITORING_FILTERS_STORAGE_KEY, JSON.stringify(filters));
+  } catch {
+    // Silent fallback: localStorage may be blocked by browser privacy mode.
+  }
+}
+
+function csvEscape(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '""';
+  }
+
+  const stringValue = Array.isArray(value)
+    ? value.map((entry) => String(entry)).join(' | ')
+    : String(value);
+
+  return `"${stringValue.replace(/"/g, '""')}"`;
+}
+
+function downloadCsvFile(fileName: string, headers: string[], rows: unknown[][]): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const csvBody = [
+    headers.map((header) => csvEscape(header)).join(';'),
+    ...rows.map((row) => row.map((cell) => csvEscape(cell)).join(';')),
+  ].join('\n');
+
+  const csvWithBom = `\uFEFF${csvBody}`;
+  const blob = new Blob([csvWithBom], { type: 'text/csv;charset=utf-8;' });
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = window.document.createElement('a');
+
+  link.href = downloadUrl;
+  link.download = fileName;
+  link.style.display = 'none';
+
+  window.document.body.appendChild(link);
+  link.click();
+  window.document.body.removeChild(link);
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+function buildExportTimestamp(): string {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mi = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  return `${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
+}
+
 export default function AdminControlTower() {
   const queryClient = useQueryClient();
   const [draftControls, setDraftControls] = useState<WithdrawalConfig>(DEFAULT_CONTROLS);
   const [slaPeriod, setSlaPeriod] = useState<'24h' | '7d' | '30d' | '90d'>('30d');
   const [riskLevelFilter, setRiskLevelFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [selectedRiskUsers, setSelectedRiskUsers] = useState<string[]>([]);
+  const [monitoringPeriod, setMonitoringPeriod] = useState<MonitoringPeriod>(() => readMonitoringFiltersFromStorage().period);
+  const [monitoringSearch, setMonitoringSearch] = useState(() => readMonitoringFiltersFromStorage().search);
+  const [monitoringLogsStatus, setMonitoringLogsStatus] = useState<MonitoringLogsStatus>(
+    () => readMonitoringFiltersFromStorage().logsStatus,
+  );
+  const [monitoringRequestsPage, setMonitoringRequestsPage] = useState(1);
+  const [monitoringLogsPage, setMonitoringLogsPage] = useState(1);
+  const [isExportingRequestsCsv, setIsExportingRequestsCsv] = useState(false);
+  const [isExportingLogsCsv, setIsExportingLogsCsv] = useState(false);
 
   const pulseQuery = useQuery<AdminPulse>({
     queryKey: ['admin-control-tower-pulse'],
@@ -265,6 +459,41 @@ export default function AdminControlTower() {
     refetchInterval: 60000,
   });
 
+  const monitoringSearchValue = monitoringSearch.trim();
+
+  const monitoringQuery = useQuery<ControlTowerMonitoringResponse>({
+    queryKey: [
+      'admin-control-tower-monitoring-feed',
+      monitoringPeriod,
+      monitoringSearchValue,
+      monitoringLogsStatus,
+      monitoringRequestsPage,
+      monitoringLogsPage,
+    ],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('period', monitoringPeriod);
+      params.append('requests_page', String(monitoringRequestsPage));
+      params.append('logs_page', String(monitoringLogsPage));
+      params.append('requests_per_page', '8');
+      params.append('logs_per_page', '8');
+
+      if (monitoringLogsStatus !== 'all') {
+        params.append('logs_status', monitoringLogsStatus);
+      }
+
+      if (monitoringSearchValue) {
+        params.append('search', monitoringSearchValue);
+      }
+
+      const response = await api.get<WrappedResponse<ControlTowerMonitoringResponse>>(
+        `/admin/control-tower/monitoring-feed?${params.toString()}`,
+      );
+      return response.data?.data;
+    },
+    refetchInterval: 30000,
+  });
+
   useEffect(() => {
     if (controlsQuery.data) {
       setDraftControls((prev) => ({ ...prev, ...controlsQuery.data }));
@@ -341,6 +570,12 @@ export default function AdminControlTower() {
   const sla = slaQuery.data;
   const riskRows = riskMatrixQuery.data?.data ?? [];
   const riskSummary = riskMatrixQuery.data?.summary ?? { high: 0, medium: 0, low: 0 };
+  const monitoring = monitoringQuery.data;
+  const monitoringSummary = monitoring?.summary;
+  const monitoringRequests = monitoring?.requests.data ?? [];
+  const monitoringRequestsMeta = monitoring?.requests.meta ?? DEFAULT_MONITORING_META;
+  const monitoringLogs = monitoring?.logs.data ?? [];
+  const monitoringLogsMeta = monitoring?.logs.meta ?? DEFAULT_MONITORING_META;
 
   useEffect(() => {
     if (!riskMatrixQuery.data?.data) {
@@ -350,6 +585,19 @@ export default function AdminControlTower() {
     const visibleIds = new Set(riskMatrixQuery.data.data.map((row) => row.user_id));
     setSelectedRiskUsers((previous) => previous.filter((userId) => visibleIds.has(userId)));
   }, [riskMatrixQuery.data?.data]);
+
+  useEffect(() => {
+    setMonitoringRequestsPage(1);
+    setMonitoringLogsPage(1);
+  }, [monitoringPeriod, monitoringSearchValue, monitoringLogsStatus]);
+
+  useEffect(() => {
+    persistMonitoringFiltersToStorage({
+      period: monitoringPeriod,
+      search: monitoringSearch,
+      logsStatus: monitoringLogsStatus,
+    });
+  }, [monitoringLogsStatus, monitoringPeriod, monitoringSearch]);
 
   const healthTone = useMemo(() => {
     if (pulse?.state === 'critical') return 'border-red-400/30 bg-red-50 text-red-300';
@@ -434,6 +682,109 @@ export default function AdminControlTower() {
     reconciliationQuery.refetch();
     slaQuery.refetch();
     riskMatrixQuery.refetch();
+    monitoringQuery.refetch();
+  };
+
+  const exportRequestsCsv = () => {
+    if (!monitoringRequests.length) {
+      toast.error('Nao ha requisicoes para exportar neste filtro');
+      return;
+    }
+
+    setIsExportingRequestsCsv(true);
+
+    try {
+      const rows = monitoringRequests.map((requestRow) => [
+        requestRow.created_at ?? '',
+        requestRow.user_name ?? '',
+        requestRow.user_email ?? '',
+        requestRow.user_id ?? '',
+        requestRow.account_id ?? '',
+        requestRow.method ?? '',
+        requestRow.path ?? '',
+        requestRow.action ?? '',
+        requestRow.entity_type ?? '',
+        requestRow.entity_id ?? '',
+        requestRow.status_code ?? '',
+        requestRow.duration_ms ?? '',
+        requestRow.ip_address ?? '',
+      ]);
+
+      downloadCsvFile(
+        `control-tower-requisicoes-${monitoringPeriod}-${buildExportTimestamp()}.csv`,
+        [
+          'created_at',
+          'user_name',
+          'user_email',
+          'user_id',
+          'account_id',
+          'method',
+          'path',
+          'action',
+          'entity_type',
+          'entity_id',
+          'status_code',
+          'duration_ms',
+          'ip_address',
+        ],
+        rows,
+      );
+
+      toast.success('CSV de requisicoes exportado');
+    } finally {
+      setIsExportingRequestsCsv(false);
+    }
+  };
+
+  const exportLogsCsv = () => {
+    if (!monitoringLogs.length) {
+      toast.error('Nao ha logs para exportar neste filtro');
+      return;
+    }
+
+    setIsExportingLogsCsv(true);
+
+    try {
+      const rows = monitoringLogs.map((logRow) => [
+        logRow.accessed_at ?? '',
+        logRow.user_name ?? '',
+        logRow.user_email ?? '',
+        logRow.user_id ?? '',
+        logRow.account_id ?? '',
+        logRow.actor_role ?? '',
+        logRow.method ?? '',
+        logRow.endpoint ?? '',
+        logRow.response_status ?? '',
+        logRow.response_time_ms ?? '',
+        logRow.ip_address ?? '',
+        logRow.security_flags,
+        logRow.correlation_id ?? '',
+      ]);
+
+      downloadCsvFile(
+        `control-tower-logs-${monitoringPeriod}-${buildExportTimestamp()}.csv`,
+        [
+          'accessed_at',
+          'user_name',
+          'user_email',
+          'user_id',
+          'account_id',
+          'actor_role',
+          'method',
+          'endpoint',
+          'response_status',
+          'response_time_ms',
+          'ip_address',
+          'security_flags',
+          'correlation_id',
+        ],
+        rows,
+      );
+
+      toast.success('CSV de logs exportado');
+    } finally {
+      setIsExportingLogsCsv(false);
+    }
   };
 
   return (
@@ -649,6 +1000,227 @@ export default function AdminControlTower() {
           ]}
           footerLink={{ href: '/admin/monitoring', label: 'Abrir monitoramento' }}
         />
+      </section>
+
+      <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-start gap-2">
+            <FunnelIcon className="mt-0.5 h-5 w-5 text-blue-700" />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Logs e requisicoes de usuarios</h3>
+              <p className="text-xs text-gray-500">Monitoramento centralizado de mutacoes auditadas e acessos administrativos</p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={monitoringPeriod}
+              onChange={(event) => setMonitoringPeriod(event.target.value as '1h' | '6h' | '24h' | '7d')}
+              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-900 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="1h">Ultima 1h</option>
+              <option value="6h">Ultimas 6h</option>
+              <option value="24h">Ultimas 24h</option>
+              <option value="7d">Ultimos 7 dias</option>
+            </select>
+
+            <select
+              value={monitoringLogsStatus}
+              onChange={(event) => setMonitoringLogsStatus(event.target.value as 'all' | 'success' | 'error' | 'blocked')}
+              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-900 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="all">Logs: todos os status</option>
+              <option value="success">Logs: sucesso</option>
+              <option value="error">Logs: erro</option>
+              <option value="blocked">Logs: bloqueadas</option>
+            </select>
+
+            <input
+              value={monitoringSearch}
+              onChange={(event) => setMonitoringSearch(event.target.value)}
+              placeholder="Buscar por usuario, endpoint, acao ou IP"
+              className="w-64 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-900 placeholder:text-gray-500 focus:border-blue-500 focus:outline-none"
+            />
+
+            <button
+              type="button"
+              onClick={() => monitoringQuery.refetch()}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-900 hover:bg-gray-100"
+            >
+              <ArrowPathIcon className={`h-3.5 w-3.5 ${monitoringQuery.isFetching ? 'animate-spin' : ''}`} />
+              Atualizar feed
+            </button>
+
+            <button
+              type="button"
+              onClick={exportRequestsCsv}
+              disabled={!monitoringRequests.length || isExportingRequestsCsv}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-900 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isExportingRequestsCsv ? 'Exportando...' : 'CSV requisicoes'}
+            </button>
+
+            <button
+              type="button"
+              onClick={exportLogsCsv}
+              disabled={!monitoringLogs.length || isExportingLogsCsv}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-900 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isExportingLogsCsv ? 'Exportando...' : 'CSV logs'}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MiniStatCard
+            label="Requisicoes mutaveis"
+            value={(monitoringSummary?.requests_total ?? 0).toLocaleString('pt-BR')}
+            tone="blue"
+          />
+          <MiniStatCard
+            label="Usuarios unicos"
+            value={(monitoringSummary?.requests_unique_users ?? 0).toLocaleString('pt-BR')}
+            tone="emerald"
+          />
+          <MiniStatCard
+            label="Logs com erro"
+            value={(monitoringSummary?.logs_errors ?? 0).toLocaleString('pt-BR')}
+            tone={(monitoringSummary?.logs_errors ?? 0) > 0 ? 'red' : 'blue'}
+          />
+          <MiniStatCard
+            label="Latencia media logs"
+            value={formatLatency(monitoringSummary?.logs_avg_response_time_ms ?? null)}
+            tone="amber"
+          />
+        </div>
+
+        <div className="mt-5 grid gap-6 xl:grid-cols-2">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-sm font-semibold text-gray-900">Requisicoes de usuarios (audit)</h4>
+              <span className="text-xs font-semibold text-gray-500">
+                {monitoringRequestsMeta.total.toLocaleString('pt-BR')} registros
+              </span>
+            </div>
+
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[640px]">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                    <th className="px-2 py-2">Horario</th>
+                    <th className="px-2 py-2">Usuario</th>
+                    <th className="px-2 py-2">Metodo / rota</th>
+                    <th className="px-2 py-2">Acao</th>
+                    <th className="px-2 py-2">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 text-xs text-gray-700">
+                  {monitoringRequests.length ? (
+                    monitoringRequests.map((item) => (
+                      <tr key={item.id} className="hover:bg-white">
+                        <td className="px-2 py-2 text-gray-600">{item.created_at ? formatDate(item.created_at) : '-'}</td>
+                        <td className="px-2 py-2">
+                          <p className="font-semibold text-gray-900">{item.user_name ?? item.user_email ?? shortId(item.user_id) ?? 'Sistema'}</p>
+                          <p className="text-[11px] text-gray-500">{item.user_email ?? item.ip_address ?? '-'}</p>
+                        </td>
+                        <td className="px-2 py-2 text-gray-600">
+                          <p className="font-semibold text-gray-900">{item.method || '-'}</p>
+                          <p className="truncate text-[11px] text-gray-500">{item.path || '-'}</p>
+                        </td>
+                        <td className="px-2 py-2 text-gray-600">
+                          <p className="font-semibold text-gray-900">{item.action || '-'}</p>
+                          <p className="text-[11px] text-gray-500">
+                            {item.entity_type ?? '-'} {item.entity_id ? `#${item.entity_id.slice(0, 8)}` : ''}
+                          </p>
+                        </td>
+                        <td className="px-2 py-2">
+                          <StatusPill statusCode={item.status_code} />
+                          <p className="mt-1 text-[11px] text-gray-500">{formatLatency(item.duration_ms)}</p>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-2 py-6 text-center text-xs text-gray-500">
+                        Nenhuma requisicao auditada no periodo atual.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <PaginationControls
+              meta={monitoringRequestsMeta}
+              isFetching={monitoringQuery.isFetching}
+              onPrevious={() => setMonitoringRequestsPage((current) => Math.max(1, current - 1))}
+              onNext={() => setMonitoringRequestsPage((current) => Math.min(monitoringRequestsMeta.last_page, current + 1))}
+            />
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-sm font-semibold text-gray-900">Logs operacionais (admin access)</h4>
+              <span className="text-xs font-semibold text-gray-500">
+                {monitoringLogsMeta.total.toLocaleString('pt-BR')} registros
+              </span>
+            </div>
+
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[680px]">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left text-[11px] uppercase tracking-wide text-gray-500">
+                    <th className="px-2 py-2">Horario</th>
+                    <th className="px-2 py-2">Operador</th>
+                    <th className="px-2 py-2">Endpoint</th>
+                    <th className="px-2 py-2">Status</th>
+                    <th className="px-2 py-2">IP</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 text-xs text-gray-700">
+                  {monitoringLogs.length ? (
+                    monitoringLogs.map((logRow) => (
+                      <tr key={logRow.id} className="hover:bg-white">
+                        <td className="px-2 py-2 text-gray-600">{logRow.accessed_at ? formatDate(logRow.accessed_at) : '-'}</td>
+                        <td className="px-2 py-2">
+                          <p className="font-semibold text-gray-900">
+                            {logRow.user_name ?? logRow.user_email ?? shortId(logRow.user_id) ?? 'Operacao automatica'}
+                          </p>
+                          <p className="text-[11px] text-gray-500">{logRow.actor_role ?? '-'}</p>
+                        </td>
+                        <td className="px-2 py-2 text-gray-600">
+                          <p className="font-semibold text-gray-900">{logRow.method || '-'}</p>
+                          <p className="truncate text-[11px] text-gray-500">{logRow.endpoint || '-'}</p>
+                        </td>
+                        <td className="px-2 py-2">
+                          <StatusPill statusCode={logRow.response_status} />
+                          <p className="mt-1 text-[11px] text-gray-500">{formatLatency(logRow.response_time_ms)}</p>
+                        </td>
+                        <td className="px-2 py-2 text-gray-600">
+                          <p>{logRow.ip_address ?? '-'}</p>
+                          <p className="truncate text-[11px] text-gray-500">{logRow.security_flags.join(', ') || '-'}</p>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="px-2 py-6 text-center text-xs text-gray-500">
+                        Nenhum log operacional no periodo atual.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <PaginationControls
+              meta={monitoringLogsMeta}
+              isFetching={monitoringQuery.isFetching}
+              onPrevious={() => setMonitoringLogsPage((current) => Math.max(1, current - 1))}
+              onNext={() => setMonitoringLogsPage((current) => Math.min(monitoringLogsMeta.last_page, current + 1))}
+            />
+          </div>
+        </div>
       </section>
 
       <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
@@ -952,7 +1524,7 @@ export default function AdminControlTower() {
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <QuickLink
-            href="/admin/finance"
+            href="/admin/withdrawals"
             title="Fila de saques"
             subtitle={`${pulse?.queues.pending_withdrawals ?? 0} pendentes`}
             tone={(pulse?.queues.pending_withdrawals ?? 0) > 10 ? 'amber' : 'blue'}
@@ -1115,6 +1687,60 @@ function RiskLevelPill({ level }: { level: 'low' | 'medium' | 'high' }) {
   return <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${toneClasses[level]}`}>{labels[level]}</span>;
 }
 
+function StatusPill({ statusCode }: { statusCode: number | null }) {
+  if (statusCode === null || !Number.isFinite(statusCode)) {
+    return <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">N/A</span>;
+  }
+
+  const isSuccess = statusCode >= 200 && statusCode < 400;
+  const isBlocked = statusCode === 429;
+  const tone = isBlocked
+    ? 'bg-amber-50 text-amber-700'
+    : isSuccess
+      ? 'bg-emerald-50 text-emerald-700'
+      : 'bg-red-50 text-red-700';
+
+  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${tone}`}>{statusCode}</span>;
+}
+
+function PaginationControls({
+  meta,
+  isFetching,
+  onPrevious,
+  onNext,
+}: {
+  meta: MonitoringPaginationMeta;
+  isFetching: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  return (
+    <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+      <span>
+        Pagina {meta.current_page.toLocaleString('pt-BR')} de {Math.max(1, meta.last_page).toLocaleString('pt-BR')}
+      </span>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onPrevious}
+          disabled={meta.current_page <= 1 || isFetching}
+          className="rounded-md border border-gray-200 bg-white px-2 py-1 font-semibold text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Anterior
+        </button>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={meta.current_page >= meta.last_page || isFetching}
+          className="rounded-md border border-gray-200 bg-white px-2 py-1 font-semibold text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Proxima
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PlaybookCard({
   title,
   subtitle,
@@ -1173,6 +1799,14 @@ function formatLatency(latencyMs: number | null): string {
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = Math.round(seconds % 60);
   return `${minutes}m ${remainingSeconds}s`;
+}
+
+function shortId(value: string | null | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  return value.length > 8 ? `${value.slice(0, 8)}...` : value;
 }
 
 function InfoCard({

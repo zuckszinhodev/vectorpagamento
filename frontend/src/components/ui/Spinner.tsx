@@ -41,12 +41,12 @@ export function PageSpinner({ text }: { text?: string }) {
         <div className="brand-loader-wordmark-shell">
           <div className="brand-loader-wordmark brand-loader-wordmark--sheen text-5xl font-black tracking-tight sm:text-6xl md:text-7xl" aria-hidden="true">
             <span className="brand-loader-wazer">Vector</span>
-            <span className="brand-loader-pay">Pagamentos</span>
+            <span className="brand-loader-pay">Pay</span>
           </div>
 
           <div className="brand-loader-wordmark brand-loader-wordmark--main text-5xl font-black tracking-tight sm:text-6xl md:text-7xl">
             <span className="brand-loader-wazer">Vector</span>
-            <span className="brand-loader-pay">Pagamentos</span>
+            <span className="brand-loader-pay">Pay</span>
           </div>
         </div>
 
