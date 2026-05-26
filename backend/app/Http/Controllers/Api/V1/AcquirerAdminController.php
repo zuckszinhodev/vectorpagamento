@@ -5,15 +5,12 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\Account;
 use App\Models\AcquirerConfig;
-use App\Models\Charge;
 use App\Models\Transaction;
 use App\Services\AcquirerRotationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Acquirer Management — extracted from AdminController
@@ -581,80 +578,17 @@ class AcquirerAdminController extends Controller
                 return response()->json(['success' => false, 'message' => 'Adquirente nao encontrado'], 404);
             }
 
-            $account = $this->resolveNominalTestAccount();
-            if (!$account) {
+            $result = app(\App\Services\PixNominalNameService::class)
+                ->refreshAcquirerNominal($config->acquirer_key, request()->user()?->account_id);
+
+            if (!($result['success'] ?? false)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Nao existe nenhuma conta ativa para gerar o PIX de teste da nominal',
+                    'message' => 'Falha ao gerar PIX para verificar nominal: ' . ($result['message'] ?? 'adquirente não configurada'),
                 ], 422);
             }
 
-            $charge = Charge::create([
-                'account_id' => $account->id,
-                'idempotency_key' => 'nominal_' . Str::uuid()->toString(),
-                'amount' => 500,
-                'currency' => 'BRL',
-                'payment_method' => 'pix',
-                'status' => 'pending',
-                'acquirer' => $config->acquirer_key,
-                'description' => 'Verificação de nominal',
-                'customer' => [
-                    'name' => 'Verificacao Nominal',
-                    'email' => 'nominal@vectorpagamentos.com',
-                    'document' => '49722485806',
-                    'phone' => '11999999999',
-                ],
-                'expires_at' => now()->addMinutes(5),
-            ]);
-
-            $paymentService = app(\App\Services\PaymentService::class);
-            $factory = \App\Services\AcquirerFactory::instance();
-
-            $result = match ($config->acquirer_key) {
-                'payfort' => $factory->payfort() ? $paymentService->generatePixViaPayFort($charge) : null,
-                'blupay' => $factory->blupay() ? $paymentService->generatePixViaBluPay($charge) : null,
-                'enki' => $factory->enki() ? $paymentService->generatePixViaEnki($charge) : null,
-                'huntersub' => $factory->huntersub() ? $paymentService->generatePixViaHunterSub($charge) : null,
-                'sharkhubsub' => $factory->sharkhubsub() ? $paymentService->generatePixViaSharkHubSub($charge) : null,
-                'babylon' => $paymentService->isConfigured() ? $paymentService->generatePix($charge) : null,
-                default => null,
-            };
-
-            if (!$result || !($result['success'] ?? false)) {
-                $charge->update(['status' => 'failed']);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Falha ao gerar PIX para verificar nominal: ' . ($result['error'] ?? 'adquirente não configurada'),
-                ], 422);
-            }
-
-            $pixPayload = (string) ($result['pix_copy_paste'] ?? $result['pix_qr_code'] ?? '');
-
-            if ($pixPayload === '') {
-                $charge->refresh();
-                $pixPayload = (string) ($charge->pix_copy_paste ?: $charge->pix_qr_code ?: '');
-            }
-
-            $charge->update(['status' => 'expired']);
-
-            if ($pixPayload === '') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'PIX gerado mas sem payload para extrair nominal',
-                ], 422);
-            }
-
-            $nominalName = $this->extractPixMerchantName($pixPayload);
-
-            if ($nominalName === null) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Nao consegui localizar a nominal no PIX gerado',
-                ], 422);
-            }
-
-            $config->nominal_name = $nominalName;
-            $config->save();
+            $config->refresh();
             AcquirerConfig::clearCache();
 
             return response()->json([
@@ -687,111 +621,8 @@ class AcquirerAdminController extends Controller
     public function refreshAllNominals(): JsonResponse
     {
         try {
-            $configs = AcquirerConfig::where('enabled', true)->get();
-            $paymentService = app(\App\Services\PaymentService::class);
-            $factory = \App\Services\AcquirerFactory::instance();
-
-            $results = [];
-
-            foreach ($configs as $config) {
-                try {
-                    $account = $this->resolveNominalTestAccount();
-                    if (!$account) {
-                        $results[] = [
-                            'acquirer' => $config->acquirer_key,
-                            'success' => false,
-                            'message' => 'Nao existe nenhuma conta ativa para gerar o PIX de teste',
-                        ];
-                        continue;
-                    }
-
-                    $charge = Charge::create([
-                        'account_id' => $account->id,
-                        'idempotency_key' => 'nominal_' . Str::uuid()->toString(),
-                        'amount' => 500,
-                        'currency' => 'BRL',
-                        'payment_method' => 'pix',
-                        'status' => 'pending',
-                        'acquirer' => $config->acquirer_key,
-                        'description' => 'Verificação de nominal',
-                        'customer' => [
-                            'name' => 'Verificacao Nominal',
-                            'email' => 'nominal@vectorpagamentos.com',
-                            'document' => '49722485806',
-                            'phone' => '11999999999',
-                        ],
-                        'expires_at' => now()->addMinutes(5),
-                    ]);
-
-                    $result = match ($config->acquirer_key) {
-                        'payfort' => $factory->payfort() ? $paymentService->generatePixViaPayFort($charge) : null,
-                        'blupay' => $factory->blupay() ? $paymentService->generatePixViaBluPay($charge) : null,
-                        'enki' => $factory->enki() ? $paymentService->generatePixViaEnki($charge) : null,
-                        'huntersub' => $factory->huntersub() ? $paymentService->generatePixViaHunterSub($charge) : null,
-                        'sharkhubsub' => $factory->sharkhubsub() ? $paymentService->generatePixViaSharkHubSub($charge) : null,
-                        'babylon' => $paymentService->isConfigured() ? $paymentService->generatePix($charge) : null,
-                        default => null,
-                    };
-
-                    if (!$result || !($result['success'] ?? false)) {
-                        $charge->update(['status' => 'failed']);
-                        $results[] = [
-                            'acquirer' => $config->acquirer_key,
-                            'success' => false,
-                            'message' => $result['error'] ?? 'Falha ao gerar PIX',
-                        ];
-                        continue;
-                    }
-
-                    $pixPayload = (string) ($result['pix_copy_paste'] ?? $result['pix_qr_code'] ?? '');
-
-                    if ($pixPayload === '') {
-                        $charge->refresh();
-                        $pixPayload = (string) ($charge->pix_copy_paste ?: $charge->pix_qr_code ?: '');
-                    }
-
-                    $charge->update(['status' => 'expired']);
-
-                    if ($pixPayload === '') {
-                        $results[] = [
-                            'acquirer' => $config->acquirer_key,
-                            'success' => false,
-                            'message' => 'PIX gerado sem payload',
-                        ];
-                        continue;
-                    }
-
-                    $nominalName = $this->extractPixMerchantName($pixPayload);
-
-                    if ($nominalName === null) {
-                        $results[] = [
-                            'acquirer' => $config->acquirer_key,
-                            'success' => false,
-                            'message' => 'Nominal não encontrada no payload',
-                        ];
-                        continue;
-                    }
-
-                    $oldName = $config->nominal_name;
-                    $config->nominal_name = $nominalName;
-                    $config->save();
-
-                    $results[] = [
-                        'acquirer' => $config->acquirer_key,
-                        'success' => true,
-                        'nominal_name' => $nominalName,
-                        'changed' => $oldName !== $nominalName,
-                    ];
-                } catch (\Throwable $e) {
-                    $results[] = [
-                        'acquirer' => $config->acquirer_key,
-                        'success' => false,
-                        'message' => $e->getMessage(),
-                    ];
-                }
-            }
-
-            AcquirerConfig::clearCache();
+            $results = app(\App\Services\PixNominalNameService::class)
+                ->refreshAllAcquirerNominals(request()->user()?->account_id);
 
             $successCount = count(array_filter($results, fn ($r) => $r['success']));
 
@@ -1030,53 +861,4 @@ class AcquirerAdminController extends Controller
         return array_values(array_unique(array_filter($normalized, static fn ($key): bool => $key !== '')));
     }
 
-    private function extractPixMerchantName(string $pixPayload): ?string
-    {
-        $payload = trim($pixPayload);
-        $offset = 0;
-        $length = strlen($payload);
-
-        while ($offset + 4 <= $length) {
-            $tag = substr($payload, $offset, 2);
-            $valueLengthRaw = substr($payload, $offset + 2, 2);
-
-            if (!ctype_digit($tag) || !ctype_digit($valueLengthRaw)) {
-                return null;
-            }
-
-            $valueLength = (int) $valueLengthRaw;
-            $valueStart = $offset + 4;
-            $valueEnd = $valueStart + $valueLength;
-
-            if ($valueEnd > $length) {
-                return null;
-            }
-
-            $value = substr($payload, $valueStart, $valueLength);
-            if ($tag === '59') {
-                $merchantName = trim($value);
-
-                return $merchantName !== '' ? $merchantName : null;
-            }
-
-            $offset = $valueEnd;
-        }
-
-        return null;
-    }
-
-    private function resolveNominalTestAccount(): ?Account
-    {
-        $adminAccountId = request()->user()?->account_id;
-
-        if ($adminAccountId) {
-            $account = Account::where('id', $adminAccountId)->first();
-            if ($account) {
-                return $account;
-            }
-        }
-
-        return Account::where('status', 'active')->orderBy('created_at')->first()
-            ?? Account::orderBy('created_at')->first();
-    }
 }

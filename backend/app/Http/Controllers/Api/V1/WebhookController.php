@@ -1347,7 +1347,7 @@ class WebhookController extends Controller
             $freshCharge = $charge->fresh();
 
             // Disparar evento de mudança de status
-            event(new \App\Events\PaymentStatusChanged($freshCharge ?? $charge));
+            $this->dispatchPaymentStatusChangedEvent($freshCharge ?? $charge);
 
             return response()->json([
                 'status' => 'success',
@@ -1501,7 +1501,7 @@ class WebhookController extends Controller
             $this->paymentService->handleWebhookPayment($charge, $webhookData);
             $freshCharge = $charge->fresh();
 
-            event(new \App\Events\PaymentStatusChanged($freshCharge ?? $charge));
+            $this->dispatchPaymentStatusChangedEvent($freshCharge ?? $charge);
 
             return response()->json([
                 'status' => 'success',
@@ -1652,5 +1652,17 @@ class WebhookController extends Controller
 
         return Cache::add($cacheKey, now()->timestamp, now()->addMinutes(15));
     }
-}
 
+    private function dispatchPaymentStatusChangedEvent(Charge $charge): void
+    {
+        event(new \App\Events\PaymentStatusChanged(
+            $charge->id,
+            (string) $charge->account_id,
+            (string) $charge->status,
+            $charge->toArray(),
+            ((float) ($charge->amount ?? 0)) / 100,
+            (string) ($charge->currency ?? 'BRL'),
+            $charge->customer['email'] ?? null,
+        ));
+    }
+}

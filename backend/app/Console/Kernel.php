@@ -67,6 +67,13 @@ class Kernel extends ConsoleKernel
             ->withoutOverlapping()
             ->onOneServer();
 
+        // Generate daily nominal verification PIX for every active acquirer
+        $schedule->job(new \App\Jobs\DailyRefreshAcquirerNominalsJob)
+            ->dailyAt('03:00')
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->appendOutputTo(storage_path('logs/daily-acquirer-nominals.log'));
+
         // Daily reconciliation at 02:00
         $schedule->job(new \App\Jobs\DailyReconciliationJob)
             ->dailyAt('02:00')

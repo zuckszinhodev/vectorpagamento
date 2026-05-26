@@ -164,11 +164,7 @@ class HunterSubAcquirer implements AcquirerInterface
                 'company_id_length' => strlen($this->companyId),
             ]);
 
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => 'Basic ' . $this->transactionAuthToken(),
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ])->connectTimeout(3)->timeout(10)->post("{$this->baseUrl}/transactions", $payload);
+            $response = $this->transactionHttpClient()->post("{$this->baseUrl}/transactions", $payload);
 
             \Illuminate\Support\Facades\Log::info('HunterSub: Response received', [
                 'status' => $response->status(),
@@ -252,11 +248,7 @@ class HunterSubAcquirer implements AcquirerInterface
                 'payment_method' => $request->paymentMethod,
             ]);
 
-            $response = Http::withHeaders([
-                'Authorization' => 'Basic ' . $this->transactionAuthToken(),
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ])->connectTimeout(3)->timeout(10)->post("{$this->baseUrl}/transactions", $payload);
+            $response = $this->transactionHttpClient()->post("{$this->baseUrl}/transactions", $payload);
 
             if (!$response->successful()) {
                 Log::error('HunterSub: Charge failed', [
@@ -343,10 +335,9 @@ class HunterSubAcquirer implements AcquirerInterface
                 'amount' => $request->amount,
             ]);
 
-            $response = Http::withHeaders([
-                'Authorization' => 'Basic ' . $this->transactionAuthToken(),
+            $response = $this->transactionHttpClient([
                 'Accept' => 'application/json',
-            ])->connectTimeout(3)->timeout(10)->delete("{$this->baseUrl}/transactions/{$request->transactionId}");
+            ])->delete("{$this->baseUrl}/transactions/{$request->transactionId}");
 
             if (!$response->successful()) {
                 Log::error('HunterSub: Refund failed', [
@@ -394,6 +385,22 @@ class HunterSubAcquirer implements AcquirerInterface
                 rawResponse: ['error' => $e->getMessage()]
             );
         }
+    }
+
+    private function transactionHttpClient(array $extraHeaders = [])
+    {
+        return Http::withHeaders(array_merge([
+            'Authorization' => 'Basic ' . $this->transactionAuthToken(),
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ], $extraHeaders))
+            ->withOptions([
+                'curl' => [
+                    CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
+                ],
+            ])
+            ->connectTimeout(3)
+            ->timeout(10);
     }
 
     public function getTransaction(string $transactionId): ?array

@@ -1001,8 +1001,8 @@ class AcquirerFactory
                 $normalizedMethod = $this->normalizePaymentMethod($paymentMethod);
 
                 // Look for an account-specific acquirer assignment ordered by priority
-                $accountAcquirer = \App\Models\AccountAcquirer::where('account_id', $accountId)
-                    ->where('is_active', true)
+                $accountAcquirer = \App\Models\AccountAcquirer::where('account_acquirers.account_id', $accountId)
+                    ->where('account_acquirers.is_active', true)
                     ->join('acquirers', 'acquirers.id', '=', 'account_acquirers.acquirer_id')
                     ->select('account_acquirers.*', 'acquirers.slug as acquirer_slug')
                     ->orderBy('account_acquirers.priority', 'asc')
@@ -1055,8 +1055,8 @@ class AcquirerFactory
     {
         if ($accountId) {
             try {
-                $accountAcquirers = \App\Models\AccountAcquirer::where('account_id', $accountId)
-                    ->where('is_active', true)
+                $accountAcquirers = \App\Models\AccountAcquirer::where('account_acquirers.account_id', $accountId)
+                    ->where('account_acquirers.is_active', true)
                     ->join('acquirers', 'acquirers.id', '=', 'account_acquirers.acquirer_id')
                     ->select('account_acquirers.*', 'acquirers.slug as acquirer_slug')
                     ->orderBy('account_acquirers.priority', 'asc')
