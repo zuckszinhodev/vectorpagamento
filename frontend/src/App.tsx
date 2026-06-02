@@ -219,7 +219,6 @@ const AdminMfaChallenge = () => {
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading, user, adminMfaVerified } = useAuthStore();
   const location = useLocation();
-  const [mfaCheckDone, setMfaCheckDone] = useState(false);
 
   const allowedAdminRoles = ['owner', 'admin', 'support', 'financial', 'antifraud'];
 
@@ -253,12 +252,6 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     if (clean.startsWith('monitoring')) return 'admin.security.monitor';
     return null;
   };
-
-  useEffect(() => {
-    if (!isLoading && isAuthenticated && user && !user.mfa_enabled && allowedAdminRoles.includes(user.role ?? '')) {
-      setMfaCheckDone(true);
-    }
-  }, [isLoading, isAuthenticated, user]);
 
   if (isLoading) {
     return <PageSpinner />;

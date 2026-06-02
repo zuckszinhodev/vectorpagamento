@@ -310,3 +310,70 @@ it('falls back to global priority when account has no acquirer assigned', functi
 
     expect($factory->getActiveAcquirerNameForAccount($account->id, 'pix'))->toBe('enki');
 });
+
+it('resolves sharkhubsub account credentials from alias assignments', function () {
+    $account = Account::create([
+        'id' => Str::uuid()->toString(), 'name' => 'Seller SharkHub Alias',
+        'document' => '55566677788', 'document_type' => 'cpf',
+        'email' => 'seller-shark@test.com', 'status' => 'active',
+    ]);
+
+    $acquirer = Acquirer::firstOrCreate(
+        ['slug' => 'sharkhubsub_vp1'],
+        ['name' => 'Vectorpagamentos 1', 'is_active' => true, 'supported_methods' => ['pix'], 'settings' => []]
+    );
+
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'sharkhubsub'],
+        ['display_name' => 'SharkHubSub', 'type' => 'gateway', 'enabled' => true,
+         'supported_methods' => ['pix'], 'priority' => 0, 'settings' => []]
+    );
+
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'sharkhubsub_vp1'],
+        ['display_name' => 'Vectorpagamentos 1', 'type' => 'gateway', 'enabled' => true,
+         'supported_methods' => ['pix'], 'priority' => 1, 'settings' => []]
+    );
+
+    AccountAcquirer::create([
+        'account_id' => $account->id,
+        'acquirer_id' => $acquirer->id,
+        'credentials' => encrypt(json_encode(['api_key' => 'acct-sharkhub-key'])),
+        'priority' => 0,
+        'is_active' => true,
+        'settings' => [],
+    ]);
+
+    AcquirerFactory::reset();
+
+    expect(AcquirerFactory::instance()->sharkhubsubForAccount($account->id))->not->toBeNull();
+});
+
+it('does not select sharkhub alias with broken credentials', function () {
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'sharkhubsub_vp2'],
+        ['display_name' => 'Vectorpagamentos 2', 'type' => 'gateway', 'enabled' => true,
+         'supported_methods' => ['pix'], 'priority' => 0, 'settings' => [], 'credentials' => 'invalid-payload']
+    );
+
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'sharkhubsub_vp1'],
+        ['display_name' => 'Vectorpagamentos 1', 'type' => 'gateway', 'enabled' => true,
+         'supported_methods' => ['pix'], 'priority' => 1, 'settings' => [],
+         'credentials' => ['api_key' => 'vp1-key', 'withdrawal_key' => 'vp1-withdrawal']]
+    );
+
+    Acquirer::firstOrCreate(
+        ['slug' => 'sharkhubsub_vp1'],
+        ['name' => 'Vectorpagamentos 1', 'is_active' => true, 'supported_methods' => ['pix'], 'settings' => []]
+    );
+
+    Acquirer::firstOrCreate(
+        ['slug' => 'sharkhubsub_vp2'],
+        ['name' => 'Vectorpagamentos 2', 'is_active' => true, 'supported_methods' => ['pix'], 'settings' => []]
+    );
+
+    AcquirerFactory::reset();
+
+    expect(AcquirerFactory::instance()->getActiveAcquirerName('pix'))->toBe('sharkhubsub_vp1');
+});

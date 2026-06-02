@@ -122,7 +122,7 @@ export default function AcquirersPage() {
         ) : items.length === 0 ? (
           <div className="px-5 py-12 text-center">
             <p className="text-sm font-medium text-tx-primary">Nenhuma nominal ativa encontrada</p>
-            <p className="mt-1 text-sm text-tx-muted">Aguarde o administrador ativar uma adquirente para sua conta.</p>
+            <p className="mt-1 text-sm text-tx-muted">Aguarde o administrador ativar uma nominal para sua conta.</p>
           </div>
         ) : (
           <DragDropContext onDragEnd={handleDragEnd}>
@@ -159,8 +159,6 @@ export default function AcquirersPage() {
                                     {getNominalName(item)}
                                   </h3>
                                 </div>
-
-                                <p className="mt-1 text-xs text-tx-muted">Adquirente: {item.name}</p>
 
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   {item.supported_methods.map((method) => (

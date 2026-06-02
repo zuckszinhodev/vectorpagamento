@@ -61,18 +61,12 @@ class Kernel extends ConsoleKernel
             ->onOneServer()
             ->appendOutputTo(storage_path('logs/abandoned-checkouts.log'));
 
-        // Sync acquirer nominal names from latest PIX payloads (every hour)
-        $schedule->job(new \App\Jobs\SyncAcquirerNominalsJob)
+        // Prune old non-final charges so stale failed/pending/expired records do not accumulate
+        $schedule->job(new \App\Jobs\PruneStaleChargesJob)
             ->hourly()
             ->withoutOverlapping()
-            ->onOneServer();
-
-        // Generate daily nominal verification PIX for every active acquirer
-        $schedule->job(new \App\Jobs\DailyRefreshAcquirerNominalsJob)
-            ->dailyAt('03:00')
-            ->withoutOverlapping()
             ->onOneServer()
-            ->appendOutputTo(storage_path('logs/daily-acquirer-nominals.log'));
+            ->appendOutputTo(storage_path('logs/prune-stale-charges.log'));
 
         // Daily reconciliation at 02:00
         $schedule->job(new \App\Jobs\DailyReconciliationJob)

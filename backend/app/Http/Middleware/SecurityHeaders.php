@@ -25,6 +25,9 @@ class SecurityHeaders
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
+        $isSecureRequest = $request->isSecure()
+            || $request->header('X-Forwarded-Proto') === 'https'
+            || $request->server('HTTPS') === 'on';
 
         // Prevent MIME type sniffing
         $response->headers->set('X-Content-Type-Options', 'nosniff');
@@ -37,9 +40,15 @@ class SecurityHeaders
         
         // Control referrer information
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        
+
+        // Isolate browsing context for authenticated/API responses
+        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+        $response->headers->set('Cross-Origin-Resource-Policy', 'same-site');
+
         // Enforce HTTPS with HSTS (1 year + preload ready)
-        $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+        if ($isSecureRequest) {
+            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+        }
         
         // Restrict dangerous browser features
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=(), usb=()');
@@ -63,6 +72,9 @@ class SecurityHeaders
         if (function_exists('header_remove')) {
             @header_remove('X-Powered-By');
         }
+
+        // Ensure CDN/proxies do not serve cached authenticated responses across users.
+        $response->headers->set('Vary', 'Origin, Authorization', false);
 
         return $response;
     }

@@ -106,7 +106,7 @@ export default function CheckoutPreviewPage() {
 
   // Renderizar o preview usando o mesmo componente do checkout real
   const { theme, product, payment, conversion, blocks } = previewData;
-  const template = (theme as any)?.template || 'classic';
+  const template = (theme as any)?.template || 'modern-split';
 
   // Se for modern-split, usar o componente ModernSplitCheckout
   if (template === 'modern-split' && product) {
@@ -114,6 +114,7 @@ export default function CheckoutPreviewPage() {
       <ModernSplitCheckout
         product={product}
         theme={theme}
+        payment={payment}
         onSubmit={() => {}}
         isLoading={false}
         orderBumps={[]}

@@ -286,7 +286,7 @@ const blockConfig: Record<BlockType, { name: string; icon: any; description: str
 const defaultSettings: CheckoutSettings = {
   name: 'Checkout Principal',
   theme: {
-    template: 'classic',
+    template: 'modern-split',
     primaryColor: '#10b981',
     secondaryColor: '#6366f1',
     backgroundColor: '#f8fafc',
@@ -487,7 +487,7 @@ function CheckoutPreview({
   const [selectedBumps] = useState<Set<string>>(new Set());
 
   // Check if template is modern-split
-  const template = (theme as any).template || 'classic';
+  const template = (theme as any).template || 'modern-split';
 
   // Use the actual checkout component for preview
   if (template === 'modern-split' && product) {
@@ -510,6 +510,13 @@ function CheckoutPreview({
           selectedBumps={selectedBumps}
           onToggleBump={() => {}}
           blocks={blocks}
+          payment={settings.payment}
+          checkoutSettings={{
+            collect_cpf: true,
+            collect_phone: true,
+            collect_address: !!product?.shipping_required,
+            payment_methods: settings.payment.methods,
+          }}
         />
       </div>
     );
@@ -1675,7 +1682,7 @@ export default function CheckoutBuilderPage() {
 
   const selectedBlock = settings.blocks.find((b) => b.id === selectedBlockId);
 
-  const availableBlockTypes: BlockType[] = ['benefits', 'bonus', 'faq', 'video', 'urgency', 'trust_badges', 'shipping', 'coupon', 'social_proof'];
+  const availableBlockTypes: BlockType[] = ['benefits', 'bonus', 'faq', 'video', 'urgency', 'trust_badges', 'shipping', 'coupon', 'social_proof', 'banner', 'custom_html', 'testimonials'];
 
   // Loading state quando está editando um checkout existente
   if (isLoading && checkoutId) {
@@ -1977,7 +1984,7 @@ export default function CheckoutBuilderPage() {
                             ...prev, 
                             theme: {
                               ...preset.theme,
-                              template: (prev.theme as any).template || 'classic', // Preservar o template atual
+                              template: (prev.theme as any).template || 'modern-split', // Preservar o template atual
                             }
                           }))
                         }

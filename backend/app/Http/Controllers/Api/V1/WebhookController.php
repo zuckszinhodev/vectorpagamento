@@ -138,7 +138,7 @@ class WebhookController extends Controller
             $candidateWithdrawalRef = $externalRef !== '' ? $externalRef : $withdrawalRef;
             if ($candidateWithdrawalRef !== '') {
                 $withdrawal = Withdrawal::where('id', $candidateWithdrawalRef)
-                    ->where('acquirer', 'sharkhubsub')
+                    ->where('acquirer', 'like', 'sharkhubsub%')
                     ->first();
 
                 if ($withdrawal) {
@@ -146,7 +146,7 @@ class WebhookController extends Controller
                 }
             }
 
-            if (Withdrawal::where('acquirer_transfer_id', $eventId)->where('acquirer', 'sharkhubsub')->exists()) {
+            if (Withdrawal::where('acquirer_transfer_id', $eventId)->where('acquirer', 'like', 'sharkhubsub%')->exists()) {
                 return 'sharkhubsub';
             }
 
@@ -163,7 +163,7 @@ class WebhookController extends Controller
                         ->first();
                 }
 
-                if ($charge && $charge->acquirer === 'sharkhubsub') {
+                if ($charge && str_starts_with((string) $charge->acquirer, 'sharkhubsub')) {
                     return 'sharkhubsub';
                 }
             }
@@ -1427,7 +1427,11 @@ class WebhookController extends Controller
                 || $withdrawalByReference !== null
                 || $withdrawalRef !== '';
 
-            $webhookSecret = $this->getSharkHubSubWebhookSecret($isTransferWebhook);
+            $resolvedAcquirerKey = $chargeByReference?->acquirer
+                ?? $withdrawalByReference?->acquirer
+                ?? null;
+
+            $webhookSecret = $this->getSharkHubSubWebhookSecret($isTransferWebhook, $resolvedAcquirerKey);
             $signature = (string) ($request->header('X-Signature') ?? $request->header('x-signature') ?? '');
 
             if ($webhookSecret && $signature !== '') {
@@ -1541,7 +1545,7 @@ class WebhookController extends Controller
         return $dbSecret !== '' ? $dbSecret : null;
     }
 
-    private function getSharkHubSubWebhookSecret(bool $transfer = false): ?string
+    private function getSharkHubSubWebhookSecret(bool $transfer = false, ?string $acquirerKey = null): ?string
     {
         $configKey = $transfer ? 'transfer_webhook_secret' : 'webhook_secret';
         $envSecret = trim((string) config("acquirers.sharkhubsub.{$configKey}", ''));
@@ -1556,7 +1560,26 @@ class WebhookController extends Controller
             }
         }
 
-        $config = AcquirerConfig::findByKey('sharkhubsub');
+        $config = null;
+
+        if (is_string($acquirerKey) && str_starts_with($acquirerKey, 'sharkhubsub')) {
+            $config = AcquirerConfig::query()
+                ->where('acquirer_key', $acquirerKey)
+                ->where('enabled', true)
+                ->first();
+        }
+
+        if (!$config) {
+            $config = AcquirerConfig::query()
+                ->where(function ($query) {
+                    $query->where('acquirer_key', 'sharkhubsub')
+                        ->orWhere('acquirer_key', 'like', 'sharkhubsub_%');
+                })
+                ->where('enabled', true)
+                ->orderBy('priority', 'asc')
+                ->first();
+        }
+
         if (!$config) {
             return null;
         }

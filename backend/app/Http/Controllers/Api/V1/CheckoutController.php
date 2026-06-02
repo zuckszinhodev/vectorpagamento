@@ -134,6 +134,7 @@ class CheckoutController extends Controller
 
         $defaultSettings = [
             'theme_color' => '#6366f1',
+            'collect_cpf' => true,
             'collect_address' => false,
             'collect_phone' => true,
             'payment_methods' => ['credit_card', 'pix', 'boleto'],
@@ -142,6 +143,19 @@ class CheckoutController extends Controller
             'timer_enabled' => false,
             'timer_minutes' => 15,
             'testimonials_enabled' => false,
+            'theme' => [
+                'template' => 'modern-split',
+                'primaryColor' => '#10b981',
+                'secondaryColor' => '#6366f1',
+                'backgroundColor' => '#f8fafc',
+                'cardBackground' => '#ffffff',
+                'textColor' => '#1e293b',
+                'mutedColor' => '#64748b',
+                'borderRadius' => 'xl',
+                'fontFamily' => 'Inter',
+                'buttonStyle' => 'gradient',
+                'shadow' => 'lg',
+            ],
         ];
 
         $checkout = Checkout::create([
@@ -153,8 +167,17 @@ class CheckoutController extends Controller
             'type' => $request->input('type', 'redirect'),
             'status' => 'active',
             'theme' => $request->input('theme', [
-                'primary_color' => '#7c3aed',
-                'background_color' => '#1f2937',
+                'template' => 'modern-split',
+                'primaryColor' => '#10b981',
+                'secondaryColor' => '#6366f1',
+                'backgroundColor' => '#f8fafc',
+                'cardBackground' => '#ffffff',
+                'textColor' => '#1e293b',
+                'mutedColor' => '#64748b',
+                'borderRadius' => 'xl',
+                'fontFamily' => 'Inter',
+                'buttonStyle' => 'gradient',
+                'shadow' => 'lg',
             ]),
             'fields' => $request->input('fields', [
                 'name' => true,

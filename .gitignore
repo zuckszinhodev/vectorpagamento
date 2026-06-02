@@ -42,3 +42,4 @@ backend/public/debug-*.php
 backend/test_*.php
 **/debug-env.php
 database/database.sqlite
+config.yaml

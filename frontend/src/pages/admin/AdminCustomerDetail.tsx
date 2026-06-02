@@ -186,6 +186,13 @@ interface AuditLogItem {
 
 type Tab = 'info' | 'charges' | 'withdrawals' | 'fees' | 'acquirers' | 'logs';
 
+interface WalletAdjustmentFormState {
+  direction: 'credit' | 'debit';
+  amount: string;
+  reason: string;
+  notes: string;
+}
+
 export default function AdminCustomerDetail() {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
@@ -196,6 +203,13 @@ export default function AdminCustomerDetail() {
   const [chargesSearch, setChargesSearch] = useState('');
   const [withdrawalsPage, setWithdrawalsPage] = useState(1);
   const [logsPage, setLogsPage] = useState(1);
+  const [showWalletAdjustmentModal, setShowWalletAdjustmentModal] = useState(false);
+  const [walletAdjustmentForm, setWalletAdjustmentForm] = useState<WalletAdjustmentFormState>({
+    direction: 'debit',
+    amount: '',
+    reason: '',
+    notes: '',
+  });
 
   // Fetch customer detail
   const { data: customer, isLoading, refetch } = useQuery<CustomerDetail>({
@@ -281,6 +295,25 @@ export default function AdminCustomerDetail() {
       queryClient.invalidateQueries({ queryKey: ['admin-customer-detail', customerId] });
     },
     onError: () => toast.error('Erro ao recalcular saldo'),
+  });
+
+  const adjustWalletMutation = useMutation({
+    mutationFn: async (payload: { amount: number; direction: 'credit' | 'debit'; reason: string; notes?: string }) => {
+      const response = await api.post(`/admin/customers/${customerId}/wallet-adjustments`, payload);
+      return response.data?.data;
+    },
+    onSuccess: () => {
+      toast.success('Ajuste de saldo aplicado');
+      setShowWalletAdjustmentModal(false);
+      setWalletAdjustmentForm({ direction: 'debit', amount: '', reason: '', notes: '' });
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-detail', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-logs', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-withdrawals', customerId] });
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Erro ao aplicar ajuste de saldo';
+      toast.error(message);
+    },
   });
 
   const impersonateMutation = useMutation({
@@ -385,6 +418,25 @@ export default function AdminCustomerDetail() {
     { key: 'logs' as const, label: 'Logs / Auditoria', icon: DocumentTextIcon },
   ];
 
+  const parsedAdjustmentAmount = Number(walletAdjustmentForm.amount.replace(/\D/g, ''));
+  const currentAvailableBalance = customer.financials.available_balance || 0;
+  const canZeroBalance = currentAvailableBalance > 0;
+  const isWalletAdjustmentValid =
+    parsedAdjustmentAmount > 0 &&
+    walletAdjustmentForm.reason.trim().length >= 8 &&
+    (walletAdjustmentForm.direction === 'credit' || parsedAdjustmentAmount <= currentAvailableBalance);
+
+  const submitWalletAdjustment = () => {
+    if (!isWalletAdjustmentValid) return;
+
+    adjustWalletMutation.mutate({
+      amount: parsedAdjustmentAmount,
+      direction: walletAdjustmentForm.direction,
+      reason: walletAdjustmentForm.reason.trim(),
+      notes: walletAdjustmentForm.notes.trim() || undefined,
+    });
+  };
+
   return (
     <AdminPageShell>
       {/* Header */}
@@ -428,6 +480,13 @@ export default function AdminCustomerDetail() {
           >
             <ArrowPathIcon className="h-3.5 w-3.5" />
             Recalcular Saldo
+          </button>
+          <button
+            onClick={() => setShowWalletAdjustmentModal(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
+          >
+            <AdjustmentsHorizontalIcon className="h-3.5 w-3.5" />
+            Ajustar Saldo
           </button>
           <button
             onClick={() => {
@@ -560,6 +619,124 @@ export default function AdminCustomerDetail() {
       )}
       {activeTab === 'fees' && <FeesTab customerId={customerId!} />}
       {activeTab === 'acquirers' && <AcquirersTab customerId={customerId!} />}
+
+      {showWalletAdjustmentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowWalletAdjustmentModal(false)}>
+          <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Ajustar saldo do seller</h2>
+                <p className="mt-1 text-sm text-gray-500">
+                  O ajuste registra motivo e auditoria. Para zerar, use um debito no valor exato do saldo atual.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowWalletAdjustmentModal(false)}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 rounded-lg bg-emerald-50 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Saldo atual</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-700">{formatCurrency(currentAvailableBalance)}</p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-gray-500">Tipo de ajuste</span>
+                <select
+                  value={walletAdjustmentForm.direction}
+                  onChange={(event) => setWalletAdjustmentForm((current) => ({
+                    ...current,
+                    direction: event.target.value as 'credit' | 'debit',
+                  }))}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                >
+                  <option value="debit">Debitar saldo</option>
+                  <option value="credit">Creditar saldo</option>
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-gray-500">Valor em centavos</span>
+                <input
+                  value={walletAdjustmentForm.amount}
+                  onChange={(event) => setWalletAdjustmentForm((current) => ({
+                    ...current,
+                    amount: event.target.value.replace(/\D/g, ''),
+                  }))}
+                  inputMode="numeric"
+                  placeholder="Ex.: 110020"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+                />
+                <p className="mt-1 text-xs text-gray-500">Equivale a {formatCurrency(parsedAdjustmentAmount || 0)}</p>
+              </label>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setWalletAdjustmentForm((current) => ({
+                  ...current,
+                  direction: 'debit',
+                  amount: String(currentAvailableBalance),
+                }))}
+                disabled={!canZeroBalance}
+                className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              >
+                Zerar saldo com debito total
+              </button>
+            </div>
+
+            <label className="mt-4 block">
+              <span className="mb-1 block text-xs font-medium text-gray-500">Motivo</span>
+              <input
+                value={walletAdjustmentForm.reason}
+                onChange={(event) => setWalletAdjustmentForm((current) => ({ ...current, reason: event.target.value }))}
+                placeholder="Motivo obrigatorio para auditoria"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+              />
+            </label>
+
+            <label className="mt-4 block">
+              <span className="mb-1 block text-xs font-medium text-gray-500">Observacoes</span>
+              <textarea
+                value={walletAdjustmentForm.notes}
+                onChange={(event) => setWalletAdjustmentForm((current) => ({ ...current, notes: event.target.value }))}
+                rows={4}
+                placeholder="Detalhes adicionais do ajuste"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
+              />
+            </label>
+
+            {walletAdjustmentForm.direction === 'debit' && parsedAdjustmentAmount > currentAvailableBalance && (
+              <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+                O debito nao pode deixar o saldo negativo.
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowWalletAdjustmentModal(false)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={submitWalletAdjustment}
+                disabled={!isWalletAdjustmentValid || adjustWalletMutation.isPending}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+              >
+                {adjustWalletMutation.isPending ? 'Aplicando...' : 'Aplicar ajuste'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminPageShell>
   );
 }
@@ -2586,5 +2763,4 @@ function AcquirersTab({ customerId }: { customerId: string }) {
     </div>
   );
 }
-
 

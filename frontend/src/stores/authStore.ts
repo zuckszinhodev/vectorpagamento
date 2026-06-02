@@ -4,6 +4,7 @@ import { authService, type User } from '@/services/api';
 
 interface MfaPending {
   mfaToken: string;
+  rememberDevice: boolean;
 }
 
 interface AuthState {
@@ -14,11 +15,11 @@ interface AuthState {
   mfaPending: MfaPending | null;
   adminMfaVerified: boolean;
   isImpersonating: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, trustedDeviceToken?: string | null) => Promise<void>;
   verifyAdminMfa: (code: string) => Promise<void>;
   resetAdminMfaVerification: () => void;
   googleLogin: (credential: string) => Promise<void>;
-  verifyMfa: (code: string) => Promise<void>;
+  verifyMfa: (code: string, rememberDevice?: boolean) => Promise<void>;
   cancelMfa: () => void;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
@@ -35,12 +36,71 @@ interface RegisterData {
   password_confirmation: string;
 }
 
+const ADMIN_MFA_STORAGE_KEY = 'admin_mfa_verified';
+const TRUSTED_DEVICE_STORAGE_KEY = 'trusted_device_tokens';
+
+const persistAdminMfaVerification = (userId: string): void => {
+  localStorage.setItem(ADMIN_MFA_STORAGE_KEY, userId);
+};
+
+const clearAdminMfaVerification = (): void => {
+  localStorage.removeItem(ADMIN_MFA_STORAGE_KEY);
+};
+
+const hasPersistedAdminMfaVerification = (userId?: string | null): boolean => {
+  if (!userId) {
+    return false;
+  }
+
+  return localStorage.getItem(ADMIN_MFA_STORAGE_KEY) === userId;
+};
+
+const getTrustedDeviceTokenMap = (): Record<string, string> => {
+  try {
+    const raw = localStorage.getItem(TRUSTED_DEVICE_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const getTrustedDeviceToken = (email: string): string | null => {
+  return getTrustedDeviceTokenMap()[email.toLowerCase()] ?? null;
+};
+
+const setTrustedDeviceToken = (email: string, token: string): void => {
+  const normalizedEmail = email.toLowerCase();
+  const tokens = getTrustedDeviceTokenMap();
+  tokens[normalizedEmail] = token;
+  localStorage.setItem(TRUSTED_DEVICE_STORAGE_KEY, JSON.stringify(tokens));
+};
+
+const clearTrustedDeviceToken = (email?: string | null): void => {
+  if (!email) {
+    return;
+  }
+
+  const normalizedEmail = email.toLowerCase();
+  const tokens = getTrustedDeviceTokenMap();
+  if (!(normalizedEmail in tokens)) {
+    return;
+  }
+
+  delete tokens[normalizedEmail];
+  localStorage.setItem(TRUSTED_DEVICE_STORAGE_KEY, JSON.stringify(tokens));
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => {
       const hardLogout = () => {
         authService.clearToken();
-        sessionStorage.removeItem('admin_mfa_verified');
+        clearAdminMfaVerification();
         sessionStorage.removeItem('admin_original_token');
 
         set({
@@ -63,13 +123,13 @@ export const useAuthStore = create<AuthState>()(
       adminMfaVerified: false,
       isImpersonating: false,
 
-      login: async (email: string, password: string) => {
+      login: async (email: string, password: string, trustedDeviceToken?: string | null) => {
         try {
-          const response = await authService.login({ email, password });
+          const response = await authService.login({ email, password, trusted_device_token: trustedDeviceToken ?? getTrustedDeviceToken(email) });
 
           if (response.data.requires_mfa && response.data.mfa_token) {
             set({
-              mfaPending: { mfaToken: response.data.mfa_token },
+              mfaPending: { mfaToken: response.data.mfa_token, rememberDevice: true },
               isLoading: false,
             });
             return;
@@ -77,8 +137,12 @@ export const useAuthStore = create<AuthState>()(
 
           const { user, token: tokenData } = response.data;
           const accessToken = tokenData!.access_token;
+          const returnedTrustedDeviceToken = response.data.trusted_device_token;
 
           authService.setToken(accessToken);
+          if (returnedTrustedDeviceToken) {
+            setTrustedDeviceToken(email, returnedTrustedDeviceToken);
+          }
 
           set({
             user: user!,
@@ -86,7 +150,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
             mfaPending: null,
-            adminMfaVerified: false,
+            adminMfaVerified: hasPersistedAdminMfaVerification(user!.id),
           });
         } catch (error) {
           set({ isLoading: false });
@@ -117,7 +181,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
             mfaPending: null,
-            adminMfaVerified: false,
+            adminMfaVerified: hasPersistedAdminMfaVerification(user!.id),
           });
         } catch (error) {
           set({ isLoading: false });
@@ -125,15 +189,19 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      verifyMfa: async (code: string) => {
+      verifyMfa: async (code: string, rememberDevice = true) => {
         const { mfaPending } = get();
         if (!mfaPending) throw new Error('No MFA session pending');
         try {
-          const response = await authService.verifyMfa(mfaPending.mfaToken, code);
+          const response = await authService.verifyMfa(mfaPending.mfaToken, code, rememberDevice);
           const { user, token: tokenData } = response.data;
           const accessToken = tokenData!.access_token;
+          const returnedTrustedDeviceToken = response.data.trusted_device_token;
 
           authService.setToken(accessToken);
+          if (rememberDevice && returnedTrustedDeviceToken) {
+            setTrustedDeviceToken(user!.email, returnedTrustedDeviceToken);
+          }
 
           set({
             user: user!,
@@ -141,7 +209,7 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
             mfaPending: null,
-            adminMfaVerified: false,
+            adminMfaVerified: hasPersistedAdminMfaVerification(user!.id),
           });
         } catch (error) {
           throw error;
@@ -149,15 +217,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       verifyAdminMfa: async (code: string) => {
+        const { user } = get();
         await authService.checkMfa(code);
-        // Use sessionStorage with TTL (15 min) — cleared on tab close
-        const expiresAt = Date.now() + 15 * 60 * 1000;
-        sessionStorage.setItem('admin_mfa_verified', String(expiresAt));
+        if (user?.id) {
+          persistAdminMfaVerification(user.id);
+        }
         set({ adminMfaVerified: true, mfaPending: null });
       },
 
       resetAdminMfaVerification: () => {
-        sessionStorage.removeItem('admin_mfa_verified');
+        clearAdminMfaVerification();
         set({ adminMfaVerified: false });
       },
 
@@ -179,7 +248,7 @@ export const useAuthStore = create<AuthState>()(
             token: accessToken,
             isAuthenticated: true,
             isLoading: false,
-            adminMfaVerified: false,
+            adminMfaVerified: hasPersistedAdminMfaVerification(user.id),
           });
         } catch (error) {
           set({ isLoading: false });
@@ -223,23 +292,13 @@ export const useAuthStore = create<AuthState>()(
           // After a successful /me call, the token may have been refreshed
           // by the interceptor. Sync latest token from localStorage.
           const latestToken = authService.getToken() || token;
-          // Check sessionStorage MFA with TTL validation
-          const mfaExpiry = sessionStorage.getItem('admin_mfa_verified');
-          const persistedAdminMfa = mfaExpiry ? Date.now() < Number(mfaExpiry) : false;
-          if (!persistedAdminMfa) {
-            sessionStorage.removeItem('admin_mfa_verified');
-          }
-
-          // Keep existing admin 2FA verification state on refresh
-          const existingAdminMfaVerified = get().adminMfaVerified;
-
           set({
             user,
             token: latestToken,
             isAuthenticated: true,
             isLoading: false,
             isImpersonating: hasOriginalAdminToken,
-            adminMfaVerified: persistedAdminMfa,
+            adminMfaVerified: !hasOriginalAdminToken && hasPersistedAdminMfaVerification(user.id),
           });
         } catch {
           // Clear everything on auth failure

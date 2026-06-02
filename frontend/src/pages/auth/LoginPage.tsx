@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/stores/authStore';
@@ -19,16 +19,91 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mfaCode, setMfaCode] = useState(['', '', '', '', '', '']);
+  const [rememberDevice, setRememberDevice] = useState(true);
   const [mfaLoading, setMfaLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const mfaInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const { login, verifyMfa, cancelMfa, mfaPending } = useAuthStore();
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const { login, googleLogin, verifyMfa, cancelMfa, mfaPending } = useAuthStore();
   const navigate = useNavigate();
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginForm>();
+
+  const handleGoogleSuccess = async (credential: string) => {
+    setGoogleLoading(true);
+
+    try {
+      await googleLogin(credential);
+      toast.success('Login com Google realizado com sucesso!');
+      navigate('/dashboard');
+    } catch (error: any) {
+      const errorCode = error.response?.data?.error?.code;
+      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Erro ao entrar com Google.';
+
+      if (errorCode === 'account_blocked') {
+        const blockReason = error.response?.data?.error?.block_reason;
+        navigate('/account-blocked', { state: { blockReason } });
+        return;
+      }
+
+      toast.error(message);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!googleClientId || mfaPending || !googleButtonRef.current) {
+      return;
+    }
+
+    const renderGoogleButton = () => {
+      if (!window.google?.accounts?.id || !googleButtonRef.current) {
+        return;
+      }
+
+      googleButtonRef.current.innerHTML = '';
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: ({ credential }) => {
+          if (credential) {
+            void handleGoogleSuccess(credential);
+          }
+        },
+      });
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: 'outline',
+        size: 'large',
+        shape: 'pill',
+        text: 'continue_with',
+        width: '100%',
+        logo_alignment: 'left',
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+      return;
+    }
+
+    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]') as HTMLScriptElement | null;
+    if (existingScript) {
+      existingScript.addEventListener('load', renderGoogleButton, { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = renderGoogleButton;
+    document.head.appendChild(script);
+  }, [googleClientId, mfaPending]);
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
@@ -92,7 +167,7 @@ export default function LoginPage() {
     }
     setMfaLoading(true);
     try {
-      await verifyMfa(code);
+      await verifyMfa(code, rememberDevice);
       toast.success('Login realizado com sucesso!');
       navigate('/dashboard');
     } catch (error: any) {
@@ -158,6 +233,16 @@ export default function LoginPage() {
                 ))}
               </div>
 
+              <label className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                <input
+                  type="checkbox"
+                  checked={rememberDevice}
+                  onChange={(e) => setRememberDevice(e.target.checked)}
+                  className="h-4 w-4 rounded border-[#2a2a2a] bg-[#121212] text-emerald-400 focus:ring-emerald-500"
+                />
+                Lembrar este dispositivo por 30 dias
+              </label>
+
               <button
                 onClick={handleMfaSubmit}
                 disabled={mfaLoading || mfaCode.join('').length !== 6}
@@ -198,6 +283,24 @@ export default function LoginPage() {
             Faça login para acessar a Vector.
           </p>
         </div>
+
+      {googleClientId && (
+        <div className="mb-6 space-y-4">
+          <div
+            className={`rounded-[28px] border border-[#202020] bg-[#121212] px-3 py-3 transition-opacity ${googleLoading ? 'opacity-70' : ''}`}
+          >
+            <div ref={googleButtonRef} className="flex min-h-[44px] items-center justify-center" />
+          </div>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#202020]" />
+            </div>
+            <div className="relative flex justify-center text-[11px] uppercase tracking-[0.18em] text-gray-500">
+              <span className="bg-[#101010] px-3">ou continue com e-mail</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">

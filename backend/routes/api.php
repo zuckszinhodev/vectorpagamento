@@ -84,6 +84,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
     Route::prefix('auth')->middleware(['throttle:5,5', 'auth.strict_rate:login'])->group(function () {
         Route::post('/register', [\App\Http\Controllers\Api\V1\AuthController::class, 'register']);
         Route::post('/login', [\App\Http\Controllers\Api\V1\AuthController::class, 'login']);
+        Route::post('/google', [\App\Http\Controllers\Api\V1\AuthController::class, 'googleAuth']);
         Route::post('/mfa/verify', [\App\Http\Controllers\Api\V1\AuthController::class, 'verifyMfa']);
         Route::post('/forgot-password', [\App\Http\Controllers\Api\V1\AuthController::class, 'forgotPassword']);
         Route::post('/reset-password', [\App\Http\Controllers\Api\V1\AuthController::class, 'resetPassword']);
@@ -408,6 +409,8 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             // Admin: All Charges/Transactions
             Route::get('admin/charges', [\App\Http\Controllers\Api\V1\AdminController::class, 'allCharges']);
             Route::post('admin/charges/{chargeId}/status', [\App\Http\Controllers\Api\V1\AdminController::class, 'updateChargeStatus']);
+            Route::get('admin/charges/failed-expired/count', [\App\Http\Controllers\Api\V1\AdminController::class, 'countDeletableCharges']);
+            Route::delete('admin/charges/failed-expired', [\App\Http\Controllers\Api\V1\AdminController::class, 'deleteFailedAndExpiredCharges']);
 
             // Admin: Control Tower advanced operations
             Route::prefix('admin/control-tower')->group(function () {
@@ -433,6 +436,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::post('/{customerId}/charges/{chargeId}/status', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updateChargeStatus']);
             Route::put('/{customerId}/payment-info', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updatePaymentInfo']);
             Route::post('/{customerId}/recalculate-balance', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'recalculateBalance']);
+            Route::post('/{customerId}/wallet-adjustments', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'adjustWalletBalance']);
             Route::get('/{customerId}/acquirers', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'getAccountAcquirers']);
             Route::put('/{customerId}/acquirers', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updateAccountAcquirers']);
             Route::post('/{customerId}/impersonate', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'impersonate']);
@@ -467,6 +471,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         Route::prefix('admin/settings')->middleware(['role:admin,owner,support,financial,antifraud', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\V1\PlatformSettingsAdminController::class, 'index']);
             Route::put('/', [\App\Http\Controllers\Api\V1\PlatformSettingsAdminController::class, 'update']);
+            Route::post('/prune-stale-charges', [\App\Http\Controllers\Api\V1\PlatformSettingsAdminController::class, 'pruneStaleCharges']);
         });
 
         // Admin: API Keys Management
@@ -728,11 +733,14 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         });
 
         // Vector IA Assistant
-        Route::prefix('vector-ia')->group(function () {
+        $vectorIaRoutes = function () {
             Route::post('/chat', [\App\Http\Controllers\Api\V1\WazerAIController::class, 'chat']);
             Route::get('/suggestions', [\App\Http\Controllers\Api\V1\WazerAIController::class, 'suggestions']);
             Route::post('/action', [\App\Http\Controllers\Api\V1\WazerAIController::class, 'executeAction']);
-        });
+        };
+
+        Route::prefix('vector-ia')->group($vectorIaRoutes);
+        Route::prefix('wazer-ai')->group($vectorIaRoutes);
     });
 
     /*

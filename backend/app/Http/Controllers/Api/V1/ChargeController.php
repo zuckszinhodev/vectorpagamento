@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\PaymentStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Models\Charge;
 use App\Models\SavedCard;
@@ -11,10 +12,12 @@ use App\Models\Transaction;
 use App\Domain\Acquirer\Entities\Acquirer;
 use App\Services\PaymentService;
 use App\Services\AdminApprovalService;
+use App\Services\PixNominalNameService;
 use App\Services\UtmifyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -83,33 +86,32 @@ class ChargeController extends Controller
         }
 
         $perPage = min((int) $request->query('per_page', 20), 100);
-        $charges = $query->with(['product:id,name,image_url', 'transactions.splits'])->orderBy('created_at', 'desc')->paginate($perPage);
+        $charges = $query->with(['product:id,name,image_url', 'transactions:id,charge_id'])
+            ->orderBy('created_at', 'desc')
+            ->paginate($perPage);
+
+        $chargeIds = collect($charges->items())->pluck('id')->all();
+        $activeChargebacks = empty($chargeIds)
+            ? []
+            : \App\Models\Chargeback::query()
+                ->whereIn('charge_id', $chargeIds)
+                ->whereIn('status', ['open', 'evidence_sent', 'under_review'])
+                ->pluck('charge_id')
+                ->flip();
+        $splitTotalsByCharge = $this->loadSplitTotalsByCharge($chargeIds, $accountId);
 
         // Enrich charges with split info
-        $chargesData = collect($charges->items())->map(function ($charge) use ($accountId) {
-            $chargeArray = $charge->toArray();
+        $chargesData = collect($charges->items())->map(function ($charge) use ($activeChargebacks, $splitTotalsByCharge) {
+            $chargeArray = $this->serializeCharge($charge);
             unset($chargeArray['transactions']); // don't leak raw transactions to response
 
-            // Check if this charge has an active chargeback
-            $hasChargeback = \App\Models\Chargeback::where('charge_id', $charge->id)
-                ->whereIn('status', ['open', 'evidence_sent', 'under_review'])
-                ->exists();
-            $chargeArray['has_chargeback'] = $hasChargeback;
+            $chargeArray['has_chargeback'] = isset($activeChargebacks[$charge->id]);
 
             // Check if this charge has splits (via metadata or actual Split records)
             $splitRules = $charge->metadata['split_rules'] ?? null;
             if (!empty($splitRules) && is_array($splitRules)) {
-                $transaction = $charge->transactions->first();
-                $splitTotal = 0;
-                if ($transaction) {
-                    $splitTotal = (int) $transaction->splits
-                        ->where('recipient_id', '!=', $accountId)
-                        ->whereIn('status', ['transferred', 'processing', 'pending'])
-                        ->sum('net_amount');
-                }
-
                 $chargeArray['has_split'] = true;
-                $chargeArray['split_amount'] = $splitTotal;
+                $chargeArray['split_amount'] = (int) ($splitTotalsByCharge[$charge->id] ?? 0);
                 $chargeArray['split_recipients'] = count($splitRules);
             } else {
                 $chargeArray['has_split'] = false;
@@ -307,7 +309,9 @@ class ChargeController extends Controller
         }
         
         if (isset($paymentResult['success']) && !$paymentResult['success']) {
-            $this->persistChargeFailure($charge, (string) ($paymentResult['error'] ?? 'Falha ao processar pagamento'));
+            $this->logChargeFailureDetails($charge, $paymentResult);
+            $this->persistChargeFailure($charge, (string) ($paymentResult['error'] ?? 'Falha ao processar pagamento'), $paymentResult);
+            $this->dispatchPaymentStatusChangedEvent($charge->fresh() ?? $charge);
             return response()->json([
                 'success' => false,
                 'error' => [
@@ -331,12 +335,11 @@ class ChargeController extends Controller
             }
         }
 
-        // Dispatch webhook, UTMify & nominal name sync AFTER response is sent (non-blocking)
-        $chargeForDeferred = $charge;
-        $paymentResultForDeferred = $paymentResult;
-        dispatch(function () use ($chargeForDeferred, $paymentResultForDeferred) {
-            app(\App\Services\PixNominalNameService::class)->syncFromCharge($chargeForDeferred->refresh(), $paymentResultForDeferred);
+        $this->dispatchPaymentStatusChangedEvent($charge->fresh() ?? $charge);
 
+        // Dispatch webhook and UTMify AFTER response is sent (non-blocking)
+        $chargeForDeferred = $charge;
+        dispatch(function () use ($chargeForDeferred) {
             try {
                 app(\App\Services\WebhookDispatchService::class)
                     ->dispatchPaymentEvent('charge.created', $chargeForDeferred);
@@ -407,7 +410,7 @@ class ChargeController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $charge,
+            'data' => $this->serializeCharge($charge),
         ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('ChargeController::show error', [
@@ -860,14 +863,23 @@ class ChargeController extends Controller
         }
     }
 
-    private function persistChargeFailure(Charge $charge, string $failureReason): void
+    private function persistChargeFailure(Charge $charge, string $failureReason, array $paymentResult = []): void
     {
         try {
             $reason = trim($failureReason);
+            $metadata = is_array($charge->metadata) ? $charge->metadata : [];
+            $metadata['payment_failure_context'] = array_filter([
+                'logged_at' => now()->toIso8601String(),
+                'acquirer' => $paymentResult['acquirer'] ?? $charge->acquirer,
+                'error' => $paymentResult['error'] ?? ($reason !== '' ? Str::limit($reason, 500, '') : 'Falha ao processar pagamento'),
+                'raw_response' => $paymentResult['raw_response'] ?? $paymentResult['data'] ?? null,
+                'provider_transaction_id' => $paymentResult['transaction_id'] ?? $paymentResult['external_id'] ?? $charge->acquirer_transaction_id,
+            ], static fn ($value) => $value !== null && $value !== '');
 
             $charge->update([
                 'status' => Charge::STATUS_FAILED,
                 'failure_reason' => $reason !== '' ? Str::limit($reason, 500, '') : 'Falha ao processar pagamento',
+                'metadata' => $metadata,
             ]);
         } catch (\Throwable $e) {
             Log::warning('Failed to persist charge failure state', [
@@ -875,6 +887,40 @@ class ChargeController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function logChargeFailureDetails(Charge $charge, array $paymentResult): void
+    {
+        try {
+            Log::warning('Charge payment failed with provider details', [
+                'charge_id' => $charge->id,
+                'account_id' => $charge->account_id,
+                'payment_method' => $charge->payment_method,
+                'amount' => $charge->amount,
+                'acquirer' => $paymentResult['acquirer'] ?? $charge->acquirer,
+                'error' => $paymentResult['error'] ?? null,
+                'raw_response' => $paymentResult['raw_response'] ?? $paymentResult['data'] ?? null,
+                'provider_transaction_id' => $paymentResult['transaction_id'] ?? $paymentResult['external_id'] ?? $charge->acquirer_transaction_id,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to log charge failure details', [
+                'charge_id' => $charge->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function dispatchPaymentStatusChangedEvent(Charge $charge): void
+    {
+        event(new PaymentStatusChanged(
+            $charge->id,
+            (string) $charge->account_id,
+            (string) $charge->status,
+            $this->serializeCharge($charge),
+            ((float) ($charge->amount ?? 0)) / 100,
+            (string) ($charge->currency ?? 'BRL'),
+            $charge->customer['email'] ?? null,
+        ));
     }
 
     /**
@@ -897,5 +943,58 @@ class ChargeController extends Controller
         );
 
         return $acquirer->id;
+    }
+
+    private function serializeCharge(Charge $charge): array
+    {
+        $chargeArray = $charge->toArray();
+        $currentNominal = trim((string) ($charge->acquirer_name ?? ''));
+        $metadata = is_array($chargeArray['metadata'] ?? null) ? $chargeArray['metadata'] : [];
+        $historicalNominal = is_string($metadata['nominal_name'] ?? null)
+            ? trim((string) $metadata['nominal_name'])
+            : '';
+        $payloadNominal = '';
+
+        try {
+            /** @var PixNominalNameService $nominalService */
+            $nominalService = app(PixNominalNameService::class);
+            $payloadNominal = trim((string) ($nominalService->extractMerchantName((string) ($charge->pix_copy_paste ?? ''))
+                ?: $nominalService->extractMerchantName((string) ($charge->pix_qr_code ?? ''))
+                ?: ''));
+        } catch (\Throwable $e) {
+            $payloadNominal = '';
+        }
+
+        $resolvedNominal = $historicalNominal !== ''
+            ? $historicalNominal
+            : ($payloadNominal !== '' ? $payloadNominal : $currentNominal);
+
+        if ($resolvedNominal === '') {
+            return $chargeArray;
+        }
+
+        if ($historicalNominal === '') {
+            $metadata['nominal_name'] = $resolvedNominal;
+        }
+
+        $chargeArray['acquirer_name'] = $resolvedNominal;
+        $chargeArray['metadata'] = $metadata;
+
+        return $chargeArray;
+    }
+
+    private function loadSplitTotalsByCharge(array $chargeIds, string $accountId): Collection
+    {
+        if (empty($chargeIds)) {
+            return collect();
+        }
+
+        return DB::table('splits')
+            ->join('transactions', 'transactions.id', '=', 'splits.transaction_id')
+            ->whereIn('transactions.charge_id', $chargeIds)
+            ->where('splits.recipient_id', '!=', $accountId)
+            ->whereIn('splits.status', ['transferred', 'processing', 'pending'])
+            ->groupBy('transactions.charge_id')
+            ->pluck(DB::raw('COALESCE(SUM(splits.net_amount), 0)'), 'transactions.charge_id');
     }
 }

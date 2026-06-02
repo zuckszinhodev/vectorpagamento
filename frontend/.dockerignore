@@ -5,7 +5,6 @@ dist
 build
 *.md
 Dockerfile
-docker/
 .vscode
 .idea
 .env

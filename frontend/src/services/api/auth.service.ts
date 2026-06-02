@@ -10,6 +10,7 @@ export interface RegisterData {
 export interface LoginData {
   email: string;
   password: string;
+  trusted_device_token?: string | null;
 }
 
 export interface AuthResponse {
@@ -33,6 +34,7 @@ export interface AuthResponse {
       token_type: string;
       expires_in: number;
     };
+    trusted_device_token?: string | null;
   };
 }
 
@@ -105,8 +107,8 @@ export const authService = {
     return response.data;
   },
 
-  async verifyMfa(mfaToken: string, code: string): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/mfa/verify', { mfa_token: mfaToken, code });
+  async verifyMfa(mfaToken: string, code: string, rememberDevice = false): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/auth/mfa/verify', { mfa_token: mfaToken, code, remember_device: rememberDevice });
     return response.data;
   },
 

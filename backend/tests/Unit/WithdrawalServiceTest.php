@@ -217,3 +217,109 @@ it('returns a detailed error when pix out acquirers are skipped', function () {
 
     Http::assertNothingSent();
 });
+
+it('splits a withdrawal across multiple nominal balances when no single acquirer can cover it', function () {
+    config([
+        'acquirers.enki.enabled' => true,
+        'acquirers.enki.public_key' => 'pk_test_enki',
+        'acquirers.enki.secret_key' => 'sk_test_enki',
+        'acquirers.enki.withdrawal_key' => 'wd_test_enki',
+        'acquirers.enki.base_url' => 'https://api.enki-bank.com',
+        'acquirers.blupay.enabled' => true,
+        'acquirers.blupay.public_key' => 'pk_test_blupay',
+        'acquirers.blupay.secret_key' => 'sk_test_blupay',
+        'acquirers.blupay.base_url' => 'https://api.blupayip.io',
+        'acquirers.payfort.enabled' => false,
+        'acquirers.babylon.enabled' => false,
+        'acquirers.witetec.enabled' => false,
+        'acquirers.asaas.enabled' => false,
+        'acquirers.huntersub.enabled' => false,
+    ]);
+
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'enki'],
+        [
+            'display_name' => 'Enki Bank',
+            'type' => 'gateway',
+            'enabled' => true,
+            'supported_methods' => ['pix_out'],
+            'priority' => 0,
+            'settings' => [],
+        ]
+    );
+
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'blupay'],
+        [
+            'display_name' => 'BluPay',
+            'type' => 'gateway',
+            'enabled' => true,
+            'supported_methods' => ['pix_out'],
+            'priority' => 1,
+            'settings' => [],
+        ]
+    );
+
+    $withdrawal = Withdrawal::create([
+        'id' => Str::uuid()->toString(),
+        'account_id' => $this->account->id,
+        'user_id' => $this->user->id,
+        'amount' => 10000,
+        'fee' => 0,
+        'net_amount' => 10000,
+        'status' => 'pending',
+        'method' => 'pix',
+        'destination' => [
+            'type' => 'pix',
+            'pix_key' => '12345678900',
+            'pix_type' => 'cpf',
+        ],
+    ]);
+
+    Http::fake([
+        'https://api.enki-bank.com/v1/transfers' => Http::sequence()
+            ->push(['message' => 'Saldo insuficiente na nominal'], 422)
+            ->push([
+                'data' => [
+                    'id' => 'tr-enki-part-1',
+                    'amount' => 6000,
+                    'status' => 'PROCESSING',
+                ],
+            ], 200),
+        'https://api.enki-bank.com/v1/company/balance' => Http::response([
+            'data' => [
+                'available' => 6000,
+                'reserved' => 0,
+            ],
+        ], 200),
+        'https://api.blupayip.io/api/v1/balance' => Http::response([
+            'data' => [
+                'pix' => ['balance' => '40.00'],
+                'pixBlocked' => ['balance' => '0.00'],
+                'reserve' => ['balance' => '0.00'],
+            ],
+        ], 200),
+        'https://api.blupayip.io/api/v1/transactions/pix-out' => Http::response([
+            'data' => [
+                'id' => 'tr-blupay-part-2',
+                'amount' => 4000,
+                'status' => 'processing',
+            ],
+        ], 201),
+    ]);
+
+    AcquirerFactory::reset();
+    $service = new WithdrawalService();
+    $result = $service->processWithdrawal($withdrawal);
+
+    $withdrawal->refresh();
+    $parts = $withdrawal->destination['transfer_parts'] ?? [];
+
+    expect($result['success'])->toBeTrue();
+    expect($withdrawal->status)->toBe('processing');
+    expect($parts)->toHaveCount(2);
+    expect($parts[0]['acquirer'])->toBe('enki');
+    expect($parts[0]['amount'])->toBe(6000);
+    expect($parts[1]['acquirer'])->toBe('blupay');
+    expect($parts[1]['amount'])->toBe(4000);
+});

@@ -78,6 +78,28 @@ interface PlatformSettingsResponse {
   };
 }
 
+interface RefreshNominalResult {
+  success: boolean;
+  id?: string;
+  acquirer?: string;
+  display_name?: string;
+  nominal_name?: string;
+  message?: string;
+}
+
+interface RefreshAllNominalsResponse {
+  success?: boolean;
+  message?: string;
+  data?: {
+    results?: RefreshNominalResult[];
+    summary?: {
+      total: number;
+      success: number;
+      failed: number;
+    };
+  };
+}
+
 const rotationMethods: RotationMethod[] = ['pix', 'credit_card', 'boleto', 'pix_out'];
 
 export default function AdminAcquirers() {
@@ -224,6 +246,7 @@ export default function AdminAcquirers() {
       toast.success(response?.message || 'Nominal atualizada');
       queryClient.invalidateQueries({ queryKey: ['admin-acquirers'] });
       queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
+      queryClient.invalidateQueries({ queryKey: ['account-acquirers'] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Erro ao atualizar nominal');
@@ -234,12 +257,24 @@ export default function AdminAcquirers() {
   const refreshAllNominalsMutation = useMutation({
     mutationFn: async () => {
       const response = await api.post('/admin/acquirers/refresh-all-nominals');
-      return response.data;
+      return response.data as RefreshAllNominalsResponse;
     },
     onSuccess: (response) => {
-      toast.success(response?.message || 'Nominais atualizadas');
+      const results = response?.data?.results || [];
+      const successLines = results
+        .filter((item) => item.success)
+        .slice(0, 3)
+        .map((item) => `${item.display_name || item.acquirer}: ${item.nominal_name || '-'}`);
+      const failedLines = results
+        .filter((item) => !item.success)
+        .slice(0, 2)
+        .map((item) => `${item.display_name || item.acquirer}: ${item.message || 'Falha ao atualizar'}`);
+
+      const details = [...successLines, ...failedLines].join('\n');
+      toast.success(details ? `${response?.message || 'Nominais atualizadas'}\n${details}` : response?.message || 'Nominais atualizadas');
       queryClient.invalidateQueries({ queryKey: ['admin-acquirers'] });
       queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
+      queryClient.invalidateQueries({ queryKey: ['account-acquirers'] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Erro ao atualizar nominais');
@@ -1186,5 +1221,3 @@ function EditAcquirerModal({
     </div>
   );
 }
-
-

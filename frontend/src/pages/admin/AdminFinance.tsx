@@ -178,6 +178,47 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
 
   const charges = chargesData?.data ?? [];
   const chargesPagination = chargesData?.meta ?? { current_page: 1, last_page: 1, total: 0 };
+  const deletableStatuses = ['expired', 'failed', 'declined'];
+  const canBulkDeleteCharges = deletableStatuses.includes(txStatus);
+
+  const deleteFailedExpiredChargesMutation = useMutation({
+    mutationFn: async () => {
+      const params = new URLSearchParams();
+      params.append('status', txStatus);
+      if (txSearch) params.append('search', txSearch);
+      if (txMethod !== 'all') params.append('payment_method', txMethod);
+      if (txAcquirer !== 'all') params.append('acquirer', txAcquirer);
+      if (txDateFrom) params.append('date_from', txDateFrom);
+      if (txDateTo) params.append('date_to', txDateTo);
+
+      const query = params.toString();
+      const response = await api.delete(`/admin/charges/failed-expired${query ? `?${query}` : ''}`);
+      return response.data;
+    },
+    onSuccess: (payload) => {
+      toast.success(payload?.message || 'Transações falhadas e expiradas removidas com sucesso.');
+      queryClient.invalidateQueries({ queryKey: ['admin-charges'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Erro ao remover transações falhadas e expiradas.');
+    },
+  });
+
+  const countDeletableChargesMutation = useMutation({
+    mutationFn: async () => {
+      const params = new URLSearchParams();
+      params.append('status', txStatus);
+      if (txSearch) params.append('search', txSearch);
+      if (txMethod !== 'all') params.append('payment_method', txMethod);
+      if (txAcquirer !== 'all') params.append('acquirer', txAcquirer);
+      if (txDateFrom) params.append('date_from', txDateFrom);
+      if (txDateTo) params.append('date_to', txDateTo);
+
+      const query = params.toString();
+      const response = await api.get(`/admin/charges/failed-expired/count${query ? `?${query}` : ''}`);
+      return response.data;
+    },
+  });
 
   const processMutation = useMutation({
     mutationFn: async ({ withdrawalId, action, notes }: { withdrawalId: string; action: 'approve' | 'reject'; notes?: string }) => {
@@ -840,6 +881,37 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                   >
                     <ArrowPathIcon className="h-4 w-4" />
                     Atualizar
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (!canBulkDeleteCharges) {
+                        toast.error('Selecione explicitamente um status: expirado, falha ou recusado.');
+                        return;
+                      }
+
+                      try {
+                        const payload = await countDeletableChargesMutation.mutateAsync();
+                        const count = Number(payload?.data?.count || 0);
+
+                        if (count <= 0) {
+                          toast('Nenhuma transação falhada, recusada ou expirada encontrada nos filtros atuais.', { icon: 'ℹ️' });
+                          return;
+                        }
+
+                        const confirmed = window.confirm(`Deseja apagar definitivamente ${count} transa${count === 1 ? 'ção' : 'ções'} falhada${count === 1 ? '' : 's'}, recusada${count === 1 ? '' : 's'} e expirada${count === 1 ? '' : 's'} visíveis com os filtros atuais?`);
+                        if (!confirmed) return;
+
+                        deleteFailedExpiredChargesMutation.mutate();
+                      } catch (error: any) {
+                        toast.error(error?.response?.data?.message || 'Erro ao contar transações removíveis.');
+                      }
+                    }}
+                    disabled={!canBulkDeleteCharges || deleteFailedExpiredChargesMutation.isPending || countDeletableChargesMutation.isPending}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors sm:w-auto"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                    {deleteFailedExpiredChargesMutation.isPending ? 'Apagando...' : countDeletableChargesMutation.isPending ? 'Contando...' : 'Apagar falhadas, recusadas e expiradas'}
                   </button>
                 </div>
               </div>
@@ -2209,5 +2281,3 @@ function ConfigModal({
     </div>
   );
 }
-
-

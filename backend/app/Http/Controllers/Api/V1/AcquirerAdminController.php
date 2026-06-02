@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Domain\Acquirer\Entities\Acquirer as AcquirerEntity;
 use App\Models\AcquirerConfig;
 use App\Models\Transaction;
 use App\Services\AcquirerRotationService;
@@ -434,6 +435,12 @@ class AcquirerAdminController extends Controller
         }
         $config->save();
 
+        if (isset($validated['display_name'])) {
+            AcquirerEntity::query()
+                ->where('slug', $config->acquirer_key)
+                ->update(['name' => $config->display_name ?: $config->acquirer_key]);
+        }
+
         // Reset the AcquirerFactory singleton so the next request picks up the new config
         \App\Services\AcquirerFactory::reset();
 
@@ -578,13 +585,28 @@ class AcquirerAdminController extends Controller
                 return response()->json(['success' => false, 'message' => 'Adquirente nao encontrado'], 404);
             }
 
+            \Illuminate\Support\Facades\Log::info('AcquirerAdminController::refreshNominal start', [
+                'acquirer_id' => $acquirerId,
+                'acquirer_key' => $config->acquirer_key,
+                'display_name' => $config->display_name,
+                'user_id' => request()->user()?->id,
+                'account_id' => request()->user()?->account_id,
+            ]);
+
             $result = app(\App\Services\PixNominalNameService::class)
                 ->refreshAcquirerNominal($config->acquirer_key, request()->user()?->account_id);
 
             if (!($result['success'] ?? false)) {
+                \Illuminate\Support\Facades\Log::warning('AcquirerAdminController::refreshNominal failed', [
+                    'acquirer_id' => $acquirerId,
+                    'acquirer_key' => $config->acquirer_key,
+                    'display_name' => $config->display_name,
+                    'result' => $result,
+                ]);
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Falha ao gerar PIX para verificar nominal: ' . ($result['message'] ?? 'adquirente não configurada'),
+                    'message' => 'Falha ao gerar PIX para verificar nominal em ' . $config->display_name . ' (' . $config->acquirer_key . '): ' . ($result['message'] ?? 'adquirente não configurada'),
                 ], 422);
             }
 
@@ -596,6 +618,7 @@ class AcquirerAdminController extends Controller
                 'data' => [
                     'id' => $config->id,
                     'key' => $config->acquirer_key,
+                    'display_name' => $config->display_name,
                     'nominal_name' => $config->nominal_name,
                 ],
                 'message' => 'Nominal atualizada para ' . $config->nominal_name,
@@ -625,10 +648,18 @@ class AcquirerAdminController extends Controller
                 ->refreshAllAcquirerNominals(request()->user()?->account_id);
 
             $successCount = count(array_filter($results, fn ($r) => $r['success']));
+            $failureCount = count($results) - $successCount;
 
             return response()->json([
                 'success' => true,
-                'data' => $results,
+                'data' => [
+                    'results' => $results,
+                    'summary' => [
+                        'total' => count($results),
+                        'success' => $successCount,
+                        'failed' => $failureCount,
+                    ],
+                ],
                 'message' => "{$successCount}/" . count($results) . " nominais atualizadas",
             ]);
         } catch (\Throwable $e) {

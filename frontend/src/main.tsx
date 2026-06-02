@@ -7,6 +7,50 @@ import { Toaster, toast, ToastBar } from 'react-hot-toast';
 import App from './App';
 import './styles/globals.css';
 
+const CHUNK_RELOAD_FLAG = 'vectorpagamentos:chunk-reload';
+
+window.addEventListener('error', (event) => {
+  const target = event.target;
+
+  if (!(target instanceof HTMLScriptElement)) {
+    return;
+  }
+
+  const src = target.src || '';
+  if (!src.includes('/assets/') || !src.endsWith('.js')) {
+    return;
+  }
+
+  if (sessionStorage.getItem(CHUNK_RELOAD_FLAG) === '1') {
+    sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
+    return;
+  }
+
+  sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1');
+  window.location.reload();
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason;
+  const message = typeof reason?.message === 'string' ? reason.message : '';
+
+  if (!message.includes('Failed to fetch dynamically imported module')) {
+    return;
+  }
+
+  if (sessionStorage.getItem(CHUNK_RELOAD_FLAG) === '1') {
+    sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
+    return;
+  }
+
+  sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1');
+  window.location.reload();
+});
+
+window.addEventListener('load', () => {
+  sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
+});
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -13,7 +13,6 @@ storage/framework/views/*
 *.md
 docker-compose*.yml
 Dockerfile
-docker/
 .vscode
 .idea
 .phpunit.result.cache

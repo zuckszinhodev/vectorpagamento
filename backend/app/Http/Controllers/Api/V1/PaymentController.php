@@ -305,8 +305,7 @@ class PaymentController extends Controller
                 $customGatewayFee = $customFee?->calculateGatewayFee($freshCharge->amount, $freshCharge->payment_method);
 
                 if (!is_null($customGatewayFee)) {
-                    $acquirerFee = $acquirerConfig->calculateAcquirerFee($freshCharge->amount);
-                    $feeAmount = $customGatewayFee + $acquirerFee;
+                    $feeAmount = $customGatewayFee;
                 } else {
                     $feeAmount = $acquirerConfig->calculateGatewayFee($freshCharge->amount);
                 }

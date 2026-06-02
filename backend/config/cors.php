@@ -7,6 +7,7 @@ $allowLocalOrigins = filter_var(
 );
 $allowAllOrigins = filter_var(env('CORS_ALLOW_ALL_ORIGINS', false), FILTER_VALIDATE_BOOLEAN);
 $supportsCredentials = filter_var(env('CORS_SUPPORTS_CREDENTIALS', !$allowAllOrigins), FILTER_VALIDATE_BOOLEAN);
+$allowWildcardSubdomains = filter_var(env('CORS_ALLOW_VECTOR_WILDCARD', true), FILTER_VALIDATE_BOOLEAN);
 $extraAllowedOrigins = array_filter(array_map(
     static fn ($origin) => trim((string) $origin),
     explode(',', (string) env('CORS_ALLOWED_ORIGINS', ''))
@@ -42,9 +43,11 @@ return [
             ] : []),
         ]))),
 
-    'allowed_origins_patterns' => [
-        '#^https://.*\.vectorpagamentos\.com$#',
-    ],
+    'allowed_origins_patterns' => $allowWildcardSubdomains
+        ? [
+            '#^https://.*\.vectorpagamentos\.com$#',
+        ]
+        : [],
 
     'allowed_headers' => ['*'],
 

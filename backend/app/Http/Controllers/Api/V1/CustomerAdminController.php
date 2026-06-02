@@ -15,12 +15,16 @@ use App\Models\Withdrawal;
 use App\Models\AccountAcquirer;
 use App\Models\AuditLog;
 use App\Models\Transaction;
+use App\Models\WalletAdjustment;
 use App\Services\AdminApprovalService;
 use App\Services\PaymentService;
+use App\Services\WithdrawalService;
 use App\Domain\Acquirer\Entities\Acquirer as AcquirerEntity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use PragmaRX\Google2FA\Google2FA;
@@ -296,6 +300,11 @@ class CustomerAdminController extends Controller
             try {
                 $totalWithdrawn = Withdrawal::where('user_id', $user->id)
                     ->whereIn('status', ['completed', 'approved', 'processing'])
+                    ->sum('amount');
+
+                $totalWithdrawn += (int) WalletAdjustment::query()
+                    ->where('account_id', $user->account_id)
+                    ->where('direction', 'debit')
                     ->sum('amount');
 
                 $pendingWithdrawals = Withdrawal::where('user_id', $user->id)
@@ -1059,7 +1068,7 @@ class CustomerAdminController extends Controller
                         ? $customFee?->calculateGatewayFee($charge->amount, $paymentMethod)
                         : null;
                     if ($acquirerConfig && !is_null($customGatewayFee)) {
-                        $feeAmount = $customGatewayFee + $acquirerConfig->calculateAcquirerFee($charge->amount);
+                        $feeAmount = $customGatewayFee;
                     } elseif ($acquirerConfig) {
                         $feeAmount = $acquirerConfig->calculateGatewayFee($charge->amount);
                     } else {
@@ -1083,7 +1092,12 @@ class CustomerAdminController extends Controller
                 ->whereIn('status', ['pending', 'pending_approval', 'processing'])
                 ->sum('amount');
 
-            $correctBalance = $totalNet - $lockedWithdrawals;
+            $manualAdjustments = (int) WalletAdjustment::query()
+                ->where('account_id', $accountId)
+                ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'debit' THEN -amount ELSE amount END), 0) AS total")
+                ->value('total');
+
+            $correctBalance = $totalNet - $lockedWithdrawals + $manualAdjustments;
 
             $wallet = AccountWallet::firstOrCreate(
                 ['account_id' => $accountId],
@@ -1107,6 +1121,7 @@ class CustomerAdminController extends Controller
                 'previous_balance' => $previousBalance,
                 'new_balance' => max(0, $correctBalance),
                 'charges_recalculated' => count($approvedCharges),
+                'manual_adjustments' => $manualAdjustments,
             ]);
 
             return response()->json([
@@ -1121,6 +1136,7 @@ class CustomerAdminController extends Controller
                     'previous_balance' => (int) $previousBalance,
                     'new_balance' => max(0, $correctBalance),
                     'charges_recalculated' => count($approvedCharges),
+                    'manual_adjustments' => $manualAdjustments,
                 ],
             ]);
         } catch (\Throwable $e) {
@@ -1167,7 +1183,7 @@ class CustomerAdminController extends Controller
                         ? $customFee?->calculateGatewayFee($charge->amount, $paymentMethod)
                         : null;
                     if ($acquirerConfig && !is_null($customGatewayFee)) {
-                        $feeAmount = $customGatewayFee + $acquirerConfig->calculateAcquirerFee($charge->amount);
+                        $feeAmount = $customGatewayFee;
                     } elseif ($acquirerConfig) {
                         $feeAmount = $acquirerConfig->calculateGatewayFee($charge->amount);
                     } else {
@@ -1191,7 +1207,12 @@ class CustomerAdminController extends Controller
                 ->whereIn('status', ['pending', 'pending_approval', 'processing'])
                 ->sum('amount');
 
-            $correctBalance = max(0, $totalNet - (int) $lockedWithdrawals);
+            $manualAdjustments = (int) WalletAdjustment::query()
+                ->where('account_id', $accountId)
+                ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'debit' THEN -amount ELSE amount END), 0) AS total")
+                ->value('total');
+
+            $correctBalance = max(0, $totalNet - (int) $lockedWithdrawals + $manualAdjustments);
 
             $wallet = AccountWallet::firstOrCreate(
                 ['account_id' => $accountId],
@@ -1219,6 +1240,112 @@ class CustomerAdminController extends Controller
             // Fallback to wallet balance
             $wallet = AccountWallet::where('account_id', $accountId)->where('currency', 'BRL')->first();
             return (int) ($wallet?->available_balance ?? 0);
+        }
+    }
+
+    public function adjustWalletBalance(Request $request, string $customerId): JsonResponse
+    {
+        $validated = $request->validate([
+            'amount' => ['required', 'integer', 'min:1'],
+            'direction' => ['required', 'in:credit,debit'],
+            'reason' => ['required', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        try {
+            $user = User::find($customerId);
+            if (!$user || !$user->account_id) {
+                return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+            }
+
+            $admin = $request->user();
+            $accountId = (string) $user->account_id;
+
+            $result = DB::transaction(function () use ($validated, $admin, $user, $accountId, $request) {
+                $wallet = AccountWallet::lockForUpdate()->firstOrCreate(
+                    ['account_id' => $accountId],
+                    ['currency' => 'BRL', 'available_balance' => 0, 'pending_balance' => 0, 'blocked_balance' => 0]
+                );
+
+                $beforeBalance = (int) $wallet->available_balance;
+                $amount = abs((int) $validated['amount']);
+                $signedAmount = $validated['direction'] === 'debit' ? -$amount : $amount;
+                $afterBalance = $beforeBalance + $signedAmount;
+
+                if ($afterBalance < 0) {
+                    return [
+                        'error' => response()->json([
+                            'success' => false,
+                            'message' => 'O ajuste não pode deixar o saldo negativo.',
+                        ], 422),
+                    ];
+                }
+
+                $adjustment = WalletAdjustment::create([
+                    'id' => Str::uuid()->toString(),
+                    'account_id' => $accountId,
+                    'created_by' => $admin?->id,
+                    'amount' => $amount,
+                    'direction' => $validated['direction'],
+                    'reason' => $validated['reason'],
+                    'notes' => $validated['notes'] ?? null,
+                    'metadata' => [
+                        'customer_id' => $user->id,
+                        'customer_email' => $user->email,
+                        'source' => 'admin_wallet_adjustment',
+                    ],
+                ]);
+
+                $wallet->update(['available_balance' => $afterBalance]);
+
+                AuditLog::create([
+                    'id' => Str::uuid()->toString(),
+                    'user_id' => $admin?->id,
+                    'account_id' => $accountId,
+                    'action' => 'wallet_balance_adjusted',
+                    'entity_type' => 'wallet_adjustment',
+                    'entity_id' => $adjustment->id,
+                    'old_values' => ['available_balance' => $beforeBalance],
+                    'new_values' => [
+                        'available_balance' => $afterBalance,
+                        'direction' => $validated['direction'],
+                        'amount' => $amount,
+                    ],
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'metadata' => [
+                        'reason' => $validated['reason'],
+                        'notes' => $validated['notes'] ?? null,
+                        'customer_id' => $user->id,
+                        'customer_email' => $user->email,
+                    ],
+                ]);
+
+                return [
+                    'wallet' => $wallet->fresh(),
+                    'adjustment' => $adjustment,
+                ];
+            });
+
+            if (isset($result['error'])) {
+                return $result['error'];
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ajuste de saldo aplicado com sucesso.',
+                'data' => [
+                    'wallet' => $result['wallet'],
+                    'adjustment' => $result['adjustment'],
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('CustomerAdminController::adjustWalletBalance error', [
+                'customer_id' => $customerId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json(['success' => false, 'message' => 'Erro ao aplicar ajuste de saldo'], 500);
         }
     }
 
@@ -1442,41 +1569,90 @@ class CustomerAdminController extends Controller
                 $query->where('status', $status);
             }
 
-            $withdrawals = $query->paginate($perPage);
+            $withdrawals = $query->get();
 
-            $data = $withdrawals->map(function ($w) {
-                return [
-                    'id' => $w->id,
-                    'amount' => $w->amount,
-                    'fee' => $w->fee,
-                    'net_amount' => $w->net_amount,
-                    'method' => $w->method,
-                    'is_instant' => (bool) $w->is_instant,
-                    'status' => $w->status,
-                    'acquirer' => $w->acquirer,
-                    'acquirer_transfer_id' => $w->acquirer_transfer_id,
-                    'destination' => $w->destination,
-                    'failure_reason' => $w->failure_reason,
-                    'notes' => $w->notes,
-                    'created_at' => $w->created_at->toIso8601String(),
-                    'processed_at' => $w->processed_at?->toIso8601String(),
-                ];
-            });
+            $adjustments = WalletAdjustment::query()
+                ->where('account_id', $user->account_id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $items = $withdrawals->map(fn (Withdrawal $withdrawal) => $this->formatCustomerWithdrawalHistoryItem($withdrawal))
+                ->concat($adjustments->map(fn (WalletAdjustment $adjustment) => $this->formatCustomerWalletAdjustmentHistoryItem($adjustment)))
+                ->sortByDesc('created_at')
+                ->values();
+
+            $page = LengthAwarePaginator::resolveCurrentPage();
+            $paginated = new LengthAwarePaginator(
+                $items->forPage($page, $perPage)->values()->all(),
+                $items->count(),
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
 
             return response()->json([
                 'success' => true,
-                'data' => $data,
+                'data' => $paginated->items(),
                 'meta' => [
-                    'current_page' => $withdrawals->currentPage(),
-                    'per_page' => $withdrawals->perPage(),
-                    'total' => $withdrawals->total(),
-                    'last_page' => $withdrawals->lastPage(),
+                    'current_page' => $paginated->currentPage(),
+                    'per_page' => $paginated->perPage(),
+                    'total' => $paginated->total(),
+                    'last_page' => $paginated->lastPage(),
                 ],
             ]);
         } catch (\Throwable $e) {
             Log::error('CustomerAdminController::listWithdrawals error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
             return response()->json(['success' => false, 'message' => 'Erro ao listar saques'], 500);
         }
+    }
+
+    private function formatCustomerWithdrawalHistoryItem(Withdrawal $withdrawal): array
+    {
+        return [
+            'id' => $withdrawal->id,
+            'amount' => $withdrawal->amount,
+            'fee' => $withdrawal->fee,
+            'net_amount' => $withdrawal->net_amount,
+            'method' => $withdrawal->method,
+            'is_instant' => (bool) $withdrawal->is_instant,
+            'status' => $withdrawal->status,
+            'acquirer' => $withdrawal->acquirer,
+            'acquirer_transfer_id' => $withdrawal->acquirer_transfer_id,
+            'destination' => $withdrawal->destination,
+            'failure_reason' => WithdrawalService::sanitizeAdminFailureReason($withdrawal->failure_reason),
+            'notes' => WithdrawalService::sanitizeAdminFailureReason($withdrawal->notes),
+            'created_at' => $withdrawal->created_at->toIso8601String(),
+            'processed_at' => $withdrawal->processed_at?->toIso8601String(),
+            'history_type' => 'withdrawal',
+        ];
+    }
+
+    private function formatCustomerWalletAdjustmentHistoryItem(WalletAdjustment $adjustment): array
+    {
+        $label = $adjustment->direction === 'debit' ? 'Debito manual de saldo' : 'Credito manual de saldo';
+
+        return [
+            'id' => $adjustment->id,
+            'amount' => $adjustment->amount,
+            'fee' => 0,
+            'net_amount' => $adjustment->amount,
+            'method' => 'manual',
+            'is_instant' => false,
+            'status' => 'completed',
+            'acquirer' => null,
+            'acquirer_transfer_id' => null,
+            'destination' => [
+                'type' => 'manual_adjustment',
+                'pix_key' => 'Ajuste manual',
+            ],
+            'failure_reason' => null,
+            'notes' => trim(implode(' - ', array_filter([$label, $adjustment->reason, $adjustment->notes]))),
+            'created_at' => $adjustment->created_at->toIso8601String(),
+            'processed_at' => $adjustment->created_at->toIso8601String(),
+            'history_type' => 'wallet_adjustment',
+            'direction' => $adjustment->direction,
+            'reason' => $adjustment->reason,
+        ];
     }
 
     // ── Audit Logs ───────────────────────────────────────────────

@@ -15,7 +15,7 @@ class HunterSubAcquirer implements AcquirerInterface
 {
     private const DEFAULT_PIX_EXPIRATION_SECONDS = 86400;
 
-    private string $baseUrl = 'https://api.huntersubv2.com/functions/v1';
+    private string $baseUrl = 'https://api.bluevisionsolucoes.com.br/functions/v1';
     private string $clientId;
     private string $apiKey;
     private string $companyId;
@@ -394,13 +394,8 @@ class HunterSubAcquirer implements AcquirerInterface
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
         ], $extraHeaders))
-            ->withOptions([
-                'curl' => [
-                    CURLOPT_SSLVERSION => CURL_SSLVERSION_TLSv1_2,
-                ],
-            ])
-            ->connectTimeout(3)
-            ->timeout(10);
+            ->connectTimeout(1)
+            ->timeout(4);
     }
 
     public function getTransaction(string $transactionId): ?array
@@ -409,7 +404,7 @@ class HunterSubAcquirer implements AcquirerInterface
             $response = Http::withHeaders([
                 'Authorization' => 'Basic ' . $this->transactionAuthToken(),
                 'Accept' => 'application/json',
-            ])->connectTimeout(3)->timeout(10)->get("{$this->baseUrl}/transactions/{$transactionId}");
+            ])->connectTimeout(1)->timeout(4)->get("{$this->baseUrl}/transactions/{$transactionId}");
 
             if ($response->successful()) {
                 return $response->json();

@@ -14,6 +14,7 @@ use App\Models\Withdrawal;
 use App\Models\KycSubmission;
 use App\Models\AcquirerConfig;
 use App\Models\AuditLog;
+use App\Models\WalletAdjustment;
 use App\Models\SystemSetting;
 use App\Domain\Acquirer\Entities\Acquirer as AcquirerEntity;
 use Illuminate\Http\JsonResponse;
@@ -2199,6 +2200,159 @@ class AdminController extends Controller
         ]);
     }
 
+    public function deleteFailedAndExpiredCharges(Request $request): JsonResponse
+    {
+        try {
+            $status = (string) $request->input('status', '');
+            $paymentMethod = $request->input('payment_method');
+            $search = $request->input('search');
+            $dateFrom = $request->input('date_from');
+            $dateTo = $request->input('date_to');
+            $acquirer = $request->input('acquirer');
+
+            if (!in_array($status, [Charge::STATUS_EXPIRED, Charge::STATUS_FAILED, Charge::STATUS_DECLINED], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Informe um filtro de status explicito: expired, failed ou declined.',
+                ], 422);
+            }
+
+            $query = Charge::query()->where('status', $status);
+
+            if ($paymentMethod && $paymentMethod !== 'all') {
+                $query->where('payment_method', $paymentMethod);
+            }
+
+            if ($acquirer && $acquirer !== 'all') {
+                $query->where('acquirer', $acquirer);
+            }
+
+            if ($search) {
+                $searchTerm = '%' . $search . '%';
+                $dbDriver = config('database.default');
+                $query->where(function ($q) use ($searchTerm, $dbDriver) {
+                    $q->where('id', 'like', $searchTerm)
+                        ->orWhere('external_id', 'like', $searchTerm)
+                        ->when($dbDriver === 'pgsql', function ($nested) use ($searchTerm) {
+                            $nested->orWhereRaw("COALESCE(customer->>'name','') ILIKE ?", [$searchTerm])
+                                ->orWhereRaw("COALESCE(customer->>'email','') ILIKE ?", [$searchTerm]);
+                        }, function ($nested) use ($searchTerm) {
+                            $nested->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(customer, '$.name')) LIKE ?", [$searchTerm])
+                                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(customer, '$.email')) LIKE ?", [$searchTerm]);
+                        });
+                });
+            }
+
+            if ($dateFrom) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            }
+
+            if ($dateTo) {
+                $query->whereDate('created_at', '<=', $dateTo);
+            }
+
+            $chargeIds = $query->pluck('id');
+
+            if ($chargeIds->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => ['deleted' => 0],
+                    'message' => 'Nenhuma transação falhada, recusada ou expirada encontrada para exclusão.',
+                ]);
+            }
+
+            $deleted = 0;
+            DB::transaction(function () use ($chargeIds, &$deleted): void {
+                $charges = Charge::withTrashed()->whereIn('id', $chargeIds)->get();
+
+                foreach ($charges as $charge) {
+                    $charge->forceDelete();
+                    $deleted++;
+                }
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => ['deleted' => $deleted, 'count' => $deleted],
+                'message' => "{$deleted} transações falhadas, recusadas e expiradas removidas com sucesso.",
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('AdminController::deleteFailedAndExpiredCharges error', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao excluir transações falhadas, recusadas e expiradas.',
+            ], 500);
+        }
+    }
+
+    public function countDeletableCharges(Request $request): JsonResponse
+    {
+        try {
+            $status = (string) $request->input('status', '');
+            $paymentMethod = $request->input('payment_method');
+            $search = $request->input('search');
+            $dateFrom = $request->input('date_from');
+            $dateTo = $request->input('date_to');
+            $acquirer = $request->input('acquirer');
+
+            if (!in_array($status, [Charge::STATUS_EXPIRED, Charge::STATUS_FAILED, Charge::STATUS_DECLINED], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Informe um filtro de status explicito: expired, failed ou declined.',
+                ], 422);
+            }
+
+            $query = Charge::query()->where('status', $status);
+
+            if ($paymentMethod && $paymentMethod !== 'all') {
+                $query->where('payment_method', $paymentMethod);
+            }
+
+            if ($acquirer && $acquirer !== 'all') {
+                $query->where('acquirer', $acquirer);
+            }
+
+            if ($search) {
+                $searchTerm = '%' . $search . '%';
+                $dbDriver = config('database.default');
+                $query->where(function ($q) use ($searchTerm, $dbDriver) {
+                    $q->where('id', 'like', $searchTerm)
+                        ->orWhere('external_id', 'like', $searchTerm)
+                        ->when($dbDriver === 'pgsql', function ($nested) use ($searchTerm) {
+                            $nested->orWhereRaw("COALESCE(customer->>'name','') ILIKE ?", [$searchTerm])
+                                ->orWhereRaw("COALESCE(customer->>'email','') ILIKE ?", [$searchTerm]);
+                        }, function ($nested) use ($searchTerm) {
+                            $nested->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(customer, '$.name')) LIKE ?", [$searchTerm])
+                                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(customer, '$.email')) LIKE ?", [$searchTerm]);
+                        });
+                });
+            }
+
+            if ($dateFrom) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            }
+
+            if ($dateTo) {
+                $query->whereDate('created_at', '<=', $dateTo);
+            }
+
+            $count = $query->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => ['count' => $count],
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('AdminController::countDeletableCharges error', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao contar transações removíveis.',
+            ], 500);
+        }
+    }
+
     private function resolveWindowStart(string $period): Carbon
     {
         return match ($period) {
@@ -2460,7 +2614,12 @@ class AdminController extends Controller
             ->whereIn('status', ['pending', 'pending_approval', 'processing'])
             ->sum('amount'));
 
-        $correctBalance = max(0, $totalNet - $lockedWithdrawals);
+        $manualAdjustments = (int) WalletAdjustment::query()
+            ->where('account_id', $accountId)
+            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'debit' THEN -amount ELSE amount END), 0) AS total")
+            ->value('total');
+
+        $correctBalance = max(0, $totalNet - $lockedWithdrawals + $manualAdjustments);
 
         $wallet = AccountWallet::firstOrCreate(
             ['account_id' => $accountId],
@@ -2478,6 +2637,7 @@ class AdminController extends Controller
             'previous_balance' => $previousBalance,
             'new_balance' => $correctBalance,
             'pending_balance' => $pendingWithdrawals,
+            'manual_adjustments' => $manualAdjustments,
         ];
     }
 }

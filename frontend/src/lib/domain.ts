@@ -7,6 +7,10 @@
 const SYSTEM_HOSTS = [
   'localhost',
   '127.0.0.1',
+  'app.vectorpagamentos.com',
+  'vectorpagamentos.com',
+  'www.vectorpagamentos.com',
+  'api.vectorpagamentos.com',
   'app.vectorpagamentos.com.br',
   'vectorpagamentos.com.br',
   'www.vectorpagamentos.com.br',
@@ -15,7 +19,7 @@ const SYSTEM_HOSTS = [
 
 const SYSTEM_SUBDOMAINS = ['api', 'app', 'www', 'checkout', 'pay', 'members', 'mail', 'ftp', 'admin'];
 
-const PLATFORM_BASE_DOMAIN = 'vectorpagamentos.com.br';
+const PLATFORM_BASE_DOMAINS = ['vectorpagamentos.com', 'vectorpagamentos.com.br'];
 
 /**
  * Returns true if the current host is a custom domain or VectorPagamentos subdomain
@@ -31,12 +35,14 @@ export function isCustomDomain(): boolean {
   if (host === 'localhost' || host === '127.0.0.1') return false;
 
   // Check if it's a VectorPagamentos subdomain
-  if (host.endsWith('.' + PLATFORM_BASE_DOMAIN)) {
-    const sub = host.slice(0, -(PLATFORM_BASE_DOMAIN.length + 1));
-    // System subdomains → not custom
-    if (SYSTEM_SUBDOMAINS.includes(sub) || sub.includes('.')) return false;
-    // User subdomain → custom!
-    return true;
+  for (const baseDomain of PLATFORM_BASE_DOMAINS) {
+    if (host.endsWith('.' + baseDomain)) {
+      const sub = host.slice(0, -(baseDomain.length + 1));
+      // System subdomains → not custom
+      if (SYSTEM_SUBDOMAINS.includes(sub) || sub.includes('.')) return false;
+      // User subdomain → custom!
+      return true;
+    }
   }
 
   // Any other domain → custom domain
@@ -50,9 +56,16 @@ export function isCustomDomain(): boolean {
  */
 export function getSubdomainSlug(): string | null {
   const host = window.location.hostname.toLowerCase();
-  if (!host.endsWith('.' + PLATFORM_BASE_DOMAIN)) return null;
 
-  const sub = host.slice(0, -(PLATFORM_BASE_DOMAIN.length + 1));
-  if (SYSTEM_SUBDOMAINS.includes(sub) || sub.includes('.')) return null;
-  return sub;
+  for (const baseDomain of PLATFORM_BASE_DOMAINS) {
+    if (!host.endsWith('.' + baseDomain)) {
+      continue;
+    }
+
+    const sub = host.slice(0, -(baseDomain.length + 1));
+    if (SYSTEM_SUBDOMAINS.includes(sub) || sub.includes('.')) return null;
+    return sub;
+  }
+
+  return null;
 }

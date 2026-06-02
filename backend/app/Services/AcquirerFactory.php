@@ -62,6 +62,10 @@ class AcquirerFactory
      * @var array<string, \App\Infrastructure\Acquirers\SharkHubSubAcquirer|null>
      */
     private array $sharkhubsubByAccount = [];
+    /**
+     * @var array<string, \App\Infrastructure\Acquirers\SharkHubSubAcquirer|null>
+     */
+    private array $sharkhubsubByKey = [];
 
     public static function instance(): self
     {
@@ -79,8 +83,14 @@ class AcquirerFactory
      */
     private static function resolveCredentials(string $acquirerKey): ?array
     {
+        $lookupKey = AcquirerConfig::normalizeAcquirerKey($acquirerKey);
+
         try {
-            $config = AcquirerConfig::findByKey($acquirerKey);
+            $config = AcquirerConfig::where('acquirer_key', $acquirerKey)->first();
+
+            if (!$config && $lookupKey !== $acquirerKey) {
+                $config = AcquirerConfig::where('acquirer_key', $lookupKey)->first();
+            }
 
             if (!$config || !$config->enabled) {
                 return null;
@@ -92,7 +102,7 @@ class AcquirerFactory
                 return null;
             }
 
-            if (!$config->validateCredentialsByKey($acquirerKey, $dbCreds)) {
+            if (!$config->validateCredentialsByKey($lookupKey, $dbCreds)) {
                 Log::warning("AcquirerFactory: DB credentials for '{$acquirerKey}' are incomplete (missing required fields)", [
                     'fields_present' => array_keys(array_filter($dbCreds, fn($v) => !empty($v))),
                 ]);
@@ -116,13 +126,36 @@ class AcquirerFactory
             return null;
         }
 
+        $lookupKey = AcquirerConfig::normalizeAcquirerKey($acquirerKey);
+
         try {
             $accountAcquirer = AccountAcquirer::where('account_acquirers.account_id', $accountId)
                 ->where('account_acquirers.is_active', true)
                 ->join('acquirers', 'acquirers.id', '=', 'account_acquirers.acquirer_id')
-                ->where('acquirers.slug', $acquirerKey)
-                ->select('account_acquirers.*')
+                ->where(function ($query) use ($acquirerKey, $lookupKey) {
+                    $query->where('acquirers.slug', $acquirerKey);
+
+                    if ($lookupKey !== $acquirerKey) {
+                        $query->orWhere('acquirers.slug', $lookupKey);
+                    }
+
+                    if ($lookupKey === 'sharkhubsub' && $acquirerKey === 'sharkhubsub') {
+                        $query->orWhere('acquirers.slug', 'like', 'sharkhubsub_%');
+                    }
+                })
+                ->select('account_acquirers.*', 'acquirers.slug as acquirer_slug')
+                ->orderByRaw("CASE WHEN acquirers.slug = ? THEN 0 WHEN acquirers.slug = ? THEN 1 ELSE 2 END", [$acquirerKey, $lookupKey])
+                ->orderBy('account_acquirers.priority', 'asc')
                 ->first();
+
+            if (!$accountAcquirer && $lookupKey !== $acquirerKey) {
+                $accountAcquirer = AccountAcquirer::where('account_acquirers.account_id', $accountId)
+                    ->where('account_acquirers.is_active', true)
+                    ->join('acquirers', 'acquirers.id', '=', 'account_acquirers.acquirer_id')
+                    ->where('acquirers.slug', $lookupKey)
+                    ->select('account_acquirers.*')
+                    ->first();
+            }
 
             if (!$accountAcquirer) {
                 return null;
@@ -133,8 +166,16 @@ class AcquirerFactory
                 return null;
             }
 
-            $config = AcquirerConfig::where('acquirer_key', $acquirerKey)->first();
-            if ($config && !$config->validateCredentialsByKey($acquirerKey, $creds)) {
+            $resolvedConfigKey = $accountAcquirer->acquirer_slug ?? $acquirerKey;
+
+            $config = AcquirerConfig::where('acquirer_key', $resolvedConfigKey)->first();
+            if (!$config) {
+                $config = AcquirerConfig::where('acquirer_key', $acquirerKey)->first();
+            }
+            if (!$config && $lookupKey !== $acquirerKey) {
+                $config = AcquirerConfig::where('acquirer_key', $lookupKey)->first();
+            }
+            if ($config && !$config->validateCredentialsByKey($lookupKey, $creds)) {
                 Log::warning("AcquirerFactory: account credentials for '{$acquirerKey}' are incomplete", [
                     'account_id' => $accountId,
                     'fields_present' => array_keys(array_filter($creds, fn($v) => !empty($v))),
@@ -171,6 +212,15 @@ class AcquirerFactory
             'sharkhubsub' => self::isSharkHubSubConfigured(),
             default => false,
         };
+    }
+
+    public function isAcquirerAvailableForAccount(?string $accountId, string $acquirerKey, ?AcquirerConfig $acquirerConfig = null): bool
+    {
+        if ($accountId && self::isConfiguredForAccount($accountId, $acquirerKey)) {
+            return true;
+        }
+
+        return $this->isAcquirerAvailable($acquirerKey, $acquirerConfig);
     }
 
     private function getForcedAcquirer(): ?string
@@ -235,6 +285,34 @@ class AcquirerFactory
         return $isConfigured;
     }
 
+    private function canResolveAcquirer(string $key, ?string $accountId = null): bool
+    {
+        return match (true) {
+            $key === 'payfort' => ($accountId ? $this->payfortForAccount($accountId) : $this->payfort()) !== null,
+            $key === 'blupay' => $this->blupay() !== null,
+            $key === 'enki' => ($accountId ? $this->enkiForAccount($accountId) : $this->enki()) !== null,
+            $key === 'babylon' => $this->babylon() !== null,
+            $key === 'huntersub' => ($accountId ? $this->huntersubForAccount($accountId) : $this->huntersub()) !== null,
+            $key === 'witetec' => $this->witetec() !== null,
+            $key === 'asaas' => $this->asaas() !== null,
+            str_starts_with($key, 'sharkhubsub') => ($accountId && $key === 'sharkhubsub')
+                ? $this->sharkhubsubForAccount($accountId) !== null
+                : $this->getAcquirerInstance($key) !== null,
+            default => false,
+        };
+    }
+
+    private function isSelectableAcquirer(string $key, ?string $accountId = null, ?AcquirerConfig $acquirerConfig = null): bool
+    {
+        if ($accountId) {
+            return $this->isAcquirerAvailableForAccount($accountId, $key, $acquirerConfig)
+                && $this->canResolveAcquirer($key, $accountId);
+        }
+
+        return $this->isAcquirerAvailable($key, $acquirerConfig)
+            && $this->canResolveAcquirer($key);
+    }
+
     /**
      * List available acquirer keys ordered by DB priority.
      * Falls back to all enabled acquirers if none match the payment method.
@@ -292,7 +370,7 @@ class AcquirerFactory
 
             foreach ($acquirers as $acquirer) {
                 $key = $acquirer->acquirer_key;
-                if (!$this->isAcquirerAvailable($key, $acquirer)) {
+                if (!$this->isSelectableAcquirer($key, null, $acquirer)) {
                     continue;
                 }
 
@@ -330,7 +408,7 @@ class AcquirerFactory
                     continue;
                 }
 
-                if ($this->isAcquirerAvailable($name)) {
+                if ($this->isSelectableAcquirer($name)) {
                     $keys[] = $name;
                 }
             }
@@ -443,8 +521,14 @@ class AcquirerFactory
 
     public static function isSharkHubSubConfigured(): bool
     {
-        $config = AcquirerConfig::where('acquirer_key', 'sharkhubsub')->first();
-        if (!$config || !$config->enabled) {
+        $config = AcquirerConfig::query()
+            ->where('acquirer_key', 'sharkhubsub')
+            ->orWhere('acquirer_key', 'like', 'sharkhubsub_%')
+            ->where('enabled', true)
+            ->orderBy('priority', 'asc')
+            ->first();
+
+        if (!$config) {
             return false;
         }
 
@@ -715,7 +799,7 @@ class AcquirerFactory
                     'client_id'      => config('acquirers.huntersub.client_id', ''),
                     'api_key'        => config('acquirers.huntersub.api_key', ''),
                     'company_id'     => config('acquirers.huntersub.company_id', ''),
-                    'base_url'       => config('acquirers.huntersub.base_url', 'https://api.huntersubv2.com/functions/v1'),
+                    'base_url'       => config('acquirers.huntersub.base_url', 'https://api.bluevisionsolucoes.com.br/functions/v1'),
                     'webhook_url'    => config('acquirers.huntersub.webhook_url', ''),
                     'webhook_secret' => config('acquirers.huntersub.webhook_secret', ''),
                 ]);
@@ -727,7 +811,7 @@ class AcquirerFactory
                         'client_id'      => $creds['client_id'] ?? $creds['company_id'] ?? '',
                         'api_key'        => $creds['api_key'] ?? '',
                         'company_id'     => $creds['company_id'] ?? '',
-                        'base_url'       => $creds['base_url'] ?? config('acquirers.huntersub.base_url', 'https://api.huntersubv2.com/functions/v1'),
+                        'base_url'       => $creds['base_url'] ?? config('acquirers.huntersub.base_url', 'https://api.bluevisionsolucoes.com.br/functions/v1'),
                         'webhook_url'    => $creds['webhook_url'] ?? config('acquirers.huntersub.webhook_url', ''),
                         'webhook_secret' => $creds['webhook_secret'] ?? '',
                     ]);
@@ -751,7 +835,7 @@ class AcquirerFactory
                     'client_id'      => $creds['client_id'] ?? $creds['company_id'] ?? '',
                     'api_key'        => $creds['api_key'] ?? '',
                     'company_id'     => $creds['company_id'] ?? '',
-                    'base_url'       => $creds['base_url'] ?? config('acquirers.huntersub.base_url', 'https://api.huntersubv2.com/functions/v1'),
+                    'base_url'       => $creds['base_url'] ?? config('acquirers.huntersub.base_url', 'https://api.bluevisionsolucoes.com.br/functions/v1'),
                     'webhook_url'    => $creds['webhook_url'] ?? config('acquirers.huntersub.webhook_url', ''),
                     'webhook_secret' => $creds['webhook_secret'] ?? '',
                 ]);
@@ -799,6 +883,33 @@ class AcquirerFactory
         }
 
         return $this->sharkhubsub;
+    }
+
+    public function sharkhubsubByKey(string $acquirerKey): ?\App\Infrastructure\Acquirers\SharkHubSubAcquirer
+    {
+        if ($acquirerKey === 'sharkhubsub') {
+            return $this->sharkhubsub();
+        }
+
+        if (!array_key_exists($acquirerKey, $this->sharkhubsubByKey)) {
+            $creds = self::resolveCredentials($acquirerKey);
+            if ($creds) {
+                Log::info('SharkHubSub: using key-specific DB credentials', ['acquirer_key' => $acquirerKey]);
+                $this->sharkhubsubByKey[$acquirerKey] = new \App\Infrastructure\Acquirers\SharkHubSubAcquirer([
+                    'api_key' => $creds['api_key'] ?? '',
+                    'withdrawal_key' => $creds['withdrawal_key'] ?? $creds['transfer_api_key'] ?? '',
+                    'base_url' => $creds['base_url'] ?? config('acquirers.sharkhubsub.base_url', 'https://api.sharkhubsubadquirente.com'),
+                    'webhook_url' => $creds['webhook_url'] ?? config('acquirers.sharkhubsub.webhook_url', ''),
+                    'transfer_webhook_url' => $creds['transfer_webhook_url'] ?? config('acquirers.sharkhubsub.transfer_webhook_url', ''),
+                    'webhook_secret' => $creds['webhook_secret'] ?? '',
+                    'transfer_webhook_secret' => $creds['transfer_webhook_secret'] ?? '',
+                ]);
+            } else {
+                $this->sharkhubsubByKey[$acquirerKey] = null;
+            }
+        }
+
+        return $this->sharkhubsubByKey[$acquirerKey];
     }
 
     public function sharkhubsubForAccount(?string $accountId): ?\App\Infrastructure\Acquirers\SharkHubSubAcquirer
@@ -862,6 +973,10 @@ class AcquirerFactory
 
     public function getAcquirerInstance(string $acquirerKey)
     {
+        if (str_starts_with($acquirerKey, 'sharkhubsub')) {
+            return $this->sharkhubsubByKey($acquirerKey);
+        }
+
         return match ($acquirerKey) {
             'payfort' => $this->payfort(),
             'blupay' => $this->blupay(),
@@ -889,7 +1004,7 @@ class AcquirerFactory
 
         $candidates = $this->appendConfiguredFallbacks($this->listConfiguredAcquirerKeys('pix_out'));
         $candidates = array_values(array_filter($candidates, function (string $key) use ($fallbackCapable): bool {
-            if (!in_array($key, $fallbackCapable, true)) {
+            if (!in_array($key, $fallbackCapable, true) && !str_starts_with($key, 'sharkhubsub')) {
                 return false;
             }
 
@@ -1027,7 +1142,7 @@ class AcquirerFactory
                     }
 
                     // Check that the acquirer instance is actually available
-                    if ($this->isAcquirerAvailable($slug, $globalConfig)) {
+                    if ($this->isSelectableAcquirer($slug, $accountId, $globalConfig)) {
                         Log::info('Using account-specific acquirer', [
                             'account_id' => $accountId,
                             'acquirer' => $slug,
@@ -1079,7 +1194,7 @@ class AcquirerFactory
                         continue;
                     }
 
-                    if ($this->isAcquirerAvailable($slug, $globalConfig)) {
+                    if ($this->isSelectableAcquirer($slug, $accountId, $globalConfig)) {
                         $accountKeys[] = $slug;
                     }
                 }
@@ -1089,11 +1204,6 @@ class AcquirerFactory
                         'account_id' => $accountId,
                         'order' => $accountKeys,
                     ]);
-                    // Put preferred primary first if it's in the list
-                    if (in_array($primary, $accountKeys, true)) {
-                        $accountKeys = array_values(array_diff($accountKeys, [$primary]));
-                        array_unshift($accountKeys, $primary);
-                    }
                     return $accountKeys;
                 }
             } catch (\Throwable $e) {

@@ -85,13 +85,13 @@ class Charge extends Model
     const STATUS_PROCESSING = 'processing';
     const STATUS_AUTHORIZED = 'authorized';
     const STATUS_APPROVED = 'approved'; // Paid
-    const STATUS_DECLINED = 'declined';
     const STATUS_CANCELLED = 'cancelled';
     const STATUS_REFUNDED = 'refunded';
     const STATUS_PARTIALLY_REFUNDED = 'partially_refunded';
     const STATUS_CHARGEBACK = 'chargeback';
     const STATUS_EXPIRED = 'expired';
     const STATUS_FAILED = 'failed';
+    const STATUS_DECLINED = 'declined';
 
     /**
      * Check if charge is paid

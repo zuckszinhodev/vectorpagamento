@@ -25,6 +25,21 @@ import PixIcon from '@/components/icons/PixIcon';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import { ModernSplitCheckout } from '@/components/checkout/ModernSplitCheckout';
 
+const WITETEC_PUBLIC_KEY = 'pk_j8iPqjurYkTDxHjXsJqAQnhvmU-Ar9AnrBU8GcPYWfdO4I9R';
+const WITETEC_SHIELD_HELPER_URL = 'https://api.paysharkgateway.com.br/v1/js';
+
+declare global {
+  interface Window {
+    ShieldHelper?: {
+      getModuleName: () => string;
+      convertDecimalToCents: (amount: number, currency: string) => number;
+      prepareThreeDS: (payload: { amount: number; installments: number; currency: string }) => Promise<any>;
+      finishThreeDS?: (transaction: any) => Promise<void>;
+    };
+    [key: string]: any;
+  }
+}
+
 // Force light mode CSS variables for public checkout (overrides dashboard dark mode)
 const LIGHT_MODE_VARS = {
   '--surface-page': '#FAFAFA',
@@ -161,6 +176,42 @@ interface PaymentResult {
   boleto_barcode?: string;
   boleto_digitable_line?: string;
   has_upsells?: boolean;
+}
+
+async function loadWitetecShieldHelper(): Promise<void> {
+  if (window.ShieldHelper) {
+    return;
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${WITETEC_SHIELD_HELPER_URL}"]`);
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Erro ao carregar ShieldHelper')), { once: true });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = WITETEC_SHIELD_HELPER_URL;
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Erro ao carregar ShieldHelper'));
+    document.head.appendChild(script);
+  });
+
+  if (!window.ShieldHelper) {
+    throw new Error('ShieldHelper não disponível');
+  }
+}
+
+async function getPublicIp(): Promise<string> {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    return data?.ip || '127.0.0.1';
+  } catch {
+    return '127.0.0.1';
+  }
 }
 
 interface OrderBumpData {
@@ -903,13 +954,85 @@ export default function PublicCheckoutPage() {
 
   const paymentMutation = useMutation({
     mutationFn: async (data: PaymentForm) => {
+      let payload = data as any;
+
+      if (paymentMethod === 'credit_card' && data.card) {
+        await loadWitetecShieldHelper();
+
+        const moduleName = window.ShieldHelper?.getModuleName?.();
+        const shieldModule = moduleName ? window[moduleName] : null;
+
+        if (!shieldModule?.setPublicKey || !shieldModule?.encrypt) {
+          throw new Error('Módulo de criptografia do cartão indisponível');
+        }
+
+        await shieldModule.setPublicKey(WITETEC_PUBLIC_KEY);
+
+        const [expMonthRaw, expYearRaw] = (data.card.expiry || '').split('/');
+        const expMonth = Number((expMonthRaw || '').trim());
+        const expYearShort = Number((expYearRaw || '').trim());
+        const expYear = expYearShort >= 100 ? expYearShort : 2000 + expYearShort;
+
+        if (!expMonth || !expYear) {
+          throw new Error('Data de validade inválida');
+        }
+
+        const amountInCents = Number(totalWithBumps || 0);
+        const installments = Number(data.card.installments || 1);
+        const userIP = await getPublicIp();
+
+        let threeDSPayload: any = undefined;
+        let sessionId: string | undefined = undefined;
+
+        try {
+          const prepared = await window.ShieldHelper?.prepareThreeDS?.({
+            amount: amountInCents,
+            installments,
+            currency: 'BRL',
+          });
+
+          if (prepared && typeof prepared === 'object') {
+            sessionId = prepared.sessionId || prepared.sessionID || prepared.id || undefined;
+            threeDSPayload = prepared.threeDS || prepared.three_ds || undefined;
+          }
+        } catch {
+          // 3DS é melhor esforço; o provider pode aceitar sem challenge dependendo da configuração.
+        }
+
+        const encryptedToken = await shieldModule.encrypt({
+          number: data.card.number.replace(/\D/g, ''),
+          holderName: data.card.holder_name,
+          expMonth,
+          expYear,
+          cvv: data.card.cvv,
+        });
+
+        payload = {
+          ...data,
+          installments,
+          card: {
+            number: data.card.number.replace(/\D/g, ''),
+            holderName: data.card.holder_name,
+            holderDocument: (data.document || '').replace(/\D/g, ''),
+            expirationMonth: expMonth,
+            expirationYear: expYear,
+            cvv: data.card.cvv,
+            token: encryptedToken,
+            currency: 'BRL',
+            ip: userIP,
+            ...(sessionId ? { sessionId } : {}),
+            ...(threeDSPayload ? { threeDS: threeDSPayload } : {}),
+          },
+        };
+      }
+
       // Capture Facebook browser params from cookies/URL
       const fbclid = searchParams.get('fbclid') || undefined;
       const fbpCookie = document.cookie.match(/_fbp=([^;]+)/)?.[1];
       const fbcCookie = document.cookie.match(/_fbc=([^;]+)/)?.[1];
 
       const response = await api.post(`/checkout/${slug}/process`, {
-        ...data,
+        ...payload,
         payment_method: paymentMethod,
         affiliate_code: affiliateCode,
         order_bumps: Array.from(selectedBumps),
@@ -1079,7 +1202,7 @@ export default function PublicCheckoutPage() {
   const themeData = builderSettings?.theme || (checkout.theme || settings.theme || {}) as Partial<CheckoutTheme>;
   
   // Check template type
-  const template = (themeData as any).template || (settings.theme as any)?.template || 'classic';
+  const template = (themeData as any).template || (settings.theme as any)?.template || 'modern-split';
 
   // Product: merge settings.product (from builder) with checkout.product (live from backend)
   // Live backend product data takes priority for image_url (user may have updated it)
@@ -1179,16 +1302,23 @@ export default function PublicCheckoutPage() {
   // Render Modern Split Layout if template is 'modern-split'
   if (template === 'modern-split' && product) {
     return (
-      <ModernSplitCheckout
-        product={product}
-        theme={theme}
-        onSubmit={onSubmit}
-        isLoading={paymentMutation.isPending}
-        orderBumps={orderBumps}
-        selectedBumps={selectedBumps}
-        onToggleBump={toggleBump}
-        blocks={blocks}
-      />
+        <ModernSplitCheckout
+          product={product}
+          theme={theme}
+          onSubmit={onSubmit}
+          isLoading={paymentMutation.isPending}
+          orderBumps={orderBumps}
+          selectedBumps={selectedBumps}
+          onToggleBump={toggleBump}
+          blocks={blocks}
+          payment={payment}
+          checkoutSettings={{
+            collect_cpf: settings.collect_cpf,
+            collect_phone: settings.collect_phone,
+            collect_address: settings.collect_address,
+            payment_methods: payment.methods,
+          }}
+        />
     );
   }
 

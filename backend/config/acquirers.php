@@ -308,7 +308,7 @@ return [
         'webhook_secret' => env('HUNTERSUB_WEBHOOK_SECRET'),
 
         // API Base URL
-        'base_url' => env('HUNTERSUB_BASE_URL', 'https://api.huntersubv2.com/functions/v1'),
+        'base_url' => env('HUNTERSUB_BASE_URL', 'https://api.bluevisionsolucoes.com.br/functions/v1'),
 
         // Public webhook URL sent in transaction creation
         'webhook_url' => env('HUNTERSUB_WEBHOOK_URL', env('APP_URL') . '/api/v1/webhooks/huntersub'),

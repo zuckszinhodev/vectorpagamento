@@ -12,6 +12,11 @@ class AcquirerConfig extends Model
 {
     use HasUuids, SoftDeletes;
 
+    public static function normalizeAcquirerKey(string $acquirerKey): string
+    {
+        return str_starts_with($acquirerKey, 'sharkhubsub') ? 'sharkhubsub' : $acquirerKey;
+    }
+
     protected $keyType = 'string';
     public $incrementing = false;
 
@@ -222,7 +227,7 @@ class AcquirerConfig extends Model
      */
     protected function getEnvCredentials(): ?array
     {
-        $key = $this->acquirer_key;
+        $key = self::normalizeAcquirerKey($this->acquirer_key);
         $config = config("acquirers.{$key}");
         
         if (!$config || !is_array($config)) {
@@ -292,6 +297,11 @@ class AcquirerConfig extends Model
                 'webhook_url' => $config['webhook_url'] ?? null,
                 'transfer_webhook_url' => $config['transfer_webhook_url'] ?? null,
             ],
+            'witetec' => [
+                'api_key' => $config['api_key'] ?? null,
+                'webhook_secret' => $config['webhook_secret'] ?? null,
+                'base_url' => $config['base_url'] ?? null,
+            ],
             default => null,
         };
     }
@@ -301,6 +311,8 @@ class AcquirerConfig extends Model
      */
     public function validateCredentialsByKey(string $key, array $credentials): bool
     {
+        $key = self::normalizeAcquirerKey($key);
+
         return match ($key) {
             'stripe' => !empty($credentials['secret_key']) && !empty($credentials['publishable_key']),
             'pagarme' => !empty($credentials['api_key']),
@@ -313,6 +325,7 @@ class AcquirerConfig extends Model
             'huntersub' => !empty($credentials['api_key']) && !empty($credentials['company_id']),
             'sharkhubsub' => !empty($credentials['api_key']),
             'enki' => !empty($credentials['public_key']) && !empty($credentials['secret_key']),
+            'witetec' => !empty($credentials['api_key']),
             default => false,
         };
     }
@@ -322,6 +335,8 @@ class AcquirerConfig extends Model
      */
     public static function getCredentialFields(string $acquirerKey): array
     {
+        $acquirerKey = self::normalizeAcquirerKey($acquirerKey);
+
         return match ($acquirerKey) {
             'stripe' => [
                 ['key' => 'secret_key', 'label' => 'Secret Key', 'type' => 'password'],
@@ -391,6 +406,11 @@ class AcquirerConfig extends Model
                 ['key' => 'webhook_url', 'label' => 'Webhook Pagamento URL', 'type' => 'text'],
                 ['key' => 'transfer_webhook_url', 'label' => 'Webhook Saque URL', 'type' => 'text'],
             ],
+            'witetec' => [
+                ['key' => 'api_key', 'label' => 'API Key', 'type' => 'password'],
+                ['key' => 'webhook_secret', 'label' => 'Webhook Secret', 'type' => 'password'],
+                ['key' => 'base_url', 'label' => 'Base URL', 'type' => 'text'],
+            ],
             default => [],
         };
     }
@@ -426,6 +446,56 @@ class AcquirerConfig extends Model
         return $percentageFee + $fixedFee;
     }
 
+    private function resolveGatewayFeeRule(?string $paymentMethod = null, int $installments = 1): array
+    {
+        $settings = is_array($this->settings) ? $this->settings : [];
+        $feeRules = is_array($settings['gateway_fee_rules'] ?? null) ? $settings['gateway_fee_rules'] : [];
+        $method = strtolower(trim((string) ($paymentMethod ?? '')));
+
+        if ($method === '') {
+            return [
+                'percentage' => (float) $this->gateway_fee_percentage,
+                'fixed' => (float) $this->gateway_fee_fixed,
+            ];
+        }
+
+        if ($method === 'card') {
+            $method = 'credit_card';
+        }
+
+        $rule = $feeRules[$method] ?? null;
+        if (!is_array($rule)) {
+            return [
+                'percentage' => (float) $this->gateway_fee_percentage,
+                'fixed' => (float) $this->gateway_fee_fixed,
+            ];
+        }
+
+        $percentage = isset($rule['percentage']) ? (float) $rule['percentage'] : null;
+        $fixed = isset($rule['fixed']) ? (float) $rule['fixed'] : null;
+
+        if ($method === 'credit_card') {
+            $installmentRules = is_array($rule['installments'] ?? null) ? $rule['installments'] : [];
+            $installmentKey = (string) max(1, $installments);
+            $installmentRule = $installmentRules[$installmentKey] ?? null;
+
+            if (is_array($installmentRule)) {
+                if (isset($installmentRule['percentage'])) {
+                    $percentage = (float) $installmentRule['percentage'];
+                }
+
+                if (isset($installmentRule['fixed'])) {
+                    $fixed = (float) $installmentRule['fixed'];
+                }
+            }
+        }
+
+        return [
+            'percentage' => $percentage ?? (float) $this->gateway_fee_percentage,
+            'fixed' => $fixed ?? (float) $this->gateway_fee_fixed,
+        ];
+    }
+
     /**
      * Calculate the gateway fee for a given amount
      * This is what Vector Pagamentos charges customers
@@ -433,10 +503,11 @@ class AcquirerConfig extends Model
      * @param int $amountCents Amount in cents
      * @return int Fee in cents
      */
-    public function calculateGatewayFee(int $amountCents): int
+    public function calculateGatewayFee(int $amountCents, ?string $paymentMethod = null, int $installments = 1): int
     {
-        $percentageFee = (int) round($amountCents * ($this->gateway_fee_percentage / 100));
-        $fixedFee = (int) round($this->gateway_fee_fixed * 100); // Convert to cents
+        $rule = $this->resolveGatewayFeeRule($paymentMethod, $installments);
+        $percentageFee = (int) round($amountCents * (($rule['percentage'] ?? 0) / 100));
+        $fixedFee = (int) round(($rule['fixed'] ?? 0) * 100); // Convert to cents
         
         return $percentageFee + $fixedFee;
     }
@@ -448,9 +519,9 @@ class AcquirerConfig extends Model
      * @param int $amountCents Amount in cents
      * @return int Total fee in cents
      */
-    public function calculateTotalFee(int $amountCents): int
+    public function calculateTotalFee(int $amountCents, ?string $paymentMethod = null, int $installments = 1): int
     {
-        $gatewayFee = $this->calculateGatewayFee($amountCents);
+        $gatewayFee = $this->calculateGatewayFee($amountCents, $paymentMethod, $installments);
         $acquirerFee = $this->calculateAcquirerFee($amountCents);
         
         return $gatewayFee + $acquirerFee;
@@ -463,9 +534,9 @@ class AcquirerConfig extends Model
      * @param int $amountCents Transaction amount in cents
      * @return int Net amount in cents
      */
-    public function calculateNetAmount(int $amountCents): int
+    public function calculateNetAmount(int $amountCents, ?string $paymentMethod = null, int $installments = 1): int
     {
-        $totalFee = $this->calculateTotalFee($amountCents);
+        $totalFee = $this->calculateTotalFee($amountCents, $paymentMethod, $installments);
         return $amountCents - $totalFee;
     }
 
@@ -475,9 +546,9 @@ class AcquirerConfig extends Model
      * @param int $amountCents Transaction amount in cents
      * @return int Profit in cents
      */
-    public function calculatePlatformProfit(int $amountCents): int
+    public function calculatePlatformProfit(int $amountCents, ?string $paymentMethod = null, int $installments = 1): int
     {
-        $gatewayFee = $this->calculateGatewayFee($amountCents);
+        $gatewayFee = $this->calculateGatewayFee($amountCents, $paymentMethod, $installments);
         $acquirerFee = $this->calculateAcquirerFee($amountCents);
         
         return $gatewayFee - $acquirerFee;

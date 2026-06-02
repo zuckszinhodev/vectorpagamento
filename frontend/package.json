@@ -28,6 +28,7 @@
     "dompurify": "^3.3.3",
     "framer-motion": "^10.16.5",
     "lucide-react": "^0.294.0",
+    "pusher-js": "^8.5.0",
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-chartjs-2": "^5.2.0",

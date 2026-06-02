@@ -26,6 +26,8 @@ use Illuminate\Support\Str;
  */
 class WithdrawalService
 {
+    private const ADMIN_HIDDEN_FAILURE_MARKER = '[admin-hidden]';
+
     private AcquirerFactory $factory;
     private ?AcquirerRotationService $rotationService = null;
 
@@ -109,16 +111,25 @@ class WithdrawalService
 
         if ($result['success']) {
             $transferId = (string) ($result['transfer_id'] ?? '');
+            $transferParts = is_array($result['transfer_parts'] ?? null) ? $result['transfer_parts'] : [];
 
-            if ($transferId === '') {
+            if ($transferId === '' && $transferParts === []) {
                 $this->failWithdrawal($withdrawal, 'Acquirer PIX OUT did not return transfer_id');
                 return ['success' => false, 'error' => 'Acquirer PIX OUT did not return transfer_id'];
             }
 
+            $destination = $withdrawal->destination ?? [];
+            if ($transferParts !== []) {
+                $destination['transfer_parts'] = $transferParts;
+            } else {
+                unset($destination['transfer_parts']);
+            }
+
             $withdrawal->update([
                 'status'               => 'processing',
-                'acquirer_transfer_id' => $transferId,
-                'acquirer'             => $result['acquirer'] ?? 'payfort',
+                'acquirer_transfer_id' => $transferId !== '' ? $transferId : ($transferParts[0]['transfer_id'] ?? null),
+                'acquirer'             => $result['acquirer'] ?? ($transferParts[0]['acquirer'] ?? 'payfort'),
+                'destination'          => $destination,
                 'failure_reason'       => null,
                 'processed_at'         => null,
             ]);
@@ -187,6 +198,10 @@ class WithdrawalService
             'acquirer_status' => $acquirerStatus,
             'mapped_status'   => $mappedStatus,
         ]);
+
+        if ($this->withdrawalUsesTransferParts($withdrawal)) {
+            return $this->handleTransferPartStatus($withdrawal, $transferId, $mappedStatus, $rawData);
+        }
 
         if ($mappedStatus === 'completed') {
             return $this->completeWithdrawal($withdrawal, $rawData);
@@ -284,7 +299,7 @@ class WithdrawalService
 
         $withdrawals = Withdrawal::query()
             ->where('status', 'processing')
-            ->where('acquirer', 'sharkhubsub')
+            ->where('acquirer', 'like', 'sharkhubsub%')
             ->whereNotNull('acquirer_transfer_id')
             ->orderBy('updated_at')
             ->limit($limit)
@@ -295,7 +310,8 @@ class WithdrawalService
 
             try {
                 $transferId = (string) $withdrawal->acquirer_transfer_id;
-                $sharkhub = $this->factory->sharkhubsub();
+                $acquirerKey = (string) ($withdrawal->acquirer ?? 'sharkhubsub');
+                $sharkhub = $this->factory->getAcquirerInstance($acquirerKey);
 
                 if (!$sharkhub) {
                     $results['errors'][] = [
@@ -462,6 +478,7 @@ class WithdrawalService
         $skipReasons = [];
         $attemptedAcquirers = [];
         $withdrawalId = (string) ($transferData['external_ref'] ?? '');
+        $accountId = $transferData['metadata']['account_id'] ?? null;
         $acquirerOrder = $this->factory->getPixOutAcquirerOrder();
 
         if ($acquirerOrder === []) {
@@ -485,13 +502,13 @@ class WithdrawalService
                 continue;
             }
 
-            $instance = $this->factory->getAcquirerInstance($name);
+            $instance = $this->resolvePixOutAcquirerInstance($name, $accountId);
 
             // Refresh singleton factory if an acquirer instance becomes stale in long-running workers.
             if (!$instance || !method_exists($instance, 'sendPixTransfer')) {
                 AcquirerFactory::reset();
                 $this->factory = AcquirerFactory::instance();
-                $instance = $this->factory->getAcquirerInstance($name);
+                $instance = $this->resolvePixOutAcquirerInstance($name, $accountId);
             }
 
             if (!$instance || !method_exists($instance, 'sendPixTransfer')) {
@@ -564,10 +581,29 @@ class WithdrawalService
             'last_error' => $lastError,
         ]);
 
+        $fragmentedResult = $this->sendPixOutAcrossAcquirers($transferData, $lastError);
+        if (($fragmentedResult['success'] ?? false) === true) {
+            return $fragmentedResult;
+        }
+
         return [
             'success' => false,
-            'error'   => $lastError ?? 'Falha ao processar PIX OUT em todas as adquirentes',
+            'error'   => $fragmentedResult['error'] ?? $lastError ?? 'Falha ao processar PIX OUT em todas as adquirentes',
         ];
+    }
+
+    /**
+     * Resolve PIX OUT acquirer instance, preferring account-level credentials when supported.
+     */
+    private function resolvePixOutAcquirerInstance(string $name, ?string $accountId)
+    {
+        return match ($name) {
+            'payfort' => $this->factory->payfortForAccount($accountId),
+            'enki' => $this->factory->enkiForAccount($accountId),
+            'huntersub' => $this->factory->huntersubForAccount($accountId),
+            'sharkhubsub' => $this->factory->sharkhubsubForAccount($accountId),
+            default => $this->factory->getAcquirerInstance($name),
+        };
     }
 
     /**
@@ -634,6 +670,263 @@ class WithdrawalService
                 'error'         => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * @return array{success: bool, transfer_id?: string|null, acquirer?: string|null, transfer_parts?: array<int, array<string, mixed>>, error?: string}
+     */
+    private function sendPixOutAcrossAcquirers(array $transferData, ?string $lastError): array
+    {
+        $balances = $this->collectSplittableAcquirerBalances($transferData);
+        $requiredAmount = (int) ($transferData['amount_cents'] ?? 0);
+
+        if ($requiredAmount <= 0 || $balances === []) {
+            return [
+                'success' => false,
+                'error' => $lastError,
+            ];
+        }
+
+        $totalAvailable = array_sum(array_column($balances, 'available_cents'));
+        if ($totalAvailable < $requiredAmount) {
+            return [
+                'success' => false,
+                'error' => $lastError,
+            ];
+        }
+
+        $remaining = $requiredAmount;
+        $parts = [];
+
+        foreach ($balances as $balance) {
+            if ($remaining <= 0) {
+                break;
+            }
+
+            $partAmount = min($remaining, (int) $balance['available_cents']);
+            if ($partAmount <= 0) {
+                continue;
+            }
+
+            $partTransferData = $transferData;
+            $partTransferData['amount_cents'] = $partAmount;
+            $partTransferData['amount'] = $partAmount / 100;
+            $partTransferData['external_ref'] = sprintf('%s:part:%d', (string) ($transferData['external_ref'] ?? ''), count($parts) + 1);
+            $partTransferData['idempotency_key'] = sprintf('%s:part:%d', (string) ($transferData['idempotency_key'] ?? ''), count($parts) + 1);
+            $partTransferData['metadata'] = array_merge($transferData['metadata'] ?? [], [
+                'withdrawal_id' => $transferData['metadata']['withdrawal_id'] ?? null,
+                'split_part' => count($parts) + 1,
+                'split_total_amount' => $requiredAmount,
+            ]);
+
+            try {
+                $result = $balance['instance']->sendPixTransfer($partTransferData);
+            } catch (\Throwable $e) {
+                Log::error('WithdrawalService: split PIX OUT exception', [
+                    'withdrawal_id' => $transferData['external_ref'] ?? null,
+                    'acquirer' => $balance['acquirer'],
+                    'error' => $e->getMessage(),
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => self::ADMIN_HIDDEN_FAILURE_MARKER . ' Nao foi possivel combinar saldo entre nominais para concluir o saque.',
+                ];
+            }
+
+            if (!($result['success'] ?? false) || empty($result['transfer_id'])) {
+                Log::warning('WithdrawalService: split PIX OUT failed', [
+                    'withdrawal_id' => $transferData['external_ref'] ?? null,
+                    'acquirer' => $balance['acquirer'],
+                    'amount_cents' => $partAmount,
+                    'error' => $result['error'] ?? 'unknown',
+                ]);
+
+                return [
+                    'success' => false,
+                    'error' => self::ADMIN_HIDDEN_FAILURE_MARKER . ' Nao foi possivel combinar saldo entre nominais para concluir o saque.',
+                ];
+            }
+
+            $parts[] = [
+                'part' => count($parts) + 1,
+                'acquirer' => $balance['acquirer'],
+                'amount' => $partAmount,
+                'transfer_id' => (string) $result['transfer_id'],
+                'status' => $this->mapTransferStatus((string) ($result['status'] ?? 'processing')),
+            ];
+
+            $remaining -= $partAmount;
+        }
+
+        if ($remaining > 0 || $parts === []) {
+            return [
+                'success' => false,
+                'error' => self::ADMIN_HIDDEN_FAILURE_MARKER . ' Nao foi possivel combinar saldo entre nominais para concluir o saque.',
+            ];
+        }
+
+        Log::info('WithdrawalService: split PIX OUT accepted across multiple acquirers', [
+            'withdrawal_id' => $transferData['external_ref'] ?? null,
+            'parts' => $parts,
+        ]);
+
+        return [
+            'success' => true,
+            'transfer_id' => (string) ($parts[0]['transfer_id'] ?? ''),
+            'acquirer' => (string) ($parts[0]['acquirer'] ?? ''),
+            'status' => 'processing',
+            'transfer_parts' => $parts,
+        ];
+    }
+
+    /**
+     * @return array<int, array{acquirer: string, instance: mixed, available_cents: int}>
+     */
+    private function collectSplittableAcquirerBalances(array $transferData): array
+    {
+        $balances = [];
+        $accountId = $transferData['metadata']['account_id'] ?? null;
+
+        foreach ($this->factory->getPixOutAcquirerOrder() as $name) {
+            $instance = $this->resolvePixOutAcquirerInstance($name, $accountId);
+
+            if (!$instance || !method_exists($instance, 'sendPixTransfer') || !method_exists($instance, 'getBalance')) {
+                continue;
+            }
+
+            try {
+                $balance = $instance->getBalance();
+            } catch (\Throwable $e) {
+                Log::warning('WithdrawalService: failed to read acquirer balance for split payout', [
+                    'acquirer' => $name,
+                    'error' => $e->getMessage(),
+                ]);
+                continue;
+            }
+
+            $availableCents = $this->extractAvailableBalanceCents($name, $balance);
+            if ($availableCents <= 0) {
+                continue;
+            }
+
+            $balances[] = [
+                'acquirer' => $name,
+                'instance' => $instance,
+                'available_cents' => $availableCents,
+            ];
+        }
+
+        return $balances;
+    }
+
+    private function extractAvailableBalanceCents(string $acquirer, array $balance): int
+    {
+        if (!($balance['success'] ?? false)) {
+            return 0;
+        }
+
+        return match ($acquirer) {
+            'enki' => (int) ($balance['available'] ?? 0),
+            'blupay' => (int) round(((float) ($balance['pix_balance'] ?? 0)) * 100),
+            default => 0,
+        };
+    }
+
+    private function withdrawalUsesTransferParts(Withdrawal $withdrawal): bool
+    {
+        $parts = $withdrawal->destination['transfer_parts'] ?? null;
+
+        return is_array($parts) && $parts !== [];
+    }
+
+    private function handleTransferPartStatus(Withdrawal $withdrawal, string $transferId, string $mappedStatus, array $rawData): bool
+    {
+        $destination = $withdrawal->destination ?? [];
+        $parts = is_array($destination['transfer_parts'] ?? null) ? $destination['transfer_parts'] : [];
+        $matched = false;
+
+        foreach ($parts as $index => $part) {
+            if ((string) ($part['transfer_id'] ?? '') !== $transferId) {
+                continue;
+            }
+
+            $parts[$index]['status'] = $mappedStatus;
+            $parts[$index]['updated_at'] = now()->toIso8601String();
+            $matched = true;
+            break;
+        }
+
+        if (!$matched) {
+            return false;
+        }
+
+        $destination['transfer_parts'] = $parts;
+        $withdrawal->update(['destination' => $destination]);
+
+        if (collect($parts)->every(fn (array $part) => ($part['status'] ?? null) === 'completed')) {
+            return $this->completeWithdrawal($withdrawal, $rawData);
+        }
+
+        if (in_array($mappedStatus, ['failed', 'cancelled'], true)) {
+            $completedAmount = collect($parts)
+                ->filter(fn (array $part) => ($part['status'] ?? null) === 'completed')
+                ->sum(fn (array $part) => (int) ($part['amount'] ?? 0));
+
+            $this->failSplitWithdrawal($withdrawal, self::ADMIN_HIDDEN_FAILURE_MARKER . ' Saque parcialmente processado entre nominais e requer conciliacao manual.', $completedAmount);
+
+            return true;
+        }
+
+        return true;
+    }
+
+    private function failSplitWithdrawal(Withdrawal $withdrawal, string $reason, int $completedAmountCents): void
+    {
+        try {
+            DB::beginTransaction();
+
+            $withdrawal->markAsFailed($reason);
+
+            $wallet = AccountWallet::where('account_id', $withdrawal->account_id)->lockForUpdate()->first();
+            if ($wallet) {
+                $totalAmount = (int) round((float) $withdrawal->amount);
+                $refundableAmount = max(0, $totalAmount - $completedAmountCents);
+                $pendingBalance = (int) round((float) $wallet->pending_balance);
+                $pendingDecrement = min($pendingBalance, $totalAmount);
+
+                if ($pendingDecrement > 0) {
+                    $wallet->decrement('pending_balance', $pendingDecrement);
+                }
+
+                if ($refundableAmount > 0) {
+                    $wallet->increment('available_balance', $refundableAmount);
+                }
+            }
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('WithdrawalService: failed to revert split withdrawal', [
+                'withdrawal_id' => $withdrawal->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    public static function sanitizeAdminFailureReason(?string $reason): ?string
+    {
+        $reason = trim((string) ($reason ?? ''));
+
+        if ($reason === '') {
+            return null;
+        }
+
+        if (str_contains($reason, self::ADMIN_HIDDEN_FAILURE_MARKER)) {
+            return null;
+        }
+
+        return $reason;
     }
 
     /**

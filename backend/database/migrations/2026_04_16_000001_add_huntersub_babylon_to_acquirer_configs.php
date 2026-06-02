@@ -26,7 +26,7 @@ return new class extends Migration
                 'supported_methods' => json_encode(['pix', 'credit_card', 'boleto']),
                 'credentials' => null,
                 'settings' => json_encode([
-                    'base_url' => 'https://api.huntersubv2.com/functions/v1',
+                    'base_url' => 'https://api.bluevisionsolucoes.com.br/functions/v1',
                     'supports_installments' => true,
                     'max_installments' => 12,
                     'min_installment_amount' => 500,
@@ -93,7 +93,7 @@ return new class extends Migration
                 'is_active' => true,
                 'supported_methods' => json_encode(['pix', 'credit_card', 'boleto']),
                 'settings' => json_encode([
-                    'api_url' => 'https://api.huntersubv2.com/functions/v1',
+                    'api_url' => 'https://api.bluevisionsolucoes.com.br/functions/v1',
                 ]),
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -125,4 +125,3 @@ return new class extends Migration
         DB::table('acquirer_configs')->where('acquirer_key', 'babylon')->update(['enabled' => false]);
     }
 };
-

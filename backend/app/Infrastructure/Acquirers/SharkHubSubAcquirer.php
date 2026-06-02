@@ -5,6 +5,7 @@ namespace App\Infrastructure\Acquirers;
 use App\Domain\Acquirer\Contracts\AcquirerInterface;
 use App\Models\Account;
 use App\Models\Charge;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -99,10 +100,19 @@ class SharkHubSubAcquirer implements AcquirerInterface
             Log::info('SharkHubSub: creating PIX payment', [
                 'charge_id' => $charge->id,
                 'amount' => $charge->amount,
+                'base_url' => $this->baseUrl,
+                'payload' => $payload,
             ]);
 
             $response = $this->paymentClient()
                 ->post("{$this->baseUrl}/v1/payment", $payload);
+
+            Log::info('SharkHubSub: PIX payment response', [
+                'charge_id' => $charge->id,
+                'status' => $response->status(),
+                'headers' => $response->headers(),
+                'body' => $response->body(),
+            ]);
 
             if (!$response->successful()) {
                 $error = $this->responseJson($response);
@@ -224,6 +234,13 @@ class SharkHubSubAcquirer implements AcquirerInterface
         try {
             $response = $this->paymentClient()->get("{$this->baseUrl}/v1/payment/{$paymentId}");
 
+            Log::info('SharkHubSub: get payment response', [
+                'payment_id' => $paymentId,
+                'status' => $response->status(),
+                'headers' => $response->headers(),
+                'body' => $response->body(),
+            ]);
+
             if (!$response->successful()) {
                 Log::warning('SharkHubSub: get payment failed', [
                     'payment_id' => $paymentId,
@@ -300,8 +317,8 @@ class SharkHubSubAcquirer implements AcquirerInterface
     {
         $customer = $charge->customer ?? [];
         $account = $charge->relationLoaded('account') ? $charge->account : Account::find($charge->account_id);
-        $document = preg_replace('/\D/', '', (string) ($customer['document'] ?? ''));
-        $sellerDocument = preg_replace('/\D/', '', (string) ($account?->document ?? ''));
+        $document = $this->normalizeTaxId((string) ($customer['document'] ?? ''));
+        $sellerDocument = $this->resolveSellerTaxId($account);
         $description = (string) ($charge->description ?? 'Pagamento PIX');
         $metadata = array_merge($charge->metadata ?? [], [
             'charge_id' => $charge->id,
@@ -309,9 +326,12 @@ class SharkHubSubAcquirer implements AcquirerInterface
             'source' => 'vectorpagamentos',
             'provider' => 'vectorpagamentos',
             'orderId' => $charge->id,
-            'sellerTaxId' => $sellerDocument,
             'sellerEmail' => (string) ($account?->email ?? ''),
         ]);
+
+        if ($sellerDocument !== null) {
+            $metadata['sellerTaxId'] = $sellerDocument;
+        }
 
         return [
             'amount' => (int) $charge->amount,
@@ -320,12 +340,12 @@ class SharkHubSubAcquirer implements AcquirerInterface
             'description' => $description,
             'externalRef' => $charge->id,
             'notificationUrl' => $this->webhookUrl,
-            'payer' => [
+            'payer' => array_filter([
                 'name' => (string) ($customer['name'] ?? 'Cliente'),
                 'taxId' => $document,
                 'email' => (string) ($customer['email'] ?? 'cliente@email.com'),
                 'phone' => preg_replace('/\D/', '', (string) ($customer['phone'] ?? '')),
-            ],
+            ], static fn ($value) => $value !== null && $value !== ''),
             'items' => [[
                 'quantity' => 1,
                 'name' => $description,
@@ -334,9 +354,129 @@ class SharkHubSubAcquirer implements AcquirerInterface
             ]],
             'metadata' => array_map(
                 fn ($value) => is_scalar($value) || $value === null ? (string) ($value ?? '') : json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-                $metadata
+                array_filter($metadata, static fn ($value) => $value !== null && $value !== '')
             ),
         ];
+    }
+
+    private function normalizeTaxId(string $value): ?string
+    {
+        $digits = preg_replace('/\D/', '', $value);
+
+        if ($digits === '' || !in_array(strlen($digits), [11, 14], true)) {
+            return null;
+        }
+
+        $isValid = strlen($digits) === 11
+            ? $this->isValidCpf($digits)
+            : $this->isValidCnpj($digits);
+
+        if (!$isValid) {
+            return null;
+        }
+
+        return $digits;
+    }
+
+    private function normalizeSellerTaxId(string $value): ?string
+    {
+        $digits = preg_replace('/\D/', '', $value);
+
+        if ($digits === '' || !in_array(strlen($digits), [11, 14], true)) {
+            return null;
+        }
+
+        return $digits;
+    }
+
+    private function resolveSellerTaxId(?Account $account): ?string
+    {
+        $accountDocument = $this->normalizeSellerTaxId((string) ($account?->document ?? ''));
+        if ($accountDocument !== null) {
+            return $accountDocument;
+        }
+
+        if (!$account?->id) {
+            return null;
+        }
+
+        $user = User::query()
+            ->where('account_id', $account->id)
+            ->with('latestKycSubmission')
+            ->orderByDesc('created_at')
+            ->first();
+
+        $kyc = $user?->latestKycSubmission;
+        if (!$kyc) {
+            return null;
+        }
+
+        $candidates = [
+            (string) ($kyc->company_document ?? ''),
+            (string) ($kyc->document_number ?? ''),
+        ];
+
+        foreach ($candidates as $candidate) {
+            $normalized = $this->normalizeSellerTaxId($candidate);
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        return null;
+    }
+
+    private function isValidCpf(string $cpf): bool
+    {
+        if (!preg_match('/^\d{11}$/', $cpf) || preg_match('/^(\d)\1{10}$/', $cpf)) {
+            return false;
+        }
+
+        for ($digitIndex = 9; $digitIndex < 11; $digitIndex++) {
+            $sum = 0;
+
+            for ($cursor = 0; $cursor < $digitIndex; $cursor++) {
+                $sum += ((int) $cpf[$cursor]) * (($digitIndex + 1) - $cursor);
+            }
+
+            $checkDigit = ((10 * $sum) % 11) % 10;
+            if ((int) $cpf[$digitIndex] !== $checkDigit) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function isValidCnpj(string $cnpj): bool
+    {
+        if (!preg_match('/^\d{14}$/', $cnpj) || preg_match('/^(\d)\1{13}$/', $cnpj)) {
+            return false;
+        }
+
+        $weightsOne = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+        $weightsTwo = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+        $sum = 0;
+        for ($index = 0; $index < 12; $index++) {
+            $sum += ((int) $cnpj[$index]) * $weightsOne[$index];
+        }
+
+        $remainder = $sum % 11;
+        $digitOne = $remainder < 2 ? 0 : 11 - $remainder;
+        if ((int) $cnpj[12] !== $digitOne) {
+            return false;
+        }
+
+        $sum = 0;
+        for ($index = 0; $index < 13; $index++) {
+            $sum += ((int) $cnpj[$index]) * $weightsTwo[$index];
+        }
+
+        $remainder = $sum % 11;
+        $digitTwo = $remainder < 2 ? 0 : 11 - $remainder;
+
+        return (int) $cnpj[13] === $digitTwo;
     }
 
     private function paymentClient()

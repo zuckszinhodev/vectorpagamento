@@ -23,13 +23,20 @@ class PixNominalNameService
             ];
         }
 
-        $account = $this->resolveNominalTestAccount($preferredAccountId);
+        $account = $this->resolveNominalTestAccount($preferredAccountId, $config->acquirer_key);
         if (!$account) {
             return [
                 'success' => false,
                 'message' => 'Nao existe nenhuma conta ativa para gerar o PIX de teste da nominal',
             ];
         }
+
+        Log::info('PixNominalNameService: refreshing nominal', [
+            'acquirer_key' => $config->acquirer_key,
+            'display_name' => $config->display_name,
+            'account_id' => $account->id,
+            'preferred_account_id' => $preferredAccountId,
+        ]);
 
         $charge = Charge::create([
             'account_id' => $account->id,
@@ -52,6 +59,12 @@ class PixNominalNameService
         $result = $this->generateVerificationPix($config->acquirer_key, $charge);
         if (!$result || !($result['success'] ?? false)) {
             $charge->update(['status' => 'failed']);
+
+            Log::warning('PixNominalNameService: PIX generation failed', [
+                'acquirer_key' => $config->acquirer_key,
+                'charge_id' => $charge->id,
+                'result' => $result,
+            ]);
 
             return [
                 'success' => false,
@@ -85,12 +98,15 @@ class PixNominalNameService
         $oldName = trim((string) $config->nominal_name);
         $config->nominal_name = $nominalName;
         $config->save();
+        $config->refresh();
 
         return [
             'success' => true,
+            'id' => $config->id,
             'acquirer' => $config->acquirer_key,
-            'nominal_name' => $nominalName,
-            'changed' => $oldName !== $nominalName,
+            'display_name' => $config->display_name,
+            'nominal_name' => $config->nominal_name,
+            'changed' => $oldName !== $config->nominal_name,
         ];
     }
 
@@ -117,7 +133,7 @@ class PixNominalNameService
 
     public function syncFromCharge(Charge $charge, array $paymentResult = []): ?string
     {
-        $acquirerKey = trim((string) ($paymentResult['acquirer'] ?? $charge->acquirer ?? ''));
+        $acquirerKey = trim((string) ($charge->acquirer ?: ($paymentResult['acquirer'] ?? '')));
 
         if ($acquirerKey === '') {
             return null;
@@ -139,6 +155,7 @@ class PixNominalNameService
                 }
 
                 $this->updateAcquirerNominalName($acquirerKey, $nominalName);
+                $this->updateChargeNominalName($charge, $nominalName);
 
                 return $nominalName;
             }
@@ -183,6 +200,7 @@ class PixNominalNameService
             }
 
             $this->updateAcquirerNominalName($acquirerKey, $nominalName);
+            $this->updateChargeNominalName($charge, $nominalName);
 
             return $nominalName;
         }
@@ -205,13 +223,20 @@ class PixNominalNameService
             return null;
         }
 
-        return $this->formatMerchantName($merchantName);
+        return trim($merchantName);
     }
 
     private function updateAcquirerNominalName(string $acquirerKey, string $nominalName): void
     {
         try {
             $config = AcquirerConfig::where('acquirer_key', $acquirerKey)->first();
+
+            if (!$config) {
+                $normalizedKey = AcquirerConfig::normalizeAcquirerKey($acquirerKey);
+                if ($normalizedKey !== $acquirerKey) {
+                    $config = AcquirerConfig::where('acquirer_key', $normalizedKey)->first();
+                }
+            }
 
             if (!$config) {
                 return;
@@ -226,6 +251,29 @@ class PixNominalNameService
         } catch (\Throwable $e) {
             Log::warning('Failed to sync PIX nominal name', [
                 'acquirer' => $acquirerKey,
+                'nominal_name' => $nominalName,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function updateChargeNominalName(Charge $charge, string $nominalName): void
+    {
+        try {
+            $metadata = is_array($charge->metadata) ? $charge->metadata : [];
+
+            if (trim((string) ($metadata['nominal_name'] ?? '')) === $nominalName) {
+                return;
+            }
+
+            $metadata['nominal_name'] = $nominalName;
+
+            $charge->forceFill([
+                'metadata' => $metadata,
+            ])->save();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to sync charge nominal name', [
+                'charge_id' => $charge->id,
                 'nominal_name' => $nominalName,
                 'error' => $e->getMessage(),
             ]);
@@ -263,46 +311,77 @@ class PixNominalNameService
         return $fields;
     }
 
-    private function formatMerchantName(string $name): string
-    {
-        $normalized = preg_replace('/[_\s]+/', ' ', trim($name)) ?? trim($name);
-        $normalized = Str::lower($normalized);
-        $normalized = str_replace(
-            ['intermediacoes', 'transacoes', 'solucoes', 'informacoes'],
-            ['intermediações', 'transações', 'soluções', 'informações'],
-            $normalized
-        );
-
-        return ucfirst($normalized);
-    }
-
     private function generateVerificationPix(string $acquirerKey, Charge $charge): ?array
     {
         $paymentService = app(PaymentService::class);
         $factory = AcquirerFactory::instance();
 
+        if (str_starts_with($acquirerKey, 'sharkhubsub')) {
+            return $factory->getAcquirerInstance($acquirerKey) ? $paymentService->generatePixViaSharkHubSub($charge) : null;
+        }
+
         return match ($acquirerKey) {
-            'payfort' => $factory->payfort() ? $paymentService->generatePixViaPayFort($charge) : null,
+            'payfort' => $factory->payfortForAccount($charge->account_id) ? $paymentService->generatePixViaPayFort($charge) : null,
             'blupay' => $factory->blupay() ? $paymentService->generatePixViaBluPay($charge) : null,
-            'enki' => $factory->enki() ? $paymentService->generatePixViaEnki($charge) : null,
-            'huntersub' => $factory->huntersub() ? $paymentService->generatePixViaHunterSub($charge) : null,
-            'sharkhubsub' => $factory->sharkhubsub() ? $paymentService->generatePixViaSharkHubSub($charge) : null,
+            'enki' => $factory->enkiForAccount($charge->account_id) ? $paymentService->generatePixViaEnki($charge) : null,
+            'huntersub' => $factory->huntersubForAccount($charge->account_id) ? $paymentService->generatePixViaHunterSub($charge) : null,
+            'witetec' => $factory->witetec() ? $paymentService->generatePixViaWitetec($charge) : null,
             'babylon' => $paymentService->isConfigured() ? $paymentService->generatePix($charge) : null,
             default => null,
         };
     }
 
-    private function resolveNominalTestAccount(?string $preferredAccountId = null): ?Account
+    private function resolveNominalTestAccount(?string $preferredAccountId = null, ?string $acquirerKey = null): ?Account
     {
         if ($preferredAccountId) {
             $account = Account::where('id', $preferredAccountId)->first();
-            if ($account) {
+            if ($account && $this->accountSupportsNominalVerification($account, $acquirerKey)) {
                 return $account;
             }
         }
 
-        return Account::where('status', 'active')->orderBy('created_at')->first()
-            ?? Account::orderBy('created_at')->first();
+        $activeAccounts = Account::where('status', 'active')->orderBy('created_at')->get();
+        foreach ($activeAccounts as $account) {
+            if ($this->accountSupportsNominalVerification($account, $acquirerKey)) {
+                return $account;
+            }
+        }
+
+        $allAccounts = Account::orderBy('created_at')->get();
+        foreach ($allAccounts as $account) {
+            if ($this->accountSupportsNominalVerification($account, $acquirerKey)) {
+                return $account;
+            }
+        }
+
+        return $activeAccounts->first() ?? $allAccounts->first();
+    }
+
+    private function accountSupportsNominalVerification(Account $account, ?string $acquirerKey = null): bool
+    {
+        $normalizedKey = (string) $acquirerKey;
+        $document = preg_replace('/\D+/', '', (string) ($account->document ?? ''));
+        $email = trim((string) ($account->email ?? ''));
+        $phone = preg_replace('/\D+/', '', (string) ($account->phone ?? ''));
+        $name = trim((string) ($account->name ?? ''));
+
+        if (str_starts_with($normalizedKey, 'witetec')) {
+            if (str_starts_with($phone, '55') && strlen($phone) >= 12) {
+                $phone = substr($phone, 2);
+            }
+
+            return $name !== ''
+                && $email !== ''
+                && filter_var($email, FILTER_VALIDATE_EMAIL) !== false
+                && $this->isValidCpfOrCnpj($document)
+                && strlen($phone) >= 10;
+        }
+
+        if (!str_starts_with($normalizedKey, 'sharkhubsub')) {
+            return true;
+        }
+
+        return $this->isValidCpfOrCnpj($document) && $email !== '';
     }
 
     private function resolveNominalCustomerName(Account $account): string

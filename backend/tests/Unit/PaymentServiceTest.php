@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\Account;
 use App\Models\AccountAcquirer;
+use App\Models\AccountCustomFee;
 use App\Models\AccountWallet;
 use App\Models\AcquirerConfig;
 use App\Models\Charge;
@@ -285,6 +286,61 @@ it('fills a fallback customer phone when generating enki pix', function () {
     expect($result['success'])->toBeTrue();
     expect($capturedPhone)->toBe('11999999999');
     expect($charge->fresh()->acquirer)->toBe('enki');
+});
+
+it('uses account custom fee as final fee without adding acquirer fee', function () {
+    AccountWallet::create([
+        'id' => Str::uuid()->toString(),
+        'account_id' => $this->account->id,
+        'available_balance' => 0,
+        'pending_balance' => 0,
+        'blocked_balance' => 0,
+        'currency' => 'BRL',
+    ]);
+
+    AcquirerConfig::create([
+        'id' => Str::uuid()->toString(),
+        'acquirer_key' => 'enki',
+        'display_name' => 'Enki',
+        'enabled' => true,
+        'supported_methods' => ['pix'],
+        'gateway_fee_percentage' => 10.00,
+        'gateway_fee_fixed' => 2.00,
+        'acquirer_fee_percentage' => 1.50,
+        'acquirer_fee_fixed' => 0.50,
+    ]);
+
+    AccountCustomFee::create([
+        'id' => Str::uuid()->toString(),
+        'account_id' => $this->account->id,
+        'pix_fee_percent' => 4.00,
+        'pix_fee_fixed' => 0.00,
+    ]);
+
+    $charge = Charge::create([
+        'id' => Str::uuid()->toString(),
+        'account_id' => $this->account->id,
+        'amount' => 10000,
+        'currency' => 'BRL',
+        'payment_method' => 'pix',
+        'status' => 'approved',
+        'acquirer' => 'enki',
+        'customer' => [
+            'name' => 'Cliente Teste',
+            'email' => 'cliente@example.com',
+            'document' => '12345678900',
+        ],
+        'idempotency_key' => Str::random(32),
+    ]);
+
+    $this->service->updateWalletOnPayment($charge);
+
+    $charge->refresh();
+    $wallet = AccountWallet::where('account_id', $this->account->id)->firstOrFail();
+
+    expect((int) $charge->fee_amount)->toBe(400);
+    expect((int) $charge->net_amount)->toBe(9600);
+    expect((int) $wallet->available_balance)->toBe(9600);
 });
 
 it('uses the global admin priority for pix even when the account links payfort', function () {

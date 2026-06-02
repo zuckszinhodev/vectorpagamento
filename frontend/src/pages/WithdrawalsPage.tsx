@@ -42,17 +42,20 @@ interface Withdrawal {
  net_amount: number;
  is_instant?: boolean;
  status: 'pending' | 'pending_approval' | 'processing' | 'approved' | 'completed' | 'failed' | 'cancelled';
- failure_reason?: string;
- method: 'pix' | 'bank_transfer';
- destination: {
- type: 'pix' | 'bank_account';
- pix_key?: string;
- bank_name?: string;
- account_number?: string;
- };
- created_at: string;
- processed_at?: string;
- notes?: string;
+  failure_reason?: string;
+ method: 'pix' | 'bank_transfer' | 'manual';
+  destination: {
+  type: 'pix' | 'bank_account' | 'manual_adjustment';
+  pix_key?: string;
+  bank_name?: string;
+  account_number?: string;
+  };
+  created_at: string;
+  processed_at?: string;
+  notes?: string;
+  history_type?: 'withdrawal' | 'wallet_adjustment';
+  direction?: 'credit' | 'debit';
+  reason?: string;
 }
 
 interface WithdrawalSettings {
@@ -457,9 +460,7 @@ export default function WithdrawalsPage() {
  ? withdrawals
  : withdrawals.filter(w => w.status === selectedStatus);
 
- const getWithdrawalReason = (withdrawal: Withdrawal) => withdrawal.failure_reason || withdrawal.notes;
-
- return (
+  return (
  <div className="space-y-5">
  <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-5 sm:p-6">
  <h1 className="text-2xl font-bold tracking-tight text-tx-primary">Saques</h1>
@@ -648,9 +649,7 @@ export default function WithdrawalsPage() {
  filteredWithdrawals.map((withdrawal) => {
  const config = statusConfig[withdrawal.status];
  const StatusIcon = config.icon;
- const withdrawalReason = getWithdrawalReason(withdrawal);
-
- return (
+  return (
  <tr key={withdrawal.id} className="transition-colors hover:bg-surface-hover/40">
  <td className="py-4 px-6">
  <div className="flex items-center gap-2 text-sm">
@@ -665,16 +664,21 @@ export default function WithdrawalsPage() {
  </td>
  <td className="py-4 px-6">
  <div className="flex items-center gap-2">
- {withdrawal.method === 'pix' ? (
- <>
- <PixIcon className="h-5 w-5 text-accent-primary/90" />
- <span className="text-sm font-medium text-tx-primary">PIX</span>
- </>
- ) : (
- <>
- <BuildingLibraryIcon className="h-5 w-5 text-tx-muted" />
- <span className="text-sm font-medium text-tx-primary">TED</span>
- </>
+  {withdrawal.method === 'pix' ? (
+  <>
+  <PixIcon className="h-5 w-5 text-accent-primary/90" />
+  <span className="text-sm font-medium text-tx-primary">PIX</span>
+  </>
+  ) : withdrawal.method === 'manual' ? (
+  <>
+  <CurrencyDollarIcon className="h-5 w-5 text-tx-muted" />
+  <span className="text-sm font-medium text-tx-primary">AJUSTE</span>
+  </>
+  ) : (
+  <>
+  <BuildingLibraryIcon className="h-5 w-5 text-tx-muted" />
+  <span className="text-sm font-medium text-tx-primary">TED</span>
+  </>
  )}
  {withdrawal.is_instant && (
  <span className="inline-flex items-center gap-0.5 rounded-full border border-accent-primary/30 bg-accent-subtle px-1.5 py-0.5 text-[10px] font-semibold text-accent-primary">
@@ -685,14 +689,21 @@ export default function WithdrawalsPage() {
  </div>
  </td>
  <td className="py-4 px-6">
- {withdrawal.destination.type === 'pix' ? (
- <div className="text-sm text-tx-secondary">
- {withdrawal.destination.pix_key}
- </div>
- ) : (
- <div>
- <div className="text-sm font-medium text-tx-primary">
- {withdrawal.destination.bank_name}
+  {withdrawal.destination.type === 'pix' ? (
+  <div className="text-sm text-tx-secondary">
+  {withdrawal.destination.pix_key}
+  </div>
+  ) : withdrawal.destination.type === 'manual_adjustment' ? (
+  <div>
+  <div className="text-sm font-medium text-tx-primary">Ajuste manual</div>
+  <div className="text-xs text-tx-muted">
+  {withdrawal.direction === 'debit' ? 'Debito de saldo' : 'Credito de saldo'}
+  </div>
+  </div>
+  ) : (
+  <div>
+  <div className="text-sm font-medium text-tx-primary">
+  {withdrawal.destination.bank_name}
  </div>
  <div className="text-xs text-tx-muted">
  {withdrawal.destination.account_number}
@@ -725,21 +736,16 @@ export default function WithdrawalsPage() {
  <StatusIcon className="h-3.5 w-3.5" />
  {config.label}
  </span>
- {withdrawalReason && (
- <p className="mt-2 text-xs leading-5 text-tx-muted whitespace-pre-line break-words">
- Motivo: {withdrawalReason}
- </p>
- )}
- </div>
- </div>
- </td>
+  </div>
+  </div>
+  </td>
  <td className="py-4 px-6">
  <div className="flex justify-center">
- {withdrawal.status === 'pending' && (
- <button
- onClick={() => handleCancelWithdrawal(withdrawal.id)}
- disabled={cancelWithdrawalMutation.isPending}
- className="inline-flex items-center gap-1.5 rounded-element border border-status-error/30 px-3 py-1.5 text-xs font-semibold text-status-error transition-colors hover:bg-status-error-subtle disabled:opacity-50"
+  {withdrawal.status === 'pending' && withdrawal.history_type !== 'wallet_adjustment' && (
+  <button
+  onClick={() => handleCancelWithdrawal(withdrawal.id)}
+  disabled={cancelWithdrawalMutation.isPending}
+  className="inline-flex items-center gap-1.5 rounded-element border border-status-error/30 px-3 py-1.5 text-xs font-semibold text-status-error transition-colors hover:bg-status-error-subtle disabled:opacity-50"
  >
  <XCircleIcon className="h-4 w-4" />
  Cancelar

@@ -34,7 +34,7 @@ export default function WazerIAPage() {
 
   const getHistory = (): WazerAIChatMessage[] => {
     return messages.filter(m => !m.isLoading).slice(-20)
-      .map(m => ({ role: m.role, content: m.content }));
+      .map(m => ({ role: m.role, content: asText(m.content) }));
   };
 
   const copyMessage = (id: string, content: string) => {
@@ -73,7 +73,7 @@ export default function WazerIAPage() {
         setMessages(prev =>
           prev.map(m =>
             m.id === loadingMessage.id
-              ? { ...m, content: response.data.message, isLoading: false, actionResult: response.data.action_result }
+              ? { ...m, content: asText(response.data.message), isLoading: false, actionResult: response.data.action_result }
               : m
           )
         );
@@ -87,7 +87,7 @@ export default function WazerIAPage() {
         );
       }
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Erro de conexão. Verifique sua internet e tente novamente.';
+      const errorMsg = asErrorMessage(err?.response?.data?.error) || 'Erro de conexão. Verifique sua internet e tente novamente.';
       setMessages(prev =>
         prev.map(m =>
           m.id === loadingMessage.id
@@ -107,25 +107,30 @@ export default function WazerIAPage() {
     }
   };
 
-  const firstName = user?.name?.split(' ')[0] || 'Usuário';
+  const firstName = asText(user?.name).split(' ')[0] || 'Usuario';
   const userInitial = firstName.charAt(0).toUpperCase() || 'U';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
 
   return (
-    <div className="flex h-[calc(100vh-80px)] flex-col overflow-hidden">
+    <div className="flex min-h-[calc(100vh-5rem)] flex-col overflow-hidden rounded-2xl border border-border-DEFAULT bg-surface-card/70 shadow-sm backdrop-blur-sm">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border-DEFAULT px-6 py-3">
-        <div>
-          <div>
-            <h1 className="text-base font-semibold text-tx-primary">VectorIA</h1>
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">Online</p>
+      <div className="flex flex-col gap-3 border-b border-border-DEFAULT px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-lg font-semibold text-tx-primary sm:text-xl">VectorIA</h1>
+            <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+              Online
+            </span>
           </div>
+          <p className="mt-1 text-sm text-tx-muted">
+            Assistente para operacao, vendas e criacao de fluxos dentro da plataforma.
+          </p>
         </div>
         {messages.length > 0 && (
           <button
             onClick={() => setMessages([])}
-            className="rounded-lg px-2.5 py-1.5 text-xs text-tx-muted hover:bg-surface-hover transition-colors"
+            className="rounded-lg px-3 py-2 text-sm text-tx-muted transition-colors hover:bg-surface-hover sm:text-xs"
           >
             Limpar
           </button>
@@ -133,21 +138,21 @@ export default function WazerIAPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
-        <div className="mx-auto max-w-2xl">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-4 sm:px-4 sm:py-5">
+        <div className="mx-auto w-full max-w-4xl">
           {messages.length === 0 && (
-            <div className="flex flex-col items-center pt-16 pb-8">
-              <h2 className="text-xl font-semibold text-tx-primary mb-1">
+            <div className="flex flex-col items-center px-1 pb-8 pt-8 text-center sm:pt-14">
+              <h2 className="mb-1 text-2xl font-semibold text-tx-primary sm:text-3xl">
                 {greeting}, {firstName}!
               </h2>
-              <p className="text-sm text-tx-muted mb-6">Como posso te ajudar?</p>
+              <p className="mb-6 max-w-xl text-sm text-tx-muted sm:text-base">Como posso te ajudar?</p>
 
-              <div className="flex flex-wrap justify-center gap-2">
+              <div className="grid w-full gap-2 sm:flex sm:flex-wrap sm:justify-center">
                 {suggestions.map((s, i) => (
                   <button
                     key={i}
                     onClick={() => sendMessage(s)}
-                    className="rounded-full border border-border-DEFAULT bg-surface-card px-4 py-2 text-xs text-tx-secondary hover:bg-surface-hover hover:border-emerald-500/40 transition-all"
+                    className="rounded-2xl border border-border-DEFAULT bg-surface-card px-4 py-3 text-left text-sm text-tx-secondary transition-all hover:border-emerald-500/40 hover:bg-surface-hover sm:rounded-full sm:px-4 sm:py-2 sm:text-center sm:text-xs"
                   >
                     {s}
                   </button>
@@ -156,9 +161,9 @@ export default function WazerIAPage() {
             </div>
           )}
 
-          <div className="space-y-1">
+          <div className="space-y-2 sm:space-y-1">
             {messages.map((msg) => (
-              <div key={msg.id} className={`group flex gap-2.5 py-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+              <div key={msg.id} className={`group flex gap-2 py-1.5 sm:gap-2.5 sm:py-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div className="flex-shrink-0 pt-0.5">
                   {msg.role === 'assistant' ? (
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-700 text-[11px] font-semibold text-white">
@@ -171,9 +176,9 @@ export default function WazerIAPage() {
                   )}
                 </div>
 
-                <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} max-w-[75%]`}>
+                <div className={`flex max-w-[88%] flex-col sm:max-w-[78%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                   <div
-                    className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                    className={`w-full rounded-2xl px-3.5 py-3 text-sm leading-relaxed sm:px-4 sm:py-3 ${
                       msg.role === 'user'
                         ? 'bg-gradient-to-br from-emerald-600 to-emerald-700 text-white rounded-tr-md'
                         : 'bg-surface-card text-tx-primary border border-border-DEFAULT rounded-tl-md'
@@ -200,7 +205,7 @@ export default function WazerIAPage() {
                   {!msg.isLoading && msg.role === 'assistant' && (
                     <button
                       onClick={() => copyMessage(msg.id, msg.content)}
-                      className="mt-0.5 rounded px-1.5 py-0.5 text-[10px] text-tx-muted opacity-0 group-hover:opacity-100 hover:bg-surface-hover transition-all"
+                      className="mt-1 rounded px-1.5 py-0.5 text-[10px] text-tx-muted transition-all hover:bg-surface-hover sm:opacity-0 sm:group-hover:opacity-100"
                     >
                       {copiedId === msg.id ? 'Copiado' : 'Copiar'}
                     </button>
@@ -214,9 +219,9 @@ export default function WazerIAPage() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-border-DEFAULT px-4 py-3">
-        <div className="mx-auto max-w-2xl">
-          <div className="flex items-end gap-2 rounded-xl border border-border-DEFAULT bg-surface-card p-1.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
+      <div className="border-t border-border-DEFAULT px-3 py-3 sm:px-4 sm:py-4">
+        <div className="mx-auto w-full max-w-4xl">
+          <div className="flex items-end gap-2 rounded-2xl border border-border-DEFAULT bg-surface-card p-2 transition-all focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 sm:gap-3">
             <textarea
               ref={inputRef}
               value={input}
@@ -224,7 +229,7 @@ export default function WazerIAPage() {
               onKeyDown={handleKeyDown}
               placeholder="Pergunte algo..."
               rows={1}
-              className="flex-1 resize-none bg-transparent px-3 py-2 text-sm text-tx-primary placeholder-tx-muted focus:outline-none"
+              className="min-h-[44px] flex-1 resize-none bg-transparent px-2 py-2 text-sm text-tx-primary placeholder-tx-muted focus:outline-none sm:px-3"
               style={{ maxHeight: '100px' }}
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
@@ -236,7 +241,7 @@ export default function WazerIAPage() {
             <button
               onClick={() => sendMessage()}
               disabled={!input.trim() || isLoading}
-              className="rounded-lg bg-gradient-to-br from-emerald-600 to-emerald-700 px-3 py-2 text-xs font-medium text-white transition-all disabled:opacity-40 active:scale-95"
+              className="rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-700 px-4 py-3 text-sm font-medium text-white transition-all active:scale-95 disabled:opacity-40 sm:px-5 sm:text-xs"
             >
               Enviar
             </button>
@@ -289,7 +294,7 @@ function ActionResultBadge({ actionResult }: { actionResult: WazerAIActionResult
 }
 
 function MarkdownContent({ content, isUser }: { content: string; isUser: boolean }) {
-  const html = simpleMarkdown(content);
+  const html = simpleMarkdown(asText(content));
   return (
     <div
       className={`wazerai-markdown prose prose-sm max-w-none ${isUser ? 'prose-invert' : 'prose-emerald'}`}
@@ -329,4 +334,17 @@ function simpleMarkdown(text: string): string {
   });
 
   return processed.join('');
+}
+
+function asText(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function asErrorMessage(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object' && 'message' in value && typeof (value as { message?: unknown }).message === 'string') {
+    return (value as { message: string }).message;
+  }
+
+  return '';
 }

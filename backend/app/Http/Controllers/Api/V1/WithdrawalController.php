@@ -12,6 +12,7 @@ use App\Models\Charge;
 use App\Models\AuditLog;
 use App\Models\Withdrawal;
 use App\Models\AccountWallet;
+use App\Models\WalletAdjustment;
 use App\Models\SystemSetting;
 use App\Models\AccountCustomFee;
 use App\Services\AdminApprovalService;
@@ -19,6 +20,8 @@ use App\Services\WithdrawalService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -37,7 +40,8 @@ class WithdrawalController extends Controller
         $accountId = $request->user()->account_id;
         $perPage = min($request->input('per_page', 20), 100);
 
-        $query = Withdrawal::where('account_id', $accountId);
+        $query = Withdrawal::where('account_id', $accountId)
+            ->where('status', '!=', 'failed');
 
         // Filters
         if ($request->filled('status')) {
@@ -56,16 +60,43 @@ class WithdrawalController extends Controller
             $query->where('created_at', '<=', $request->input('to'));
         }
 
-        $withdrawals = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $withdrawals = $query->orderBy('created_at', 'desc')->get();
+
+        $adjustments = WalletAdjustment::query()
+            ->where('account_id', $accountId)
+            ->when(
+                $request->filled('from'),
+                fn ($q) => $q->where('created_at', '>=', $request->input('from'))
+            )
+            ->when(
+                $request->filled('to'),
+                fn ($q) => $q->where('created_at', '<=', $request->input('to'))
+            )
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $items = $withdrawals->map(fn (Withdrawal $withdrawal) => $this->formatWithdrawalHistoryItem($withdrawal))
+            ->concat($adjustments->map(fn (WalletAdjustment $adjustment) => $this->formatWalletAdjustmentHistoryItem($adjustment)))
+            ->sortByDesc('created_at')
+            ->values();
+
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $paginated = new LengthAwarePaginator(
+            $items->forPage($page, $perPage)->values()->all(),
+            $items->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
 
         return response()->json([
             'success' => true,
-            'data' => $withdrawals->items(),
+            'data' => $paginated->items(),
             'meta' => [
-                'current_page' => $withdrawals->currentPage(),
-                'per_page' => $withdrawals->perPage(),
-                'total' => $withdrawals->total(),
-                'last_page' => $withdrawals->lastPage(),
+                'current_page' => $paginated->currentPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+                'last_page' => $paginated->lastPage(),
             ],
         ]);
     }
@@ -799,7 +830,7 @@ class WithdrawalController extends Controller
                 $acquirerConfig = $acquirerConfigs->get($charge->acquirer);
                 $customGatewayFee = $customFee?->calculateGatewayFee($charge->amount, $charge->payment_method);
                 if ($acquirerConfig && !is_null($customGatewayFee)) {
-                    $fee = $customGatewayFee + $acquirerConfig->calculateAcquirerFee($charge->amount);
+                    $fee = $customGatewayFee;
                 } elseif ($acquirerConfig) {
                     $fee = $acquirerConfig->calculateGatewayFee($charge->amount);
                 } else {
@@ -828,7 +859,12 @@ class WithdrawalController extends Controller
                 ->whereIn('status', ['pending', 'pending_approval', 'processing'])
                 ->sum('amount');
 
-            $correctBalance = max(0, $totalNet - $lockedWithdrawals);
+            $manualAdjustments = (int) WalletAdjustment::query()
+                ->where('account_id', $accountId)
+                ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'debit' THEN -amount ELSE amount END), 0) AS total")
+                ->value('total');
+
+            $correctBalance = max(0, $totalNet - $lockedWithdrawals + $manualAdjustments);
         }
 
         $walletUpdates = [];
@@ -849,6 +885,11 @@ class WithdrawalController extends Controller
             ->where('status', 'completed')
             ->sum('net_amount');
 
+        $manualDebitsTotal = (int) WalletAdjustment::query()
+            ->where('account_id', $accountId)
+            ->where('direction', 'debit')
+            ->sum('amount');
+
         $pendingAmount = Withdrawal::where('account_id', $accountId)
             ->whereIn('status', ['pending', 'pending_approval', 'processing'])
             ->sum('amount');
@@ -859,10 +900,29 @@ class WithdrawalController extends Controller
             ->whereYear('created_at', now()->year)
             ->sum('net_amount');
 
+        $manualDebitsThisMonth = (int) WalletAdjustment::query()
+            ->where('account_id', $accountId)
+            ->where('direction', 'debit')
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->sum('amount');
+
         $recentWithdrawals = Withdrawal::where('account_id', $accountId)
             ->orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
+
+        $recentAdjustments = WalletAdjustment::query()
+            ->where('account_id', $accountId)
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get();
+
+        $recentHistory = $recentWithdrawals->map(fn (Withdrawal $withdrawal) => $this->formatWithdrawalHistoryItem($withdrawal))
+            ->concat($recentAdjustments->map(fn (WalletAdjustment $adjustment) => $this->formatWalletAdjustmentHistoryItem($adjustment)))
+            ->sortByDesc('created_at')
+            ->take(5)
+            ->values();
 
         // Cobranças pendentes (charges com status pending/processing)
         $pendingCharges = \App\Models\Charge::where('account_id', $accountId)
@@ -879,10 +939,10 @@ class WithdrawalController extends Controller
                 'pending_balance' => (int) $pendingCharges + $blockedBalance,
                 'blocked_balance' => $blockedBalance,
                 'total_balance' => (int) $wallet->total_balance,
-                'total_withdrawn' => (int) $totalWithdrawn,
+                'total_withdrawn' => (int) $totalWithdrawn + $manualDebitsTotal,
                 'pending_withdrawals' => (int) $pendingAmount,
-                'this_month_withdrawn' => (int) $thisMonthWithdrawn,
-                'recent_withdrawals' => $recentWithdrawals,
+                'this_month_withdrawn' => (int) $thisMonthWithdrawn + $manualDebitsThisMonth,
+                'recent_withdrawals' => $recentHistory,
             ],
         ]);
     }
@@ -951,9 +1011,10 @@ class WithdrawalController extends Controller
                     'bank_account' => $withdrawal->destination['account_number'] ?? null,
                     'bank_agency' => $withdrawal->destination['agency'] ?? null,
                     'status' => $withdrawal->status,
-                    'failure_reason' => $withdrawal->failure_reason,
-                    'notes' => $withdrawal->notes,
-                    'cancel_reason' => $withdrawal->failure_reason ?? $withdrawal->notes,
+                    'failure_reason' => WithdrawalService::sanitizeAdminFailureReason($withdrawal->failure_reason),
+                    'notes' => WithdrawalService::sanitizeAdminFailureReason($withdrawal->notes),
+                    'cancel_reason' => WithdrawalService::sanitizeAdminFailureReason($withdrawal->failure_reason)
+                        ?? WithdrawalService::sanitizeAdminFailureReason($withdrawal->notes),
                     'requested_at' => $withdrawal->created_at->toIso8601String(),
                     'processed_at' => $withdrawal->processed_at?->toIso8601String(),
                 ];
@@ -973,6 +1034,55 @@ class WithdrawalController extends Controller
             \Illuminate\Support\Facades\Log::error('WithdrawalController::adminList error', ['error' => $e->getMessage()]);
             return response()->json(['success' => true, 'data' => [], 'meta' => ['current_page' => 1, 'per_page' => 20, 'total' => 0, 'last_page' => 1]]);
         }
+    }
+
+    private function formatWithdrawalHistoryItem(Withdrawal $withdrawal): array
+    {
+        return [
+            'id' => $withdrawal->id,
+            'amount' => $withdrawal->amount,
+            'fee' => $withdrawal->fee,
+            'net_amount' => $withdrawal->net_amount,
+            'method' => $withdrawal->method,
+            'is_instant' => (bool) $withdrawal->is_instant,
+            'status' => $withdrawal->status,
+            'acquirer' => $withdrawal->acquirer,
+            'acquirer_transfer_id' => $withdrawal->acquirer_transfer_id,
+            'destination' => $withdrawal->destination,
+            'failure_reason' => null,
+            'notes' => null,
+            'created_at' => $withdrawal->created_at->toIso8601String(),
+            'processed_at' => $withdrawal->processed_at?->toIso8601String(),
+            'history_type' => 'withdrawal',
+        ];
+    }
+
+    private function formatWalletAdjustmentHistoryItem(WalletAdjustment $adjustment): array
+    {
+        $label = $adjustment->direction === 'debit' ? 'Debito manual de saldo' : 'Credito manual de saldo';
+
+        return [
+            'id' => $adjustment->id,
+            'amount' => $adjustment->amount,
+            'fee' => 0,
+            'net_amount' => $adjustment->amount,
+            'method' => 'manual',
+            'is_instant' => false,
+            'status' => 'completed',
+            'acquirer' => null,
+            'acquirer_transfer_id' => null,
+            'destination' => [
+                'type' => 'manual_adjustment',
+                'pix_key' => 'Ajuste manual',
+            ],
+            'failure_reason' => null,
+            'notes' => trim(implode(' - ', array_filter([$label, $adjustment->reason, $adjustment->notes]))),
+            'created_at' => $adjustment->created_at->toIso8601String(),
+            'processed_at' => $adjustment->created_at->toIso8601String(),
+            'history_type' => 'wallet_adjustment',
+            'direction' => $adjustment->direction,
+            'reason' => $adjustment->reason,
+        ];
     }
 
     /**

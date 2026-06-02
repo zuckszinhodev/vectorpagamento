@@ -113,10 +113,18 @@ class WitetecAcquirer implements AcquirerInterface
 
             if (!$response->successful()) {
                 $error = $response->json();
+
+                Log::error('Witetec PIX API error', [
+                    'charge_id' => $charge->id,
+                    'status' => $response->status(),
+                    'payload' => $payload,
+                    'response_body' => $response->body(),
+                ]);
+
                 return [
                     'success' => false,
-                    'error' => $error['message'] ?? $error['error'] ?? 'PIX generation failed',
-                    'raw_response' => $error,
+                    'error' => $error['message'] ?? $error['error'] ?? $response->body() ?? 'PIX generation failed',
+                    'raw_response' => $error ?: ['body' => $response->body(), 'status' => $response->status()],
                 ];
             }
 
@@ -127,7 +135,8 @@ class WitetecAcquirer implements AcquirerInterface
             return [
                 'success' => true,
                 'external_id' => $txData['id'],
-                'pix_qr_code' => $pixData['qrcode'] ?? null,
+                'pix_qr_code' => $pixData['qrcode'] ?? $pixData['copyPaste'] ?? null,
+                'pix_copy_paste' => $pixData['copyPaste'] ?? $pixData['qrcode'] ?? null,
                 'pix_qr_code_url' => $pixData['qrcodeUrl'] ?? $pixData['copyPaste'] ?? null,
                 'pix_expires_at' => $pixData['expirationDate'] ?? null,
                 'status' => $this->mapStatus($txData['status'] ?? 'PENDING'),
@@ -213,26 +222,80 @@ class WitetecAcquirer implements AcquirerInterface
         }
     }
 
+    public function sendPixTransfer(array $transferData): array
+    {
+        try {
+            $payload = [
+                'amount' => (int) ($transferData['amount_cents'] ?? round(((float) ($transferData['amount'] ?? 0)) * 100)),
+                'pixKey' => (string) ($transferData['pix_key'] ?? ''),
+                'pixKeyType' => strtoupper((string) ($transferData['pix_key_type'] ?? 'CPF')),
+                'method' => 'PIX',
+                'metadata' => [
+                    'withdrawal_id' => $transferData['metadata']['withdrawal_id'] ?? null,
+                    'account_id' => $transferData['metadata']['account_id'] ?? null,
+                    'sellerExternalRef' => (string) ($transferData['external_ref'] ?? ''),
+                ],
+            ];
+
+            Log::info('Witetec PIX OUT request', [
+                'withdrawal_id' => $transferData['metadata']['withdrawal_id'] ?? null,
+                'amount_cents' => $payload['amount'],
+            ]);
+
+            $response = $this->getHttpClient()->post("{$this->baseUrl}/withdrawals", $payload);
+
+            if (!$response->successful()) {
+                $error = $response->json();
+                return [
+                    'success' => false,
+                    'error' => $error['message'] ?? $error['error'] ?? 'PIX OUT failed',
+                    'raw_response' => $error,
+                ];
+            }
+
+            $data = $response->json();
+            $withdrawalData = $data['data'] ?? $data;
+
+            return [
+                'success' => true,
+                'transfer_id' => $withdrawalData['id'] ?? null,
+                'status' => $this->mapStatus($withdrawalData['status'] ?? 'PENDING'),
+                'data' => $withdrawalData,
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
     private function buildTransactionPayload(Charge $charge, string $method, array $paymentData = []): array
     {
         $customer = $charge->customer ?? [];
         $metadata = $charge->metadata ?? [];
+        $documentNumber = preg_replace('/\D/', '', $customer['document'] ?? '');
+        $documentType = $this->getDocumentType($customer['document'] ?? '');
+        $phone = preg_replace('/\D/', '', $customer['phone'] ?? '');
 
         // Build customer data
         $customerData = [
             'name' => $customer['name'] ?? 'Cliente',
             'email' => $customer['email'] ?? 'cliente@email.com',
-            'phone' => preg_replace('/\D/', '', $customer['phone'] ?? ''),
-            'documentType' => $this->getDocumentType($customer['document'] ?? ''),
-            'document' => preg_replace('/\D/', '', $customer['document'] ?? ''),
+            'phone' => $phone,
+            'documentType' => $documentType,
+            'document' => $documentNumber,
         ];
 
-        // Build items array
+        $isPix = $method === 'PIX';
+
+        // Keep PIX payload as close as possible to Witetec's documented schema.
         $items = [[
-            'title' => $charge->description ?? 'Produto',
+            'title' => $isPix ? 'Deposito pix' : ($charge->description ?? 'Produto'),
             'amount' => (int) $charge->amount,
             'quantity' => 1,
             'tangible' => true,
+            'externalRef' => $isPix ? '' : (string) ($charge->id ?? ''),
         ]];
 
         $payload = [
@@ -240,38 +303,38 @@ class WitetecAcquirer implements AcquirerInterface
             'method' => $method,
             'customer' => $customerData,
             'items' => $items,
-            'postbackUrl' => config('app.url') . '/api/v1/webhooks/witetec',
             'metadata' => [
-                'charge_id' => $charge->id,
-                'account_id' => $charge->account_id,
+                'sellerExternalRef' => (string) ($charge->id ?? ''),
             ],
         ];
 
+        if (!$isPix) {
+            $payload['postbackUrl'] = config('app.url') . '/api/v1/webhooks/witetec';
+        }
+
         if ($method === 'CREDIT_CARD') {
             $payload['installments'] = $charge->installments ?? 1;
-            
-            // Card data - Witetec expects 'card' field with encrypted or plain data
-            if (isset($paymentData['card'])) {
-                $cardData = $paymentData['card'];
-                
-                // If it's mock data (for testing), structure it properly
-                if (is_array($cardData) && isset($cardData['_mock'])) {
-                    unset($cardData['_mock']);
-                    $payload['card'] = $cardData;
-                } else {
-                    // Encrypted data from ShieldHelper
-                    $payload['card'] = $cardData;
-                }
+
+            $cardData = is_array($paymentData['card'] ?? null) ? $paymentData['card'] : $paymentData;
+
+            $payload['card'] = [
+                'number' => preg_replace('/\D/', '', (string) ($cardData['number'] ?? '')),
+                'holderName' => (string) ($cardData['holderName'] ?? $cardData['holder_name'] ?? ''),
+                'holderDocument' => preg_replace('/\D/', '', (string) ($cardData['holderDocument'] ?? $customer['document'] ?? '')),
+                'expirationMonth' => (int) ($cardData['expirationMonth'] ?? $cardData['expMonth'] ?? 0),
+                'expirationYear' => (int) ($cardData['expirationYear'] ?? $cardData['expYear'] ?? 0),
+                'cvv' => (string) ($cardData['cvv'] ?? ''),
+                'token' => (string) ($cardData['token'] ?? $cardData['token_id'] ?? ''),
+                'currency' => (string) ($cardData['currency'] ?? 'BRL'),
+                'ip' => (string) ($cardData['ip'] ?? $paymentData['ipAddress'] ?? data_get($metadata, 'ip', '127.0.0.1')),
+            ];
+
+            if (!empty($cardData['sessionId'])) {
+                $payload['card']['sessionId'] = (string) $cardData['sessionId'];
             }
-            
-            // Add 3DS data if available
-            if (isset($paymentData['threeDSecure'])) {
-                $payload['threeDSecure'] = $paymentData['threeDSecure'];
-            }
-            
-            // Add IP address for 3DS
-            if (isset($paymentData['ipAddress'])) {
-                $payload['ipAddress'] = $paymentData['ipAddress'];
+
+            if (!empty($cardData['threeDS']) && is_array($cardData['threeDS'])) {
+                $payload['card']['threeDS'] = $cardData['threeDS'];
             }
         }
 

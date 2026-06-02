@@ -4,13 +4,42 @@ import Pusher from 'pusher-js';
 // Configuração do Pusher/Soketi
 let pusher: Pusher;
 
+function getRealtimeConfig() {
+  const appKey = import.meta.env.VITE_PUSHER_APP_KEY?.trim();
+  const host = import.meta.env.VITE_PUSHER_HOST?.trim();
+  const scheme = import.meta.env.VITE_PUSHER_SCHEME?.trim();
+  const port = import.meta.env.VITE_PUSHER_PORT?.trim();
+
+  if (!appKey || !host) {
+    return null;
+  }
+
+  return {
+    appKey,
+    cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER?.trim() || 'mt1',
+    host,
+    port: Number.parseInt(port || (scheme === 'https' ? '443' : '80'), 10),
+    forceTLS: scheme === 'https',
+  };
+}
+
+export function isRealtimeEnabled(): boolean {
+  return getRealtimeConfig() !== null;
+}
+
 function getPusherInstance(): Pusher {
+  const config = getRealtimeConfig();
+  if (!config) {
+    throw new Error('Realtime disabled: missing public websocket configuration');
+  }
+
   if (!pusher) {
-    pusher = new Pusher(import.meta.env.VITE_PUSHER_APP_KEY || 'local', {
-      cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1',
-      wsHost: import.meta.env.VITE_PUSHER_HOST || window.location.hostname,
-      wsPort: parseInt(import.meta.env.VITE_PUSHER_PORT || '6001'),
-      forceTLS: import.meta.env.VITE_PUSHER_SCHEME === 'https',
+    pusher = new Pusher(config.appKey, {
+      cluster: config.cluster,
+      wsHost: config.host,
+      wsPort: config.port,
+      wssPort: config.port,
+      forceTLS: config.forceTLS,
       disableStats: true,
       enabledTransports: ['ws', 'wss'],
       authEndpoint: `${import.meta.env.VITE_API_URL}/broadcasting/auth`,
@@ -44,7 +73,7 @@ export function useWebSocket({
   const channelRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !isRealtimeEnabled()) return;
 
     try {
       // Subscribe to channel
@@ -76,7 +105,7 @@ export function useWebSocket({
     }
   }, [channel, event, enabled]);
 
-  return { isConnected, error, pusher: getPusherInstance() };
+  return { isConnected, error, pusher: isRealtimeEnabled() ? getPusherInstance() : null };
 }
 
 // Hook para múltiplos eventos no mesmo canal
@@ -89,7 +118,7 @@ export function useChannelEvents(
   const channelRef = useRef<any>(null);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !isRealtimeEnabled()) return;
 
     const subscribedChannel = getPusherInstance().subscribe(channel);
     channelRef.current = subscribedChannel;

@@ -18,6 +18,8 @@ import {
 import PixIcon from '@/components/icons/PixIcon';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { useAuthStore } from '@/stores/authStore';
 
 interface Charge {
   id: string;
@@ -56,6 +58,62 @@ interface ChargeFilters {
   date_to?: string;
   search?: string;
 }
+
+const validateCPF = (cpf: string): boolean => {
+  const cleanCPF = cpf.replace(/\D/g, '');
+  if (cleanCPF.length !== 11) return false;
+  if (/^(\d)\1+$/.test(cleanCPF)) return false;
+
+  let sum = 0;
+  for (let i = 0; i < 9; i += 1) {
+    sum += Number.parseInt(cleanCPF.charAt(i), 10) * (10 - i);
+  }
+
+  let digit = 11 - (sum % 11);
+  if (digit > 9) digit = 0;
+  if (digit !== Number.parseInt(cleanCPF.charAt(9), 10)) return false;
+
+  sum = 0;
+  for (let i = 0; i < 10; i += 1) {
+    sum += Number.parseInt(cleanCPF.charAt(i), 10) * (11 - i);
+  }
+
+  digit = 11 - (sum % 11);
+  if (digit > 9) digit = 0;
+  return digit === Number.parseInt(cleanCPF.charAt(10), 10);
+};
+
+const validateCNPJ = (cnpj: string): boolean => {
+  const cleanCNPJ = cnpj.replace(/\D/g, '');
+  if (cleanCNPJ.length !== 14) return false;
+  if (/^(\d)\1+$/.test(cleanCNPJ)) return false;
+
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+  let sum = 0;
+  for (let i = 0; i < 12; i += 1) {
+    sum += Number.parseInt(cleanCNPJ.charAt(i), 10) * weights1[i];
+  }
+
+  let digit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (digit !== Number.parseInt(cleanCNPJ.charAt(12), 10)) return false;
+
+  sum = 0;
+  for (let i = 0; i < 13; i += 1) {
+    sum += Number.parseInt(cleanCNPJ.charAt(i), 10) * weights2[i];
+  }
+
+  digit = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  return digit === Number.parseInt(cleanCNPJ.charAt(13), 10);
+};
+
+const validateCpfOrCnpj = (document: string): boolean => {
+  const cleanDocument = document.replace(/\D/g, '');
+  if (cleanDocument.length === 11) return validateCPF(cleanDocument);
+  if (cleanDocument.length === 14) return validateCNPJ(cleanDocument);
+  return false;
+};
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -119,12 +177,7 @@ function extractPixMerchantName(pixPayload?: string): string | null {
     return null;
   }
 
-  const normalized = merchantName.replace(/[_\s]+/g, ' ').trim().toLocaleLowerCase('pt-BR');
-  return normalized
-    .split(' ')
-    .filter(Boolean)
-    .map((word) => word.charAt(0).toLocaleUpperCase('pt-BR') + word.slice(1))
-    .join(' ');
+  return merchantName;
 }
 
 function getChargeNominal(charge: Charge): string {
@@ -133,11 +186,11 @@ function getChargeNominal(charge: Charge): string {
     : '';
   if (metadataNominal) return metadataNominal;
 
-  const acquirerNominal = (charge.acquirer_name || '').trim();
-  if (acquirerNominal) return acquirerNominal;
-
   const pixNominal = extractPixMerchantName(charge.pix_copy_paste || charge.pix_qr_code);
-  return pixNominal || '-';
+  if (pixNominal) return pixNominal;
+
+  const acquirerNominal = (charge.acquirer_name || '').trim();
+  return acquirerNominal || '-';
 }
 
 function NewPixChargeModal({
@@ -222,6 +275,11 @@ function NewPixChargeModal({
       return;
     }
 
+    if (!validateCpfOrCnpj(cleanDoc)) {
+      toast.error('CPF/CNPJ inválido. Verifique e tente novamente.');
+      return;
+    }
+
     const amountValue = parseFloat(amount.replace(',', '.'));
     if (isNaN(amountValue) || amountValue <= 0) {
       toast.error('Valor inválido');
@@ -269,7 +327,7 @@ function NewPixChargeModal({
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-6">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -279,91 +337,109 @@ function NewPixChargeModal({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-                <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4">
-                  <Dialog.Title className="text-lg font-semibold text-tx-primary">
-                    {showQrCode ? 'PIX QR Code Gerado' : 'Nova Cobrança PIX'}
-                  </Dialog.Title>
-                  <button
-                    onClick={handleClose}
-                    className="text-tx-muted hover:text-tx-muted"
-                  >
-                    <XMarkIcon className="h-6 w-6" />
-                  </button>
+              <Dialog.Panel className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-2xl transform flex-col overflow-hidden rounded-2xl border border-border-DEFAULT bg-surface-elevated text-left shadow-2xl transition-all">
+                <div className="border-b border-border-DEFAULT bg-gradient-to-r from-accent-primary/10 via-transparent to-accent-secondary/10 px-5 py-4 sm:px-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <Dialog.Title className="text-xl font-semibold text-tx-primary">
+                        {showQrCode ? 'PIX QR Code Gerado' : 'Nova Cobrança PIX'}
+                      </Dialog.Title>
+                      <p className="mt-1 text-sm text-tx-muted">
+                        {showQrCode
+                          ? 'Compartilhe o QR Code ou copie o codigo PIX para concluir o pagamento.'
+                          : 'Preencha os dados abaixo para gerar uma cobranca PIX com identificacao do cliente.'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleClose}
+                      className="rounded-full p-2 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {!showQrCode ? (
-                  <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-4">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                          Valor (R$)
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="0,00"
-                          className="input"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          required
-                        />
+                  <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
+                    <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+                      <div className="rounded-xl border border-border-DEFAULT bg-surface-card px-4 py-3">
+                        <p className="text-sm font-medium text-tx-primary">Geracao rapida</p>
+                        <p className="mt-1 text-sm text-tx-muted">
+                          A cobranca sera criada como PIX e aparecera automaticamente na sua lista de cobrancas.
+                        </p>
                       </div>
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                          Nome do Cliente
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="João Silva"
-                          className="input"
-                          value={customerName}
-                          onChange={(e) => setCustomerName(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                          E-mail do Cliente
-                        </label>
-                        <input
-                          type="email"
-                          placeholder="joao@email.com"
-                          className="input"
-                          value={customerEmail}
-                          onChange={(e) => setCustomerEmail(e.target.value)}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                          CPF/CNPJ do Cliente
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="000.000.000-00"
-                          className="input"
-                          value={customerDocument}
-                          onChange={(e) => {
-                            let v = e.target.value.replace(/\D/g, '');
-                            if (v.length <= 11) {
-                              v = v.replace(/(\d{3})(\d)/, '$1.$2');
-                              v = v.replace(/(\d{3})(\d)/, '$1.$2');
-                              v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-                            } else {
-                              v = v.replace(/(\d{2})(\d)/, '$1.$2');
-                              v = v.replace(/(\d{3})(\d)/, '$1.$2');
-                              v = v.replace(/(\d{3})(\d)/, '$1/$2');
-                              v = v.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
-                            }
-                            setCustomerDocument(v);
-                          }}
-                          maxLength={18}
-                          required
-                        />
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                          <label className="mb-2 block text-sm font-medium text-tx-secondary">
+                            Valor (R$)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="0,00"
+                            className="input h-12 text-base"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <label className="mb-2 block text-sm font-medium text-tx-secondary">
+                            Nome do Cliente
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Joao Silva"
+                            className="input h-12"
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-tx-secondary">
+                            E-mail do Cliente
+                          </label>
+                          <input
+                            type="email"
+                            placeholder="joao@email.com"
+                            className="input h-12"
+                            value={customerEmail}
+                            onChange={(e) => setCustomerEmail(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-tx-secondary">
+                            CPF/CNPJ do Cliente
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="000.000.000-00"
+                            className="input h-12"
+                            value={customerDocument}
+                            onChange={(e) => {
+                              let v = e.target.value.replace(/\D/g, '');
+                              if (v.length <= 11) {
+                                v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                                v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                                v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                              } else {
+                                v = v.replace(/(\d{2})(\d)/, '$1.$2');
+                                v = v.replace(/(\d{3})(\d)/, '$1.$2');
+                                v = v.replace(/(\d{3})(\d)/, '$1/$2');
+                                v = v.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+                              }
+                              setCustomerDocument(v);
+                            }}
+                            maxLength={18}
+                            required
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="mt-6 flex justify-end gap-3">
+                    <div className="flex flex-col-reverse gap-3 border-t border-border-DEFAULT bg-surface-card px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
                       <button
                         type="button"
                         onClick={handleClose}
@@ -374,63 +450,58 @@ function NewPixChargeModal({
                       <button
                         type="submit"
                         disabled={createChargeMutation.isPending}
-                        className="btn-primary inline-flex items-center"
+                        className="btn-primary inline-flex items-center justify-center"
                       >
                         <PixIcon className="mr-2 h-5 w-5" />
-                        {createChargeMutation.isPending ? 'Gerando...' : 'Gerar PIX'}
+                        {createChargeMutation.isPending ? 'Gerando...' : 'Gerar cobranca PIX'}
                       </button>
                     </div>
                   </form>
                 ) : (
-                  <div className="px-4 sm:px-6 py-4">
-                    <div className="space-y-4">
+                  <div className="flex flex-1 flex-col overflow-hidden">
+                    <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
                       <div className="flex justify-center">
                         {qrCodeUrl && (
-                          <img
-                            src={qrCodeUrl}
-                            alt="QR Code PIX"
-                            className="rounded-element border-4 border-border-DEFAULT"
-                          />
+                          <div className="rounded-2xl border border-border-DEFAULT bg-white p-4 shadow-sm">
+                            <img
+                              src={qrCodeUrl}
+                              alt="QR Code PIX"
+                              className="h-auto w-full max-w-[280px] rounded-lg"
+                            />
+                          </div>
                         )}
                       </div>
-                      
-                      <div>
+
+                      <div className="rounded-xl border border-border-DEFAULT bg-surface-card p-4">
                         <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                          Código PIX Copia e Cola
+                          Codigo PIX copia e cola
                         </label>
                         <div className="relative">
                           <textarea
                             readOnly
                             value={pixCode}
-                            className="input min-h-[100px] font-mono text-xs"
+                            className="input min-h-[120px] pr-14 font-mono text-xs"
                             onClick={(e) => e.currentTarget.select()}
                           />
                           <button
                             onClick={handleCopyPixCode}
-                            className="absolute right-2 top-2 rounded p-2 hover:bg-surface-hover"
-                            title="Copiar código"
+                            className="absolute right-2 top-2 rounded-lg p-2 transition-colors hover:bg-surface-hover"
+                            title="Copiar codigo"
                           >
                             <ClipboardDocumentIcon className="h-5 w-5 text-tx-muted" />
                           </button>
                         </div>
                       </div>
 
-                      <div className="rounded-lg bg-accent-subtle p-4">
-                        <p className="text-sm text-accent-primary">
-                          <strong>Instruções:</strong>
-                          <br />
-                          1. Abra o app do seu banco
-                          <br />
-                          2. Escolha pagar via PIX QR Code ou Copia e Cola
-                          <br />
-                          3. Escaneie o QR Code ou cole o código
-                          <br />
-                          4. Confirme o pagamento
+                      <div className="rounded-xl border border-accent-primary/20 bg-accent-primary/10 p-4">
+                        <p className="text-sm font-medium text-tx-primary">Como pagar</p>
+                        <p className="mt-2 text-sm leading-6 text-tx-secondary">
+                          Abra o app do seu banco, escolha pagar com PIX por QR Code ou copia e cola e confirme a operacao.
                         </p>
                       </div>
                     </div>
 
-                    <div className="mt-6 flex justify-end gap-3">
+                    <div className="flex justify-end border-t border-border-DEFAULT bg-surface-card px-5 py-4 sm:px-6">
                       <button
                         onClick={handleClose}
                         className="btn-primary"
@@ -459,6 +530,79 @@ function ChargeDetailModal({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const [shareQrCodeUrl, setShareQrCodeUrl] = useState('');
+
+  const pixPayload = charge?.pix_copy_paste || charge?.pix_qr_code || '';
+  const canShareActivePix = Boolean(
+    charge &&
+    charge.payment_method === 'pix' &&
+    ['pending', 'processing'].includes(charge.status) &&
+    pixPayload,
+  );
+
+  useEffect(() => {
+    if (!charge || !canShareActivePix) {
+      setShareQrCodeUrl('');
+      return;
+    }
+
+    if (charge.pix_qr_code?.startsWith('data:')) {
+      setShareQrCodeUrl(charge.pix_qr_code);
+      return;
+    }
+
+    let cancelled = false;
+
+    QRCode.toDataURL(pixPayload, {
+      width: 320,
+      margin: 2,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF',
+      },
+    })
+      .then((url) => {
+        if (!cancelled) {
+          setShareQrCodeUrl(url);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setShareQrCodeUrl('');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [charge, canShareActivePix, pixPayload]);
+
+  const handleShareQrCode = async () => {
+    if (!charge || !pixPayload || !shareQrCodeUrl) {
+      toast.error('QR Code indisponível para compartilhamento');
+      return;
+    }
+
+    try {
+      const response = await fetch(shareQrCodeUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `cobranca-${charge.id}.png`, { type: blob.type || 'image/png' });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          title: 'QR Code PIX',
+          text: `Pagamento PIX de ${formatCurrency(charge.amount)} para ${charge.customer?.name || 'cliente'}`,
+          files: [file],
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(pixPayload);
+      toast.success('Compartilhamento indisponível neste dispositivo. Código PIX copiado.');
+    } catch {
+      toast.error('Não foi possível compartilhar o QR Code');
+    }
+  };
 
   const refundMutation = useMutation({
     mutationFn: async (chargeId: string) => {
@@ -492,7 +636,7 @@ function ChargeDetailModal({
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-6">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -570,6 +714,29 @@ function ChargeDetailModal({
                         <span className="text-sm text-tx-muted">Pago em</span>
                         <span className="text-sm text-tx-primary">{formatDate(charge.paid_at)}</span>
                       </div>
+                    )}
+                    {canShareActivePix && (
+                      <>
+                        <hr className="border-border-DEFAULT" />
+                        <div className="rounded-lg bg-accent-subtle p-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-medium text-tx-primary">QR Code PIX ativo</p>
+                              <p className="mt-1 text-xs text-tx-muted">
+                                Compartilhe enquanto a cobrança ainda estiver pendente de pagamento.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void handleShareQrCode()}
+                              disabled={!shareQrCodeUrl}
+                              className="btn-secondary text-xs sm:text-sm"
+                            >
+                              Compartilhar QR Code
+                            </button>
+                          </div>
+                        </div>
+                      </>
                     )}
                     {charge.metadata?.source === 'split' && (
                       <>
@@ -769,11 +936,13 @@ function ChargeActionsDropdown({
 }
 
 export default function ChargesPage() {
+  const user = useAuthStore((state) => state.user);
   const [filters, setFilters] = useState<ChargeFilters>({});
   const [selectedCharge, setSelectedCharge] = useState<Charge | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isNewChargeOpen, setIsNewChargeOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['charges', filters, page],
@@ -787,10 +956,54 @@ export default function ChargesPage() {
       });
       return response.data;
     },
-    refetchInterval: 5000, // Atualiza a cada 5 segundos para tempo real
+    refetchInterval: 15000,
   });
 
-  const queryClient = useQueryClient();
+  useWebSocket({
+    channel: user?.account_id ? `private-account.${user.account_id}` : '',
+    event: 'payment.status.changed',
+    enabled: Boolean(user?.account_id),
+    onMessage: (payload) => {
+      const eventCharge = payload?.charge;
+      const eventChargeId = payload?.charge_id || eventCharge?.id;
+
+      if (!eventChargeId) {
+        queryClient.invalidateQueries({ queryKey: ['charges'] });
+        return;
+      }
+
+      queryClient.setQueriesData({ queryKey: ['charges'] }, (oldData: any) => {
+        if (!oldData?.data || !Array.isArray(oldData.data)) {
+          return oldData;
+        }
+
+        let found = false;
+        const nextCharges = oldData.data.map((charge: Charge) => {
+          if (charge.id !== eventChargeId) {
+            return charge;
+          }
+
+          found = true;
+          return {
+            ...charge,
+            ...eventCharge,
+            status: payload?.status || eventCharge?.status || charge.status,
+          };
+        });
+
+        if (!found && eventCharge) {
+          nextCharges.unshift(eventCharge as Charge);
+        }
+
+        return {
+          ...oldData,
+          data: nextCharges,
+        };
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['charges'] });
+    },
+  });
 
   const syncChargeMutation = useMutation({
     mutationFn: async (chargeId: string) => {
@@ -901,13 +1114,6 @@ export default function ChargesPage() {
               <ArrowPathIcon className={`mr-1.5 lg:mr-2 h-4 w-4 lg:h-5 lg:w-5 ${syncAllMutation.isPending ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">{syncAllMutation.isPending ? 'Sincronizando...' : 'Sincronizar'}</span>
               <span className="sm:hidden">Sync</span>
-            </button>
-            <button
-              onClick={() => refetch()}
-              className="btn-secondary inline-flex items-center text-xs lg:text-sm flex-1 lg:flex-none justify-center"
-            >
-              <ArrowPathIcon className="mr-1.5 lg:mr-2 h-4 w-4 lg:h-5 lg:w-5" />
-              Atualizar
             </button>
           </div>
         </div>

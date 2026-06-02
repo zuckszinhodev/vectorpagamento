@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\AccountRegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -152,12 +153,12 @@ class AuthController extends Controller
                 'credential' => ['required', 'string'],
             ]);
 
-            $accessToken = $request->input('credential');
+            $idToken = $request->input('credential');
 
-            // Verify the Google access token via Google's userinfo endpoint
+            // Verify the Google ID token via Google's tokeninfo endpoint.
             $client = new \GuzzleHttp\Client();
-            $response = $client->get('https://www.googleapis.com/oauth2/v3/userinfo', [
-                'headers' => ['Authorization' => 'Bearer ' . $accessToken],
+            $response = $client->get('https://oauth2.googleapis.com/tokeninfo', [
+                'query' => ['id_token' => $idToken],
                 'timeout' => 10,
             ]);
 
@@ -167,6 +168,14 @@ class AuthController extends Controller
                 return response()->json([
                     'success' => false,
                     'error' => ['code' => 'invalid_token', 'message' => 'Token Google inválido.'],
+                ], 401);
+            }
+
+            $expectedClientId = (string) config('services.google.client_id');
+            if ($expectedClientId !== '' && ($payload['aud'] ?? null) !== $expectedClientId) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['code' => 'invalid_token', 'message' => 'Token Google não pertence a este aplicativo.'],
                 ], 401);
             }
 
@@ -275,6 +284,7 @@ class AuthController extends Controller
         $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
+            'trusted_device_token' => ['nullable', 'string'],
         ], [
             'email.required' => 'O e-mail é obrigatório',
             'email.email' => 'E-mail inválido',
@@ -331,24 +341,22 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // Check MFA if enabled — TEMPORARILY DISABLED AT LOGIN
-        // MFA is still enforced on sensitive operations (withdrawals, admin actions)
-        // if ($user->mfa_enabled) {
-        //     $mfaToken = Str::random(64);
-        //     cache()->put('mfa_token:' . $mfaToken, [
-        //         'user_id' => $user->id,
-        //         'ip' => $this->getClientIp($request),
-        //         'ua_hash' => $this->buildUserAgentHash($request),
-        //     ], 300);
-        //
-        //     return response()->json([
-        //         'success' => true,
-        //         'data' => [
-        //             'requires_mfa' => true,
-        //             'mfa_token' => $mfaToken,
-        //         ],
-        //     ]);
-        // }
+        if ($user->mfa_enabled && !$this->hasTrustedDevice($user, $request, (string) $request->input('trusted_device_token', ''))) {
+            $mfaToken = Str::random(64);
+            Cache::put('mfa_token:' . $mfaToken, [
+                'user_id' => $user->id,
+                'ip' => $this->getClientIp($request),
+                'ua_hash' => $this->buildUserAgentHash($request),
+            ], 300);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'requires_mfa' => true,
+                    'mfa_token' => $mfaToken,
+                ],
+            ]);
+        }
 
         // Update last login
         $user->forceFill([
@@ -406,6 +414,7 @@ class AuthController extends Controller
         try {
         $mfaToken = (string) $request->input('mfa_token');
         $code = preg_replace('/\D/', '', (string) $request->input('code', ''));
+        $rememberDevice = filter_var($request->input('remember_device', false), FILTER_VALIDATE_BOOLEAN);
 
         $mfaData = cache()->get('mfa_token:' . $mfaToken);
 
@@ -528,6 +537,7 @@ class AuthController extends Controller
         ])->save();
 
         $token = JWTAuth::fromUser($user);
+        $trustedDeviceToken = $rememberDevice ? $this->issueTrustedDeviceToken($user, $request) : null;
 
         return response()->json([
             'success' => true,
@@ -547,6 +557,7 @@ class AuthController extends Controller
                     'token_type' => 'bearer',
                     'expires_in' => config('jwt.ttl', 60) * 60,
                 ],
+                'trusted_device_token' => $trustedDeviceToken,
             ],
         ]);
         } catch (\Throwable $e) {
@@ -1224,5 +1235,82 @@ class AuthController extends Controller
     protected function buildUserAgentHash(Request $request): string
     {
         return hash('sha256', (string) ($request->userAgent() ?? ''));
+    }
+
+    protected function hasTrustedDevice(User $user, Request $request, string $trustedDeviceToken): bool
+    {
+        if ($trustedDeviceToken === '') {
+            return false;
+        }
+
+        $payload = $this->parseTrustedDeviceToken($trustedDeviceToken);
+        if (!$payload) {
+            return false;
+        }
+
+        if (($payload['user_id'] ?? null) !== $user->id) {
+            return false;
+        }
+
+        if (($payload['ua_hash'] ?? null) !== $this->buildUserAgentHash($request)) {
+            return false;
+        }
+
+        $deviceKey = $this->trustedDeviceCacheKey($user->id, (string) ($payload['device_id'] ?? ''));
+
+        return Cache::get($deviceKey) === hash('sha256', $trustedDeviceToken);
+    }
+
+    protected function issueTrustedDeviceToken(User $user, Request $request): string
+    {
+        $payload = [
+            'user_id' => $user->id,
+            'device_id' => (string) Str::uuid(),
+            'ua_hash' => $this->buildUserAgentHash($request),
+            'issued_at' => now()->timestamp,
+            'expires_at' => now()->addDays(30)->timestamp,
+        ];
+
+        $encodedPayload = base64_encode(json_encode($payload, JSON_UNESCAPED_SLASHES));
+        $signature = hash_hmac('sha256', $encodedPayload, (string) config('app.key'));
+        $token = $encodedPayload . '.' . $signature;
+
+        Cache::put(
+            $this->trustedDeviceCacheKey($user->id, $payload['device_id']),
+            hash('sha256', $token),
+            now()->addDays(30)
+        );
+
+        return $token;
+    }
+
+    protected function parseTrustedDeviceToken(string $token): ?array
+    {
+        $parts = explode('.', $token, 2);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        [$encodedPayload, $signature] = $parts;
+        $expectedSignature = hash_hmac('sha256', $encodedPayload, (string) config('app.key'));
+        if (!hash_equals($expectedSignature, $signature)) {
+            return null;
+        }
+
+        $payload = json_decode(base64_decode($encodedPayload, true) ?: '', true);
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        if ((int) ($payload['expires_at'] ?? 0) < now()->timestamp) {
+            return null;
+        }
+
+        return $payload;
+    }
+
+    protected function trustedDeviceCacheKey(string $userId, string $deviceId): string
+    {
+        return 'trusted_device:' . $userId . ':' . $deviceId;
     }
 }

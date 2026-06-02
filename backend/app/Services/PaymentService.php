@@ -32,6 +32,7 @@ use App\Services\AcquirerRotationService;
 class PaymentService
 {
     private const DEFAULT_PIX_EXPIRATION_MINUTES = 1440;
+    private const PIX_ATTEMPT_SOFT_TIMEOUT_MS = 4500;
 
     private const CONFIRMED_WEBHOOK_STATUSES = [
         'paid',
@@ -260,6 +261,11 @@ class PaymentService
                 $acquirer = $lockedAccountRouting['order'][0];
             }
 
+            if (($charge->acquirer ?? null) !== $acquirer) {
+                $charge->acquirer = $acquirer;
+                $charge->save();
+            }
+
             Log::info('PaymentService: processing payment', [
                 'charge_id' => $charge->id,
                 'payment_method' => $paymentMethod,
@@ -353,25 +359,25 @@ class PaymentService
         return null;
     }
 
-    private function isAcquirerEnabledForRouting(string $acquirerName): bool
+    private function isAcquirerEnabledForRouting(string $acquirerName, ?string $accountId = null): bool
     {
         $isEnabledInDb = AcquirerConfig::where('acquirer_key', $acquirerName)
             ->where('enabled', true)
             ->exists();
 
-        if ($isEnabledInDb) {
-            return true;
+        if (!$isEnabledInDb) {
+            return $this->factory->isAcquirerAvailableForAccount($accountId, $acquirerName);
         }
 
-        return match ($acquirerName) {
-            'payfort' => AcquirerFactory::isPayFortConfigured(),
-            'blupay' => AcquirerFactory::isBluPayConfigured(),
-            'enki' => AcquirerFactory::isEnkiConfigured(),
-            'babylon' => AcquirerFactory::isBabylonConfigured(),
-            'witetec' => AcquirerFactory::isWitetecConfigured(),
-            'asaas' => AcquirerFactory::isAsaasConfigured(),
-            'huntersub' => AcquirerFactory::isHunterSubConfigured(),
-            'sharkhubsub' => AcquirerFactory::isSharkHubSubConfigured(),
+        return match (true) {
+            $acquirerName === 'payfort' => $this->factory->payfortForAccount($accountId) !== null,
+            $acquirerName === 'blupay' => $this->factory->blupay() !== null,
+            $acquirerName === 'enki' => $this->factory->enkiForAccount($accountId) !== null,
+            $acquirerName === 'babylon' => $this->factory->babylon() !== null,
+            $acquirerName === 'huntersub' => $this->factory->huntersubForAccount($accountId) !== null,
+            $acquirerName === 'witetec' => $this->factory->witetec() !== null,
+            $acquirerName === 'asaas' => $this->factory->asaas() !== null,
+            str_starts_with($acquirerName, 'sharkhubsub') => $this->factory->getAcquirerInstance($acquirerName) !== null,
             default => false,
         };
     }
@@ -418,6 +424,10 @@ class PaymentService
 
                 $supportedMethods = array_map('strtolower', $globalConfig->supported_methods ?? []);
                 if ($supportedMethods !== [] && !in_array($normalizedMethod, $supportedMethods, true)) {
+                    continue;
+                }
+
+                if (!$this->isAcquirerEnabledForRouting($slug, $accountId)) {
                     continue;
                 }
 
@@ -470,9 +480,12 @@ class PaymentService
         $isAccountLocked = (bool) ($lockedAccountRouting['locked'] ?? false);
 
         // Build ordered acquirer list from account priority first, then global admin priority.
+        $accountOrder = array_values(array_filter($lockedAccountRouting['order'] ?? []));
+        $globalOrder = $this->factory->getPixAcquirerOrder($primaryAcquirer);
         $acquirerOrder = $isAccountLocked
-            ? array_values(array_filter($lockedAccountRouting['order'] ?? []))
+            ? array_values(array_unique([...$accountOrder, ...$globalOrder]))
             : $this->factory->getPixAcquirerOrderForAccount($charge->account_id, $primaryAcquirer);
+        $lockedAcquirerNames = array_fill_keys($accountOrder, true);
 
         if ($isAccountLocked && $acquirerOrder === []) {
             $charge->update(['status' => 'failed']);
@@ -482,29 +495,33 @@ class PaymentService
             ];
         }
 
-        $lockedRemaining = $isAccountLocked ? count($acquirerOrder) : 0;
+        $lockedRemaining = $isAccountLocked ? count($accountOrder) : 0;
         $lastLockedError = null;
 
         foreach ($acquirerOrder as $acquirerName) {
-            if ($isAccountLocked) {
+            $attemptStartedAt = microtime(true);
+            $isLockedAcquirer = $isAccountLocked && isset($lockedAcquirerNames[$acquirerName]);
+            if ($isLockedAcquirer) {
                 $lockedRemaining--;
             }
 
-            $isEnabled = $this->isAcquirerEnabledForRouting($acquirerName);
+            $isEnabled = $this->isAcquirerEnabledForRouting($acquirerName, $charge->account_id);
 
             if (!$isEnabled) {
                 Log::info('Acquirer disabled in database, skipping', [
                     'charge_id' => $charge->id,
                     'acquirer' => $acquirerName,
                 ]);
-                if ($isAccountLocked) {
+                if ($isLockedAcquirer) {
                     $lastLockedError = 'A adquirente configurada para este seller esta desativada ou sem credenciais.';
                     if ($lockedRemaining <= 0) {
-                        $charge->update(['status' => 'failed']);
-                        return [
-                            'success' => false,
-                            'error' => $lastLockedError,
-                        ];
+                        if (!$failoverEnabled || count($acquirerOrder) === count($accountOrder)) {
+                            $charge->update(['status' => 'failed']);
+                            return [
+                                'success' => false,
+                                'error' => $lastLockedError,
+                            ];
+                        }
                     }
                 }
                 continue;
@@ -516,7 +533,7 @@ class PaymentService
                     'acquirer' => $acquirerName,
                     'amount' => $charge->amount,
                 ]);
-                if ($isAccountLocked) {
+                if ($isLockedAcquirer) {
                     $lastLockedError = 'A adquirente configurada para este seller nao aceita o valor desta cobranca.';
                     if ($lockedRemaining <= 0) {
                         $charge->update(['status' => 'failed']);
@@ -537,14 +554,16 @@ class PaymentService
                     'charge_id' => $charge->id,
                     'acquirer'  => $acquirerName,
                 ]);
-                if ($isAccountLocked) {
+                if ($isLockedAcquirer) {
                     $lastLockedError = 'A adquirente configurada para este seller esta temporariamente indisponivel.';
                     if ($lockedRemaining <= 0) {
-                        $charge->update(['status' => 'failed']);
-                        return [
-                            'success' => false,
-                            'error' => $lastLockedError,
-                        ];
+                        if (!$failoverEnabled || count($acquirerOrder) === count($accountOrder)) {
+                            $charge->update(['status' => 'failed']);
+                            return [
+                                'success' => false,
+                                'error' => $lastLockedError,
+                            ];
+                        }
                     }
                 }
                 continue;
@@ -555,15 +574,16 @@ class PaymentService
                 'acquirer' => $acquirerName,
                     'is_fallback' => !$isAccountLocked && $acquirerName !== $primaryAcquirer,
                     'account_locked' => $isAccountLocked,
+                    'account_priority_acquirer' => $isLockedAcquirer,
                 ]);
 
-            $result = match ($acquirerName) {
-                'payfort' => $this->factory->payfortForAccount($charge->account_id) ? $this->generatePixViaPayFort($charge) : null,
-                'blupay' => $this->factory->blupay() ? $this->generatePixViaBluPay($charge) : null,
-                'enki' => $this->factory->enkiForAccount($charge->account_id) ? $this->generatePixViaEnki($charge) : null,
-                'babylon' => $this->isConfigured() ? $this->generatePix($charge) : null,
-                'huntersub' => $this->factory->huntersubForAccount($charge->account_id) ? $this->generatePixViaHunterSub($charge) : null,
-                'sharkhubsub' => $this->factory->sharkhubsubForAccount($charge->account_id) ? $this->generatePixViaSharkHubSub($charge) : null,
+            $result = match (true) {
+                $acquirerName === 'payfort' => $this->factory->payfortForAccount($charge->account_id) ? $this->generatePixViaPayFort($charge) : null,
+                $acquirerName === 'blupay' => $this->factory->blupay() ? $this->generatePixViaBluPay($charge) : null,
+                $acquirerName === 'enki' => $this->factory->enkiForAccount($charge->account_id) ? $this->generatePixViaEnki($charge) : null,
+                $acquirerName === 'babylon' => $this->isConfigured() ? $this->generatePix($charge) : null,
+                $acquirerName === 'huntersub' => $this->factory->huntersubForAccount($charge->account_id) ? $this->generatePixViaHunterSub($charge) : null,
+                str_starts_with($acquirerName, 'sharkhubsub') => $this->factory->getAcquirerInstance($acquirerName) ? $this->generatePixViaSharkHubSub($charge) : null,
                 default => null,
             };
 
@@ -598,17 +618,33 @@ class PaymentService
             if ($result) {
                 $cb?->recordFailure();
                 $this->rotationService?->markFailure('pix', $acquirerName);
+                $attemptDurationMs = (int) round((microtime(true) - $attemptStartedAt) * 1000);
                 Log::warning('PIX acquirer failed, trying next', [
                     'charge_id' => $charge->id,
                     'acquirer' => $acquirerName,
                     'error' => $result['error'] ?? 'Unknown error',
+                    'raw_response' => $result['raw_response'] ?? $result['data'] ?? null,
+                    'provider_transaction_id' => $result['transaction_id'] ?? $result['external_id'] ?? null,
+                    'duration_ms' => $attemptDurationMs,
                     'account_locked' => $isAccountLocked,
                 ]);
+
+                if ($attemptDurationMs > self::PIX_ATTEMPT_SOFT_TIMEOUT_MS) {
+                    Log::warning('PIX attempt exceeded soft timeout', [
+                        'charge_id' => $charge->id,
+                        'acquirer' => $acquirerName,
+                        'duration_ms' => $attemptDurationMs,
+                    ]);
+                }
             }
 
-            if ($isAccountLocked) {
+            if ($isLockedAcquirer) {
                 $lastLockedError = $result['error'] ?? 'A adquirente configurada para este seller nao conseguiu gerar a cobranca.';
-                Log::warning('Account-specific PIX acquirer failed; fallback blocked', [
+                $shouldTryGlobalFallback = $failoverEnabled && $this->shouldTryGlobalPixFallback($result);
+
+                Log::warning($shouldTryGlobalFallback
+                    ? 'Account-specific PIX acquirer failed; trying global fallback'
+                    : 'Account-specific PIX acquirer failed; fallback blocked', [
                     'charge_id' => $charge->id,
                     'account_id' => $charge->account_id,
                     'acquirer' => $acquirerName,
@@ -616,11 +652,13 @@ class PaymentService
                 ]);
 
                 if ($lockedRemaining <= 0) {
-                    $charge->update(['status' => 'failed']);
-                    return $result ?? [
-                        'success' => false,
-                        'error' => $lastLockedError,
-                    ];
+                    if (!$shouldTryGlobalFallback) {
+                        $charge->update(['status' => 'failed']);
+                        return $result ?? [
+                            'success' => false,
+                            'error' => $lastLockedError,
+                        ];
+                    }
                 }
 
                 continue;
@@ -642,7 +680,12 @@ class PaymentService
         }
 
         // All acquirers failed → return error
-        Log::error('All PIX acquirers failed', ['charge_id' => $charge->id]);
+        Log::error('All PIX acquirers failed', [
+            'charge_id' => $charge->id,
+            'account_id' => $charge->account_id,
+            'payment_method' => $charge->payment_method,
+            'amount' => $charge->amount,
+        ]);
         
         return [
             'success' => false,
@@ -657,6 +700,31 @@ class PaymentService
     private function getPixAcquirerOrder(string $primary): array
     {
         return $this->factory->getPixAcquirerOrder($primary);
+    }
+
+    private function shouldTryGlobalPixFallback(?array $result): bool
+    {
+        if (!$result) {
+            return true;
+        }
+
+        $error = strtolower(trim((string) ($result['error'] ?? '')));
+        $rawResponse = $result['raw_response'] ?? $result['data'] ?? null;
+        $rawResponseText = is_string($rawResponse)
+            ? strtolower($rawResponse)
+            : strtolower(json_encode($rawResponse) ?: '');
+
+        if (str_contains($error, 'provider error') || str_contains($rawResponseText, 'provider error')) {
+            return true;
+        }
+
+        foreach (['timeout', 'timed out', 'ssl', 'handshake', 'connection refused', 'service unavailable', 'temporariamente indisponivel', 'temporarily unavailable', 'bad gateway', '502', '503', '504'] as $needle) {
+            if (str_contains($error, $needle) || str_contains($rawResponseText, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function isPixAmountAllowedForAcquirer(Charge $charge, string $acquirerName): bool
@@ -1013,6 +1081,82 @@ class PaymentService
     }
 
     /**
+     * Generate PIX payment via Witetec
+     */
+    public function generatePixViaWitetec(Charge $charge): array
+    {
+        $witetec = $this->factory->witetec();
+
+        if (!$witetec) {
+            Log::error('Witetec not configured', ['charge_id' => $charge->id]);
+            return [
+                'success' => false,
+                'error' => 'Witetec não configurada. Verifique as credenciais no painel admin.',
+            ];
+        }
+
+        try {
+            $result = $witetec->generatePixQrCode($charge);
+
+            if (!$result['success']) {
+                Log::error('Witetec PIX failed', [
+                    'charge_id' => $charge->id,
+                    'error' => $result['error'] ?? 'Unknown error',
+                    'raw_response' => $result['raw_response'] ?? null,
+                ]);
+
+                return $result;
+            }
+
+            $charge->update([
+                'acquirer' => 'witetec',
+                'acquirer_transaction_id' => $result['external_id'] ?? null,
+                'external_id' => $result['external_id'] ?? null,
+                'pix_qr_code' => $result['pix_qr_code'] ?? null,
+                'pix_copy_paste' => $result['pix_copy_paste'] ?? $result['pix_qr_code'] ?? null,
+                'pix_qr_code_url' => $result['pix_qr_code_url'] ?? null,
+                'expires_at' => isset($result['pix_expires_at']) && $result['pix_expires_at']
+                    ? \Carbon\Carbon::parse($result['pix_expires_at'])
+                    : $this->defaultPixExpirationAt(),
+                'status' => $result['status'] ?? 'pending',
+            ]);
+
+            Transaction::create([
+                'id' => Str::uuid()->toString(),
+                'charge_id' => $charge->id,
+                'acquirer_id' => $this->getOrCreateAcquirerId('witetec', 'Witetec'),
+                'type' => 'authorization',
+                'status' => 'pending',
+                'amount' => $charge->amount,
+                'net_amount' => $charge->amount,
+                'acquirer_tid' => $result['external_id'] ?? null,
+            ]);
+
+            return [
+                'success' => true,
+                'acquirer' => 'witetec',
+                'transaction_id' => $result['external_id'] ?? null,
+                'status' => $result['status'] ?? 'pending',
+                'pix_qr_code' => $result['pix_qr_code'] ?? null,
+                'pix_copy_paste' => $result['pix_copy_paste'] ?? $result['pix_qr_code'] ?? null,
+                'pix_qr_code_url' => $result['pix_qr_code_url'] ?? null,
+                'expires_at' => $result['pix_expires_at'] ?? null,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Witetec PIX exception', [
+                'charge_id' => $charge->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Witetec PIX error: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Generate PIX payment via Enki Bank
      */
     public function generatePixViaEnki(Charge $charge): array
@@ -1184,7 +1328,10 @@ class PaymentService
 
     public function generatePixViaSharkHubSub(Charge $charge): array
     {
-        $sharkhub = $this->factory->sharkhubsubForAccount($charge->account_id);
+        $acquirerKey = $charge->acquirer ?: 'sharkhubsub';
+        $sharkhub = str_starts_with($acquirerKey, 'sharkhubsub_')
+            ? $this->factory->sharkhubsubByKey($acquirerKey)
+            : $this->factory->sharkhubsubForAccount($charge->account_id);
 
         if (!$sharkhub) {
             Log::error('SharkHubSub not configured', ['charge_id' => $charge->id]);
@@ -1210,7 +1357,7 @@ class PaymentService
             }
 
             $charge->update([
-                'acquirer' => 'sharkhubsub',
+                'acquirer' => $acquirerKey,
                 'acquirer_transaction_id' => $result['external_id'] ?? null,
                 'external_id' => $result['external_id'] ?? null,
                 'pix_qr_code' => $result['pix_qr_code'] ?? null,
@@ -1226,7 +1373,7 @@ class PaymentService
             Transaction::create([
                 'id' => Str::uuid()->toString(),
                 'charge_id' => $charge->id,
-                'acquirer_id' => $this->getOrCreateAcquirerId('sharkhubsub', 'SharkHub Subadquirente'),
+                'acquirer_id' => $this->getOrCreateAcquirerId($acquirerKey, str_replace('_', ' ', ucfirst($acquirerKey))),
                 'type' => 'authorization',
                 'status' => 'pending',
                 'amount' => $charge->amount,
@@ -1237,7 +1384,7 @@ class PaymentService
 
             return [
                 'success' => true,
-                'acquirer' => 'sharkhubsub',
+                'acquirer' => $acquirerKey,
                 'transaction_id' => $result['external_id'] ?? null,
                 'status' => $result['status'] ?? 'pending',
                 'pix_qr_code' => $result['pix_qr_code'] ?? null,
@@ -1890,15 +2037,6 @@ class PaymentService
                     'acquirer_transaction_id' => $transactionId,
                 ]);
 
-                try {
-                    app(\App\Services\PixNominalNameService::class)->syncFromCharge($charge);
-                } catch (\Throwable $e) {
-                    Log::warning('Failed to sync nominal name from webhook', [
-                        'charge_id' => $charge->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-
                 // Dispatch ALL notifications asynchronously via job
                 \App\Jobs\DispatchPaymentNotificationsJob::dispatch($charge->id, 'payment.approved');
             }
@@ -2293,11 +2431,14 @@ class PaymentService
                 $customGatewayFee = $customFee?->calculateGatewayFee($charge->amount, $charge->payment_method);
 
                 if (!is_null($customGatewayFee)) {
-                    $acquirerFee = $acquirerConfig->calculateAcquirerFee($charge->amount);
-                    $feeAmount = $customGatewayFee + $acquirerFee;
+                    $feeAmount = $customGatewayFee;
                 } else {
                     // Default: total fee from acquirer config
-                    $feeAmount = $acquirerConfig->calculateTotalFee($charge->amount);
+                    $feeAmount = $acquirerConfig->calculateTotalFee(
+                        $charge->amount,
+                        $charge->payment_method,
+                        (int) ($charge->installments ?? 1)
+                    );
                 }
 
                 $netAmount = $charge->amount - $feeAmount;
@@ -2421,7 +2562,7 @@ class PaymentService
             return $this->syncBluPayChargeStatus($charge);
         } elseif (in_array($acquirer, ['huntersub'])) {
             return $this->syncHunterSubChargeStatus($charge);
-        } elseif (in_array($acquirer, ['sharkhubsub'])) {
+        } elseif (str_starts_with((string) $acquirer, 'sharkhubsub')) {
             return $this->syncSharkHubSubChargeStatus($charge);
         } elseif (in_array($acquirer, ['asaas'])) {
             return $this->syncAsaasChargeStatus($charge);
@@ -2711,7 +2852,10 @@ class PaymentService
 
     private function syncSharkHubSubChargeStatus(Charge $charge): array
     {
-        $sharkhub = $this->factory->sharkhubsubForAccount($charge->account_id);
+        $acquirerKey = (string) ($charge->acquirer ?? 'sharkhubsub');
+        $sharkhub = str_starts_with($acquirerKey, 'sharkhubsub')
+            ? $this->factory->getAcquirerInstance($acquirerKey)
+            : $this->factory->sharkhubsubForAccount($charge->account_id);
 
         if (!$sharkhub) {
             return ['success' => true, 'status' => $charge->status, 'synced' => false];

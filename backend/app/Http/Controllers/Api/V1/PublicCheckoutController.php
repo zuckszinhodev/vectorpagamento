@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Events\PaymentStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Models\Checkout;
 use App\Models\Charge;
@@ -478,7 +479,9 @@ class PublicCheckoutController extends Controller
         }
         
         if (isset($paymentResult['success']) && !$paymentResult['success']) {
-            $this->persistChargeFailure($charge, (string) ($paymentResult['error'] ?? 'Falha ao processar pagamento'));
+            $this->logChargeFailureDetails($charge, $paymentResult, 'Public checkout payment failed with provider details');
+            $this->persistChargeFailure($charge, (string) ($paymentResult['error'] ?? 'Falha ao processar pagamento'), $paymentResult);
+            $this->dispatchPaymentStatusChangedEvent($charge->fresh() ?? $charge);
             return response()->json([
                 'success' => false,
                 'error' => [
@@ -487,6 +490,8 @@ class PublicCheckoutController extends Controller
                 ],
             ], 400);
         }
+
+        $this->dispatchPaymentStatusChangedEvent($charge->fresh() ?? $charge);
 
         // Check if there are upsells to show after payment
         try {
@@ -499,15 +504,12 @@ class PublicCheckoutController extends Controller
 
         // Defer non-critical work to after the response is sent
         $chargeForDeferred = $charge;
-        $paymentResultForDeferred = $paymentResult;
         $checkoutForDeferred = $checkout;
         $totalAmountForDeferred = $totalAmount;
         $paymentMethodInput = $request->input('payment_method');
         $memberEnrollmentService = $this->memberEnrollmentService;
 
-        dispatch(function () use ($chargeForDeferred, $paymentResultForDeferred, $checkoutForDeferred, $totalAmountForDeferred, $paymentMethodInput, $memberEnrollmentService) {
-            app(\App\Services\PixNominalNameService::class)->syncFromCharge($chargeForDeferred->refresh(), $paymentResultForDeferred);
-
+        dispatch(function () use ($chargeForDeferred, $checkoutForDeferred, $totalAmountForDeferred, $paymentMethodInput, $memberEnrollmentService) {
             try {
                 app(UtmifyService::class)->dispatchSync($chargeForDeferred);
             } catch (\Exception $e) {
@@ -811,11 +813,8 @@ class PublicCheckoutController extends Controller
         }
 
         if (isset($paymentResult['success']) && !$paymentResult['success']) {
-            $this->persistChargeFailure($upsellCharge, (string) ($paymentResult['error'] ?? 'Falha ao processar pagamento do upsell'));
-        }
-
-        if ($paymentResult['success'] ?? false) {
-            app(\App\Services\PixNominalNameService::class)->syncFromCharge($upsellCharge->refresh(), $paymentResult);
+            $this->logChargeFailureDetails($upsellCharge, $paymentResult, 'Upsell payment failed with provider details');
+            $this->persistChargeFailure($upsellCharge, (string) ($paymentResult['error'] ?? 'Falha ao processar pagamento do upsell'), $paymentResult);
         }
 
         // Record the upsell offer
@@ -990,17 +989,60 @@ class PublicCheckoutController extends Controller
         }
     }
 
-    private function persistChargeFailure(Charge $charge, string $failureReason): void
+    private function persistChargeFailure(Charge $charge, string $failureReason, array $paymentResult = []): void
     {
         try {
             $reason = trim($failureReason);
+            $metadata = is_array($charge->metadata) ? $charge->metadata : [];
+            $metadata['payment_failure_context'] = array_filter([
+                'logged_at' => now()->toIso8601String(),
+                'acquirer' => $paymentResult['acquirer'] ?? $charge->acquirer,
+                'error' => $paymentResult['error'] ?? ($reason !== '' ? Str::limit($reason, 500, '') : 'Falha ao processar pagamento'),
+                'raw_response' => $paymentResult['raw_response'] ?? $paymentResult['data'] ?? null,
+                'provider_transaction_id' => $paymentResult['transaction_id'] ?? $paymentResult['external_id'] ?? $charge->acquirer_transaction_id,
+            ], static fn ($value) => $value !== null && $value !== '');
 
             $charge->update([
                 'status' => Charge::STATUS_FAILED,
                 'failure_reason' => $reason !== '' ? Str::limit($reason, 500, '') : 'Falha ao processar pagamento',
+                'metadata' => $metadata,
             ]);
         } catch (\Throwable $e) {
             Log::warning('Failed to persist checkout charge failure state', [
+                'charge_id' => $charge->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function dispatchPaymentStatusChangedEvent(Charge $charge): void
+    {
+        event(new PaymentStatusChanged(
+            $charge->id,
+            (string) $charge->account_id,
+            (string) $charge->status,
+            $charge->toArray(),
+            ((float) ($charge->amount ?? 0)) / 100,
+            (string) ($charge->currency ?? 'BRL'),
+            $charge->customer['email'] ?? null,
+        ));
+    }
+
+    private function logChargeFailureDetails(Charge $charge, array $paymentResult, string $message): void
+    {
+        try {
+            Log::warning($message, [
+                'charge_id' => $charge->id,
+                'account_id' => $charge->account_id,
+                'payment_method' => $charge->payment_method,
+                'amount' => $charge->amount,
+                'acquirer' => $paymentResult['acquirer'] ?? $charge->acquirer,
+                'error' => $paymentResult['error'] ?? null,
+                'raw_response' => $paymentResult['raw_response'] ?? $paymentResult['data'] ?? null,
+                'provider_transaction_id' => $paymentResult['transaction_id'] ?? $paymentResult['external_id'] ?? $charge->acquirer_transaction_id,
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Failed to log public checkout failure details', [
                 'charge_id' => $charge->id,
                 'error' => $e->getMessage(),
             ]);

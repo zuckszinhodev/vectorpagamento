@@ -70,7 +70,7 @@ export default function WazerAIChat() {
     return messages
       .filter(m => !m.isLoading)
       .slice(-20)
-      .map(m => ({ role: m.role, content: m.content }));
+      .map(m => ({ role: m.role, content: asText(m.content) }));
   };
 
   const sendMessage = async (text?: string) => {
@@ -105,9 +105,9 @@ export default function WazerAIChat() {
         setMessages(prev =>
           prev.map(m =>
             m.id === loadingMessage.id
-              ? { ...m, content: response.data.message, isLoading: false, actionResult: response.data.action_result }
-              : m
-          )
+                ? { ...m, content: asText(response.data.message), isLoading: false, actionResult: response.data.action_result }
+                : m
+            )
         );
       } else {
         setMessages(prev =>
@@ -119,7 +119,7 @@ export default function WazerAIChat() {
         );
       }
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.error || 'Erro de conexão. Verifique sua internet e tente novamente.';
+      const errorMsg = asErrorMessage(err?.response?.data?.error) || 'Erro de conexão. Verifique sua internet e tente novamente.';
       setMessages(prev =>
         prev.map(m =>
           m.id === loadingMessage.id
@@ -149,7 +149,7 @@ export default function WazerAIChat() {
     });
   };
 
-  const firstName = user?.name?.split(' ')[0] || 'Usuário';
+  const firstName = asText(user?.name).split(' ')[0] || 'Usuario';
 
   return (
     <>
@@ -391,7 +391,7 @@ function ActionResultBadge({ actionResult }: { actionResult: WazerAIActionResult
  * Simple markdown renderer for chat messages
  */
 function MarkdownContent({ content, isUser }: { content: string; isUser: boolean }) {
-  const html = simpleMarkdown(content);
+  const html = simpleMarkdown(asText(content));
   return (
     <div
       className={`wazerai-markdown prose prose-sm max-w-none ${
@@ -432,4 +432,17 @@ function simpleMarkdown(text: string): string {
   html = html.replace(/((?:<li[^>]*>.*?<\/li>\s*(?:<br\/>)?)+)/g, '<ul class="my-1 space-y-0.5">$1</ul>');
 
   return `<p>${html}</p>`;
+}
+
+function asText(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function asErrorMessage(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (value && typeof value === 'object' && 'message' in value && typeof (value as { message?: unknown }).message === 'string') {
+    return (value as { message: string }).message;
+  }
+
+  return '';
 }

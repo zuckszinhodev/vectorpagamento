@@ -82,6 +82,20 @@ export default function AdminSettings() {
     onError: () => toast.error('Erro ao salvar'),
   });
 
+  const pruneStaleChargesMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post('/admin/settings/prune-stale-charges');
+      return response.data;
+    },
+    onSuccess: (response) => {
+      const deleted = response?.data?.deleted ?? 0;
+      toast.success(`Limpeza concluída. ${deleted} removidas.`);
+      queryClient.invalidateQueries({ queryKey: ['charges'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-charges'] });
+    },
+    onError: () => toast.error('Erro ao executar limpeza'),
+  });
+
   if (isLoading || !settings) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -100,7 +114,19 @@ export default function AdminSettings() {
 
   return (
     <AdminPageShell>
-      <AdminPageHeader title="Configurações" subtitle="Configurações globais da plataforma" />
+      <AdminPageHeader
+        title="Configurações"
+        subtitle="Configurações globais da plataforma"
+        actions={(
+          <button
+            onClick={() => pruneStaleChargesMutation.mutate()}
+            disabled={pruneStaleChargesMutation.isPending}
+            className="rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {pruneStaleChargesMutation.isPending ? 'Limpando...' : 'Limpar Agora'}
+          </button>
+        )}
+      />
 
       <div className="flex flex-col gap-6 lg:flex-row">
         <nav className="flex flex-row gap-1 overflow-x-auto lg:w-48 lg:flex-col">

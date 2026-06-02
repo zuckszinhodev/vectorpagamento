@@ -11,6 +11,7 @@ use App\Models\AccountWallet;
 use App\Models\AcquirerConfig;
 use App\Models\AccountCustomFee;
 use App\Models\Charge;
+use App\Models\WalletAdjustment;
 use App\Domain\Acquirer\Entities\Acquirer as AcquirerEntity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -92,6 +93,7 @@ class AccountController extends Controller
                     ->get()
                     ->sortBy(fn (AcquirerEntity $entity) => $accountAssignments->get($entity->id)?->priority ?? 99)
                     ->pluck('slug')
+                    ->filter(fn (string $slug) => $activeConfigs->contains('acquirer_key', $slug))
                     ->values();
             } else {
                 $slugs = $activeConfigs->pluck('acquirer_key')->values();
@@ -158,13 +160,18 @@ class AccountController extends Controller
                 ->where('is_active', true)
                 ->pluck('acquirer_id');
 
+            $activeConfigSlugs = AcquirerConfig::where('enabled', true)->pluck('acquirer_key');
+            $globalEntityIds = AcquirerEntity::whereIn('slug', $activeConfigSlugs)
+                ->pluck('id')
+                ->all();
+
             if ($accountAssignmentIds->isNotEmpty()) {
-                $allowedEntityIds = $accountAssignmentIds->values()->all();
+                $allowedEntityIds = array_values(array_unique(array_merge(
+                    $accountAssignmentIds->values()->all(),
+                    $globalEntityIds,
+                )));
             } else {
-                $activeConfigSlugs = AcquirerConfig::where('enabled', true)->pluck('acquirer_key');
-                $allowedEntityIds = AcquirerEntity::whereIn('slug', $activeConfigSlugs)
-                    ->pluck('id')
-                    ->all();
+                $allowedEntityIds = $globalEntityIds;
             }
 
             DB::transaction(function () use ($validated, $user, $allowedEntityIds) {
@@ -440,7 +447,7 @@ class AccountController extends Controller
                     try {
                         $customGatewayFee = $customFee?->calculateGatewayFee($charge->amount, $charge->payment_method);
                         if (!is_null($customGatewayFee)) {
-                            $fee = $customGatewayFee + $acquirerConfig->calculateAcquirerFee($charge->amount);
+                            $fee = $customGatewayFee;
                         } else {
                             $fee = $acquirerConfig->calculateGatewayFee($charge->amount);
                         }
@@ -471,7 +478,16 @@ class AccountController extends Controller
                 $pendingWithdrawals = 0;
             }
 
-            $correctBalance = max(0, $totalNet - (int) $lockedWithdrawals);
+            try {
+                $manualAdjustments = (int) WalletAdjustment::query()
+                    ->where('account_id', $user->account_id)
+                    ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'debit' THEN -amount ELSE amount END), 0) AS total")
+                    ->value('total');
+            } catch (\Throwable $e) {
+                $manualAdjustments = 0;
+            }
+
+            $correctBalance = max(0, $totalNet - (int) $lockedWithdrawals + $manualAdjustments);
 
             // Sync wallet
             $walletUpdates = [];
@@ -493,6 +509,7 @@ class AccountController extends Controller
                     'pending_balance' => (int) $pendingCharges + (int) $pendingWithdrawals,
                     'reserved_balance' => $wallet->reserved_balance ?? 0,
                     'total_revenue' => $totalRevenue,
+                    'manual_adjustments' => $manualAdjustments,
                     'currency' => $wallet->currency,
                 ],
             ]);
