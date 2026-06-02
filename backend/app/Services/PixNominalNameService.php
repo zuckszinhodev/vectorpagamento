@@ -60,15 +60,23 @@ class PixNominalNameService
         if (!$result || !($result['success'] ?? false)) {
             $charge->update(['status' => 'failed']);
 
+            $message = 'Falha ao gerar PIX';
+            if ($result === null) {
+                $message = 'Falha ao gerar PIX: adquirente não configurada ou credenciais ausentes';
+            } elseif (!empty($result['error'])) {
+                $message = (string) $result['error'];
+            }
+
             Log::warning('PixNominalNameService: PIX generation failed', [
                 'acquirer_key' => $config->acquirer_key,
                 'charge_id' => $charge->id,
                 'result' => $result,
+                'message' => $message,
             ]);
 
             return [
                 'success' => false,
-                'message' => $result['error'] ?? 'Falha ao gerar PIX',
+                'message' => $message,
             ];
         }
 

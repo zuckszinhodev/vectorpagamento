@@ -143,6 +143,12 @@ class WitetecAcquirer implements AcquirerInterface
                 'data' => $txData,
             ];
         } catch (\Exception $e) {
+            Log::error('Witetec PIX exception', [
+                'charge_id' => $charge->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return [
                 'success' => false,
                 'error' => $e->getMessage(),
@@ -295,7 +301,7 @@ class WitetecAcquirer implements AcquirerInterface
             'amount' => (int) $charge->amount,
             'quantity' => 1,
             'tangible' => true,
-            'externalRef' => $isPix ? '' : (string) ($charge->id ?? ''),
+            'externalRef' => (string) ($charge->id ?? ''),
         ]];
 
         $payload = [
