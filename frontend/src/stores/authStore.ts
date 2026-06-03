@@ -38,6 +38,22 @@ interface RegisterData {
 
 const ADMIN_MFA_STORAGE_KEY = 'admin_mfa_verified';
 const TRUSTED_DEVICE_STORAGE_KEY = 'trusted_device_tokens';
+const ADMIN_IMPERSONATION_TOKEN_KEY = 'admin_original_token';
+
+const getStoredAdminOriginalToken = (): string | null => {
+  return sessionStorage.getItem(ADMIN_IMPERSONATION_TOKEN_KEY)
+    || localStorage.getItem(ADMIN_IMPERSONATION_TOKEN_KEY);
+};
+
+const setStoredAdminOriginalToken = (token: string): void => {
+  sessionStorage.setItem(ADMIN_IMPERSONATION_TOKEN_KEY, token);
+  localStorage.setItem(ADMIN_IMPERSONATION_TOKEN_KEY, token);
+};
+
+const clearStoredAdminOriginalToken = (): void => {
+  sessionStorage.removeItem(ADMIN_IMPERSONATION_TOKEN_KEY);
+  localStorage.removeItem(ADMIN_IMPERSONATION_TOKEN_KEY);
+};
 
 const persistAdminMfaVerification = (userId: string): void => {
   localStorage.setItem(ADMIN_MFA_STORAGE_KEY, userId);
@@ -101,7 +117,7 @@ export const useAuthStore = create<AuthState>()(
       const hardLogout = () => {
         authService.clearToken();
         clearAdminMfaVerification();
-        sessionStorage.removeItem('admin_original_token');
+        clearStoredAdminOriginalToken();
 
         set({
           user: null,
@@ -257,7 +273,7 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        const hasOriginalAdminToken = Boolean(sessionStorage.getItem('admin_original_token'));
+        const hasOriginalAdminToken = Boolean(getStoredAdminOriginalToken());
 
         if (get().isImpersonating || hasOriginalAdminToken) {
           get().stopImpersonation();
@@ -287,7 +303,7 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await authService.me();
           const user = response.data;
-          const hasOriginalAdminToken = Boolean(sessionStorage.getItem('admin_original_token'));
+          const hasOriginalAdminToken = Boolean(getStoredAdminOriginalToken());
 
           // After a successful /me call, the token may have been refreshed
           // by the interceptor. Sync latest token from localStorage.
@@ -316,8 +332,8 @@ export const useAuthStore = create<AuthState>()(
       startImpersonation: async (impersonateToken: string) => {
         // Save admin token so we can return later
         const adminToken = authService.getToken();
-        if (adminToken && !sessionStorage.getItem('admin_original_token')) {
-          sessionStorage.setItem('admin_original_token', adminToken);
+        if (adminToken && !getStoredAdminOriginalToken()) {
+          setStoredAdminOriginalToken(adminToken);
         }
 
         // Set the impersonation token
@@ -346,16 +362,18 @@ export const useAuthStore = create<AuthState>()(
       },
 
       stopImpersonation: () => {
-        authService.logout().catch(() => {});
-
-        const adminToken = sessionStorage.getItem('admin_original_token');
-        sessionStorage.removeItem('admin_original_token');
+        const adminToken = getStoredAdminOriginalToken();
+        clearStoredAdminOriginalToken();
 
         if (adminToken) {
           authService.setToken(adminToken);
           set({
+            token: adminToken,
+            isAuthenticated: true,
+            user: null,
             isImpersonating: false,
             isLoading: true,
+            adminMfaVerified: true,
           });
           // Re-check auth with admin token
           void get().checkAuth();
