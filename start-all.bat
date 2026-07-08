@@ -8,7 +8,7 @@ echo.
 echo Este script vai iniciar:
 echo  - PostgreSQL local (servico)
 echo  - Backend (Laravel) em http://127.0.0.1:8000
-echo  - Frontend (React) em http://localhost:5173
+echo  - Frontend (React) em http://localhost:3000
 echo.
 echo Aguarde...
 echo.
@@ -31,13 +31,13 @@ echo Sistema iniciado com sucesso!
 echo ========================================
 echo.
 echo Backend: http://127.0.0.1:8000
-echo Frontend: http://localhost:5173
+echo Frontend: http://localhost:3000
 echo.
 echo Pressione qualquer tecla para abrir o navegador...
 pause > nul
 
 REM Abre o navegador
-start http://localhost:5173
+start http://localhost:3000
 
 echo.
 echo Para parar os servidores, feche as janelas do:

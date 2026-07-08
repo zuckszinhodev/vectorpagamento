@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Str;
 
+$sqliteDatabase = env('DB_DATABASE', database_path('database.sqlite'));
+$sqliteDatabasePath = preg_match('/^(?:[A-Za-z]:[\/\\\\]|[\/\\\\])/', $sqliteDatabase)
+    ? $sqliteDatabase
+    : base_path($sqliteDatabase);
+
 return [
 
     /*
@@ -38,7 +43,7 @@ return [
         'sqlite' => [
             'driver' => 'sqlite',
             'url' => env('DATABASE_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'database' => $sqliteDatabasePath,
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
         ],

@@ -68,11 +68,26 @@ export const kycService = {
     return response.data;
   },
 
+  async createMobileSession(): Promise<{ success: boolean; data: { code: string; url: string; expires_at: string } }> {
+    const response = await api.post('/kyc/mobile-session');
+    return response.data;
+  },
+
+  async getMobileSession(code: string): Promise<{ success: boolean; data: { code: string; user_name: string; kyc_status: string } }> {
+    const response = await api.get(`/kyc/mobile/${code}`);
+    return response.data;
+  },
+
   /**
    * Submit KYC personal data
    */
   async submit(data: KycSubmitData): Promise<{ success: boolean; data: { submission_id: string; message: string } }> {
     const response = await api.post('/kyc/submit', data);
+    return response.data;
+  },
+
+  async submitWithCode(code: string, data: KycSubmitData): Promise<{ success: boolean; data: { submission_id: string; message: string } }> {
+    const response = await api.post(`/kyc/mobile/${code}/submit`, data);
     return response.data;
   },
 
@@ -92,6 +107,19 @@ export const kycService = {
     return response.data;
   },
 
+  async uploadDocumentWithCode(code: string, documentType: string, file: File): Promise<{ success: boolean; data: { document_id: string } }> {
+    const formData = new FormData();
+    formData.append('document_type', documentType);
+    formData.append('file', file);
+
+    const response = await api.post(`/kyc/mobile/${code}/documents`, formData, {
+      headers: {
+        'Content-Type': undefined,
+      },
+    });
+    return response.data;
+  },
+
   /**
    * Delete a document
    */
@@ -105,6 +133,11 @@ export const kycService = {
    */
   async submitForReview(): Promise<{ success: boolean; data: { kyc_status: string; message: string } }> {
     const response = await api.post('/kyc/submit-for-review');
+    return response.data;
+  },
+
+  async submitForReviewWithCode(code: string): Promise<{ success: boolean; data: { kyc_status: string; message: string } }> {
+    const response = await api.post(`/kyc/mobile/${code}/submit-for-review`);
     return response.data;
   },
 };

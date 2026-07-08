@@ -18,6 +18,7 @@ use App\Models\CustomDomain;
 use App\Models\SavedCard;
 use App\Services\MemberEnrollmentService;
 use App\Services\PaymentService;
+use App\Services\LiveMapService;
 use App\Services\UtmifyService;
 use App\Services\FacebookConversionsApiService;
 use Illuminate\Http\JsonResponse;
@@ -29,11 +30,44 @@ class PublicCheckoutController extends Controller
 {
     private PaymentService $paymentService;
     private MemberEnrollmentService $memberEnrollmentService;
+    private LiveMapService $liveMapService;
 
-    public function __construct(PaymentService $paymentService, MemberEnrollmentService $memberEnrollmentService)
+    public function __construct(
+        PaymentService $paymentService,
+        MemberEnrollmentService $memberEnrollmentService,
+        LiveMapService $liveMapService
+    )
     {
         $this->paymentService = $paymentService;
         $this->memberEnrollmentService = $memberEnrollmentService;
+        $this->liveMapService = $liveMapService;
+    }
+
+    private function resolveFacebookPixel(Checkout $checkout): ?array
+    {
+        $metadata = $checkout->product?->metadata;
+        $productPixel = is_array($metadata) && is_array($metadata['facebook_pixel'] ?? null)
+            ? $metadata['facebook_pixel']
+            : null;
+
+        if ($productPixel
+            && filter_var($productPixel['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN)
+            && !empty($productPixel['pixel_id'])
+        ) {
+            return [
+                'pixel_id' => (string) $productPixel['pixel_id'],
+                'track_page_view' => (bool) ($productPixel['track_page_view'] ?? true),
+                'track_initiate_checkout' => (bool) ($productPixel['track_initiate_checkout'] ?? true),
+                'track_add_payment_info' => (bool) ($productPixel['track_add_payment_info'] ?? true),
+                'track_purchase' => (bool) ($productPixel['track_purchase'] ?? true),
+            ];
+        }
+
+        try {
+            return app(FacebookConversionsApiService::class)->getPixelDataForAccount($checkout->account_id);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**
@@ -85,6 +119,7 @@ class PublicCheckoutController extends Controller
         // Increment views
         try {
             $checkout->incrementViews();
+            $this->liveMapService->recordCheckoutAccess($checkout, $request, 'checkout', 'Checkout aberto');
         } catch (\Throwable $e) {
             Log::warning('Failed to increment checkout views (domain)', ['error' => $e->getMessage()]);
         }
@@ -92,12 +127,7 @@ class PublicCheckoutController extends Controller
         // Load product
         $checkout->load('product');
 
-        // Load Facebook pixel data
-        try {
-            $facebookPixel = app(FacebookConversionsApiService::class)->getPixelDataForAccount($checkout->account_id);
-        } catch (\Throwable $e) {
-            $facebookPixel = null;
-        }
+        $facebookPixel = $this->resolveFacebookPixel($checkout);
 
         return response()->json([
             'success' => true,
@@ -140,7 +170,7 @@ class PublicCheckoutController extends Controller
     /**
      * Get checkout by slug (public)
      */
-    public function show(string $slug): JsonResponse
+    public function show(Request $request, string $slug): JsonResponse
     {
         try {
         $checkout = Checkout::where('slug', $slug)
@@ -160,6 +190,7 @@ class PublicCheckoutController extends Controller
         // Increment views
         try {
             $checkout->incrementViews();
+            $this->liveMapService->recordCheckoutAccess($checkout, $request, 'checkout', 'Checkout aberto');
         } catch (\Throwable $e) {
             Log::warning('Failed to increment checkout views', ['slug' => $slug, 'error' => $e->getMessage()]);
         }
@@ -188,12 +219,7 @@ class PublicCheckoutController extends Controller
             $hasUpsells = false;
         }
 
-        // Load Facebook pixel data
-        try {
-            $facebookPixel = app(FacebookConversionsApiService::class)->getPixelDataForAccount($checkout->account_id);
-        } catch (\Throwable $e) {
-            $facebookPixel = null;
-        }
+        $facebookPixel = $this->resolveFacebookPixel($checkout);
 
         return response()->json([
             'success' => true,
@@ -268,6 +294,12 @@ class PublicCheckoutController extends Controller
                     'message' => 'Checkout não encontrado ou inativo',
                 ],
             ], 404);
+        }
+
+        try {
+            $this->liveMapService->recordCheckoutAccess($checkout, $request, 'api', 'API do checkout acionada');
+        } catch (\Throwable $e) {
+            Log::debug('Failed to record checkout API access', ['slug' => $slug, 'error' => $e->getMessage()]);
         }
 
         // Accept customer data either nested or flat

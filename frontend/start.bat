@@ -14,14 +14,17 @@ if not exist ".env" (
 )
 
 echo [2/3] Verificando dependencias...
-if not exist "node_modules" (
-    echo Instalando dependencias...
-    call npm install
+echo Sincronizando dependencias...
+call npm install
+if %ERRORLEVEL% NEQ 0 (
+    echo ERRO: Falha ao instalar dependencias do frontend.
+    pause
+    exit /b 1
 )
 
 echo [3/3] Iniciando servidor Vite...
 echo.
-echo Frontend rodando em: http://localhost:5173
+echo Frontend rodando em: http://localhost:3000
 echo.
 echo Pressione Ctrl+C para parar o servidor
 echo.

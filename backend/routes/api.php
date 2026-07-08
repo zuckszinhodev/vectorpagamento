@@ -151,6 +151,14 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
     // KYC Document View (protected via signed URL with expiration)
     Route::get('/kyc/documents/{document}/view', [\App\Http\Controllers\Api\V1\KycController::class, 'viewDocument'])->name('kyc.document.view');
 
+    // Public mobile KYC flow opened from QR code
+    Route::prefix('kyc/mobile')->middleware('throttle:30,1')->group(function () {
+        Route::get('/{code}', [\App\Http\Controllers\Api\V1\KycMobileSessionController::class, 'show']);
+        Route::post('/{code}/submit', [\App\Http\Controllers\Api\V1\KycMobileSessionController::class, 'submit']);
+        Route::post('/{code}/documents', [\App\Http\Controllers\Api\V1\KycMobileSessionController::class, 'uploadDocument']);
+        Route::post('/{code}/submit-for-review', [\App\Http\Controllers\Api\V1\KycMobileSessionController::class, 'submitForReview']);
+    });
+
     // Public Landing Pages (no auth)
     Route::prefix('lp')->group(function () {
         Route::get('/{slug}', [\App\Http\Controllers\Api\V1\PublicLandingPageController::class, 'show']);
@@ -203,6 +211,8 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
 
         // Account acquirer priority management
         Route::get('/acquirers', [\App\Http\Controllers\Api\V1\AccountController::class, 'acquirers']);
+        Route::get('/acquirers/routing-settings', [\App\Http\Controllers\Api\V1\AccountController::class, 'acquirerRoutingSettings']);
+        Route::put('/acquirers/routing-settings', [\App\Http\Controllers\Api\V1\AccountController::class, 'updateAcquirerRoutingSettings']);
         Route::put('/acquirers/reorder', [\App\Http\Controllers\Api\V1\AccountController::class, 'reorderAcquirers']);
 
         // Users Management (admin only)
@@ -317,6 +327,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
 
         // Dashboard Analytics (JWT auth)
         Route::get('/analytics', [\App\Http\Controllers\Api\V1\AnalyticsController::class, 'index']);
+        Route::get('/live-map/events', [\App\Http\Controllers\Api\V1\LiveMapController::class, 'index']);
 
         // Dashboard Withdrawals (JWT auth)
         Route::prefix('withdrawals')->middleware('idempotency')->group(function () {
@@ -343,6 +354,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         // KYC (Know Your Customer) - User verification
         Route::prefix('kyc')->group(function () {
             Route::get('/status', [\App\Http\Controllers\Api\V1\KycController::class, 'status']);
+            Route::post('/mobile-session', [\App\Http\Controllers\Api\V1\KycMobileSessionController::class, 'create']);
             Route::post('/submit', [\App\Http\Controllers\Api\V1\KycController::class, 'submit']);
             Route::post('/documents', [\App\Http\Controllers\Api\V1\KycController::class, 'uploadDocument']);
             Route::delete('/documents/{documentId}', [\App\Http\Controllers\Api\V1\KycController::class, 'deleteDocument']);

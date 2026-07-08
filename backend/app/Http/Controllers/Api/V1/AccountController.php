@@ -15,6 +15,7 @@ use App\Models\WalletAdjustment;
 use App\Domain\Acquirer\Entities\Acquirer as AcquirerEntity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -107,7 +108,12 @@ class AccountController extends Controller
                 ->get()
                 ->keyBy('slug');
 
-            $items = $slugs->map(function (string $slug) use ($entities, $configs, $accountAssignments) {
+            $chargeMetrics = Charge::where('account_id', $user->account_id)
+                ->where('created_at', '>=', now()->subDay())
+                ->get(['acquirer', 'status'])
+                ->groupBy(fn (Charge $charge) => strtolower((string) ($charge->acquirer ?? '')));
+
+            $items = $slugs->map(function (string $slug) use ($entities, $configs, $accountAssignments, $chargeMetrics) {
                 $entity = $entities->get($slug);
                 if (!$entity) {
                     return null;
@@ -116,6 +122,11 @@ class AccountController extends Controller
                 $config = $configs->get($slug);
                 $assignment = $accountAssignments->get($entity->id);
                 $supportedMethods = $config?->supported_methods ?? $entity->supported_methods ?? [];
+                $settings = $assignment?->settings ?? [];
+                $metricsRows = $chargeMetrics->get(strtolower($slug), collect());
+                $volumeToday = $metricsRows->count();
+                $approvedToday = $metricsRows->filter(fn (Charge $charge) => in_array($charge->status, ['paid', 'approved', 'completed'], true))->count();
+                $failedToday = $metricsRows->filter(fn (Charge $charge) => in_array($charge->status, ['failed', 'cancelled', 'refused', 'expired'], true))->count();
 
                 return [
                     'acquirer_id' => $entity->id,
@@ -124,11 +135,18 @@ class AccountController extends Controller
                     'nominal_name' => $config?->nominal_name,
                     'priority' => $assignment?->priority ?? $config?->priority ?? 99,
                     'is_active' => $assignment?->is_active ?? true,
+                    'routing_weight' => (int) ($settings['routing_weight'] ?? 1),
                     'supported_methods' => $supportedMethods,
                     'supports_pix' => in_array('pix', $supportedMethods, true),
                     'supports_pix_out' => in_array('pix_out', $supportedMethods, true),
                     'supports_credit_card' => in_array('credit_card', $supportedMethods, true) || in_array('card', $supportedMethods, true),
                     'supports_boleto' => in_array('boleto', $supportedMethods, true),
+                    'metrics' => [
+                        'approval_rate' => $volumeToday > 0 ? round(($approvedToday / $volumeToday) * 100, 1) : null,
+                        'volume_today' => $volumeToday,
+                        'failures_today' => $failedToday,
+                        'latency_ms' => $settings['latency_ms'] ?? null,
+                    ],
                 ];
             })->filter()->sortBy('priority')->values();
 
@@ -136,6 +154,109 @@ class AccountController extends Controller
         } catch (\Throwable $e) {
             Log::error('AccountController::acquirers error', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Erro ao carregar adquirentes'], 500);
+        }
+    }
+
+    public function acquirerRoutingSettings(Request $request): JsonResponse
+    {
+        try {
+            $account = $this->resolveAccount($request);
+            if (!$account) {
+                return response()->json(['success' => false, 'message' => 'Conta nÃ£o encontrada'], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $this->getAccountRoutingSettings($account),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('AccountController::acquirerRoutingSettings error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Erro ao carregar configuracao de rotacao'], 500);
+        }
+    }
+
+    public function updateAcquirerRoutingSettings(Request $request): JsonResponse
+    {
+        $account = $this->resolveAccount($request);
+        if (!$account) {
+            return response()->json(['success' => false, 'message' => 'Conta nÃ£o encontrada'], 404);
+        }
+
+        $validated = $request->validate([
+            'rotation_mode' => ['required', Rule::in(['priority', 'weighted', 'fallback', 'approval'])],
+            'method_rules' => ['nullable', 'array'],
+            'method_rules.pix' => ['nullable', 'uuid'],
+            'method_rules.credit_card' => ['nullable', 'uuid'],
+            'method_rules.boleto' => ['nullable', 'uuid'],
+            'weights' => ['nullable', 'array'],
+            'weights.*' => ['integer', 'min:1', 'max:100'],
+            'history_note' => ['nullable', 'string', 'max:180'],
+        ]);
+
+        try {
+            $allowedAcquirerIds = $this->allowedAccountAcquirerIds($account->id);
+            $methodRules = collect($validated['method_rules'] ?? [])
+                ->only(['pix', 'credit_card', 'boleto'])
+                ->map(fn ($acquirerId) => in_array($acquirerId, $allowedAcquirerIds, true) ? $acquirerId : null)
+                ->all();
+
+            DB::transaction(function () use ($account, $validated, $allowedAcquirerIds, $methodRules, $request) {
+                foreach (($validated['weights'] ?? []) as $acquirerId => $weight) {
+                    if (!in_array($acquirerId, $allowedAcquirerIds, true)) {
+                        continue;
+                    }
+
+                    $assignment = AccountAcquirer::firstOrNew([
+                        'account_id' => $account->id,
+                        'acquirer_id' => $acquirerId,
+                    ]);
+
+                    if (!$assignment->exists) {
+                        $assignment->credentials = encrypt([]);
+                        $assignment->priority = 99;
+                        $assignment->is_active = true;
+                    }
+
+                    $settings = $assignment->settings ?? [];
+                    $settings['routing_weight'] = (int) $weight;
+                    $assignment->settings = $settings;
+                    $assignment->save();
+                }
+
+                $settings = $account->settings ?? [];
+                $routing = $settings['acquirer_routing'] ?? [];
+                $history = array_slice($routing['history'] ?? [], 0, 9);
+
+                array_unshift($history, [
+                    'action' => $validated['history_note'] ?? 'Configuracao de rotacao atualizada',
+                    'user_id' => $request->user()?->id,
+                    'at' => now()->toIso8601String(),
+                ]);
+
+                $settings['acquirer_routing'] = [
+                    'rotation_mode' => $validated['rotation_mode'],
+                    'method_rules' => $methodRules,
+                    'history' => array_slice($history, 0, 10),
+                    'updated_at' => now()->toIso8601String(),
+                ];
+
+                $account->settings = $settings;
+                $account->save();
+            });
+
+            $account->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Configuracao de rotacao atualizada',
+                'data' => $this->getAccountRoutingSettings($account),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('AccountController::updateAcquirerRoutingSettings error', [
+                'error' => $e->getMessage(),
+                'account_id' => $account->id,
+            ]);
+            return response()->json(['success' => false, 'message' => 'Erro ao salvar configuracao de rotacao'], 500);
         }
     }
 
@@ -194,6 +315,23 @@ class AccountController extends Controller
                     $assignment->priority = (int) $item['priority'];
                     $assignment->save();
                 }
+
+                $account = Account::find($user->account_id);
+                if ($account) {
+                    $settings = $account->settings ?? [];
+                    $routing = $settings['acquirer_routing'] ?? [];
+                    $history = array_slice($routing['history'] ?? [], 0, 9);
+                    array_unshift($history, [
+                        'action' => 'Prioridade das nominais atualizada',
+                        'user_id' => $user->id,
+                        'at' => now()->toIso8601String(),
+                    ]);
+                    $routing['history'] = array_slice($history, 0, 10);
+                    $routing['updated_at'] = now()->toIso8601String();
+                    $settings['acquirer_routing'] = $routing;
+                    $account->settings = $settings;
+                    $account->save();
+                }
             });
 
             return response()->json(['success' => true, 'message' => 'Prioridade das nominais atualizada']);
@@ -201,6 +339,52 @@ class AccountController extends Controller
             Log::error('AccountController::reorderAcquirers error', ['error' => $e->getMessage(), 'account_id' => $user->account_id]);
             return response()->json(['success' => false, 'message' => 'Erro ao salvar prioridade das nominais'], 500);
         }
+    }
+
+    private function resolveAccount(Request $request): ?Account
+    {
+        $user = $request->user();
+        if (!$user?->account_id) {
+            return null;
+        }
+
+        return Account::find($user->account_id);
+    }
+
+    private function getAccountRoutingSettings(Account $account): array
+    {
+        $routing = ($account->settings ?? [])['acquirer_routing'] ?? [];
+        $assignments = AccountAcquirer::where('account_id', $account->id)->get(['acquirer_id', 'settings']);
+
+        return [
+            'rotation_mode' => $routing['rotation_mode'] ?? 'priority',
+            'method_rules' => array_merge([
+                'pix' => null,
+                'credit_card' => null,
+                'boleto' => null,
+            ], $routing['method_rules'] ?? []),
+            'weights' => $assignments
+                ->mapWithKeys(fn (AccountAcquirer $assignment) => [
+                    $assignment->acquirer_id => (int) (($assignment->settings ?? [])['routing_weight'] ?? 1),
+                ])
+                ->all(),
+            'history' => $routing['history'] ?? [],
+            'updated_at' => $routing['updated_at'] ?? null,
+        ];
+    }
+
+    private function allowedAccountAcquirerIds(string $accountId): array
+    {
+        $assignedIds = AccountAcquirer::where('account_id', $accountId)
+            ->pluck('acquirer_id')
+            ->all();
+
+        $activeConfigSlugs = AcquirerConfig::where('enabled', true)->pluck('acquirer_key');
+        $globalIds = AcquirerEntity::whereIn('slug', $activeConfigSlugs)
+            ->pluck('id')
+            ->all();
+
+        return array_values(array_unique(array_merge($assignedIds, $globalIds)));
     }
 
     /**

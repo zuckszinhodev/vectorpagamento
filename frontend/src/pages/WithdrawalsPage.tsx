@@ -17,6 +17,9 @@ import {
  ExclamationTriangleIcon,
  BoltIcon,
  ShieldCheckIcon,
+ DocumentArrowDownIcon,
+ EyeIcon,
+ MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '@/lib/api';
@@ -124,6 +127,11 @@ export default function WithdrawalsPage() {
  const [mfaCode, setMfaCode] = useState(['', '', '', '', '', '']);
  const [pendingFormData, setPendingFormData] = useState<WithdrawalForm | null>(null);
  const [withdrawalRequestKey, setWithdrawalRequestKey] = useState('');
+ const [searchQuery, setSearchQuery] = useState('');
+ const [methodFilter, setMethodFilter] = useState('all');
+ const [dateFrom, setDateFrom] = useState('');
+ const [dateTo, setDateTo] = useState('');
+ const [selectedWithdrawalDetail, setSelectedWithdrawalDetail] = useState<Withdrawal | null>(null);
  const mfaInputRefs = useRef<(HTMLInputElement | null)[]>([]);
  const { user } = useAuthStore();
  const navigate = useNavigate();
@@ -456,18 +464,120 @@ export default function WithdrawalsPage() {
  }
  };
 
- const filteredWithdrawals = selectedStatus === 'all'
+ const filteredWithdrawals = (selectedStatus === 'all'
  ? withdrawals
- : withdrawals.filter(w => w.status === selectedStatus);
+ : withdrawals.filter(w => w.status === selectedStatus))
+ .filter((withdrawal) => {
+ if (methodFilter !== 'all' && withdrawal.method !== methodFilter) return false;
+
+ const createdAt = new Date(withdrawal.created_at);
+ if (dateFrom && createdAt < new Date(`${dateFrom}T00:00:00`)) return false;
+ if (dateTo && createdAt > new Date(`${dateTo}T23:59:59`)) return false;
+
+ const query = searchQuery.trim().toLowerCase();
+ if (!query) return true;
+
+ const searchable = [
+ withdrawal.id,
+ withdrawal.method,
+ withdrawal.status,
+ withdrawal.destination.pix_key,
+ withdrawal.destination.bank_name,
+ withdrawal.destination.account_number,
+ withdrawal.notes,
+ withdrawal.failure_reason,
+ ].filter(Boolean).join(' ').toLowerCase();
+
+ return searchable.includes(query);
+ });
+
+ const statusTabs = [
+ { key: 'all', label: 'Todos', count: withdrawals.length },
+ { key: 'pending', label: 'Pendentes', count: pendingWithdrawals.length },
+ { key: 'completed', label: 'Concluidos', count: withdrawals.filter(w => w.status === 'completed').length },
+ { key: 'cancelled', label: 'Cancelados', count: withdrawals.filter(w => w.status === 'cancelled').length },
+ ];
+
+ const quickWithdrawalPercents = [25, 50, 100];
+
+ const setQuickAmount = (percent: number) => {
+ const amount = Math.floor((availableBalance * percent) / 100) / 100;
+ setValue('amount', amount, { shouldDirty: true, shouldValidate: true });
+ };
+
+ const getWithdrawalTimeline = (withdrawal: Withdrawal) => {
+ const base = [
+ { label: 'Solicitado', date: withdrawal.created_at, done: true },
+ {
+ label: withdrawal.status === 'pending' ? 'Aguardando analise' : 'Analise concluida',
+ date: withdrawal.status === 'pending' ? undefined : withdrawal.processed_at,
+ done: withdrawal.status !== 'pending',
+ },
+ {
+ label: ['processing', 'approved', 'completed'].includes(withdrawal.status) ? 'Processamento iniciado' : 'Processamento',
+ date: ['processing', 'approved', 'completed'].includes(withdrawal.status) ? withdrawal.processed_at : undefined,
+ done: ['processing', 'approved', 'completed'].includes(withdrawal.status),
+ },
+ {
+ label: withdrawal.status === 'cancelled' ? 'Cancelado' : withdrawal.status === 'failed' ? 'Falhou' : 'Concluido',
+ date: withdrawal.processed_at,
+ done: ['completed', 'cancelled', 'failed'].includes(withdrawal.status),
+ },
+ ];
+
+ return base;
+ };
+
+ const exportWithdrawalsCsv = () => {
+ const headers = ['Data', 'Metodo', 'Destino', 'Valor', 'Taxa', 'Liquido', 'Status'];
+ const rows = filteredWithdrawals.map((withdrawal) => [
+ new Date(withdrawal.created_at).toLocaleString('pt-BR'),
+ withdrawal.method,
+ withdrawal.destination.pix_key || withdrawal.destination.bank_name || withdrawal.destination.account_number || 'Ajuste manual',
+ (withdrawal.amount / 100).toFixed(2),
+ (withdrawal.fee / 100).toFixed(2),
+ (withdrawal.net_amount / 100).toFixed(2),
+ statusConfig[withdrawal.status]?.label || withdrawal.status,
+ ]);
+ const csv = [headers, ...rows]
+ .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(';'))
+ .join('\n');
+ const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+ const url = URL.createObjectURL(blob);
+ const link = document.createElement('a');
+ link.href = url;
+ link.download = `saques-${new Date().toISOString().slice(0, 10)}.csv`;
+ link.click();
+ URL.revokeObjectURL(url);
+ };
 
   return (
  <div className="space-y-5">
- <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-5 sm:p-6">
- <h1 className="text-2xl font-bold tracking-tight text-tx-primary">Saques</h1>
+ <section className="rounded-xl border border-border-DEFAULT bg-surface-card p-5 shadow-sm sm:p-6">
+ <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+ <div className="min-w-0">
+ <h1 className="text-2xl font-bold tracking-tight text-tx-primary sm:text-3xl">Saques</h1>
  <p className="mt-1 text-sm text-tx-muted">
  Acompanhe saldo disponível, solicitações e histórico de transferências.
  </p>
  </div>
+ <button
+ onClick={() => {
+ if (user?.kyc_status !== 'approved') {
+ toast.error('Voce precisa completar a verificacao KYC antes de realizar saques.');
+ navigate('/kyc');
+ return;
+ }
+ setIsWithdrawModalOpen(true);
+ }}
+ disabled={createWithdrawalMutation.isPending || !withdrawalsEnabled || availableBalance < minWithdrawal}
+ className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-accent-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+ >
+ <ArrowDownTrayIcon className="h-5 w-5" />
+ Solicitar saque
+ </button>
+ </div>
+ </section>
 
  {!withdrawalsEnabled && (
  <div className="rounded-2xl border border-status-warning bg-status-warning-subtle p-4">
@@ -483,8 +593,8 @@ export default function WithdrawalsPage() {
 
 
 
- <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
- <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-5 sm:p-6">
+ <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+ <div className="rounded-xl border border-border-DEFAULT bg-surface-card p-4 shadow-sm">
  <div className="mb-2 flex items-center justify-between">
  <span className="text-sm font-medium text-tx-secondary">Saldo disponível</span>
  <button
@@ -496,25 +606,25 @@ export default function WithdrawalsPage() {
  <ArrowPathIcon className={clsx('h-4 w-4', isFetchingSummary && 'animate-spin')} />
  </button>
  </div>
- <p className="mb-1 font-mono text-2xl font-bold tracking-tight text-tx-primary sm:text-3xl">{formatCurrency(availableBalance)}</p>
+ <p className="mb-1 font-mono text-2xl font-bold tracking-tight text-tx-primary">{formatCurrency(availableBalance)}</p>
  <p className="text-xs text-tx-muted">Disponível para nova solicitação</p>
  </div>
 
- <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-5 sm:p-6">
+ <div className="rounded-xl border border-border-DEFAULT bg-surface-card p-4 shadow-sm">
  <div className="mb-2 flex items-center justify-between">
  <span className="text-sm font-medium text-tx-secondary">Em processamento</span>
  <ClockIcon className="h-5 w-5 text-tx-muted" />
  </div>
- <p className="mb-1 font-mono text-2xl font-bold tracking-tight text-tx-primary sm:text-3xl">{formatCurrency(pendingAmount)}</p>
+ <p className="mb-1 font-mono text-2xl font-bold tracking-tight text-tx-primary">{formatCurrency(pendingAmount)}</p>
  <p className="text-xs text-tx-muted">{pendingWithdrawals.length} solicitações ativas</p>
  </div>
 
- <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-5 sm:p-6">
+ <div className="rounded-xl border border-border-DEFAULT bg-surface-card p-4 shadow-sm">
  <div className="mb-2 flex items-center justify-between">
  <span className="text-sm font-medium text-tx-secondary">Sacado no mês</span>
  <CheckCircleIcon className="h-5 w-5 text-tx-muted" />
  </div>
- <p className="mb-1 font-mono text-2xl font-bold tracking-tight text-tx-primary sm:text-3xl">{formatCurrency(summary?.this_month_withdrawn || 0)}</p>
+ <p className="mb-1 font-mono text-2xl font-bold tracking-tight text-tx-primary">{formatCurrency(summary?.this_month_withdrawn || 0)}</p>
  <p className="text-xs text-tx-muted">Total de saques concluídos</p>
  </div>
  </div>
@@ -541,6 +651,49 @@ export default function WithdrawalsPage() {
  </div>
  </div>
 
+ <div className="rounded-xl border border-border-DEFAULT bg-surface-card p-4 shadow-sm">
+ <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_160px_150px_150px_auto] lg:items-end">
+ <div>
+ <label className="mb-1 block text-xs font-semibold text-tx-muted">Buscar</label>
+ <div className="relative">
+ <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
+ <input
+ value={searchQuery}
+ onChange={(event) => setSearchQuery(event.target.value)}
+ className="input pl-9"
+ placeholder="Chave PIX, banco, status ou ID"
+ />
+ </div>
+ </div>
+ <div>
+ <label className="mb-1 block text-xs font-semibold text-tx-muted">Metodo</label>
+ <select value={methodFilter} onChange={(event) => setMethodFilter(event.target.value)} className="input">
+ <option value="all">Todos</option>
+ <option value="pix">PIX</option>
+ <option value="bank_transfer">TED</option>
+ <option value="manual">Ajuste</option>
+ </select>
+ </div>
+ <div>
+ <label className="mb-1 block text-xs font-semibold text-tx-muted">De</label>
+ <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} className="input" />
+ </div>
+ <div>
+ <label className="mb-1 block text-xs font-semibold text-tx-muted">Ate</label>
+ <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="input" />
+ </div>
+ <button
+ type="button"
+ onClick={exportWithdrawalsCsv}
+ disabled={filteredWithdrawals.length === 0}
+ className="inline-flex items-center justify-center gap-2 rounded-lg border border-border-DEFAULT px-4 py-2.5 text-sm font-semibold text-tx-secondary transition hover:bg-surface-hover disabled:opacity-50"
+ >
+ <DocumentArrowDownIcon className="h-4 w-4" />
+ Exportar
+ </button>
+ </div>
+ </div>
+
  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
  <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
  <button
@@ -552,7 +705,7 @@ export default function WithdrawalsPage() {
  : 'border border-border-DEFAULT bg-transparent text-tx-secondary hover:bg-surface-hover'
  )}
  >
- Todos
+ Todos ({statusTabs[0].count})
  </button>
  <button
  onClick={() => setSelectedStatus('pending')}
@@ -563,7 +716,7 @@ export default function WithdrawalsPage() {
  : 'border border-border-DEFAULT bg-transparent text-tx-secondary hover:bg-surface-hover'
  )}
  >
- Pendentes
+ Pendentes ({statusTabs[1].count})
  </button>
  <button
  onClick={() => setSelectedStatus('completed')}
@@ -585,7 +738,7 @@ export default function WithdrawalsPage() {
  : 'border border-border-DEFAULT bg-transparent text-tx-secondary hover:bg-surface-hover'
  )}
  >
- Cancelados
+ Cancelados ({statusTabs[3].count})
  </button>
  </div>
 
@@ -599,7 +752,7 @@ export default function WithdrawalsPage() {
  setIsWithdrawModalOpen(true);
  }}
  disabled={createWithdrawalMutation.isPending || !withdrawalsEnabled || availableBalance < minWithdrawal}
- className="btn-primary inline-flex w-full items-center justify-center gap-2 px-6 py-2.5 sm:w-auto"
+ className="hidden"
  >
  <ArrowDownTrayIcon className="h-5 w-5" />
  Solicitar Saque
@@ -740,7 +893,14 @@ export default function WithdrawalsPage() {
   </div>
   </td>
  <td className="py-4 px-6">
- <div className="flex justify-center">
+ <div className="flex justify-center gap-2">
+  <button
+  onClick={() => setSelectedWithdrawalDetail(withdrawal)}
+  className="inline-flex items-center gap-1.5 rounded-element border border-border-DEFAULT px-3 py-1.5 text-xs font-semibold text-tx-secondary transition-colors hover:bg-surface-hover"
+ >
+ <EyeIcon className="h-4 w-4" />
+ Detalhes
+ </button>
   {withdrawal.status === 'pending' && withdrawal.history_type !== 'wallet_adjustment' && (
   <button
   onClick={() => handleCancelWithdrawal(withdrawal.id)}
@@ -761,6 +921,85 @@ export default function WithdrawalsPage() {
  </table>
  </div>
  </div>
+
+ <Transition appear show={!!selectedWithdrawalDetail} as={Fragment}>
+ <Dialog as="div" className="relative z-50" onClose={() => setSelectedWithdrawalDetail(null)}>
+ <Transition.Child
+ as={Fragment}
+ enter="ease-out duration-200"
+ enterFrom="opacity-0"
+ enterTo="opacity-100"
+ leave="ease-in duration-150"
+ leaveFrom="opacity-100"
+ leaveTo="opacity-0"
+ >
+ <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+ </Transition.Child>
+ <div className="fixed inset-0 overflow-y-auto">
+ <div className="flex min-h-full items-center justify-center p-4">
+ <Transition.Child
+ as={Fragment}
+ enter="ease-out duration-200"
+ enterFrom="opacity-0 scale-95"
+ enterTo="opacity-100 scale-100"
+ leave="ease-in duration-150"
+ leaveFrom="opacity-100 scale-100"
+ leaveTo="opacity-0 scale-95"
+ >
+ <Dialog.Panel className="w-full max-w-lg overflow-hidden rounded-2xl bg-surface-card shadow-xl">
+ {selectedWithdrawalDetail && (
+ <>
+ <div className="border-b border-border-DEFAULT px-6 py-4">
+ <Dialog.Title className="text-lg font-bold text-tx-primary">Detalhes do saque</Dialog.Title>
+ <p className="mt-1 text-sm text-tx-muted">Acompanhamento financeiro da solicitacao.</p>
+ </div>
+ <div className="space-y-5 p-6">
+ <div className="grid grid-cols-3 gap-3">
+ <div className="rounded-lg border border-border-DEFAULT bg-surface-page p-3">
+ <p className="text-xs text-tx-muted">Valor</p>
+ <p className="mt-1 font-mono text-sm font-bold text-tx-primary">{formatCurrency(selectedWithdrawalDetail.amount)}</p>
+ </div>
+ <div className="rounded-lg border border-border-DEFAULT bg-surface-page p-3">
+ <p className="text-xs text-tx-muted">Taxa</p>
+ <p className="mt-1 font-mono text-sm font-bold text-tx-primary">{selectedWithdrawalDetail.fee > 0 ? formatCurrency(selectedWithdrawalDetail.fee) : 'Gratis'}</p>
+ </div>
+ <div className="rounded-lg border border-border-DEFAULT bg-surface-page p-3">
+ <p className="text-xs text-tx-muted">Liquido</p>
+ <p className="mt-1 font-mono text-sm font-bold text-accent-primary">{formatCurrency(selectedWithdrawalDetail.net_amount)}</p>
+ </div>
+ </div>
+
+ <div>
+ <h3 className="mb-3 text-sm font-semibold text-tx-primary">Linha do tempo</h3>
+ <div className="space-y-3">
+ {getWithdrawalTimeline(selectedWithdrawalDetail).map((event, index) => (
+ <div key={`${event.label}-${index}`} className="flex gap-3">
+ <div className={clsx('mt-1 h-3 w-3 rounded-full border', event.done ? 'border-accent-primary bg-accent-primary' : 'border-border-DEFAULT bg-surface-hover')} />
+ <div>
+ <p className={clsx('text-sm font-semibold', event.done ? 'text-tx-primary' : 'text-tx-muted')}>{event.label}</p>
+ <p className="text-xs text-tx-muted">
+ {event.date ? new Date(event.date).toLocaleString('pt-BR') : 'Pendente'}
+ </p>
+ </div>
+ </div>
+ ))}
+ </div>
+ </div>
+
+ {(selectedWithdrawalDetail.failure_reason || selectedWithdrawalDetail.notes) && (
+ <div className="rounded-lg border border-border-DEFAULT bg-surface-page p-3 text-sm text-tx-secondary">
+ {selectedWithdrawalDetail.failure_reason || selectedWithdrawalDetail.notes}
+ </div>
+ )}
+ </div>
+ </>
+ )}
+ </Dialog.Panel>
+ </Transition.Child>
+ </div>
+ </div>
+ </Dialog>
+ </Transition>
 
  {/* Withdraw Modal */}
  <Transition appear show={isWithdrawModalOpen} as={Fragment}>
@@ -921,6 +1160,18 @@ export default function WithdrawalsPage() {
  {errors.amount && (
  <p className="text-status-error text-xs mt-1">{errors.amount.message}</p>
  )}
+ <div className="mt-2 flex flex-wrap gap-2">
+ {quickWithdrawalPercents.map((percent) => (
+ <button
+ key={`pix-${percent}`}
+ type="button"
+ onClick={() => setQuickAmount(percent)}
+ className="rounded-md border border-border-DEFAULT px-2.5 py-1 text-xs font-semibold text-tx-secondary transition hover:bg-surface-hover"
+ >
+ {percent}% do saldo
+ </button>
+ ))}
+ </div>
  </div>
 
  <div>
@@ -985,6 +1236,10 @@ export default function WithdrawalsPage() {
  {formatCurrency(Math.max(0, netAmount))}
  </span>
  </div>
+ <div className="flex justify-between text-xs text-tx-muted">
+ <span>Previsao:</span>
+ <span>Alguns minutos apos aprovacao</span>
+ </div>
  </div>
  )}
  </Tab.Panel>
@@ -1012,6 +1267,18 @@ export default function WithdrawalsPage() {
  {errors.amount && (
  <p className="text-status-error text-xs mt-1">{errors.amount.message}</p>
  )}
+ <div className="mt-2 flex flex-wrap gap-2">
+ {quickWithdrawalPercents.map((percent) => (
+ <button
+ key={`bank-${percent}`}
+ type="button"
+ onClick={() => setQuickAmount(percent)}
+ className="rounded-md border border-border-DEFAULT px-2.5 py-1 text-xs font-semibold text-tx-secondary transition hover:bg-surface-hover"
+ >
+ {percent}% do saldo
+ </button>
+ ))}
+ </div>
  </div>
 
  <div>
@@ -1133,6 +1400,10 @@ export default function WithdrawalsPage() {
  <span className={clsx('text-lg font-bold', netAmount > 0 ? 'text-accent-primary' : 'text-status-error')}>
  {formatCurrency(Math.max(0, netAmount))}
  </span>
+ </div>
+ <div className="flex justify-between text-xs text-tx-muted">
+ <span>Previsao:</span>
+ <span>Ate 1 dia util</span>
  </div>
  </div>
  )}

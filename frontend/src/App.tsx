@@ -66,6 +66,7 @@ const PublicCheckoutPage = lazy(() => import('@/pages/public/CheckoutPage'));
 const DomainLandingPage = lazy(() => import('@/pages/public/DomainLandingPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
+const KycPrivacyPage = lazy(() => import('@/pages/KycPrivacyPage'));
 const ApiDocsPage = lazy(() => import('@/pages/ApiDocsPage'));
 
 // Member Area Pages (lazy)
@@ -77,12 +78,18 @@ const MemberProfilePage = lazy(() => import('@/pages/members/MemberProfilePage')
 // Protected Route Component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuthStore();
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const isPublicKycMobile =
+    location.pathname === '/kyc' &&
+    params.get('mobile') === '1' &&
+    Boolean(params.get('kyc_code'));
 
   if (isLoading) {
     return <PageSpinner />;
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isPublicKycMobile) {
     return <Navigate to="/login" replace />;
   }
 
@@ -511,6 +518,7 @@ function App() {
       {/* Legal Pages */}
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/kyc/privacy" element={<KycPrivacyPage />} />
       <Route path="/docs" element={<ApiDocsPage />} />
       <Route path="/api-docs" element={<ApiDocsPage />} />
 

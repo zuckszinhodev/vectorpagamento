@@ -1,18 +1,35 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/stores/authStore';
 import SEO from '@/components/SEO';
 import toast from 'react-hot-toast';
-import { 
-  EyeIcon, 
-  EyeSlashIcon,
+import {
   ArrowLeftIcon,
+  ArrowRightIcon,
+  EnvelopeIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  LockClosedIcon,
+  ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
 
 interface LoginForm {
   email: string;
   password: string;
+}
+
+function Spinner() {
+  return (
+    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+  );
 }
 
 export default function LoginPage() {
@@ -21,12 +38,9 @@ export default function LoginPage() {
   const [mfaCode, setMfaCode] = useState(['', '', '', '', '', '']);
   const [rememberDevice, setRememberDevice] = useState(true);
   const [mfaLoading, setMfaLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const mfaInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const googleButtonRef = useRef<HTMLDivElement | null>(null);
-  const { login, googleLogin, verifyMfa, cancelMfa, mfaPending } = useAuthStore();
+  const { login, verifyMfa, cancelMfa, mfaPending } = useAuthStore();
   const navigate = useNavigate();
-  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
   const {
     register,
@@ -34,99 +48,31 @@ export default function LoginPage() {
     formState: { errors },
   } = useForm<LoginForm>();
 
-  const handleGoogleSuccess = async (credential: string) => {
-    setGoogleLoading(true);
-
-    try {
-      await googleLogin(credential);
-      toast.success('Login com Google realizado com sucesso!');
-      navigate('/dashboard');
-    } catch (error: any) {
-      const errorCode = error.response?.data?.error?.code;
-      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Erro ao entrar com Google.';
-
-      if (errorCode === 'account_blocked') {
-        const blockReason = error.response?.data?.error?.block_reason;
-        navigate('/account-blocked', { state: { blockReason } });
-        return;
-      }
-
-      toast.error(message);
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!googleClientId || mfaPending || !googleButtonRef.current) {
-      return;
-    }
-
-    const renderGoogleButton = () => {
-      if (!window.google?.accounts?.id || !googleButtonRef.current) {
-        return;
-      }
-
-      googleButtonRef.current.innerHTML = '';
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: ({ credential }) => {
-          if (credential) {
-            void handleGoogleSuccess(credential);
-          }
-        },
-      });
-      window.google.accounts.id.renderButton(googleButtonRef.current, {
-        theme: 'outline',
-        size: 'large',
-        shape: 'pill',
-        text: 'continue_with',
-        width: '100%',
-        logo_alignment: 'left',
-      });
-    };
-
-    if (window.google?.accounts?.id) {
-      renderGoogleButton();
-      return;
-    }
-
-    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]') as HTMLScriptElement | null;
-    if (existingScript) {
-      existingScript.addEventListener('load', renderGoogleButton, { once: true });
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = renderGoogleButton;
-    document.head.appendChild(script);
-  }, [googleClientId, mfaPending]);
-
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     try {
       await login(data.email, data.password);
-      // If MFA is required, the store will set mfaPending and we stay on page
       const state = useAuthStore.getState();
+
       if (state.mfaPending) {
-        // MFA step will show automatically
         return;
       }
+
       toast.success('Login realizado com sucesso!');
       navigate('/dashboard');
     } catch (error: any) {
       const errorCode = error.response?.data?.error?.code;
-      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Erro ao fazer login. Verifique suas credenciais.';
-      
+      const message =
+        error.response?.data?.error?.message ||
+        error.response?.data?.message ||
+        'Erro ao fazer login. Verifique suas credenciais.';
+
       if (errorCode === 'account_blocked') {
         const blockReason = error.response?.data?.error?.block_reason;
         navigate('/account-blocked', { state: { blockReason } });
         return;
       }
-      
+
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -135,9 +81,11 @@ export default function LoginPage() {
 
   const handleMfaChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
+
     const newCode = [...mfaCode];
     newCode[index] = value.slice(-1);
     setMfaCode(newCode);
+
     if (value && index < 5) {
       mfaInputRefs.current[index + 1]?.focus();
     }
@@ -152,26 +100,31 @@ export default function LoginPage() {
   const handleMfaPaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+
     if (pasted.length === 6) {
-      const newCode = pasted.split('');
-      setMfaCode(newCode);
+      setMfaCode(pasted.split(''));
       mfaInputRefs.current[5]?.focus();
     }
   };
 
   const handleMfaSubmit = async () => {
     const code = mfaCode.join('');
+
     if (code.length !== 6) {
-      toast.error('Digite o código de 6 dígitos');
+      toast.error('Digite o codigo de 6 digitos');
       return;
     }
+
     setMfaLoading(true);
     try {
       await verifyMfa(code, rememberDevice);
       toast.success('Login realizado com sucesso!');
       navigate('/dashboard');
     } catch (error: any) {
-      const message = error.response?.data?.error?.message || error.response?.data?.message || 'Código inválido. Tente novamente.';
+      const message =
+        error.response?.data?.error?.message ||
+        error.response?.data?.message ||
+        'Codigo invalido. Tente novamente.';
       toast.error(message);
       setMfaCode(['', '', '', '', '', '']);
       mfaInputRefs.current[0]?.focus();
@@ -192,224 +145,208 @@ export default function LoginPage() {
         description="Acesse sua conta VectorPagamentos e gerencie seus pagamentos, produtos e afiliados"
         url="/login"
       />
-      
-      <div className="w-full">
-        {mfaPending ? (
-          /* MFA Verification Step */
-          <div>
-            <div className="mb-8">
-              <button
-                onClick={handleBackToLogin}
-                className="flex items-center gap-1 text-sm text-emerald-400 hover:text-emerald-300 mb-4 transition-colors"
-              >
-                <ArrowLeftIcon className="h-4 w-4" />
-                Voltar
-              </button>
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-2xl font-semibold text-white">
-                  Verificação 2FA
-                </h1>
-              </div>
-              <p className="text-sm text-gray-400">
-                Digite o código de 6 dígitos gerado pelo Google Authenticator.
-              </p>
-            </div>
 
-            <div className="space-y-6">
-              <div className="flex justify-center gap-3" onPaste={handleMfaPaste}>
-                {mfaCode.map((digit, i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { mfaInputRefs.current[i] = el; }}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handleMfaChange(i, e.target.value)}
-                    onKeyDown={(e) => handleMfaKeyDown(i, e)}
-                    autoFocus={i === 0}
-                    className="w-12 h-14 text-center text-xl font-bold bg-[#121212] border border-[#202020] rounded-element text-white focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
-                  />
-                ))}
-              </div>
-
-              <label className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                <input
-                  type="checkbox"
-                  checked={rememberDevice}
-                  onChange={(e) => setRememberDevice(e.target.checked)}
-                  className="h-4 w-4 rounded border-[#2a2a2a] bg-[#121212] text-emerald-400 focus:ring-emerald-500"
-                />
-                Lembrar este dispositivo por 30 dias
-              </label>
-
-              <button
-                onClick={handleMfaSubmit}
-                disabled={mfaLoading || mfaCode.join('').length !== 6}
-                className="w-full py-3 px-6 rounded-full font-semibold text-[#101010] bg-emerald-300 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-[#101010] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {mfaLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Verificando...
-                  </span>
-                ) : (
-                  'Verificar'
-                )}
-              </button>
-
-              <p className="text-center text-xs text-gray-500">
-                O código expira em 5 minutos. Abra o Google Authenticator para obtê-lo.
-              </p>
-              <p className="text-center text-xs text-gray-500">
-                Em caso de problemas, contate o suporte: <a href="https://wa.me/5511940968290?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20a%20autentica%C3%A7%C3%A3o%20de%202%20fatores" className="text-emerald-400 hover:text-emerald-300 transition-colors">
-                  11 94096-8290
-                </a>
-              </p>
-            </div>
-          </div>
-        ) : (
-        /* Normal Login Form */
-        <div>
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-lg font-semibold text-white mb-1">
-            Bem-vindo de volta
-          </h1>
-          <p className="text-sm text-gray-400">
-            Faça login para acessar a Vector.
-          </p>
-        </div>
-
-      {googleClientId && (
-        <div className="mb-6 space-y-4">
-          <div
-            className={`rounded-[28px] border border-[#202020] bg-[#121212] px-3 py-3 transition-opacity ${googleLoading ? 'opacity-70' : ''}`}
-          >
-            <div ref={googleButtonRef} className="flex min-h-[44px] items-center justify-center" />
-          </div>
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#202020]" />
-            </div>
-            <div className="relative flex justify-center text-[11px] uppercase tracking-[0.18em] text-gray-500">
-              <span className="bg-[#101010] px-3">ou continue com e-mail</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Email Field */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-white">
-            Email
-          </label>
-          <input
-            {...register('email', {
-              required: 'E-mail é obrigatório',
-              pattern: {
-                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: 'E-mail inválido',
-              },
-            })}
-            type="email"
-            autoComplete="email"
-            className="w-full px-4 py-3 bg-[#121212] border border-[#202020] rounded-element text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
-            placeholder="seu@email.com"
-          />
-          {errors.email && (
-            <p className="text-sm text-red-400">
-              {errors.email.message}
-            </p>
-          )}
-        </div>
-
-        {/* Password Field */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-white">
-            Senha
-          </label>
-          <div className="relative">
-            <input
-              {...register('password', {
-                required: 'Senha é obrigatória',
-                minLength: {
-                  value: 8,
-                  message: 'Senha deve ter no mínimo 8 caracteres',
-                },
-              })}
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              className="w-full px-4 pr-12 py-3 bg-[#121212] border border-[#202020] rounded-element text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
-              placeholder="Sua senha"
+      {mfaPending ? (
+        <section className="w-full">
+          <div className="mb-10 md:hidden">
+            <img
+              src="/img/logo.png"
+              alt="Vector"
+              className="h-10 w-auto object-contain"
             />
+          </div>
+
+          <button
+            onClick={handleBackToLogin}
+            className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-emerald-300 transition-colors hover:text-emerald-200"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Voltar
+          </button>
+
+          <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-lg border border-emerald-300/25 bg-emerald-300/10 text-emerald-200">
+            <ShieldCheckIcon className="h-6 w-6" />
+          </div>
+
+          <div className="mb-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200/70">
+              Verificacao adicional
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-normal text-white">
+              Confirme seu acesso
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              Digite o codigo de 6 digitos gerado pelo Google Authenticator.
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-6 gap-2 sm:gap-3" onPaste={handleMfaPaste}>
+              {mfaCode.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={(el) => {
+                    mfaInputRefs.current[i] = el;
+                  }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleMfaChange(i, e.target.value)}
+                  onKeyDown={(e) => handleMfaKeyDown(i, e)}
+                  autoFocus={i === 0}
+                  className="h-14 w-full rounded-lg border border-white/10 bg-white/[0.035] text-center text-xl font-semibold text-white outline-none transition-colors focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/15"
+                />
+              ))}
+            </div>
+
+            <label className="flex items-center gap-3 text-sm text-slate-400">
+              <input
+                type="checkbox"
+                checked={rememberDevice}
+                onChange={(e) => setRememberDevice(e.target.checked)}
+                className="h-4 w-4 rounded border-white/15 bg-[#101312] text-emerald-300 focus:ring-emerald-300"
+              />
+              Lembrar este dispositivo por 30 dias
+            </label>
+
             <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-tx-muted hover:text-white transition-colors"
+              onClick={handleMfaSubmit}
+              disabled={mfaLoading || mfaCode.join('').length !== 6}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-emerald-300 px-5 text-sm font-semibold text-[#052e1a] transition-colors hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-[#0b0d0c] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {showPassword ? (
-                <EyeSlashIcon className="h-5 w-5" />
+              {mfaLoading ? (
+                <>
+                  <Spinner />
+                  Verificando
+                </>
               ) : (
-                <EyeIcon className="h-5 w-5" />
+                'Verificar acesso'
               )}
             </button>
-          </div>
-          {errors.password && (
-            <p className="text-sm text-red-400">
-              {errors.password.message}
+
+            <p className="text-sm leading-6 text-slate-500">
+              Em caso de problemas, contate o suporte pelo WhatsApp{' '}
+              <a
+                href="https://wa.me/5511940968290?text=Ola%2C%20preciso%20de%20ajuda%20com%20a%20autenticacao%20de%202%20fatores"
+                className="font-medium text-emerald-300 transition-colors hover:text-emerald-200"
+              >
+                11 94096-8290
+              </a>
+              .
             </p>
-          )}
-        </div>
+          </div>
+        </section>
+      ) : (
+        <section className="w-full">
+          <div className="mb-8">
+            <div className="mb-10 md:hidden">
+              <img
+                src="/img/logo.png"
+                alt="Vector"
+                className="h-10 w-auto object-contain"
+              />
+            </div>
 
-        {/* Forgot Password Link */}
-        <div className="flex justify-start">
-          <Link
-            to="/forgot-password"
-            className="text-sm text-emerald-400 hover:text-emerald-300 hover:underline transition-colors"
-          >
-            Esqueceu sua senha?
-          </Link>
-        </div>
+            <h1 className="text-3xl font-semibold tracking-normal text-white">
+              Acesse sua conta
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+              Entre para acompanhar suas vendas
+            </p>
+          </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full py-3 px-6 rounded-full font-semibold text-[#052e1a] bg-emerald-300 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-[#101010] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Entrando...
-            </span>
-          ) : (
-            'Entrar'
-          )}
-        </button>
-      </form>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200">E-mail</label>
+              <div className="relative">
+                <EnvelopeIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+                <input
+                  {...register('email', {
+                    required: 'E-mail e obrigatorio',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'E-mail invalido',
+                    },
+                  })}
+                  type="email"
+                  autoComplete="email"
+                  className="h-12 w-full rounded-lg border border-white/10 bg-white/[0.035] px-11 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-emerald-300 focus:bg-white/[0.055] focus:ring-2 focus:ring-emerald-300/15"
+                  placeholder="seu@email.com"
+                />
+              </div>
+              {errors.email && <p className="text-sm text-red-300">{errors.email.message}</p>}
+            </div>
 
-      {/* Register Link */}
-      <p className="text-center mt-8 text-tx-muted">
-        Não tem uma conta?{' '}
-        <Link
-          to="/register"
-          className="text-emerald-400 hover:text-emerald-300 hover:underline transition-colors"
-        >
-          Cadastre-se
-        </Link>
-      </p>
-    </div>
-        )}
-    </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-4">
+                <label className="text-sm font-medium text-slate-200">Senha</label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-emerald-300 transition-colors hover:text-emerald-200"
+                >
+                  Esqueci minha senha
+                </Link>
+              </div>
+              <div className="relative">
+                <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+                <input
+                  {...register('password', {
+                    required: 'Senha e obrigatoria',
+                    minLength: {
+                      value: 8,
+                      message: 'Senha deve ter no minimo 8 caracteres',
+                    },
+                  })}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  className="h-12 w-full rounded-lg border border-white/10 bg-white/[0.035] px-11 pr-12 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-emerald-300 focus:bg-white/[0.055] focus:ring-2 focus:ring-emerald-300/15"
+                  placeholder="Sua senha"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-slate-200"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-sm text-red-300">{errors.password.message}</p>}
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-emerald-300 px-5 text-sm font-semibold text-[#052e1a] transition-colors hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-[#0b0d0c] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isLoading ? (
+                <>
+                  <Spinner />
+                  Entrando
+                </>
+              ) : (
+                <>
+                  Entrar na plataforma
+                  <ArrowRightIcon className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-8 border-t border-white/10 pt-6">
+            <p className="text-sm text-slate-500">
+              Nao tem uma conta?{' '}
+              <Link
+                to="/register"
+                className="font-medium text-emerald-300 transition-colors hover:text-emerald-200"
+              >
+                Cadastre-se
+              </Link>
+            </p>
+          </div>
+        </section>
+      )}
     </>
   );
 }

@@ -49,6 +49,7 @@ interface Product {
   image_url?: string;
   checkout_url?: string;
   checkout_slug?: string;
+  metadata?: Record<string, any>;
   affiliate_enabled: boolean;
   affiliate_commission_percent?: number;
   visible_on_marketplace: boolean;
@@ -109,9 +110,12 @@ interface ProductForm {
   upsell_title?: string;
   upsell_description?: string;
   upsell_discount_percent?: number;
-  // Área de Membros
-  member_area_enabled: boolean;
-  course_id?: string;
+  // Meta Pixel
+  facebook_pixel_enabled: boolean;
+  facebook_pixel_id?: string;
+  facebook_pixel_track_page_view: boolean;
+  facebook_pixel_track_initiate_checkout: boolean;
+  facebook_pixel_track_purchase: boolean;
 }
 
 const PRODUCT_IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024;
@@ -122,6 +126,75 @@ const PRODUCT_IMAGE_ALLOWED_TYPES = new Set([
   'image/webp',
 ]);
 const PRODUCT_IMAGE_ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+
+function SalesIcon({
+  type,
+  className = '',
+}: {
+  type: 'payment' | 'card' | 'boleto' | 'bump' | 'upsell' | 'pixel';
+  className?: string;
+}) {
+  const common = 'fill-none stroke-current';
+
+  if (type === 'payment') {
+    return (
+      <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="7" y="11" width="34" height="26" rx="8" className={common} strokeWidth="3" />
+        <path d="M8 20h32M15 29h7M27 29h6" className={common} strokeWidth="3" strokeLinecap="round" />
+        <circle cx="36" cy="15" r="4" className="fill-current opacity-20" />
+      </svg>
+    );
+  }
+
+  if (type === 'card') {
+    return (
+      <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
+        <rect x="8" y="13" width="32" height="23" rx="7" className={common} strokeWidth="3" />
+        <path d="M8 21h32M16 29h8" className={common} strokeWidth="3" strokeLinecap="round" />
+        <path d="M31 28h5v4h-5z" className="fill-current opacity-25" />
+      </svg>
+    );
+  }
+
+  if (type === 'boleto') {
+    return (
+      <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M13 7h22a3 3 0 0 1 3 3v31l-5-3-4 3-5-3-5 3-4-3-5 3V10a3 3 0 0 1 3-3Z" className={common} strokeWidth="3" strokeLinejoin="round" />
+        <path d="M17 16h14M17 23h18M17 30h10" className={common} strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (type === 'bump') {
+    return (
+      <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M14 12h20a5 5 0 0 1 5 5v14a5 5 0 0 1-5 5H14a5 5 0 0 1-5-5V17a5 5 0 0 1 5-5Z" className={common} strokeWidth="3" />
+        <path d="M24 17v14M17 24h14" className={common} strokeWidth="3" strokeLinecap="round" />
+        <path d="M34 10l4-4M39 16h5M9 37l-4 4" className={common} strokeWidth="3" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (type === 'upsell') {
+    return (
+      <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
+        <path d="M8 34 19 23l7 7 14-16" className={common} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M29 14h11v11" className={common} strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />
+        <rect x="8" y="36" width="8" height="4" rx="2" className="fill-current opacity-25" />
+        <rect x="21" y="32" width="8" height="8" rx="2" className="fill-current opacity-25" />
+        <rect x="34" y="27" width="8" height="13" rx="2" className="fill-current opacity-25" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className={className} viewBox="0 0 48 48" aria-hidden="true">
+      <rect x="8" y="8" width="32" height="32" rx="10" className={common} strokeWidth="3" />
+      <path d="M16 30V18h8a5 5 0 0 1 0 10h-8M29 18h5M29 24h5M29 30h5" className={common} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="37" cy="11" r="4" className="fill-current opacity-25" />
+    </svg>
+  );
+}
 
 export default function ProductsPage() {
   const [search, setSearch] = useState('');
@@ -909,6 +982,10 @@ function ProductFormPage({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const productMetadata = product?.metadata && typeof product.metadata === 'object' ? product.metadata : {};
+  const productPixel = productMetadata.facebook_pixel && typeof productMetadata.facebook_pixel === 'object'
+    ? productMetadata.facebook_pixel
+    : {};
 
   const getInvalidProductImageReason = (file: File): string | null => {
     const mimeType = file.type.toLowerCase();
@@ -966,20 +1043,28 @@ function ProductFormPage({
           shipping_length: product.shipping_info?.length || 0,
           free_shipping: product.shipping_info?.free_shipping || false,
           shipping_price: product.shipping_info?.shipping_price ? product.shipping_info.shipping_price / 100 : 0,
+          payment_methods: productMetadata.payment_methods || {
+            credit_card: false,
+            pix: true,
+            boleto: false,
+          },
           thank_you_page_type: (product as any).thank_you_page_type || 'default',
           thank_you_page_url: (product as any).thank_you_page_url || '',
-          order_bump_enabled: (product as any).order_bump_enabled || false,
-          order_bump_product_id: (product as any).order_bump_product_id || '',
-          order_bump_title: (product as any).order_bump_title || '',
-          order_bump_description: (product as any).order_bump_description || '',
-          order_bump_discount_percent: (product as any).order_bump_discount_percent || 10,
-          upsell_enabled: (product as any).upsell_enabled || false,
-          upsell_product_id: (product as any).upsell_product_id || '',
-          upsell_title: (product as any).upsell_title || '',
-          upsell_description: (product as any).upsell_description || '',
-          upsell_discount_percent: (product as any).upsell_discount_percent || 15,
-          member_area_enabled: (product as any).member_area_enabled || false,
-          course_id: (product as any).course_id || '',
+          order_bump_enabled: productMetadata.order_bump_enabled || false,
+          order_bump_product_id: productMetadata.order_bump_product_id || '',
+          order_bump_title: productMetadata.order_bump_title || '',
+          order_bump_description: productMetadata.order_bump_description || '',
+          order_bump_discount_percent: productMetadata.order_bump_discount_percent || 10,
+          upsell_enabled: productMetadata.upsell_enabled || false,
+          upsell_product_id: productMetadata.upsell_product_id || '',
+          upsell_title: productMetadata.upsell_title || '',
+          upsell_description: productMetadata.upsell_description || '',
+          upsell_discount_percent: productMetadata.upsell_discount_percent || 15,
+          facebook_pixel_enabled: Boolean(productPixel.enabled),
+          facebook_pixel_id: productPixel.pixel_id || '',
+          facebook_pixel_track_page_view: productPixel.track_page_view ?? true,
+          facebook_pixel_track_initiate_checkout: productPixel.track_initiate_checkout ?? true,
+          facebook_pixel_track_purchase: productPixel.track_purchase ?? true,
         }
       : {
           type: 'digital',
@@ -1010,8 +1095,11 @@ function ProductFormPage({
           upsell_title: '',
           upsell_description: '',
           upsell_discount_percent: 15,
-          member_area_enabled: false,
-          course_id: '',
+          facebook_pixel_enabled: false,
+          facebook_pixel_id: '',
+          facebook_pixel_track_page_view: true,
+          facebook_pixel_track_initiate_checkout: true,
+          facebook_pixel_track_purchase: true,
         },
   });
 
@@ -1058,20 +1146,28 @@ function ProductFormPage({
         shipping_length: product.shipping_info?.length || 0,
         free_shipping: product.shipping_info?.free_shipping || false,
         shipping_price: product.shipping_info?.shipping_price ? product.shipping_info.shipping_price / 100 : 0,
+        payment_methods: productMetadata.payment_methods || {
+          credit_card: false,
+          pix: true,
+          boleto: false,
+        },
         thank_you_page_type: (product as any).thank_you_page_type || 'default',
         thank_you_page_url: (product as any).thank_you_page_url || '',
-        order_bump_enabled: (product as any).order_bump_enabled || false,
-        order_bump_product_id: (product as any).order_bump_product_id || '',
-        order_bump_title: (product as any).order_bump_title || '',
-        order_bump_description: (product as any).order_bump_description || '',
-        order_bump_discount_percent: (product as any).order_bump_discount_percent || 10,
-        upsell_enabled: (product as any).upsell_enabled || false,
-        upsell_product_id: (product as any).upsell_product_id || '',
-        upsell_title: (product as any).upsell_title || '',
-        upsell_description: (product as any).upsell_description || '',
-        upsell_discount_percent: (product as any).upsell_discount_percent || 15,
-        member_area_enabled: (product as any).member_area_enabled || false,
-        course_id: (product as any).course_id || '',
+        order_bump_enabled: productMetadata.order_bump_enabled || false,
+        order_bump_product_id: productMetadata.order_bump_product_id || '',
+        order_bump_title: productMetadata.order_bump_title || '',
+        order_bump_description: productMetadata.order_bump_description || '',
+        order_bump_discount_percent: productMetadata.order_bump_discount_percent || 10,
+        upsell_enabled: productMetadata.upsell_enabled || false,
+        upsell_product_id: productMetadata.upsell_product_id || '',
+        upsell_title: productMetadata.upsell_title || '',
+        upsell_description: productMetadata.upsell_description || '',
+        upsell_discount_percent: productMetadata.upsell_discount_percent || 15,
+        facebook_pixel_enabled: Boolean(productPixel.enabled),
+        facebook_pixel_id: productPixel.pixel_id || '',
+        facebook_pixel_track_page_view: productPixel.track_page_view ?? true,
+        facebook_pixel_track_initiate_checkout: productPixel.track_initiate_checkout ?? true,
+        facebook_pixel_track_purchase: productPixel.track_purchase ?? true,
       });
       setPriceDisplay(formatCurrencyInput(product.price));
       setImagePreview(product.image_url || null);
@@ -1098,8 +1194,11 @@ function ProductFormPage({
         upsell_title: '',
         upsell_description: '',
         upsell_discount_percent: 15,
-        member_area_enabled: false,
-        course_id: '',
+        facebook_pixel_enabled: false,
+        facebook_pixel_id: '',
+        facebook_pixel_track_page_view: true,
+        facebook_pixel_track_initiate_checkout: true,
+        facebook_pixel_track_purchase: true,
       });
       setImagePreview(null);
       setImageFile(null);
@@ -1117,15 +1216,6 @@ function ProductFormPage({
     },
   });
 
-  // Query para buscar cursos da área de membros
-  const { data: availableCourses = [] } = useQuery<{ id: string; name: string; description?: string }[]>({
-    queryKey: ['courses-for-products'],
-    queryFn: async () => {
-      const response = await api.get('/member-area/courses');
-      return response.data?.data || response.data || [];
-    },
-  });
-
   // Image upload removed - using base64/URL directly in payload
 
   const affiliateEnabled = watch('affiliate_enabled');
@@ -1135,7 +1225,7 @@ function ProductFormPage({
   const orderBumpEnabled = watch('order_bump_enabled');
   const upsellEnabled = watch('upsell_enabled');
   const thankYouPageType = watch('thank_you_page_type');
-  const memberAreaEnabled = watch('member_area_enabled');
+  const facebookPixelEnabled = watch('facebook_pixel_enabled');
 
   const mutation = useMutation({
     mutationFn: async (data: ProductForm) => {
@@ -1217,9 +1307,29 @@ function ProductFormPage({
         upsell_title: data.upsell_title,
         upsell_description: data.upsell_description,
         upsell_discount_percent: data.upsell_discount_percent,
-        // Área de Membros
-        member_area_enabled: data.member_area_enabled,
-        course_id: data.course_id,
+        // Meta Pixel
+        metadata: {
+          ...productMetadata,
+          payment_methods: data.payment_methods,
+          order_bump_enabled: data.order_bump_enabled,
+          order_bump_product_id: data.order_bump_product_id,
+          order_bump_title: data.order_bump_title,
+          order_bump_description: data.order_bump_description,
+          order_bump_discount_percent: data.order_bump_discount_percent,
+          upsell_enabled: data.upsell_enabled,
+          upsell_product_id: data.upsell_product_id,
+          upsell_title: data.upsell_title,
+          upsell_description: data.upsell_description,
+          upsell_discount_percent: data.upsell_discount_percent,
+          facebook_pixel: {
+            enabled: data.facebook_pixel_enabled,
+            pixel_id: data.facebook_pixel_id?.trim() || '',
+            track_page_view: data.facebook_pixel_track_page_view,
+            track_initiate_checkout: data.facebook_pixel_track_initiate_checkout,
+            track_add_payment_info: true,
+            track_purchase: data.facebook_pixel_track_purchase,
+          },
+        },
       };
 
       if (data.category) {
@@ -1452,7 +1562,7 @@ function ProductFormPage({
               </div>
             </div>
 
-            {/* Order Bump, Upsell e Área de Membros */}
+            {/* Configurações comerciais do checkout */}
             <div className="card p-4 sm:p-6">
               <h2 className="text-lg font-semibold text-tx-primary mb-4">Configurações de Vendas</h2>
               
@@ -1460,9 +1570,7 @@ function ProductFormPage({
               <div className="mb-6 p-4 rounded-xl border-2 border-border-DEFAULT bg-gradient-to-br from-surface-card to-surface-hover/30">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
-                    <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
+                    <SalesIcon type="payment" className="h-6 w-6 text-emerald-500" />
                   </div>
                   <div>
                     <h3 className="text-sm font-semibold text-tx-primary">Métodos de Pagamento</h3>
@@ -1479,9 +1587,7 @@ function ProductFormPage({
                       className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
                     />
                     <div className="flex items-center gap-2">
-                      <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
+                      <SalesIcon type="card" className="h-6 w-6 text-emerald-500" />
                       <span className="text-sm font-medium text-tx-primary">Cartão</span>
                       <span className="text-xs text-tx-muted">(em breve)</span>
                     </div>
@@ -1494,7 +1600,9 @@ function ProductFormPage({
                       className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
                     />
                     <div className="flex items-center gap-2">
-                      <PixIcon className="h-5 w-5 text-emerald-500" />
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                        <PixIcon className="h-5 w-5" />
+                      </span>
                       <span className="text-sm font-medium text-tx-primary">PIX</span>
                     </div>
                   </label>
@@ -1507,9 +1615,7 @@ function ProductFormPage({
                       className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
                     />
                     <div className="flex items-center gap-2">
-                      <svg className="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-                      </svg>
+                      <SalesIcon type="boleto" className="h-6 w-6 text-emerald-500" />
                       <span className="text-sm font-medium text-tx-primary">Boleto</span>
                     </div>
                   </label>
@@ -1521,9 +1627,7 @@ function ProductFormPage({
                 <div className={`p-4 rounded-lg border-2 transition-all ${orderBumpEnabled ? 'border-accent-primary bg-accent-subtle' : 'border-border-DEFAULT'}`}>
                   <div className="flex items-center gap-4">
                     <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                      <svg className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
+                      <SalesIcon type="bump" className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-semibold text-tx-primary">Order Bump</h3>
@@ -1557,9 +1661,7 @@ function ProductFormPage({
                 <div className={`p-4 rounded-lg border-2 transition-all ${upsellEnabled ? 'border-accent-primary bg-accent-subtle' : 'border-border-DEFAULT'}`}>
                   <div className="flex items-center gap-4">
                     <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                      </svg>
+                      <SalesIcon type="upsell" className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-semibold text-tx-primary">Upsell</h3>
@@ -1589,32 +1691,56 @@ function ProductFormPage({
                   )}
                 </div>
 
-                {/* Área de Membros */}
-                <div className={`p-4 rounded-lg border-2 transition-all ${memberAreaEnabled ? 'border-accent-primary bg-accent-subtle' : 'border-border-DEFAULT'}`}>
+                {/* Meta Pixel */}
+                <div className={`p-4 rounded-lg border-2 transition-all ${facebookPixelEnabled ? 'border-accent-primary bg-accent-subtle' : 'border-border-DEFAULT'}`}>
                   <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                      <svg className="h-5 w-5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                      </svg>
+                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
+                      <SalesIcon type="pixel" className="h-6 w-6 text-sky-600 dark:text-sky-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-tx-primary">Área de Membros</h3>
-                      <p className="text-xs text-tx-muted">Acesso automático ao curso</p>
+                      <h3 className="text-sm font-semibold text-tx-primary">Meta Pixel</h3>
+                      <p className="text-xs text-tx-muted">Rastreie visitas e compras deste checkout</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input {...register('member_area_enabled')} type="checkbox" className="sr-only peer" />
+                      <input {...register('facebook_pixel_enabled')} type="checkbox" className="sr-only peer" />
                       <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-primary"></div>
                     </label>
                   </div>
-                  {memberAreaEnabled && (
-                    <div className="mt-4">
-                      <label className="block text-xs font-medium text-tx-secondary mb-1">Curso / Conteúdo</label>
-                      <select {...register('course_id')} className="input text-sm">
-                        <option value="" className="bg-white dark:bg-gray-800 text-black dark:text-white">Selecione um curso...</option>
-                        {availableCourses.map((course) => (
-                          <option key={course.id} value={course.id} className="bg-white dark:bg-gray-800 text-black dark:text-white">{course.name}</option>
+                  {facebookPixelEnabled && (
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <label className="block text-xs font-medium text-tx-secondary mb-1">ID do Pixel</label>
+                        <input
+                          {...register('facebook_pixel_id', {
+                            required: facebookPixelEnabled ? 'Informe o ID do Pixel' : false,
+                            pattern: {
+                              value: /^[0-9]{8,30}$/,
+                              message: 'Use apenas numeros do ID do Pixel',
+                            },
+                          })}
+                          className="input text-sm"
+                          placeholder="Ex: 123456789012345"
+                        />
+                        {errors.facebook_pixel_id && (
+                          <p className="mt-1 text-xs text-red-500">{errors.facebook_pixel_id.message}</p>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        {[
+                          ['facebook_pixel_track_page_view', 'PageView'],
+                          ['facebook_pixel_track_initiate_checkout', 'InitiateCheckout'],
+                          ['facebook_pixel_track_purchase', 'Purchase'],
+                        ].map(([field, label]) => (
+                          <label key={field} className="flex items-center gap-2 rounded-lg border border-border-DEFAULT bg-surface-card px-3 py-2 text-xs font-medium text-tx-secondary">
+                            <input
+                              {...register(field as keyof ProductForm)}
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
+                            />
+                            {label}
+                          </label>
                         ))}
-                      </select>
+                      </div>
                     </div>
                   )}
                 </div>

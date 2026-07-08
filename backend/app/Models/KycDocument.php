@@ -98,6 +98,7 @@ class KycDocument extends Model
         $types = [
             self::TYPE_IDENTITY_FRONT,
             self::TYPE_IDENTITY_BACK,
+            self::TYPE_SELFIE,
         ];
 
         if ($accountType === 'company') {

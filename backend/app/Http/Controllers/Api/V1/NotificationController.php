@@ -57,7 +57,13 @@ class NotificationController extends Controller
                 ];
             });
 
-            $unreadCount = Notification::where('user_id', $userId)->where('read', false)->count();
+            $unreadCount = Notification::where('user_id', $userId)
+                ->where('read', false)
+                ->where(function ($q) {
+                    $q->whereNull('data->expires_at')
+                      ->orWhere('data->expires_at', '>', now()->toIso8601String());
+                })
+                ->count();
         } catch (\Throwable $e) {
             Log::error('NotificationController::index error', ['message' => $e->getMessage()]);
             $data = collect();
@@ -97,6 +103,10 @@ class NotificationController extends Controller
         try {
         $count = Notification::where('user_id', $request->user()->id)
             ->where('read', false)
+            ->where(function ($q) {
+                $q->whereNull('data->expires_at')
+                  ->orWhere('data->expires_at', '>', now()->toIso8601String());
+            })
             ->count();
 
         return response()->json([

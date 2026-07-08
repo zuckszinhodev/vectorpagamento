@@ -56,6 +56,23 @@ class ProductController extends Controller
         return $request->getSchemeAndHttpHost();
     }
 
+    private function normalizePaymentMethods(mixed $methods): array
+    {
+        $allowed = ['credit_card', 'pix', 'boleto'];
+
+        if (!is_array($methods)) {
+            return ['pix'];
+        }
+
+        $selected = array_is_list($methods)
+            ? $methods
+            : array_keys(array_filter($methods, fn ($enabled) => filter_var($enabled, FILTER_VALIDATE_BOOLEAN)));
+
+        $selected = array_values(array_intersect($allowed, $selected));
+
+        return empty($selected) ? ['pix'] : $selected;
+    }
+
     /**
      * List products for authenticated account
      */
@@ -201,6 +218,11 @@ class ProductController extends Controller
             $imageUrl = $images[0];
         }
 
+        $metadata = $request->input('metadata', []);
+        $paymentMethods = $this->normalizePaymentMethods(
+            $request->input('payment_methods', $metadata['payment_methods'] ?? ['pix' => true])
+        );
+
         $product = Product::create([
             'id' => Str::uuid()->toString(),
             'account_id' => $accountId,
@@ -220,7 +242,7 @@ class ProductController extends Controller
             'stock_quantity' => $request->input('stock_quantity'),
             'images' => $images,
             'image_url' => $imageUrl,
-            'metadata' => $request->input('metadata', []),
+            'metadata' => $metadata,
             'is_active' => true,
         ]);
 
@@ -259,7 +281,7 @@ class ProductController extends Controller
                     'collect_cpf' => true,
                     'collect_address' => false,
                     'collect_phone' => true,
-                    'payment_methods' => ['credit_card', 'pix', 'boleto'],
+                    'payment_methods' => $paymentMethods,
                     'max_installments' => 12,
                     'exit_popup_enabled' => false,
                     'timer_enabled' => false,
@@ -493,6 +515,15 @@ class ProductController extends Controller
         // Add checkout_url
         $checkout = Checkout::where('product_id', $freshProduct->id)->first();
         if ($checkout) {
+            $metadata = is_array($freshProduct->metadata) ? $freshProduct->metadata : [];
+            if ($request->has('payment_methods') || isset($metadata['payment_methods'])) {
+                $settings = is_array($checkout->settings) ? $checkout->settings : [];
+                $settings['payment_methods'] = $this->normalizePaymentMethods(
+                    $request->input('payment_methods', $metadata['payment_methods'] ?? ['pix' => true])
+                );
+                $checkout->update(['settings' => $settings]);
+            }
+
             $checkoutBaseUrl = $this->getCheckoutBaseUrl($accountId, $request);
             $productData['checkout_slug'] = $checkout->slug;
             $productData['checkout_url'] = "{$checkoutBaseUrl}/checkout/{$checkout->slug}";

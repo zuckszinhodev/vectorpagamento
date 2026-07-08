@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import QRCode from 'qrcode';
 import { 
  DocumentTextIcon, 
+ ArrowLeftIcon,
+ ArrowRightIcon,
  UserIcon, 
  HomeIcon, 
- CreditCardIcon,
  BuildingOfficeIcon,
  CheckCircleIcon,
  CloudArrowUpIcon,
@@ -14,7 +16,11 @@ import {
  ShieldCheckIcon,
  SparklesIcon,
  BanknotesIcon,
- IdentificationIcon
+ IdentificationIcon,
+ DevicePhoneMobileIcon,
+ QrCodeIcon,
+ CameraIcon,
+ LockClosedIcon
 } from '@heroicons/react/24/outline';
 import { 
  CheckCircleIcon as CheckCircleIconSolid 
@@ -22,6 +28,7 @@ import {
 import toast from 'react-hot-toast';
 import { kycService } from '@/services/api/kyc.service';
 import { useAuthStore } from '@/stores/authStore';
+import { PageSpinner } from '@/components/ui/Spinner';
 
 // Função de validação de CPF
 const validateCPF = (cpf: string): boolean => {
@@ -94,7 +101,7 @@ const formatCNPJ = (value: string): string => {
 };
 
 type PersonType = 'pf' | 'pj';
-type Step = 'type' | 'documents' | 'personal' | 'address' | 'financial' | 'review';
+type Step = 'type' | 'documents' | 'facial' | 'personal' | 'address' | 'review';
 
 interface DocumentFile {
  name: string;
@@ -102,14 +109,192 @@ interface DocumentFile {
  preview?: string;
 }
 
+function KycPersonIcon({ className = '' }: { className?: string }) {
+ return (
+ <svg viewBox="0 0 64 64" className={className} fill="none" aria-hidden="true">
+ <path d="M32 35c8.3 0 15 5.8 15 13v2.5c0 1.4-1.1 2.5-2.5 2.5h-25c-1.4 0-2.5-1.1-2.5-2.5V48c0-7.2 6.7-13 15-13Z" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+ <path d="M32 29c5.5 0 10-4.5 10-10S37.5 9 32 9 22 13.5 22 19s4.5 10 10 10Z" stroke="currentColor" strokeWidth="4" />
+ <path d="M47 13h5.5c1.4 0 2.5 1.1 2.5 2.5V24" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+ <path d="M17 13h-5.5C10.1 13 9 14.1 9 15.5V24" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+ <path d="M47 51h5.5c1.4 0 2.5-1.1 2.5-2.5V40" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+ <path d="M17 51h-5.5C10.1 51 9 49.9 9 48.5V40" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+ </svg>
+ );
+}
+
+function KycCompanyIcon({ className = '' }: { className?: string }) {
+ return (
+ <svg viewBox="0 0 64 64" className={className} fill="none" aria-hidden="true">
+ <path d="M16 54V13.5c0-1.4 1.1-2.5 2.5-2.5h21c1.4 0 2.5 1.1 2.5 2.5V54" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+ <path d="M42 25h7.5c1.4 0 2.5 1.1 2.5 2.5V54" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+ <path d="M12 54h44" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+ <path d="M25 22h8M25 31h8M25 40h8" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+ <path d="M22 54V43.5c0-1.4 1.1-2.5 2.5-2.5h9c1.4 0 2.5 1.1 2.5 2.5V54" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+ <path d="M48 35h-1M48 44h-1" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+ </svg>
+ );
+}
+
+const FACIAL_INSTRUCTIONS = [
+ 'Centralize seu rosto no molde',
+ 'Aproxime um pouco o rosto',
+ 'Afaste um pouco o rosto',
+ 'Olhe levemente para a direita',
+ 'Olhe levemente para a esquerda',
+ 'Olhe para a camera',
+ 'Capturando automaticamente...',
+];
+
+function KycSubmittedScreen({
+ redirectCountdown,
+ onDashboard,
+}: {
+ redirectCountdown: number;
+ onDashboard: () => void;
+}) {
+ const timeline = [
+ ['Recebido', 'Documentos e selfie enviados'],
+ ['Analise', 'Validacao de identidade em andamento'],
+ ['Liberacao', 'Avisaremos quando estiver aprovado'],
+ ];
+
+ return (
+ <div className="flex min-h-[72vh] items-center justify-center">
+ <div className="w-full max-w-md rounded-[28px] border border-gray-200 bg-white p-6 text-center shadow-[0_24px_70px_rgba(15,23,42,0.10)] sm:p-8">
+ <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-600 ring-8 ring-emerald-50/60">
+ <CheckCircleIcon className="h-9 w-9" />
+ </div>
+ <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">KYC em analise</p>
+ <h1 className="mt-3 text-2xl font-semibold tracking-tight text-gray-950">Documentos enviados</h1>
+ <p className="mx-auto mt-3 max-w-xs text-sm leading-6 text-gray-500">
+ Recebemos suas informacoes com seguranca. Nossa equipe vai revisar os dados e liberar a conta assim que a validacao for concluida.
+ </p>
+ <div className="mt-6 flex flex-col gap-3">
+ <button
+ onClick={onDashboard}
+ className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-gray-950 px-5 text-sm font-semibold text-white transition hover:bg-gray-800"
+ >
+ Ir para Dashboard
+ <ArrowRightIcon className="h-4 w-4" />
+ </button>
+ <p className="text-xs text-gray-400">Redirecionando automaticamente em {redirectCountdown}s</p>
+ </div>
+ </div>
+ </div>
+ );
+}
+
 export default function KYCPage() {
  const navigate = useNavigate();
+ const location = useLocation();
+ const queryClient = useQueryClient();
  const { user, updateUser } = useAuthStore();
  const [currentStep, setCurrentStep] = useState<Step>('type');
  const [personType, setPersonType] = useState<PersonType>('pf');
  const [isSubmitted, setIsSubmitted] = useState(false);
  const [isSubmitting, setIsSubmitting] = useState(false);
  const [redirectCountdown, setRedirectCountdown] = useState(10);
+ const [qrCodeUrl, setQrCodeUrl] = useState('');
+ const [mobileSessionUrl, setMobileSessionUrl] = useState('');
+ const [mobileSessionCode, setMobileSessionCode] = useState('');
+ const [publicSessionName, setPublicSessionName] = useState('');
+ const [isMobileViewport, setIsMobileViewport] = useState(false);
+ const [isCameraOpen, setIsCameraOpen] = useState(false);
+ const [isCameraLoading, setIsCameraLoading] = useState(false);
+ const [facialInstructionIndex, setFacialInstructionIndex] = useState(0);
+ const [facialCountdown, setFacialCountdown] = useState(FACIAL_INSTRUCTIONS.length);
+ const videoRef = useRef<HTMLVideoElement | null>(null);
+ const streamRef = useRef<MediaStream | null>(null);
+
+ const isMobileKycLink = useMemo(() => {
+ return new URLSearchParams(location.search).get('mobile') === '1';
+ }, [location.search]);
+
+ const mobileKycCode = useMemo(() => {
+ return new URLSearchParams(location.search).get('kyc_code') || '';
+ }, [location.search]);
+
+ const shouldUseMobileFlow = isMobileKycLink || isMobileViewport;
+ const isPublicMobileKyc = shouldUseMobileFlow && Boolean(mobileKycCode);
+
+ const fallbackMobileKycUrl = useMemo(() => {
+ if (typeof window === 'undefined') return '/kyc?mobile=1';
+ return `${window.location.origin}/kyc?mobile=1`;
+ }, []);
+
+ const mobileKycUrl = mobileSessionUrl || fallbackMobileKycUrl;
+
+ useEffect(() => {
+ const updateViewport = () => {
+ setIsMobileViewport(window.matchMedia('(max-width: 768px), (pointer: coarse)').matches);
+ };
+
+ updateViewport();
+ window.addEventListener('resize', updateViewport);
+ return () => window.removeEventListener('resize', updateViewport);
+ }, []);
+
+ useEffect(() => {
+ QRCode.toDataURL(mobileKycUrl, {
+ width: 232,
+ margin: 1,
+ color: {
+ dark: '#111827',
+ light: '#ffffff',
+ },
+ })
+ .then(setQrCodeUrl)
+ .catch(() => setQrCodeUrl(''));
+ }, [mobileKycUrl]);
+
+ useEffect(() => {
+ if (shouldUseMobileFlow || isSubmitted) return;
+
+ kycService.createMobileSession()
+ .then((response) => {
+ const rawUrl = response.data.url;
+ const url = new URL(rawUrl);
+ setMobileSessionCode(response.data.code);
+ setMobileSessionUrl(`${window.location.origin}${url.pathname}${url.search}`);
+ })
+ .catch(() => {
+ toast.error('Nao foi possivel gerar o codigo do KYC');
+ });
+ }, [shouldUseMobileFlow, isSubmitted]);
+
+ useEffect(() => {
+ if (!isPublicMobileKyc) return;
+
+ kycService.getMobileSession(mobileKycCode)
+ .then((response) => {
+ const sessionName = response.data.user_name || '';
+ setPublicSessionName(sessionName);
+ if (sessionName) {
+ setPersonalData(prev => ({
+ ...prev,
+ fullName: prev.fullName || sessionName,
+ }));
+ }
+ })
+ .catch(() => {
+ toast.error('Codigo de KYC expirado ou invalido');
+ });
+ }, [isPublicMobileKyc, mobileKycCode]);
+
+ const stopCamera = () => {
+ streamRef.current?.getTracks().forEach(track => track.stop());
+ streamRef.current = null;
+ setIsCameraOpen(false);
+ setFacialInstructionIndex(0);
+ setFacialCountdown(FACIAL_INSTRUCTIONS.length);
+ };
+
+ useEffect(() => {
+ return () => {
+ streamRef.current?.getTracks().forEach(track => track.stop());
+ streamRef.current = null;
+ };
+ }, []);
 
  // Auto-redirect to dashboard after 10 seconds when submitted
  useEffect(() => {
@@ -117,18 +302,16 @@ export default function KYCPage() {
  
  setRedirectCountdown(10);
  const interval = setInterval(() => {
- setRedirectCountdown(prev => {
- if (prev <= 1) {
- clearInterval(interval);
- navigate('/dashboard');
- return 0;
- }
- return prev - 1;
- });
+ setRedirectCountdown(prev => Math.max(prev - 1, 0));
  }, 1000);
  
  return () => clearInterval(interval);
- }, [isSubmitted, navigate]);
+ }, [isSubmitted]);
+
+ useEffect(() => {
+ if (!isSubmitted || redirectCountdown > 0) return;
+ navigate('/dashboard');
+ }, [isSubmitted, redirectCountdown, navigate]);
 
  // Força modo claro apenas nesta página
  useEffect(() => {
@@ -148,6 +331,7 @@ export default function KYCPage() {
  const { data: kycStatus, isLoading: isLoadingStatus } = useQuery({
  queryKey: ['kyc-status'],
  queryFn: () => kycService.getStatus(),
+ enabled: !isPublicMobileKyc,
  staleTime: 0,
  });
 
@@ -195,7 +379,7 @@ export default function KYCPage() {
  if (kyc_status === 'pending' || kyc_status === 'rejected') {
  // Check what step to resume from based on available data
  if (submission.address_city) {
- setCurrentStep('financial');
+ setCurrentStep('review');
  } else if (submission.full_name) {
  setCurrentStep('address');
  }
@@ -210,11 +394,13 @@ export default function KYCPage() {
  identityBack: DocumentFile | null;
  cnpjCard: DocumentFile | null;
  socialContract: DocumentFile | null;
+ selfie: DocumentFile | null;
  }>({
  identity: null,
  identityBack: null,
  cnpjCard: null,
- socialContract: null
+ socialContract: null,
+ selfie: null
  });
 
  // Personal Data (PF)
@@ -242,18 +428,12 @@ export default function KYCPage() {
  country: 'Brasil'
  });
 
- // Financial Data
- const [financialData, setFinancialData] = useState({
- pixType: 'cpf',
- pixKey: '',
- });
-
  const steps = [
  { id: 'type', name: 'Tipo de Pessoa', icon: UserIcon },
  { id: 'documents', name: 'Documentos', icon: DocumentTextIcon },
+ { id: 'facial', name: 'Facial', icon: CameraIcon },
  { id: 'personal', name: 'Dados Pessoais', icon: UserIcon },
  { id: 'address', name: 'Endereço', icon: HomeIcon },
- { id: 'financial', name: 'Dados Financeiros', icon: CreditCardIcon },
  { id: 'review', name: 'Revisar', icon: CheckCircleIcon }
  ];
 
@@ -284,8 +464,109 @@ export default function KYCPage() {
  setDocuments(prev => ({ ...prev, [field]: null }));
  };
 
+ const startFacialCapture = async () => {
+ const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+ if (!window.isSecureContext && !isLocalHost) {
+ toast.error('Para usar a camera no celular, abra o KYC por HTTPS');
+ return;
+ }
+
+ if (!navigator.mediaDevices?.getUserMedia) {
+ toast.error('Camera nao disponivel neste dispositivo');
+ return;
+ }
+
+ setIsCameraLoading(true);
+ try {
+ const stream = await navigator.mediaDevices.getUserMedia({
+ video: {
+ facingMode: 'user',
+ width: { ideal: 1280 },
+ height: { ideal: 1280 },
+ },
+ audio: false,
+ });
+
+ streamRef.current = stream;
+ setIsCameraOpen(true);
+ } catch (error) {
+ toast.error('Nao foi possivel acessar a camera');
+ } finally {
+ setIsCameraLoading(false);
+ }
+ };
+
+ useEffect(() => {
+ if (!isCameraOpen || !videoRef.current || !streamRef.current) return;
+
+ const video = videoRef.current;
+ video.srcObject = streamRef.current;
+ video.play().catch(() => {
+ toast.error('Toque em iniciar camera novamente para liberar o preview');
+ });
+ }, [isCameraOpen]);
+
+ const captureFacialPhoto = () => {
+ const video = videoRef.current;
+ if (!video) return;
+ if (!video.videoWidth || !video.videoHeight) {
+ toast.error('Aguarde a camera carregar');
+ return;
+ }
+
+ const canvas = document.createElement('canvas');
+ canvas.width = video.videoWidth;
+ canvas.height = video.videoHeight;
+ const context = canvas.getContext('2d');
+ if (!context) return;
+
+ context.drawImage(video, 0, 0, canvas.width, canvas.height);
+ canvas.toBlob((blob) => {
+ if (!blob) {
+ toast.error('Nao foi possivel capturar a foto');
+ return;
+ }
+
+ const file = new File([blob], `selfie-kyc-${Date.now()}.jpg`, { type: 'image/jpeg' });
+ handleFileUpload('selfie', file);
+ stopCamera();
+ toast.success('Verificacao facial capturada');
+ }, 'image/jpeg', 0.86);
+ };
+
+ useEffect(() => {
+ if (!isCameraOpen || documents.selfie) return;
+
+ setFacialInstructionIndex(0);
+ setFacialCountdown(FACIAL_INSTRUCTIONS.length);
+
+ let captureTimeout: number | undefined;
+ const interval = window.setInterval(() => {
+ setFacialInstructionIndex((current) => {
+ const next = Math.min(current + 1, FACIAL_INSTRUCTIONS.length - 1);
+ return next;
+ });
+
+ setFacialCountdown((current) => {
+ const next = Math.max(current - 1, 0);
+ if (next === 0) {
+ window.clearInterval(interval);
+ captureTimeout = window.setTimeout(() => {
+ captureFacialPhoto();
+ }, 500);
+ }
+ return next;
+ });
+ }, 1200);
+
+ return () => {
+ window.clearInterval(interval);
+ if (captureTimeout) window.clearTimeout(captureTimeout);
+ };
+ }, [isCameraOpen, documents.selfie]);
+
  const handleNext = () => {
- const stepOrder: Step[] = ['type', 'documents', 'personal', 'address', 'financial', 'review'];
+ const stepOrder: Step[] = ['type', 'documents', 'facial', 'personal', 'address', 'review'];
  const currentIndex = stepOrder.indexOf(currentStep);
  
  // Validate documents step
@@ -296,7 +577,7 @@ export default function KYCPage() {
  toast.error('Envie a frente e o verso do documento de identidade');
  return;
  }
- 
+
  if (personType === 'pj') {
  if (!documents.cnpjCard) {
  toast.error('Envie o cartão CNPJ');
@@ -307,13 +588,25 @@ export default function KYCPage() {
  return;
  }
  }
+
+ // Validate facial step
+ if (currentStep === 'facial') {
+ if (!documents.selfie) {
+ toast.error('Faca a verificacao facial pelo celular');
+ return;
+ }
+ }
  }
  
  // Validate personal data step
  if (currentStep === 'personal') {
  if (personType === 'pf') {
- if (!personalData.fullName || !personalData.cpf || !personalData.birthDate || !personalData.phone) {
- toast.error('Preencha todos os campos obrigatórios');
+ if (!personalData.fullName?.trim()) {
+ toast.error('Informe seu nome completo');
+ return;
+ }
+ if (!personalData.cpf || !personalData.birthDate || !personalData.phone) {
+ toast.error('Preencha CPF, nascimento e telefone');
  return;
  }
  if (!validateCPF(personalData.cpf)) {
@@ -344,21 +637,13 @@ export default function KYCPage() {
  }
  }
  
- // Validate financial data step
- if (currentStep === 'financial') {
- if (!financialData.pixKey) {
- toast.error('Preencha a chave PIX');
- return;
- }
- }
- 
  if (currentIndex < stepOrder.length - 1) {
  setCurrentStep(stepOrder[currentIndex + 1]);
  }
  };
 
  const handleBack = () => {
- const stepOrder: Step[] = ['type', 'documents', 'personal', 'address', 'financial', 'review'];
+ const stepOrder: Step[] = ['type', 'documents', 'facial', 'personal', 'address', 'review'];
  const currentIndex = stepOrder.indexOf(currentStep);
  if (currentIndex > 0) {
  setCurrentStep(stepOrder[currentIndex - 1]);
@@ -368,7 +653,7 @@ export default function KYCPage() {
  const handleSubmit = async () => {
  // Verify user is still authenticated before submitting
  const token = localStorage.getItem('auth_token');
- if (!token) {
+ if (!token && !isPublicMobileKyc) {
  toast.error('Sessão expirada. Faça login novamente.');
  return;
  }
@@ -381,17 +666,22 @@ export default function KYCPage() {
  identityBack: 'identity_back',
  cnpjCard: 'company_document',
  socialContract: 'company_document',
+ selfie: 'selfie',
  };
 
  for (const [field, docType] of Object.entries(documentMapping)) {
  const doc = documents[field as keyof typeof documents];
  if (doc?.file) {
+ if (isPublicMobileKyc) {
+ await kycService.uploadDocumentWithCode(mobileKycCode, docType, doc.file);
+ } else {
  await kycService.uploadDocument(docType, doc.file);
+ }
  }
  }
 
  // 2. Submit personal data
- await kycService.submit({
+ const submitPayload = {
  full_name: personalData.fullName,
  birth_date: personalData.birthDate,
  document_number: personalData.cpf.replace(/\D/g, ''),
@@ -406,15 +696,24 @@ export default function KYCPage() {
  account_type: personType === 'pf' ? 'individual' : 'company',
  company_name: personalData.companyName,
  company_document: personalData.cnpj?.replace(/\D/g, ''),
- pix_key: financialData.pixKey?.trim() || undefined,
- pix_type: financialData.pixType || undefined,
- });
+ };
+
+ if (isPublicMobileKyc) {
+ await kycService.submitWithCode(mobileKycCode, submitPayload);
+ } else {
+ await kycService.submit(submitPayload);
+ }
 
  // 3. Submit for review
+ if (isPublicMobileKyc) {
+ await kycService.submitForReviewWithCode(mobileKycCode);
+ } else {
  await kycService.submitForReview();
+ }
 
  // Update user status
  updateUser({ kyc_status: 'submitted' });
+ queryClient.invalidateQueries({ queryKey: ['notifications'] });
  setIsSubmitted(true);
  toast.success('Verificação enviada com sucesso!');
  } catch (error: any) {
@@ -446,45 +745,170 @@ export default function KYCPage() {
  }
  };
 
+ const remoteKycStatus = kycStatus?.data?.kyc_status;
+ const isWaitingReview = remoteKycStatus === 'submitted' || remoteKycStatus === 'under_review';
+
+ if (!isLoadingStatus && !isSubmitted && !isWaitingReview && !shouldUseMobileFlow) {
  return (
- <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 py-3 sm:py-5 px-3 sm:px-4">
- <div className="mx-auto max-w-2xl">
- {isLoadingStatus ? (
- <div className="flex flex-col items-center justify-center py-12">
- <div className="h-10 w-10 animate-spin rounded-full border-3 border-emerald-500 border-t-transparent" />
- <p className="mt-4 text-sm text-gray-500">Carregando...</p>
+ <div className="h-screen overflow-hidden bg-[#f6faf8] px-5 py-4 text-gray-950">
+ <div className="mx-auto flex h-full max-w-5xl items-center">
+ <div className="grid w-full gap-4 lg:grid-cols-[minmax(0,1fr)_390px]">
+ <section className="rounded-3xl border border-emerald-950/10 bg-[#07120d] p-5 text-white shadow-xl shadow-emerald-950/10">
+ <div className="flex h-full min-h-[360px] flex-col justify-between gap-8">
+ <div>
+ <div className="flex items-center justify-between">
+ <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/60">Etapa obrigatoria</span>
  </div>
- ) : isSubmitted ? (
- /* Success Screen */
- <div className="flex min-h-[50vh] items-center justify-center">
- <div className="text-center max-w-sm mx-auto p-4">
- <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500">
- <CheckCircleIconSolid className="h-8 w-8 text-white" />
- </div>
- 
- <h1 className="mb-2 text-lg font-bold text-gray-900">
- Documentos Enviados!
+
+ <div className="mt-6 max-w-2xl">
+ <p className="text-sm font-medium text-emerald-200">Verificacao de identidade</p>
+ <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white lg:text-[38px]">
+ Continue pelo celular
  </h1>
- 
- <p className="text-sm text-gray-600 mb-4">
- Estamos analisando suas informações.
+ <p className="mt-3 max-w-xl text-sm leading-6 text-white/70">
+ Escaneie o QR Code para fotografar documentos e concluir a selfie facial com mais nitidez.
  </p>
- 
- <p className="text-xs text-gray-400">
- Redirecionando em {redirectCountdown}s...
- </p>
+ </div>
+ </div>
+
+ <div className="grid gap-3 sm:grid-cols-3">
+ {[
+ { number: '01', title: 'Escanear QR', desc: 'Abra o fluxo seguro', icon: QrCodeIcon },
+ { number: '02', title: 'Documentos', desc: 'Fotografe frente e verso', icon: DocumentTextIcon },
+ { number: '03', title: 'Selfie facial', desc: 'Confirme sua identidade', icon: CameraIcon },
+ ].map((item) => {
+ const Icon = item.icon;
+ return (
+ <div key={item.number} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.055] p-3 transition duration-300 hover:-translate-y-0.5 hover:bg-white/[0.08]">
+ <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-white/[0.05]" />
+ <div className="relative flex items-start justify-between">
+ <Icon className="h-8 w-8 text-white stroke-[1.6]" />
+ <span className="rounded-full border border-white/10 bg-white/[0.07] px-2 py-1 text-[10px] font-semibold tracking-wider text-emerald-100">
+ {item.number}
+ </span>
+ </div>
+ <div className="relative mt-3">
+ <p className="text-sm font-semibold text-white">{item.title}</p>
+ <p className="mt-1 text-[11px] leading-4 text-white/52">{item.desc}</p>
+ </div>
+ </div>
+ );
+ })}
+ </div>
+ </div>
+ </section>
+
+ <aside className="rounded-3xl border border-gray-200 bg-white p-4 shadow-xl shadow-emerald-950/8">
+ <div className="flex h-full min-h-[360px] flex-col">
+ <div className="flex items-center justify-between">
+ <div>
+ <p className="text-xs font-semibold tracking-[0.18em] text-emerald-700">Use seu Celular</p>
+ <h2 className="mt-1 text-lg font-semibold text-gray-950">Escaneie o QR Code</h2>
+ </div>
+ <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+ <QrCodeIcon className="h-5 w-5" />
+ </div>
+ </div>
+
+ <div className="mt-3 rounded-3xl border border-gray-100 bg-gray-50 p-3">
+ <div className="mx-auto flex h-36 w-36 items-center justify-center rounded-2xl bg-white p-2 shadow-inner">
+ {qrCodeUrl && mobileSessionCode ? (
+ <img src={qrCodeUrl} alt="QR Code para abrir o KYC no celular" className="h-full w-full" />
+ ) : (
+ <div className="h-9 w-9 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+ )}
+ </div>
+ </div>
+
+ {mobileSessionCode && (
+ <div className="mt-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-2.5 text-center">
+ <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400">Codigo da verificacao</p>
+ <p className="mt-1 font-mono text-lg font-semibold tracking-[0.22em] text-gray-950">{mobileSessionCode}</p>
+ </div>
+ )}
+
+ <div className="mt-3 grid gap-2">
+ <div className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-2">
+ <DevicePhoneMobileIcon className="mt-0.5 h-5 w-5 text-emerald-600" />
+ <div>
+ <p className="text-sm font-semibold text-gray-900">Use a camera do telefone</p>
+ <p className="mt-1 text-xs leading-4 text-gray-500">Documentos e selfie facial em uma unica etapa.</p>
+ </div>
+ </div>
+ <div className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-2">
+ <LockClosedIcon className="mt-0.5 h-5 w-5 text-emerald-600" />
+ <div>
+ <p className="text-sm font-semibold text-gray-900">Sessao protegida</p>
+ <p className="mt-1 text-xs leading-4 text-gray-500">Entre na mesma conta caso o celular solicite login.</p>
+ </div>
+ </div>
+ </div>
 
  <button
- onClick={() => navigate('/dashboard')}
- className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+ type="button"
+ onClick={() => {
+ navigator.clipboard?.writeText(mobileKycUrl);
+ toast.success('Link copiado');
+ }}
+ className="mt-auto w-full rounded-2xl bg-gray-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700"
  >
- Ir para Dashboard
+ Copiar link
+ </button>
+ <button
+ type="button"
+ onClick={() => navigate('/dashboard')}
+ className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-emerald-200 hover:text-emerald-700"
+ >
+ <ArrowLeftIcon className="h-4 w-4" />
+ Voltar
+ </button>
+ <button
+ type="button"
+ onClick={() => navigate('/kyc/privacy')}
+ className="mt-3 text-center text-xs font-semibold text-gray-500 transition hover:text-emerald-700"
+ >
+ Politica de privacidade do KYC
  </button>
  </div>
+ </aside>
  </div>
+ </div>
+ </div>
+ );
+ }
+
+ return (
+ <div className={shouldUseMobileFlow ? 'min-h-screen bg-[#f6f8f7] px-4 py-4 text-gray-950' : 'min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 py-3 sm:py-5 px-3 sm:px-4'}>
+ <div className={shouldUseMobileFlow ? 'mx-auto max-w-lg' : 'mx-auto max-w-2xl'}>
+ {isLoadingStatus ? (
+ <PageSpinner text="Carregando KYC..." />
+ ) : isSubmitted ? (
+ <KycSubmittedScreen redirectCountdown={redirectCountdown} onDashboard={() => navigate('/dashboard')} />
  ) : (
  <>
  {/* Header */}
+ {shouldUseMobileFlow ? (
+ <div className="mb-4 border-b border-gray-200 pb-4">
+ <div className="flex items-start justify-between gap-3">
+ <div>
+ <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">Vector KYC</p>
+ <h1 className="mt-1 text-2xl font-semibold tracking-tight text-gray-950">Verificacao de identidade</h1>
+ <p className="mt-1 text-sm leading-5 text-gray-500">
+ {publicSessionName || 'Complete a validacao para liberar sua conta.'}
+ </p>
+ </div>
+ <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5">
+ <p className="text-xs font-semibold text-emerald-700">{currentStepIndex + 1}/{steps.length}</p>
+ </div>
+ </div>
+ {(mobileKycCode || mobileSessionCode) && (
+ <div className="mt-4 flex items-center justify-between rounded-2xl border border-gray-200 bg-white px-4 py-3">
+ <span className="text-xs font-medium text-gray-500">Codigo da verificacao</span>
+ <span className="font-mono text-sm font-semibold tracking-[0.18em] text-gray-950">{mobileKycCode || mobileSessionCode}</span>
+ </div>
+ )}
+ </div>
+ ) : (
  <div className="mb-4 sm:mb-6 text-center">
  <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gray-900 via-emerald-800 to-emerald-900 bg-clip-text text-transparent mb-1.5">
  Verificação de Identidade
@@ -493,8 +917,26 @@ export default function KYCPage() {
  Complete seu cadastro para desbloquear todos os recursos
  </p>
  </div>
+ )}
 
  {/* Progress Steps */}
+ {shouldUseMobileFlow ? (
+ <div className="mb-4 rounded-2xl border border-gray-200 bg-white px-4 py-3">
+ <div className="flex items-center justify-between">
+ <div>
+ <p className="text-xs font-medium text-gray-500">Etapa atual</p>
+ <p className="mt-0.5 text-sm font-semibold text-gray-950">{steps[currentStepIndex]?.name}</p>
+ </div>
+ <p className="text-xs font-semibold text-emerald-700">{Math.round(((currentStepIndex + 1) / steps.length) * 100)}%</p>
+ </div>
+ <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-100">
+ <div
+ className="h-full rounded-full bg-emerald-600 transition-all duration-500"
+ style={{ width: `${((currentStepIndex + 1) / steps.length) * 100}%` }}
+ />
+ </div>
+ </div>
+ ) : (
  <div className="mb-4 sm:mb-6 overflow-x-auto pb-1">
  <div className="relative min-w-[400px] sm:min-w-0">
  {/* Progress Bar Background */}
@@ -546,16 +988,14 @@ export default function KYCPage() {
  </div>
  </div>
  </div>
+ )}
 
  {/* Content Card */}
- <div className="rounded-xl bg-white p-3 sm:p-4 md:p-5 shadow-lg border border-gray-100">
+ <div className={shouldUseMobileFlow ? 'rounded-2xl border border-gray-200 bg-white p-5 shadow-sm' : 'rounded-xl bg-white p-3 sm:p-4 md:p-5 shadow-lg border border-gray-100'}>
  {/* Step: Type Selection */}
  {currentStep === 'type' && (
  <div className="animate-fadeIn">
  <div className="text-center mb-4">
- <div className="inline-flex p-2 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-100 mb-2">
- <IdentificationIcon className="h-6 w-6 text-emerald-600" />
- </div>
  <h2 className="text-lg font-bold text-gray-900 mb-1">
  Qual o tipo de cadastro?
  </h2>
@@ -583,7 +1023,7 @@ export default function KYCPage() {
  ? 'bg-emerald-500' 
  : 'bg-gray-100 group-hover:bg-emerald-100'
  }`}>
- <UserIcon className={`h-6 w-6 ${
+ <KycPersonIcon className={`h-7 w-7 ${
  personType === 'pf' ? 'text-white' : 'text-gray-500 group-hover:text-emerald-600'
  }`} />
  </div>
@@ -619,7 +1059,7 @@ export default function KYCPage() {
  ? 'bg-emerald-500' 
  : 'bg-gray-100 group-hover:bg-emerald-100'
  }`}>
- <BuildingOfficeIcon className={`h-6 w-6 ${
+ <KycCompanyIcon className={`h-7 w-7 ${
  personType === 'pj' ? 'text-white' : 'text-gray-500 group-hover:text-emerald-600'
  }`} />
  </div>
@@ -653,9 +1093,6 @@ export default function KYCPage() {
  {currentStep === 'documents' && (
  <div>
  <div className="text-center mb-4">
- <div className="inline-flex p-2 rounded-lg bg-blue-100 mb-2">
- <DocumentTextIcon className="h-5 w-5 text-blue-600" />
- </div>
  <h2 className="text-lg font-bold text-gray-900">
  Envio de Documentos
  </h2>
@@ -728,6 +1165,124 @@ export default function KYCPage() {
  </div>
  )}
 
+ {/* Step: Facial Recognition */}
+ {currentStep === 'facial' && (
+ <div>
+ <div className="text-center mb-4">
+ <div className="inline-flex p-2 rounded-lg bg-emerald-100 mb-2">
+ <CameraIcon className="h-5 w-5 text-emerald-700" />
+ </div>
+ <h2 className="text-lg font-bold text-gray-900">
+ Reconhecimento facial
+ </h2>
+ <p className="mt-1 text-xs text-gray-500">
+ Use a camera frontal e mantenha o rosto centralizado.
+ </p>
+ </div>
+ <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 sm:p-4">
+ <div className="flex items-start justify-between gap-3">
+ <div className="flex items-start gap-3">
+ <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm">
+ <CameraIcon className="h-5 w-5" />
+ </div>
+ <div>
+ <h3 className="text-sm font-bold text-gray-950">Reconhecimento facial</h3>
+ <p className="mt-1 text-xs leading-5 text-gray-600">
+ Capture uma selfie em ambiente iluminado, sem oculos escuros e com o rosto centralizado.
+ </p>
+ </div>
+ </div>
+ {documents.selfie && (
+ <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+ Capturado
+ </span>
+ )}
+ </div>
+
+ {isCameraOpen ? (
+ <div className="mt-3 overflow-hidden rounded-2xl border border-emerald-200 bg-gray-950">
+ <div className="relative aspect-square w-full overflow-hidden bg-gray-950">
+ <video ref={videoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
+ <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+ <div
+ className="h-[62%] w-[48%] rounded-[48%] border-2 border-emerald-300/95 shadow-[0_0_0_9999px_rgba(0,0,0,0.42),0_0_30px_rgba(110,231,183,0.35)]"
+ />
+ </div>
+ <div className="pointer-events-none absolute left-3 right-3 top-3 rounded-2xl bg-gray-950/70 px-3 py-2 text-center backdrop-blur">
+ <p className="text-xs font-semibold text-emerald-200">
+ {FACIAL_INSTRUCTIONS[facialInstructionIndex]}
+ </p>
+ <p className="mt-0.5 text-[10px] text-white/60">
+ Mantenha boa iluminacao e rosto dentro do molde
+ </p>
+ </div>
+ <div className="pointer-events-none absolute bottom-3 left-3 right-3">
+ <div className="overflow-hidden rounded-full bg-white/20">
+ <div
+ className="h-1.5 rounded-full bg-emerald-300 transition-all duration-500"
+ style={{ width: `${((FACIAL_INSTRUCTIONS.length - facialCountdown) / FACIAL_INSTRUCTIONS.length) * 100}%` }}
+ />
+ </div>
+ <p className="mt-2 text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-white/70">
+ Captura automatica
+ </p>
+ </div>
+ </div>
+ <div className="flex gap-2 bg-white p-2">
+ <button
+ type="button"
+ onClick={stopCamera}
+ className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700"
+ >
+ Cancelar
+ </button>
+ <button
+ type="button"
+ onClick={captureFacialPhoto}
+ className="flex-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"
+ >
+ Capturar agora
+ </button>
+ </div>
+ </div>
+ ) : documents.selfie ? (
+ <div className="mt-3 flex items-center justify-between rounded-2xl border border-emerald-200 bg-white p-3">
+ <div className="flex items-center gap-3">
+ {documents.selfie.preview && (
+ <img src={documents.selfie.preview} alt="" className="h-14 w-14 rounded-2xl object-cover" />
+ )}
+ <div>
+ <p className="text-sm font-semibold text-gray-900">Selfie facial enviada</p>
+ <p className="text-xs text-emerald-700">Pronta para analise KYC</p>
+ </div>
+ </div>
+ <button
+ type="button"
+ onClick={() => removeFile('selfie')}
+ className="rounded-xl p-2 text-red-500 hover:bg-red-50"
+ >
+ <XMarkIcon className="h-5 w-5" />
+ </button>
+ </div>
+ ) : (
+ <button
+ type="button"
+ onClick={startFacialCapture}
+ disabled={isCameraLoading}
+ className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gray-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60"
+ >
+ {isCameraLoading ? (
+ <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+ ) : (
+ <CameraIcon className="h-5 w-5" />
+ )}
+ Fazer verificacao facial
+ </button>
+ )}
+ </div>
+ </div>
+ )}
+
  {/* Step: Personal Data */}
  {currentStep === 'personal' && (
  <div>
@@ -738,6 +1293,19 @@ export default function KYCPage() {
  <div className="space-y-3">
  {personType === 'pf' ? (
  <>
+ <div>
+ <label className="block text-xs font-medium text-gray-600 mb-1">
+ Nome Completo *
+ </label>
+ <input
+ type="text"
+ value={personalData.fullName}
+ onChange={(e) => setPersonalData({ ...personalData, fullName: e.target.value })}
+ className="w-full rounded-xl border border-gray-200 px-3 py-2 text-gray-900 bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all placeholder:text-gray-400"
+ placeholder="Seu nome completo"
+ />
+ </div>
+
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
  <div>
  <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -977,52 +1545,6 @@ export default function KYCPage() {
  </div>
  )}
 
- {/* Step: Financial Data */}
- {currentStep === 'financial' && (
- <div>
- <h2 className="mb-3 text-lg font-bold text-gray-900">
- Dados Financeiros
- </h2>
- 
- <div className="rounded-lg border border-gray-200 p-3 bg-white">
- <h3 className="mb-3 text-sm font-medium text-gray-900">
- Chave PIX para Recebimento
- </h3>
- 
- <div className="space-y-3">
- <div>
- <label className="block text-xs font-medium text-gray-600 mb-1">
- Tipo de Chave *
- </label>
- <select
- value={financialData.pixType}
- onChange={(e) => setFinancialData({ ...financialData, pixType: e.target.value })}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20"
- >
- <option value="cpf">CPF</option>
- <option value="cnpj">CNPJ</option>
- <option value="email">E-mail</option>
- <option value="phone">Telefone</option>
- <option value="random">Chave Aleatória</option>
- </select>
- </div>
-
- <div>
- <label className="block text-xs font-medium text-gray-600 mb-1">
- Chave PIX *
- </label>
- <input
- type="text"
- value={financialData.pixKey}
- onChange={(e) => setFinancialData({ ...financialData, pixKey: e.target.value })}
- className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 placeholder:text-gray-400"
- placeholder="Digite sua chave PIX"
- />
- </div>
- </div>
- </div>
- </div>
- )}
 
  {/* Step: Review */}
  {currentStep === 'review' && (
@@ -1062,13 +1584,6 @@ export default function KYCPage() {
  {Object.values(documents).filter(Boolean).length} enviados
  </p>
  </div>
-
- <div className="rounded-lg border border-gray-200 p-2.5 bg-white col-span-2">
- <h4 className="text-xs font-medium text-gray-500 mb-1">Chave PIX</h4>
- <p className="text-sm text-gray-900 truncate">
- {financialData.pixType}: {financialData.pixKey}
- </p>
- </div>
  </div>
 
  {/* Terms */}
@@ -1088,11 +1603,11 @@ export default function KYCPage() {
  )}
 
  {/* Navigation Buttons */}
- <div className="mt-5 flex flex-col-reverse sm:flex-row justify-between items-center gap-2 pt-4 border-t border-gray-100">
+ <div className={shouldUseMobileFlow ? 'mt-5 grid grid-cols-[1fr_1.35fr] items-center gap-2 pt-4 border-t border-gray-100' : 'mt-5 flex flex-col-reverse sm:flex-row justify-between items-center gap-2 pt-4 border-t border-gray-100'}>
  <button
  onClick={handleBack}
  disabled={currentStep === 'type'}
- className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+ className={shouldUseMobileFlow ? 'flex w-full items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all' : 'w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-all'}
  >
  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -1104,7 +1619,7 @@ export default function KYCPage() {
  <button
  onClick={handleSubmit}
  disabled={isSubmitting}
- className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-600 transition-all disabled:opacity-50"
+ className={shouldUseMobileFlow ? 'flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition-all disabled:opacity-50' : 'w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-600 transition-all disabled:opacity-50'}
  >
  {isSubmitting ? (
  <>
@@ -1121,7 +1636,7 @@ export default function KYCPage() {
  ) : (
  <button
  onClick={handleNext}
- className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-all"
+ className={shouldUseMobileFlow ? 'flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition-all' : 'w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-all'}
  >
  Continuar
  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

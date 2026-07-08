@@ -2,10 +2,15 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/stores/authStore';
+import SEO from '@/components/SEO';
 import toast from 'react-hot-toast';
-import { 
-  EyeIcon, 
-  EyeSlashIcon
+import {
+  ArrowRightIcon,
+  EnvelopeIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  LockClosedIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 
 interface RegisterForm {
@@ -13,6 +18,38 @@ interface RegisterForm {
   email: string;
   password: string;
   password_confirmation: string;
+}
+
+function Spinner() {
+  return (
+    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+  );
+}
+
+function getApiErrorMessage(error: any): string {
+  const errors = error.response?.data?.errors;
+
+  if (errors && typeof errors === 'object') {
+    const firstField = Object.keys(errors)[0];
+    const firstError = firstField ? errors[firstField]?.[0] : null;
+
+    if (firstError) {
+      return firstError;
+    }
+  }
+
+  return (
+    error.response?.data?.error?.message ||
+    error.response?.data?.message ||
+    'Erro ao criar conta'
+  );
 }
 
 export default function RegisterPage() {
@@ -38,197 +75,182 @@ export default function RegisterPage() {
       toast.success('Conta criada com sucesso!');
       navigate('/dashboard');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Erro ao criar conta';
-      toast.error(message);
+      toast.error(getApiErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full">
-      {/* Header */}
-      <div className="mb-3">
-        <h1 className="text-lg font-semibold text-white">
-          Criar sua conta
-        </h1>
-      </div>
+    <>
+      <SEO
+        title="Criar conta"
+        description="Crie sua conta VectorPagamentos para gerenciar pagamentos, produtos e afiliados"
+        url="/register"
+      />
 
-      {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2.5">
-        {/* Name Field */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-white">
-            Nome completo
-          </label>
-          <input
-            {...register('name', {
-              required: 'Nome é obrigatório',
-              minLength: {
-                value: 3,
-                message: 'Nome deve ter no mínimo 3 caracteres',
-              },
-            })}
-            type="text"
-            autoComplete="name"
-            className="w-full px-3 py-2 bg-[#121212] border border-[#202020] rounded-element text-white text-sm placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
-            placeholder="João Silva"
-          />
-          {errors.name && (
-            <p className="text-sm text-red-400">
-              {errors.name.message}
-            </p>
-          )}
+      <section className="w-full">
+        <div className="mb-7">
+          <h1 className="text-3xl font-semibold tracking-normal text-white">
+            Crie sua conta
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-slate-400">
+            Configure seu acesso para operar pagamentos, acompanhar vendas e gerenciar retiradas.
+          </p>
         </div>
 
-        {/* Email Field */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-white">
-            Email
-          </label>
-          <input
-            {...register('email', {
-              required: 'E-mail é obrigatório',
-              pattern: {
-                value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: 'E-mail inválido',
-              },
-            })}
-            type="email"
-            autoComplete="email"
-            className="w-full px-3 py-2 bg-[#121212] border border-[#202020] rounded-element text-white text-sm placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
-            placeholder="seu@email.com"
-          />
-          {errors.email && (
-            <p className="text-sm text-red-400">
-              {errors.email.message}
-            </p>
-          )}
-        </div>
-
-        {/* Password Field */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-white">
-            Senha
-          </label>
-          <div className="relative">
-            <input
-              {...register('password', {
-                required: 'Senha é obrigatória',
-                minLength: {
-                  value: 8,
-                  message: 'Senha deve ter no mínimo 8 caracteres',
-                },
-              })}
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              className="w-full px-3 pr-10 py-2 bg-[#121212] border border-[#202020] rounded-element text-white text-sm placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
-              placeholder="Sua senha"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-tx-muted hover:text-white transition-colors"
-            >
-              {showPassword ? (
-                <EyeSlashIcon className="h-5 w-5" />
-              ) : (
-                <EyeIcon className="h-5 w-5" />
-              )}
-            </button>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-200">Nome completo</label>
+            <div className="relative">
+              <UserIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+              <input
+                {...register('name', {
+                  required: 'Nome e obrigatorio',
+                  minLength: {
+                    value: 3,
+                    message: 'Nome deve ter no minimo 3 caracteres',
+                  },
+                })}
+                type="text"
+                autoComplete="name"
+                className="h-12 w-full rounded-lg border border-white/10 bg-white/[0.035] px-11 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-emerald-300 focus:bg-white/[0.055] focus:ring-2 focus:ring-emerald-300/15"
+                placeholder="Seu nome"
+              />
+            </div>
+            {errors.name && <p className="text-sm text-red-300">{errors.name.message}</p>}
           </div>
-          {errors.password && (
-            <p className="text-sm text-red-400">
-              {errors.password.message}
-            </p>
-          )}
-        </div>
 
-        {/* Password Confirmation Field */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-white">
-            Confirmar senha
-          </label>
-          <div className="relative">
-            <input
-              {...register('password_confirmation', {
-                required: 'Confirmação de senha é obrigatória',
-                validate: (value) =>
-                  value === password || 'As senhas não conferem',
-              })}
-              type={showPasswordConfirmation ? 'text' : 'password'}
-              autoComplete="new-password"
-              className="w-full px-3 pr-10 py-2 bg-[#121212] border border-[#202020] rounded-element text-white text-sm placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 transition-colors"
-              placeholder="Confirme sua senha"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-tx-muted hover:text-white transition-colors"
-            >
-              {showPasswordConfirmation ? (
-                <EyeSlashIcon className="h-5 w-5" />
-              ) : (
-                <EyeIcon className="h-5 w-5" />
-              )}
-            </button>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-200">E-mail</label>
+            <div className="relative">
+              <EnvelopeIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+              <input
+                {...register('email', {
+                  required: 'E-mail e obrigatorio',
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'E-mail invalido',
+                  },
+                })}
+                type="email"
+                autoComplete="email"
+                className="h-12 w-full rounded-lg border border-white/10 bg-white/[0.035] px-11 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-emerald-300 focus:bg-white/[0.055] focus:ring-2 focus:ring-emerald-300/15"
+                placeholder="seu@email.com"
+              />
+            </div>
+            {errors.email && <p className="text-sm text-red-300">{errors.email.message}</p>}
           </div>
-          {errors.password_confirmation && (
-            <p className="text-sm text-red-400">
-              {errors.password_confirmation.message}
-            </p>
-          )}
-        </div>
 
-        {/* Terms */}
-        <label className="flex items-start gap-3 cursor-pointer group/terms">
-          <input
-            type="checkbox"
-            required
-            className="mt-1 w-4 h-4 rounded bg-[#121212] border border-[#202020] text-accent-primary focus:ring-2 focus:ring-emerald-500/50 focus:ring-offset-0 transition-colors"
-          />
-          <span className="text-sm text-tx-muted group-hover/terms:text-tx-muted transition-colors">
-            Concordo com os{' '}
-            <a href="/terms" target="_blank" className="text-emerald-400 hover:text-emerald-300 hover:underline">
-              Termos de Uso
-            </a>
-            {' '}e{' '}
-            <a href="/privacy" target="_blank" className="text-emerald-400 hover:text-emerald-300 hover:underline">
-              Política de Privacidade
-            </a>
-          </span>
-        </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200">Senha</label>
+              <div className="relative">
+                <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+                <input
+                  {...register('password', {
+                    required: 'Senha e obrigatoria',
+                    minLength: {
+                      value: 8,
+                      message: 'Minimo de 8 caracteres',
+                    },
+                  })}
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  className="h-12 w-full rounded-lg border border-white/10 bg-white/[0.035] px-11 pr-12 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-emerald-300 focus:bg-white/[0.055] focus:ring-2 focus:ring-emerald-300/15"
+                  placeholder="Senha"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-slate-200"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-sm text-red-300">{errors.password.message}</p>}
+            </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="w-full py-2.5 px-6 rounded-full font-semibold text-[#101010] bg-emerald-300 hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-[#101010] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Criando conta...
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-200">Confirmar</label>
+              <div className="relative">
+                <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+                <input
+                  {...register('password_confirmation', {
+                    required: 'Confirme sua senha',
+                    validate: (value) => value === password || 'As senhas nao conferem',
+                  })}
+                  type={showPasswordConfirmation ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  className="h-12 w-full rounded-lg border border-white/10 bg-white/[0.035] px-11 pr-12 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-emerald-300 focus:bg-white/[0.055] focus:ring-2 focus:ring-emerald-300/15"
+                  placeholder="Repetir senha"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-slate-200"
+                  aria-label={showPasswordConfirmation ? 'Ocultar confirmacao' : 'Mostrar confirmacao'}
+                >
+                  {showPasswordConfirmation ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                </button>
+              </div>
+              {errors.password_confirmation && (
+                <p className="text-sm text-red-300">{errors.password_confirmation.message}</p>
+              )}
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/10 bg-white/[0.025] p-4 text-sm leading-6 text-slate-400 transition-colors hover:border-white/15 hover:bg-white/[0.04]">
+            <input
+              type="checkbox"
+              required
+              className="mt-1 h-4 w-4 rounded border-white/15 bg-[#101312] text-emerald-300 focus:ring-emerald-300"
+            />
+            <span>
+              Concordo com os{' '}
+              <a href="/terms" target="_blank" rel="noreferrer" className="font-medium text-emerald-300 hover:text-emerald-200">
+                Termos de Uso
+              </a>{' '}
+              e a{' '}
+              <a href="/privacy" target="_blank" rel="noreferrer" className="font-medium text-emerald-300 hover:text-emerald-200">
+                Politica de Privacidade
+              </a>
+              .
             </span>
-          ) : (
-            'Criar conta'
-          )}
-        </button>
-      </form>
+          </label>
 
-      {/* Login Link */}
-      <p className="text-center mt-3 text-tx-muted">
-        Já tem uma conta?{' '}
-        <Link
-          to="/login"
-          className="text-emerald-400 hover:text-emerald-300 hover:underline transition-colors"
-        >
-          Faça login
-        </Link>
-      </p>
-    </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-emerald-300 px-5 text-sm font-semibold text-[#052e1a] transition-colors hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-[#0b0d0c] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isLoading ? (
+              <>
+                <Spinner />
+                Criando conta
+              </>
+            ) : (
+              <>
+                Criar conta
+                <ArrowRightIcon className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </form>
+
+        <div className="mt-7 border-t border-white/10 pt-6">
+          <p className="text-sm text-slate-500">
+            Ja tem uma conta?{' '}
+            <Link
+              to="/login"
+              className="font-medium text-emerald-300 transition-colors hover:text-emerald-200"
+            >
+              Fazer login
+            </Link>
+          </p>
+        </div>
+      </section>
+    </>
   );
 }

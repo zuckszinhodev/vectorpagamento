@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\KycActivityLog;
 use App\Models\KycDocument;
 use App\Models\KycSubmission;
+use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -586,6 +587,34 @@ class KycController extends Controller
                     'kyc_rejection_reason' => null,
                     'phone' => $submission->phone,
                 ])->save();
+
+                $kycNotification = Notification::where('user_id', $user->id)
+                    ->where('account_id', $user->account_id)
+                    ->where('type', 'info')
+                    ->where('data->notification_key', 'kyc_submitted_waiting_approval')
+                    ->first();
+
+                $kycNotificationPayload = [
+                    'title' => 'Documentos KYC enviados',
+                    'message' => 'Seus documentos foram enviados e estao aguardando aprovacao da administracao para voce realizar saques normalmente.',
+                    'read' => false,
+                    'read_at' => null,
+                    'data' => [
+                        'notification_key' => 'kyc_submitted_waiting_approval',
+                        'kyc_status' => 'submitted',
+                        'expires_at' => now()->addDay()->toIso8601String(),
+                    ],
+                ];
+
+                if ($kycNotification) {
+                    $kycNotification->update($kycNotificationPayload);
+                } else {
+                    Notification::create(array_merge($kycNotificationPayload, [
+                        'user_id' => $user->id,
+                        'account_id' => $user->account_id,
+                        'type' => 'info',
+                    ]));
+                }
 
                 KycActivityLog::log(
                     $user->id,

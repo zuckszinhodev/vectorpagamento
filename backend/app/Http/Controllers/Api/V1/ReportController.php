@@ -46,6 +46,18 @@ class ReportController extends Controller
             return "to_char({$column}, '{$format}')";
         }
 
+        if ($connection === 'sqlite') {
+            $sqliteFormat = match ($format) {
+                'YYYY-MM-DD HH24:00' => '%Y-%m-%d %H:00',
+                'YYYY-MM-DD' => '%Y-%m-%d',
+                'IYYY-IW' => '%Y-%W',
+                'YYYY-MM' => '%Y-%m',
+                default => '%Y-%m-%d',
+            };
+
+            return "strftime('{$sqliteFormat}', {$column})";
+        }
+
         $mysqlFormat = str_replace(
             ['YYYY', 'MM', 'DD', 'HH24', 'IYYY', 'IW'],
             ['%Y', '%m', '%d', '%H', '%x', '%v'],

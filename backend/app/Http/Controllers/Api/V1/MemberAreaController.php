@@ -12,6 +12,25 @@ use Illuminate\Support\Str;
 
 class MemberAreaController extends Controller
 {
+    private function uniqueSubdomain(string $name, ?string $ignoreId = null): string
+    {
+        $base = Str::slug($name) ?: 'area-' . Str::lower(Str::random(8));
+        $base = Str::limit($base, 52, '');
+        $candidate = $base;
+        $suffix = 2;
+
+        while (
+            MemberArea::where('subdomain', $candidate)
+                ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+                ->exists()
+        ) {
+            $candidate = Str::limit($base, 52, '') . '-' . $suffix;
+            $suffix++;
+        }
+
+        return $candidate;
+    }
+
     /**
      * Get member area settings for authenticated account
      */
@@ -26,7 +45,7 @@ class MemberAreaController extends Controller
                 $memberArea = MemberArea::create([
                     'account_id' => $accountId,
                     'name' => $request->user()->account->name ?? 'Minha Área de Membros',
-                    'subdomain' => Str::slug($request->user()->account->name ?? 'area-' . Str::random(8)),
+                    'subdomain' => $this->uniqueSubdomain($request->user()->account->name ?? 'Minha Area de Membros'),
                 ]);
             }
 
@@ -79,6 +98,10 @@ class MemberAreaController extends Controller
         $memberArea = MemberArea::where('account_id', $accountId)->first();
         
         if (!$memberArea) {
+            if (!isset($validated['subdomain']) || !$validated['subdomain']) {
+                $validated['subdomain'] = $this->uniqueSubdomain($validated['name'] ?? 'Minha Area de Membros');
+            }
+
             $memberArea = MemberArea::create(array_merge([
                 'account_id' => $accountId,
                 'name' => 'Minha Área de Membros',

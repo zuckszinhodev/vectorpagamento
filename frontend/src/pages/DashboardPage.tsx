@@ -996,7 +996,7 @@ export default function DashboardPage() {
             <button
               onClick={() => navigate('/saques')}
               disabled={!walletSummary?.available_balance || walletSummary.available_balance <= 0}
-              className="w-full mt-2 lg:mt-4 px-3 py-2 lg:py-2.5 bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-700 hover:to-indigo-700 text-white font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-xs lg:text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-emerald-600 disabled:hover:to-indigo-600 disabled:shadow-none"
+              className="w-full mt-2 lg:mt-4 px-3 py-2 lg:py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-emerald-950 font-semibold rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-xs lg:text-sm shadow-sm shadow-emerald-900/10 hover:shadow-md hover:shadow-emerald-900/15 disabled:bg-emerald-600/45 dark:disabled:bg-emerald-500/35 disabled:text-white/70 dark:disabled:text-white/60 disabled:cursor-not-allowed disabled:shadow-none"
             >
               Solicitar saque
             </button>
