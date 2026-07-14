@@ -38,18 +38,10 @@ interface AcquirerRoutingSettings {
   updated_at?: string | null;
 }
 
-const methodLabels: Record<string, string> = {
-  pix: 'PIX',
-  pix_out: 'Saque PIX',
-  credit_card: 'Cartao',
-  card: 'Cartao',
-  boleto: 'Boleto',
-};
 
 export default function AcquirersPage() {
   const queryClient = useQueryClient();
   const [items, setItems] = useState<AcquirerPriorityItem[]>([]);
-  const [weights, setWeights] = useState<Record<string, number>>({});
   const [rotationHistory, setRotationHistory] = useState<Array<{ action: string; at: string }>>([]);
 
   const { data, isLoading } = useQuery<AcquirerPriorityItem[]>({
@@ -77,27 +69,11 @@ export default function AcquirersPage() {
   useEffect(() => {
     if (!routingSettings) return;
 
-    setWeights(routingSettings.weights || {});
     setRotationHistory((routingSettings.history || []).map((event) => ({
       action: event.action,
       at: event.at ? new Date(event.at).toLocaleString('pt-BR') : '',
     })));
   }, [routingSettings]);
-
-  useEffect(() => {
-    if (items.length === 0) return;
-
-    setWeights((current) => {
-      const next = { ...current };
-      items.forEach((item) => {
-        if (!next[item.acquirer_id]) {
-          next[item.acquirer_id] = item.routing_weight || Math.max(1, Math.floor(100 / items.length));
-        }
-      });
-
-      return next;
-    });
-  }, [items]);
 
   const reorderMutation = useMutation({
     mutationFn: async (orderedItems: AcquirerPriorityItem[]) => {
@@ -145,7 +121,6 @@ export default function AcquirersPage() {
       approval: item.metrics?.approval_rate ?? Math.min(98, 84 + (seed % 11)),
       volume: item.metrics?.volume_today ?? 18 + (seed % 37),
       failures: item.metrics?.failures_today ?? seed % 5,
-      latency: item.metrics?.latency_ms ?? 240 + (seed % 9) * 35,
     };
   };
 
@@ -255,17 +230,7 @@ export default function AcquirersPage() {
                                     </span>
                                   )}
                                 </div>
-                                <p className="mt-1 text-sm text-tx-muted">{item.name} / {item.slug}</p>
-
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {item.supported_methods.map((method) => (
-                                    <span key={method} className="rounded-md border border-border-DEFAULT bg-surface-hover px-2 py-1 text-xs font-semibold text-tx-secondary">
-                                      {methodLabels[method] || method}
-                                    </span>
-                                  ))}
-                                </div>
-
-                                <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                                <div className="mt-3 grid gap-2 sm:grid-cols-3">
                                   <div className="rounded-md bg-surface-page px-2.5 py-2">
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-tx-muted">Aprovacao</p>
                                     <p className="mt-1 text-xs font-bold text-tx-primary">{getOperationalMetrics(item, index).approval}%</p>
@@ -278,38 +243,8 @@ export default function AcquirersPage() {
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-tx-muted">Falhas</p>
                                     <p className="mt-1 text-xs font-bold text-tx-primary">{getOperationalMetrics(item, index).failures}</p>
                                   </div>
-                                  <div className="rounded-md bg-surface-page px-2.5 py-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-tx-muted">Latencia</p>
-                                    <p className="mt-1 text-xs font-bold text-tx-primary">{getOperationalMetrics(item, index).latency}ms</p>
-                                  </div>
                                 </div>
                               </div>
-                            </div>
-
-                            <div className="grid min-w-[300px] grid-cols-3 gap-2">
-                              <div className={`rounded-lg border px-3 py-2 text-center ${item.is_active ? 'border-accent-primary/25 bg-accent-subtle' : 'border-border-DEFAULT bg-surface-hover'}`}>
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-tx-muted">Status</p>
-                                <p className={`mt-1 text-xs font-bold ${item.is_active ? 'text-accent-primary' : 'text-tx-muted'}`}>
-                                  {item.is_active ? 'Ativa' : 'Pausada'}
-                                </p>
-                              </div>
-                              <div className={`rounded-lg border px-3 py-2 text-center ${index === 0 ? 'border-accent-primary/25 bg-accent-subtle' : 'border-border-DEFAULT bg-surface-hover'}`}>
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-tx-muted">Ordem</p>
-                                <p className={`mt-1 text-xs font-bold ${index === 0 ? 'text-accent-primary' : 'text-tx-secondary'}`}>
-                                  Prioridade {index + 1}
-                                </p>
-                              </div>
-                              <label className="rounded-lg border border-border-DEFAULT bg-surface-hover px-3 py-2 text-center">
-                                <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-tx-muted">Peso</span>
-                                <input
-                                  type="number"
-                                  min={1}
-                                  max={100}
-                                  value={weights[item.acquirer_id] || 1}
-                                  onChange={(event) => setWeights((current) => ({ ...current, [item.acquirer_id]: Number(event.target.value) }))}
-                                  className="mt-1 w-full bg-transparent text-center text-xs font-bold text-tx-primary outline-none"
-                                />
-                              </label>
                             </div>
                           </div>
                         </div>
