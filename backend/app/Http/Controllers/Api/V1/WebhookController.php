@@ -815,23 +815,19 @@ class WebhookController extends Controller
             'ip' => $request->ip(),
         ]);
 
-        try {
-            $payload = $request->all();
-            
-            // Generic webhook handling
-            $chargeId = $payload['charge_id'] ?? $payload['reference'] ?? null;
-            $status = $payload['status'] ?? null;
+        // SECURITY: this endpoint has no signature/secret verification, so it must
+        // NOT be able to mutate charge status. Previously it updated the charge to
+        // "paid" directly from an unauthenticated request body, letting anyone mark
+        // any charge as paid. Reject until a verified custom-integration flow exists.
+        Log::warning('Custom webhook rejected — unverified source cannot mutate charges', [
+            'integration_id' => $integrationId,
+            'ip' => $request->ip(),
+        ]);
 
-            if ($chargeId && $status) {
-                $mappedStatus = $this->mapStatus($status);
-                $this->updateChargeStatus($chargeId, $mappedStatus);
-            }
-
-            return response()->json(['status' => 'error', 'message' => 'Erro interno ao processar webhook'], 500);
-        } catch (\Exception $e) {
-            Log::error('Custom webhook error', ['error' => $e->getMessage()]);
-            return response()->json(['status' => 'error', 'message' => 'Erro interno ao processar webhook'], 500);
-        }
+        return response()->json([
+            'status' => 'rejected',
+            'message' => 'Unverified webhook source. Use an acquirer-specific signed endpoint.',
+        ], 401);
     }
 
     /**
@@ -1434,14 +1430,21 @@ class WebhookController extends Controller
             $webhookSecret = $this->getSharkHubSubWebhookSecret($isTransferWebhook, $resolvedAcquirerKey);
             $signature = (string) ($request->header('X-Signature') ?? $request->header('x-signature') ?? '');
 
-            if ($webhookSecret && $signature !== '') {
+            if ($webhookSecret) {
+                // SECURITY: when a secret is configured a valid signature is MANDATORY.
+                // Previously the check was skipped whenever the signature header was
+                // absent, letting an attacker bypass verification by simply omitting it.
+                if ($signature === '') {
+                    Log::warning('SharkHubSub webhook rejected: missing signature', ['ip' => $request->ip()]);
+                    return response()->json(['status' => 'error', 'message' => 'Missing signature'], 401);
+                }
+
                 if (!\App\Infrastructure\Acquirers\SharkHubSubAcquirer::verifyWebhookSignature($rawPayload, $signature, $webhookSecret)) {
                     Log::warning('SharkHubSub webhook signature verification failed', ['ip' => $request->ip()]);
                     return response()->json(['status' => 'error', 'message' => 'Invalid signature'], 401);
                 }
             } else {
-                Log::info('SharkHubSub webhook accepted without signature verification', [
-                    'reason' => $signature === '' ? 'no_signature_sent' : 'no_secret_configured',
+                Log::warning('SharkHubSub webhook accepted without signature verification: no secret configured', [
                     'ip' => $request->ip(),
                 ]);
             }

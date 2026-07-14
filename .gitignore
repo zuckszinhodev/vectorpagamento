@@ -1,4 +1,7 @@
 # Environment files
+.env
+.env.*
+!.env.example
 backend/.env
 backend/.env.*
 !backend/.env.example
@@ -42,4 +45,6 @@ backend/public/debug-*.php
 backend/test_*.php
 **/debug-env.php
 database/database.sqlite
+backend/database/database.sqlite
+backend/database/*.sqlite
 config.yaml
