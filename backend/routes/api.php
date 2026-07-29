@@ -463,6 +463,10 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::post('/{customerId}/impersonate', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'impersonate']);
             Route::get('/{customerId}/withdrawals', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'listWithdrawals']);
             Route::get('/{customerId}/audit-logs', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'listAuditLogs']);
+            // Fintech seller management
+            Route::post('/{customerId}/approve-kyc', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'approveKyc']);
+            Route::post('/{customerId}/reset-mfa', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'resetMfa']);
+            Route::post('/{customerId}/exclusive-acquirer', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'setExclusiveAcquirer']);
         });
 
         // Admin: Acquirers Management - SECURITY: Added admin audit logging

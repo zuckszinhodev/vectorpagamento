@@ -316,6 +316,28 @@ export default function AdminCustomerDetail() {
     },
   });
 
+  const approveKycMutation = useMutation({
+    mutationFn: async () => {
+      await api.post(`/admin/customers/${customerId}/approve-kyc`);
+    },
+    onSuccess: () => {
+      toast.success('KYC aprovado manualmente (sem documentação)');
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-detail', customerId] });
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Erro ao aprovar KYC'),
+  });
+
+  const resetMfaMutation = useMutation({
+    mutationFn: async () => {
+      await api.post(`/admin/customers/${customerId}/reset-mfa`);
+    },
+    onSuccess: () => {
+      toast.success('2FA removido — o vendedor pode reconfigurar');
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-detail', customerId] });
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.message || 'Erro ao remover 2FA'),
+  });
+
   const impersonateMutation = useMutation({
     mutationFn: async () => {
       const response = await api.post(`/admin/customers/${customerId}/impersonate`);
@@ -499,6 +521,30 @@ export default function AdminCustomerDetail() {
           >
             <KeyIcon className="h-3.5 w-3.5" />
             Login como Vendedor
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm(`Aprovar o KYC de ${customer.name} manualmente, sem exigir documentação?`)) {
+                approveKycMutation.mutate();
+              }
+            }}
+            disabled={approveKycMutation.isPending || customer.kyc_status === 'approved'}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            <ShieldCheckIcon className="h-3.5 w-3.5" />
+            {customer.kyc_status === 'approved' ? 'KYC Aprovado' : 'Aprovar KYC'}
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm(`Remover / resetar o 2FA de ${customer.name}? O vendedor poderá configurar novamente.`)) {
+                resetMfaMutation.mutate();
+              }
+            }}
+            disabled={resetMfaMutation.isPending || !customer.mfa_enabled}
+            className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-xs font-medium text-white hover:bg-rose-700 disabled:opacity-50 transition-colors"
+          >
+            <KeyIcon className="h-3.5 w-3.5" />
+            {customer.mfa_enabled ? 'Resetar 2FA' : '2FA já desativado'}
           </button>
         </div>
       </div>
@@ -1535,6 +1581,23 @@ function WithdrawalsTab({
     },
   });
 
+  const approveWithdrawalMutation = useMutation({
+    mutationFn: async (withdrawalId: string) => {
+      const response = await api.post(`/admin/withdrawals/${withdrawalId}/process`);
+      return response.data;
+    },
+    onSuccess: (payload) => {
+      toast.success(payload?.message || 'Saque autorizado e processado.');
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-withdrawals', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-detail', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-logs', customerId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || error?.response?.data?.error?.message || 'Erro ao autorizar saque');
+    },
+  });
+
   const closeCancelModal = () => {
     if (cancelWithdrawalMutation.isPending) return;
     setSelectedWithdrawal(null);
@@ -1635,6 +1698,21 @@ function WithdrawalsTab({
                           >
                             <EyeIcon className="h-4 w-4" />
                           </button>
+
+                          {w.status === 'pending' ? (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Autorizar e processar o saque de ${formatCurrency(w.amount)}?`)) {
+                                  approveWithdrawalMutation.mutate(w.id);
+                                }
+                              }}
+                              disabled={approveWithdrawalMutation.isPending}
+                              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                              title="Autorizar e processar o saque"
+                            >
+                              Autorizar
+                            </button>
+                          ) : null}
 
                           {['pending', 'processing'].includes(w.status) ? (
                             <button
@@ -2646,6 +2724,21 @@ function AcquirersTab({ customerId }: { customerId: string }) {
     onError: () => toast.error('Erro ao salvar adquirentes'),
   });
 
+  const exclusiveMutation = useMutation({
+    mutationFn: async (payload: { exclusive: boolean; acquirer_id?: string }) => {
+      const res = await api.post(`/admin/customers/${customerId}/exclusive-acquirer`, payload);
+      return res.data;
+    },
+    onSuccess: (data: any) => {
+      toast.success(data?.message || 'Exclusividade atualizada');
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-acquirers', customerId] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Erro ao configurar exclusividade'),
+  });
+
+  const exclusive: boolean = acquirersData?.exclusive ?? false;
+  const exclusiveSlug: string | null = acquirersData?.exclusive_slug ?? null;
+
   const handleSave = () => {
     const payload = acquirers
       .filter(a => a.is_active)
@@ -2692,6 +2785,25 @@ function AcquirersTab({ customerId }: { customerId: string }) {
           >
             {saveMutation.isPending ? 'Salvando...' : 'Salvar Adquirentes'}
           </button>
+        </div>
+
+        <div className={`mb-4 flex items-center justify-between rounded-md border px-4 py-3 ${exclusive ? 'border-purple-300 bg-purple-50' : 'border-gray-200 bg-gray-50'}`}>
+          <p className="text-xs text-gray-700">
+            {exclusive ? (
+              <><strong className="text-purple-800">Modo exclusivo ativo:</strong> este vendedor usa somente <span className="font-mono">{exclusiveSlug}</span> (sem failover).</>
+            ) : (
+              <><strong>Adquirente exclusiva:</strong> use o botão em uma adquirente abaixo para travar o vendedor a usar somente ela.</>
+            )}
+          </p>
+          {exclusive && (
+            <button
+              onClick={() => { if (window.confirm('Desativar o modo exclusivo? O vendedor volta ao roteamento normal.')) exclusiveMutation.mutate({ exclusive: false }); }}
+              disabled={exclusiveMutation.isPending}
+              className="shrink-0 rounded-md bg-purple-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+            >
+              Desativar exclusividade
+            </button>
+          )}
         </div>
 
         {acquirers.length === 0 ? (
@@ -2742,6 +2854,19 @@ function AcquirersTab({ customerId }: { customerId: string }) {
                 </div>
 
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Tornar "${acq.name}" a ÚNICA adquirente deste vendedor? Ele passará a usar somente ela (sem failover).`)) {
+                        exclusiveMutation.mutate({ exclusive: true, acquirer_id: acq.acquirer_id });
+                      }
+                    }}
+                    disabled={exclusiveMutation.isPending}
+                    className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                      exclusiveSlug === acq.slug ? 'bg-purple-600 text-white' : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+                    }`}
+                  >
+                    {exclusiveSlug === acq.slug ? 'Exclusiva ✓' : 'Tornar exclusiva'}
+                  </button>
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-gray-500">Prioridade:</label>
                     <input

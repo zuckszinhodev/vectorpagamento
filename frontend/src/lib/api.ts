@@ -4,6 +4,23 @@ import toast from 'react-hot-toast';
 // Configure API base URL to point to Laravel backend
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.vectorpagamentos.com.br/api/v1';
 
+// Safe UUID generator. crypto.randomUUID only exists in secure contexts
+// (HTTPS/localhost); over plain HTTP by IP it is undefined and would throw
+// inside the request interceptor, killing every POST (login, 2FA, etc.).
+function safeUuid(): string {
+  const c: any = typeof crypto !== 'undefined' ? crypto : undefined;
+  if (c && typeof c.randomUUID === 'function') {
+    try { return c.randomUUID(); } catch { /* fall through */ }
+  }
+  const b = c && c.getRandomValues
+    ? c.getRandomValues(new Uint8Array(16))
+    : Uint8Array.from({ length: 16 }, () => Math.floor(Math.random() * 256));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x: number) => x.toString(16).padStart(2, '0'));
+  return `${h[0]}${h[1]}${h[2]}${h[3]}-${h[4]}${h[5]}-${h[6]}${h[7]}-${h[8]}${h[9]}-${h[10]}${h[11]}${h[12]}${h[13]}${h[14]}${h[15]}`;
+}
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -42,7 +59,7 @@ api.interceptors.request.use(
 
     // Add idempotency key for POST requests
     if (config.method === 'post' && !config.headers['X-Idempotency-Key']) {
-      config.headers['X-Idempotency-Key'] = crypto.randomUUID();
+      config.headers['X-Idempotency-Key'] = safeUuid();
     }
     return config;
   },

@@ -473,6 +473,29 @@ class PaymentService
      * Default: PayFort (priority 0) → BluPay → Babylon → Mock
      * If the primary acquirer fails, automatically tries the next one.
      */
+    /**
+     * When an account is flagged as "exclusive acquirer", returns the acquirer
+     * slug it is locked to (uses only that one, no failover). Null otherwise.
+     */
+    private function getExclusiveAcquirerSlug(?string $accountId): ?string
+    {
+        if (!$accountId) {
+            return null;
+        }
+
+        try {
+            $account = \App\Models\Account::find($accountId);
+            $settings = (array) ($account?->settings ?? []);
+            if (!empty($settings['acquirer_exclusive']) && !empty($settings['acquirer_exclusive_slug'])) {
+                return (string) $settings['acquirer_exclusive_slug'];
+            }
+        } catch (\Throwable $e) {
+            // ignore — fall back to normal routing
+        }
+
+        return null;
+    }
+
     private function processPixWithFallback(Charge $charge, string $primaryAcquirer, array $lockedAccountRouting = []): array
     {
         $rotationSettings = $this->rotationService?->getSettings() ?? [];
@@ -485,6 +508,15 @@ class PaymentService
         $acquirerOrder = $isAccountLocked
             ? array_values(array_unique([...$accountOrder, ...$globalOrder]))
             : $this->factory->getPixAcquirerOrderForAccount($charge->account_id, $primaryAcquirer);
+
+        // Exclusive acquirer: seller is locked to a single acquirer, no failover.
+        $exclusiveSlug = $this->getExclusiveAcquirerSlug($charge->account_id);
+        if ($exclusiveSlug !== null) {
+            $acquirerOrder = [$exclusiveSlug];
+            $accountOrder = [$exclusiveSlug];
+            $isAccountLocked = true;
+        }
+
         $lockedAcquirerNames = array_fill_keys($accountOrder, true);
 
         if ($isAccountLocked && $acquirerOrder === []) {
@@ -581,6 +613,7 @@ class PaymentService
                 $acquirerName === 'payfort' => $this->factory->payfortForAccount($charge->account_id) ? $this->generatePixViaPayFort($charge) : null,
                 $acquirerName === 'blupay' => $this->factory->blupay() ? $this->generatePixViaBluPay($charge) : null,
                 $acquirerName === 'enki' => $this->factory->enkiForAccount($charge->account_id) ? $this->generatePixViaEnki($charge) : null,
+                $acquirerName === 'witetec' => $this->factory->witetec() ? $this->generatePixViaWitetec($charge) : null,
                 $acquirerName === 'babylon' => $this->isConfigured() ? $this->generatePix($charge) : null,
                 $acquirerName === 'huntersub' => $this->factory->huntersubForAccount($charge->account_id) ? $this->generatePixViaHunterSub($charge) : null,
                 str_starts_with($acquirerName, 'sharkhubsub') => $this->factory->getAcquirerInstance($acquirerName) ? $this->generatePixViaSharkHubSub($charge) : null,

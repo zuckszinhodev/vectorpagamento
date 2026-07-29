@@ -1408,9 +1408,13 @@ class CustomerAdminController extends Controller
                 ];
             });
 
+            $acctSettings = (array) (optional(Account::find($user->account_id))->settings ?? []);
+
             return response()->json([
                 'success' => true,
                 'data' => $result->values(),
+                'exclusive' => (bool) ($acctSettings['acquirer_exclusive'] ?? false),
+                'exclusive_slug' => $acctSettings['acquirer_exclusive_slug'] ?? null,
             ]);
         } catch (\Throwable $e) {
             Log::error('CustomerAdminController::getAccountAcquirers error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
@@ -1487,6 +1491,156 @@ class CustomerAdminController extends Controller
                 'success' => false,
                 'message' => 'Erro ao atualizar adquirentes: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    // ── Fintech seller management ────────────────────────────────
+
+    /**
+     * Approve KYC manually, without requiring the seller to submit documents.
+     */
+    public function approveKyc(Request $request, string $customerId): JsonResponse
+    {
+        try {
+            $user = User::with('account')->find($customerId);
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+            }
+
+            $now = now();
+            $user->forceFill([
+                'kyc_status' => 'approved',
+                'kyc_submitted_at' => $user->kyc_submitted_at ?? $now,
+                'kyc_approved_at' => $now,
+                'kyc_rejection_reason' => null,
+            ])->save();
+
+            // Activate the account if it was still pending/suspended.
+            if ($user->account && in_array((string) $user->account->status, ['pending', 'suspended', ''], true)) {
+                $user->account->update(['status' => 'active']);
+            }
+
+            Log::info('Admin approved KYC manually (no documents)', [
+                'customer_id' => $user->id,
+                'admin_id' => $request->user()?->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'KYC aprovado manualmente (sem documentação).',
+                'data' => ['kyc_status' => 'approved'],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('CustomerAdminController::approveKyc error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
+            return response()->json(['success' => false, 'message' => 'Erro ao aprovar KYC'], 500);
+        }
+    }
+
+    /**
+     * Remove / reset the seller's two-factor authentication (2FA).
+     * The seller can configure it again from scratch.
+     */
+    public function resetMfa(Request $request, string $customerId): JsonResponse
+    {
+        try {
+            $user = User::find($customerId);
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+            }
+
+            $user->forceFill([
+                'mfa_enabled' => false,
+                'mfa_secret' => null,
+            ])->save();
+
+            Log::info('Admin reset seller MFA/2FA', [
+                'customer_id' => $user->id,
+                'admin_id' => $request->user()?->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Autenticação de dois fatores (2FA) removida. O vendedor pode configurar novamente.',
+                'data' => ['mfa_enabled' => false],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('CustomerAdminController::resetMfa error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
+            return response()->json(['success' => false, 'message' => 'Erro ao remover 2FA'], 500);
+        }
+    }
+
+    /**
+     * Make a single acquirer EXCLUSIVE for this seller: the seller will only
+     * use the chosen acquirer (no failover to any other). Toggle off to release.
+     * Body: { exclusive: bool, acquirer_id?: uuid (required when exclusive=true) }
+     */
+    public function setExclusiveAcquirer(Request $request, string $customerId): JsonResponse
+    {
+        $validated = $request->validate([
+            'exclusive' => ['required', 'boolean'],
+            'acquirer_id' => ['nullable', 'uuid', 'required_if:exclusive,true'],
+        ]);
+
+        $user = User::with('account')->find($customerId);
+        if (!$user || !$user->account_id) {
+            return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+        }
+
+        $account = $user->account;
+        $accountId = (string) $user->account_id;
+
+        DB::beginTransaction();
+        try {
+            $settings = (array) ($account->settings ?? []);
+
+            if ($validated['exclusive']) {
+                $acquirer = AcquirerEntity::find($validated['acquirer_id']);
+                if (!$acquirer) {
+                    DB::rollBack();
+                    return response()->json(['success' => false, 'message' => 'Adquirente não encontrada'], 404);
+                }
+
+                // Keep ONLY the chosen acquirer active for this account.
+                AccountAcquirer::where('account_id', $accountId)
+                    ->where('acquirer_id', '!=', $acquirer->id)
+                    ->delete();
+
+                AccountAcquirer::updateOrCreate(
+                    ['account_id' => $accountId, 'acquirer_id' => $acquirer->id],
+                    ['is_active' => true, 'priority' => 0, 'credentials' => encrypt([]), 'settings' => []]
+                );
+
+                $settings['acquirer_exclusive'] = true;
+                $settings['acquirer_exclusive_slug'] = $acquirer->slug;
+            } else {
+                $settings['acquirer_exclusive'] = false;
+                unset($settings['acquirer_exclusive_slug']);
+            }
+
+            $account->update(['settings' => $settings]);
+            DB::commit();
+
+            Log::info('Admin set exclusive acquirer for seller', [
+                'account_id' => $accountId,
+                'exclusive' => $validated['exclusive'],
+                'slug' => $settings['acquirer_exclusive_slug'] ?? null,
+                'admin_id' => $request->user()?->id,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $validated['exclusive']
+                    ? 'Adquirente exclusiva ativada. Este vendedor usará somente a adquirente escolhida.'
+                    : 'Modo exclusivo desativado.',
+                'data' => [
+                    'exclusive' => (bool) ($settings['acquirer_exclusive'] ?? false),
+                    'slug' => $settings['acquirer_exclusive_slug'] ?? null,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('CustomerAdminController::setExclusiveAcquirer error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
+            return response()->json(['success' => false, 'message' => 'Erro ao configurar adquirente exclusiva'], 500);
         }
     }
 
