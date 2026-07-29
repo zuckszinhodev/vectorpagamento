@@ -34,6 +34,9 @@ export function isCustomDomain(): boolean {
   // Localhost with port → not custom
   if (host === 'localhost' || host === '127.0.0.1') return false;
 
+  // Raw IP address access (IPv4/IPv6) → main app, never member/custom area
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':')) return false;
+
   // Check if it's a VectorPagamentos subdomain
   for (const baseDomain of PLATFORM_BASE_DOMAINS) {
     if (host.endsWith('.' + baseDomain)) {
