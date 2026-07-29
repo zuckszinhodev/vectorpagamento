@@ -2362,6 +2362,7 @@ class PaymentService
         try { $this->dispatchAccountWebhook('charge.paid', $charge); } catch (\Exception $e) { Log::error('Account webhook failed (fallback)', ['charge_id' => $charge->id, 'error' => $e->getMessage()]); }
         $this->dispatchUtmifyEvent($charge);
         try { $this->sendPaymentApprovedEmails($charge); } catch (\Exception $e) { Log::error('Email dispatch failed (fallback)', ['charge_id' => $charge->id, 'error' => $e->getMessage()]); }
+        try { app(\App\Services\AccountNotificationService::class)->chargePaid($charge); } catch (\Throwable $e) { Log::warning('In-app notification (charge paid) failed', ['charge_id' => $charge->id, 'error' => $e->getMessage()]); }
     }
 
     /**
@@ -2373,6 +2374,7 @@ class PaymentService
         try { $this->dispatchAccountWebhook('payment.refunded', $charge); } catch (\Exception $e) { Log::error('Account webhook failed', ['charge_id' => $charge->id, 'error' => $e->getMessage()]); }
         try { $this->dispatchAccountWebhook('charge.refunded', $charge); } catch (\Exception $e) { Log::error('Account webhook failed', ['charge_id' => $charge->id, 'error' => $e->getMessage()]); }
         $this->dispatchUtmifyEvent($charge);
+        try { app(\App\Services\AccountNotificationService::class)->chargeRefunded($charge); } catch (\Throwable $e) { Log::warning('In-app notification (charge refunded) failed', ['charge_id' => $charge->id, 'error' => $e->getMessage()]); }
     }
 
     /**

@@ -46,6 +46,7 @@ const AdminFinance = lazy(() => import('@/pages/admin/AdminFinance'));
 const AdminAcquirers = lazy(() => import('@/pages/admin/AdminAcquirers'));
 const AdminMonitoring = lazy(() => import('@/pages/admin/AdminMonitoring'));
 const AdminChargebacks = lazy(() => import('@/pages/admin/AdminChargebacks'));
+const AdminSupport = lazy(() => import('@/pages/admin/AdminSupport'));
 const LandingPagesPage = lazy(() => import('@/pages/LandingPagesPage'));
 const LandingPageEditorPage = lazy(() => import('@/pages/LandingPageEditorPage'));
 const MemberAreaPage = lazy(() => import('@/pages/MemberAreaPage'));
@@ -257,6 +258,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     if (clean.startsWith('chargebacks')) return 'admin.chargebacks.manage';
     if (clean.startsWith('approvals')) return 'admin.approvals.review';
     if (clean.startsWith('monitoring')) return 'admin.security.monitor';
+    if (clean.startsWith('support')) return 'admin.customers.manage';
     return null;
   };
 
@@ -462,6 +464,7 @@ function App() {
         <Route path="kyc" element={<AdminKYC />} />
         <Route path="acquirers" element={<AdminAcquirers />} />
         <Route path="chargebacks" element={<AdminChargebacks />} />
+        <Route path="support" element={<AdminSupport />} />
         <Route path="approvals" element={<AdminFinance mode="transactions" />} />
         <Route path="security" element={<Navigate to="/admin" replace />} />
         <Route path="settings" element={<Navigate to="/admin" replace />} />

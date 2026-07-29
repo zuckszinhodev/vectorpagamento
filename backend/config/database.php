@@ -3,7 +3,10 @@
 use Illuminate\Support\Str;
 
 $sqliteDatabase = env('DB_DATABASE', database_path('database.sqlite'));
-$sqliteDatabasePath = preg_match('/^(?:[A-Za-z]:[\/\\\\]|[\/\\\\])/', $sqliteDatabase)
+// ':memory:' (usado nos testes) nunca deve ser tratado como caminho de arquivo,
+// senão vira base_path(':memory:') e o SQLite tenta abrir um arquivo inexistente.
+$sqliteDatabasePath = ($sqliteDatabase === ':memory:'
+    || preg_match('/^(?:[A-Za-z]:[\/\\\\]|[\/\\\\])/', $sqliteDatabase))
     ? $sqliteDatabase
     : base_path($sqliteDatabase);
 

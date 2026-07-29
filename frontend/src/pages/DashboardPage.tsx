@@ -759,27 +759,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 2FA Alert - Only show if MFA is disabled AND KYC is approved AND not impersonating */}
-      {user && !user.mfa_enabled && user.kyc_status === 'approved' && !isImpersonating && (
-        <div className="flex items-center gap-2 sm:gap-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-lg px-2.5 py-1.5 sm:px-4 sm:py-3">
-          <ShieldExclamationIcon className="h-4 w-4 sm:h-6 sm:w-6 text-amber-500 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs sm:text-sm font-medium text-amber-800 dark:text-amber-200">
-              Sua conta ainda não tem autenticação de dois fatores ativada.
-            </p>
-            <p className="text-[10px] sm:text-xs text-amber-600 dark:text-amber-400 mt-0.5 hidden sm:block">
-              Ative o 2FA para proteger sua conta contra acessos não autorizados.
-            </p>
-          </div>
-          <button
-            onClick={() => navigate('/settings?tab=security')}
-            className="flex-shrink-0 text-[10px] sm:text-xs font-semibold bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-md transition-colors"
-          >
-            Ativar agora
-          </button>
-        </div>
-      )}
-
       {/* Greeting Section */}
       <div className="mb-0.5 sm:mb-1">
         <h1 className="text-lg sm:text-2xl font-bold text-tx-primary">

@@ -4,7 +4,6 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { api, formatCurrency } from '@/lib/api';
 import { safeHref } from '@/lib/safeUrl';
-import { Spinner } from '@/components/ui/Spinner';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import DOMPurify from 'dompurify';
@@ -133,6 +132,8 @@ interface CheckoutData {
   type?: string;
   theme?: CheckoutTheme;
   settings?: CheckoutSettings;
+  /** Métodos que o gateway consegue processar agora (fonte da verdade). */
+  gateway_payment_methods?: string[];
   product: CheckoutProduct;
   facebook_pixel?: {
     pixel_id: string;
@@ -1078,11 +1079,12 @@ export default function PublicCheckoutPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <Spinner size="lg" />
-      </div>
-    );
+    // Sem spinner: mostra apenas o fundo do checkout, para a transição do
+    // carregamento para a página ser imperceptível (antes piscava branco).
+    // Em preview o tema chega por postMessage; no load normal usamos o mesmo
+    // default de backgroundColor aplicado ao tema mais abaixo.
+    const loadingBackground = builderSettings?.theme?.backgroundColor || '#f8fafc';
+    return <div className="min-h-screen" style={{ ...LIGHT_MODE_VARS, backgroundColor: loadingBackground }} />;
   }
 
   if (error || !checkout) {
@@ -1216,11 +1218,22 @@ export default function PublicCheckoutPage() {
     image_url: backendProduct?.image_url || rawProduct.image_url,
   } : null;
   
-  const payment = settings.payment || {
-    methods: (settings.payment_methods || ['pix']).filter((m: string) => m !== 'credit_card'),
+  const rawPayment = settings.payment || {
+    methods: settings.payment_methods || ['pix'],
     maxInstallments: settings.max_installments || 12,
     pixDiscount: settings.pix_discount || 0,
     boletoDiscount: 0,
+  };
+
+  // Só oferece métodos que o gateway realmente processa. Sem isto, o checkout
+  // mostra (por ex.) Boleto, o cliente escolhe e o pagamento falha no submit.
+  // Em preview do builder não há dado do gateway, então não filtra.
+  const gatewayMethods = checkout.gateway_payment_methods;
+  const payment = {
+    ...rawPayment,
+    methods: gatewayMethods
+      ? (rawPayment.methods || []).filter((m: string) => gatewayMethods.includes(m))
+      : rawPayment.methods,
   };
   const conversion = settings.conversion || {
     timerEnabled: settings.timer_enabled !== false,

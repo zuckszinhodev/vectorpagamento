@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {
   ArrowPathIcon,
   BoltIcon,
+  ChevronLeftIcon,
   ServerStackIcon,
   ShoppingBagIcon,
   XMarkIcon,
@@ -639,6 +640,24 @@ export default function LiveGlobeMap({ accountId }: LiveGlobeMapProps) {
           <div className="pointer-events-none absolute bottom-[-18%] left-[18%] h-[44vmin] w-[44vmin] rounded-full bg-teal-400/12 blur-3xl" />
           <GlobeCanvas events={events} active={isOpen} worldGeoJson={worldGeoJson} />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(3,6,17,0.12)_38%,rgba(3,6,17,0.92)_100%)]" />
+
+          {/* Coming Soon Overlay — blurred background */}
+          <div className="absolute inset-0 z-20 backdrop-blur-md bg-black/40" />
+          <div className="absolute inset-0 z-30 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+              <h3 className="text-xl font-bold tracking-wide text-white sm:text-2xl">Disponível em breve</h3>
+              <p className="max-w-xs text-center text-sm text-white/60">
+                O mapa global de acessos em tempo real estará disponível em uma próxima atualização.
+              </p>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 py-2 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20"
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+                Voltar para Dashboard
+              </button>
+            </div>
+          </div>
 
           <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-between px-5 py-4 sm:px-8">
             <div>

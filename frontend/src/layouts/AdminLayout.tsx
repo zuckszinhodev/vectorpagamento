@@ -20,6 +20,7 @@ import {
   ServerIcon,
   ExclamationTriangleIcon,
   CpuChipIcon,
+  LifebuoyIcon,
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -79,6 +80,7 @@ const navigationGroups: NavGroup[] = [
       { name: 'KYC', href: '/admin/kyc', icon: DocumentCheckIcon, permission: 'admin.kyc.review' },
       { name: 'Disputas', href: '/admin/chargebacks', icon: ExclamationTriangleIcon, permission: 'admin.chargebacks.manage' },
       { name: 'Aprovacoes', href: '/admin/approvals', icon: DocumentTextIcon, permission: 'admin.approvals.review' },
+      { name: 'Suporte', href: '/admin/support', icon: LifebuoyIcon, permission: 'admin.customers.manage' },
     ],
   },
   {

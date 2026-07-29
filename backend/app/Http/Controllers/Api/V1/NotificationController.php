@@ -6,10 +6,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
+use App\Models\NotificationRead;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class NotificationController extends Controller
 {
@@ -20,50 +23,99 @@ class NotificationController extends Controller
     {
         try {
         $userId = $request->user()->id;
+        $accountId = $request->user()->account_id;
         $perPage = min($request->input('per_page', 20), 100);
 
         try {
-            $query = Notification::where('user_id', $userId);
+            // Base: notificações do próprio usuário OU notificações de conta
+            // (user_id null) da mesma account. Exclui as que este usuário ocultou.
+            $baseFilter = function ($q) use ($userId, $accountId) {
+                $q->where(function ($inner) use ($userId, $accountId) {
+                    $inner->where('user_id', $userId)
+                          ->orWhere(function ($qq) use ($accountId) {
+                              $qq->whereNull('user_id')->where('account_id', $accountId);
+                          });
+                })
+                ->where(function ($e) {
+                    $e->whereNull('data->expires_at')
+                      ->orWhere('data->expires_at', '>', now()->toIso8601String());
+                })
+                // Se este usuário ocultou a notificação, não devolve.
+                ->whereNotIn('id', function ($sub) use ($userId) {
+                    $sub->select('notification_id')
+                        ->from('notification_reads')
+                        ->where('user_id', $userId)
+                        ->whereNotNull('deleted_at');
+                });
+            };
 
-            // Hide expired admin notifications
-            $query->where(function ($q) {
-                $q->whereNull('data->expires_at')
-                  ->orWhere('data->expires_at', '>', now()->toIso8601String());
-            });
+            $query = Notification::query()->where($baseFilter);
 
-            // Filter by read status
-            if ($request->filled('read')) {
-                $query->where('read', filter_var($request->input('read'), FILTER_VALIDATE_BOOLEAN));
-            }
-
-            // Filter by type
             if ($request->filled('type')) {
                 $query->where('type', $request->input('type'));
             }
 
-            $notifications = $query->orderBy('created_at', 'desc')->paginate($perPage);
+            $paginated = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
-            // Transform for frontend
-            $data = collect($notifications->items())->map(function ($notification) {
+            // Uma query só para saber quais o usuário já leu (dentre as da página).
+            $ids = collect($paginated->items())->pluck('id')->all();
+            $readIds = NotificationRead::where('user_id', $userId)
+                ->whereIn('notification_id', $ids)
+                ->whereNotNull('read_at')
+                ->pluck('notification_id')
+                ->flip();
+
+            $isRead = function (Notification $n) use ($userId, $readIds): bool {
+                // Notificação direcionada ao próprio usuário usa a coluna clássica.
+                if ($n->user_id !== null && $n->user_id === $userId) {
+                    return (bool) $n->read;
+                }
+                // Notificação de conta: lida se existir marca em notification_reads.
+                return $readIds->has($n->id);
+            };
+
+            $items = collect($paginated->items());
+
+            // Aplica filtro `read` no lado do PHP (é per-user, não dá para SQL simples).
+            if ($request->filled('read')) {
+                $wantRead = filter_var($request->input('read'), FILTER_VALIDATE_BOOLEAN);
+                $items = $items->filter(fn (Notification $n) => $isRead($n) === $wantRead)->values();
+            }
+
+            $data = $items->map(function (Notification $n) use ($isRead) {
                 return [
-                    'id' => $notification->id,
-                    'type' => $notification->type,
-                    'title' => $notification->title,
-                    'message' => $notification->message,
-                    'data' => $notification->data,
-                    'read' => $notification->read,
-                    'time' => $this->formatTime($notification->created_at),
-                    'created_at' => $notification->created_at->toIso8601String(),
+                    'id'         => $n->id,
+                    'type'       => $n->type,
+                    'title'      => $n->title,
+                    'message'    => $n->message,
+                    'data'       => $n->data,
+                    'read'       => $isRead($n),
+                    'time'       => $this->formatTime($n->created_at),
+                    'created_at' => $n->created_at->toIso8601String(),
                 ];
             });
 
-            $unreadCount = Notification::where('user_id', $userId)
+            // Não-lidas: personal (read=false) + conta (sem marca em notification_reads.read_at).
+            $unreadPersonal = Notification::query()
+                ->where($baseFilter)
+                ->where('user_id', $userId)
                 ->where('read', false)
-                ->where(function ($q) {
-                    $q->whereNull('data->expires_at')
-                      ->orWhere('data->expires_at', '>', now()->toIso8601String());
+                ->count();
+
+            $unreadAccount = Notification::query()
+                ->where($baseFilter)
+                ->whereNull('user_id')
+                ->whereNotExists(function ($sub) use ($userId) {
+                    $sub->select(DB::raw(1))
+                        ->from('notification_reads')
+                        ->whereColumn('notification_reads.notification_id', 'notifications.id')
+                        ->where('notification_reads.user_id', $userId)
+                        ->whereNotNull('read_at');
                 })
                 ->count();
+
+            $unreadCount = $unreadPersonal + $unreadAccount;
+            $notifications = $paginated;
         } catch (\Throwable $e) {
             Log::error('NotificationController::index error', ['message' => $e->getMessage()]);
             $data = collect();
@@ -101,13 +153,44 @@ class NotificationController extends Controller
     public function unreadCount(Request $request): JsonResponse
     {
         try {
-        $count = Notification::where('user_id', $request->user()->id)
+        $userId = $request->user()->id;
+        $accountId = $request->user()->account_id;
+
+        $notValidExpiry = function ($q) {
+            $q->whereNull('data->expires_at')
+              ->orWhere('data->expires_at', '>', now()->toIso8601String());
+        };
+
+        // Não ocultadas por este usuário.
+        $notHidden = function ($q) use ($userId) {
+            $q->whereNotIn('id', function ($sub) use ($userId) {
+                $sub->select('notification_id')
+                    ->from('notification_reads')
+                    ->where('user_id', $userId)
+                    ->whereNotNull('deleted_at');
+            });
+        };
+
+        $personal = Notification::where('user_id', $userId)
             ->where('read', false)
-            ->where(function ($q) {
-                $q->whereNull('data->expires_at')
-                  ->orWhere('data->expires_at', '>', now()->toIso8601String());
+            ->where($notValidExpiry)
+            ->where($notHidden)
+            ->count();
+
+        $account = Notification::whereNull('user_id')
+            ->where('account_id', $accountId)
+            ->where($notValidExpiry)
+            ->where($notHidden)
+            ->whereNotExists(function ($sub) use ($userId) {
+                $sub->select(DB::raw(1))
+                    ->from('notification_reads')
+                    ->whereColumn('notification_reads.notification_id', 'notifications.id')
+                    ->where('notification_reads.user_id', $userId)
+                    ->whereNotNull('read_at');
             })
             ->count();
+
+        $count = $personal + $account;
 
         return response()->json([
             'success' => true,
@@ -134,7 +217,14 @@ class NotificationController extends Controller
     public function markAsRead(Request $request, string $notificationId): JsonResponse
     {
         try {
-        $notification = Notification::where('user_id', $request->user()->id)
+        $userId = $request->user()->id;
+        $accountId = $request->user()->account_id;
+        $notification = Notification::where(function ($q) use ($userId, $accountId) {
+                $q->where('user_id', $userId)
+                  ->orWhere(function ($qq) use ($accountId) {
+                      $qq->whereNull('user_id')->where('account_id', $accountId);
+                  });
+            })
             ->where('id', $notificationId)
             ->first();
 
@@ -145,7 +235,14 @@ class NotificationController extends Controller
             ], 404);
         }
 
-        $notification->markAsRead();
+        // Personal (para este user): marca na coluna clássica.
+        // De conta (user_id null): grava um registro em notification_reads
+        // para este usuário — sem afetar os outros usuários da conta.
+        if ($notification->user_id === $userId) {
+            $notification->markAsRead();
+        } else {
+            $this->markAccountNotificationAsRead($notification->id, $userId);
+        }
 
         return response()->json([
             'success' => true,
@@ -170,12 +267,30 @@ class NotificationController extends Controller
     public function markAllAsRead(Request $request): JsonResponse
     {
         try {
-        Notification::where('user_id', $request->user()->id)
+        $userId = $request->user()->id;
+        $accountId = $request->user()->account_id;
+
+        // Personal: marca coluna clássica de uma vez.
+        Notification::where('user_id', $userId)
             ->where('read', false)
-            ->update([
-                'read' => true,
-                'read_at' => now(),
-            ]);
+            ->update(['read' => true, 'read_at' => now()]);
+
+        // De conta: cria registros em notification_reads para as que ainda
+        // não têm marca deste usuário.
+        $accountIds = Notification::whereNull('user_id')
+            ->where('account_id', $accountId)
+            ->whereNotExists(function ($sub) use ($userId) {
+                $sub->select(DB::raw(1))
+                    ->from('notification_reads')
+                    ->whereColumn('notification_reads.notification_id', 'notifications.id')
+                    ->where('notification_reads.user_id', $userId)
+                    ->whereNotNull('read_at');
+            })
+            ->pluck('id');
+
+        foreach ($accountIds as $nid) {
+            $this->markAccountNotificationAsRead((string) $nid, $userId);
+        }
 
         return response()->json([
             'success' => true,
@@ -200,9 +315,23 @@ class NotificationController extends Controller
     public function destroy(Request $request, string $notificationId): JsonResponse
     {
         try {
-        $notification = Notification::where('user_id', $request->user()->id)
+        $userId = $request->user()->id;
+        $accountId = $request->user()->account_id;
+        $notification = Notification::where(function ($q) use ($userId, $accountId) {
+                $q->where('user_id', $userId)
+                  ->orWhere(function ($qq) use ($accountId) {
+                      $qq->whereNull('user_id')->where('account_id', $accountId);
+                  });
+            })
             ->where('id', $notificationId)
             ->first();
+
+        // Personal: apaga de verdade. De conta: apenas oculta para este usuário
+        // (grava deleted_at em notification_reads sem tocar no registro global).
+        if ($notification && $notification->user_id !== $userId) {
+            $this->hideAccountNotification($notification->id, $userId);
+            return response()->json(['success' => true, 'message' => 'Notificação removida da sua caixa.']);
+        }
 
         if (!$notification) {
             return response()->json([
@@ -514,6 +643,50 @@ class NotificationController extends Controller
                 'success' => false,
                 'error' => ['code' => 'server_error', 'message' => 'Erro interno do servidor.'],
             ], 500);
+        }
+    }
+
+    /**
+     * Upsert seguro do estado "lida" de uma notificação de conta para um usuário.
+     * Se já existe registro, só atualiza `read_at`; senão, cria novo.
+     */
+    private function markAccountNotificationAsRead(string $notificationId, string $userId): void
+    {
+        $read = NotificationRead::where('notification_id', $notificationId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($read) {
+            $read->update(['read_at' => now()]);
+        } else {
+            NotificationRead::create([
+                'id'              => (string) Str::uuid(),
+                'notification_id' => $notificationId,
+                'user_id'         => $userId,
+                'read_at'         => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Oculta uma notificação de conta para um usuário específico
+     * (não afeta a visibilidade dela para os outros usuários da mesma account).
+     */
+    private function hideAccountNotification(string $notificationId, string $userId): void
+    {
+        $read = NotificationRead::where('notification_id', $notificationId)
+            ->where('user_id', $userId)
+            ->first();
+
+        if ($read) {
+            $read->update(['deleted_at' => now()]);
+        } else {
+            NotificationRead::create([
+                'id'              => (string) Str::uuid(),
+                'notification_id' => $notificationId,
+                'user_id'         => $userId,
+                'deleted_at'      => now(),
+            ]);
         }
     }
 }

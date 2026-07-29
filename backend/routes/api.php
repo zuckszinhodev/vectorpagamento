@@ -379,6 +379,15 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::delete('/{notificationId}', [\App\Http\Controllers\Api\V1\NotificationController::class, 'destroy']);
         });
 
+        // Suporte: chamados do vendedor
+        Route::prefix('support/tickets')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\SupportTicketController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\V1\SupportTicketController::class, 'store']);
+            Route::get('/{id}', [\App\Http\Controllers\Api\V1\SupportTicketController::class, 'show']);
+            Route::post('/{id}/messages', [\App\Http\Controllers\Api\V1\SupportTicketController::class, 'reply']);
+            Route::patch('/{id}/close', [\App\Http\Controllers\Api\V1\SupportTicketController::class, 'close']);
+        });
+
         // Admin: KYC Management - SECURITY: Added admin audit logging
         Route::middleware(['role:admin,owner,support,financial,antifraud', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
             Route::prefix('admin/kyc')->group(function () {
@@ -508,6 +517,14 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::get('/', [\App\Http\Controllers\Api\V1\NotificationController::class, 'adminList']);
             Route::get('/search-users', [\App\Http\Controllers\Api\V1\NotificationController::class, 'adminSearchUsers']);
             Route::delete('/clear', [\App\Http\Controllers\Api\V1\NotificationController::class, 'adminClear']);
+        });
+
+        // Admin: Suporte / chamados
+        Route::prefix('admin/support/tickets')->middleware(['role:admin,owner,support,financial,antifraud', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\SupportTicketAdminController::class, 'index']);
+            Route::get('/{id}', [\App\Http\Controllers\Api\V1\SupportTicketAdminController::class, 'show']);
+            Route::post('/{id}/messages', [\App\Http\Controllers\Api\V1\SupportTicketAdminController::class, 'reply']);
+            Route::patch('/{id}', [\App\Http\Controllers\Api\V1\SupportTicketAdminController::class, 'update']);
         });
 
         // Admin: Fraud Management - SECURITY: Added admin audit logging

@@ -34,6 +34,7 @@ import {
   PaperAirplaneIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
+import { api } from '@/lib/api';
 import { notificationsService, Notification } from '@/services/api/notifications.service';
 import { productsService } from '@/services/api/products.service';
 import { wazerAIService, type WazerAIChatMessage } from '@/services/api/wazerAI.service';
@@ -44,6 +45,9 @@ import clsx from 'clsx';
 interface DashboardLayoutProps {
   children?: ReactNode;
 }
+
+// Id da notificação local de lembrete de 2FA (não existe na API).
+const MFA_REMINDER_NOTIFICATION_ID = 'local:mfa-reminder';
 
 interface NavChild {
   name: string;
@@ -78,9 +82,35 @@ const searchPrompts = [
   'Pesquise oportunidades dentro do sistema',
 ];
 
+interface SearchHit {
+  type: 'charge' | 'affiliate' | 'product';
+  id: string;
+  title: string;
+  subtitle?: string;
+  meta?: string;
+  href: string;
+  // Dados brutos para renderização rica no card (só usado para 'charge' hoje).
+  raw?: {
+    amount?: string;
+    customerName?: string;
+    customerEmail?: string;
+    paymentMethod?: string;
+    status?: string;
+    createdAt?: string;
+    paidAt?: string;
+    shortId?: string;
+  };
+}
+
+interface SearchResults {
+  query: string;
+  hits: SearchHit[];
+}
+
 interface AiSearchMessage extends WazerAIChatMessage {
   id: string;
   isLoading?: boolean;
+  results?: SearchResults;
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -177,8 +207,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
-  const notifications = notificationsData?.data || [];
-  const unreadCount = notificationsData?.meta?.unread_count || 0;
+  // Lembrete de 2FA: notificação local (não vem da API) exibida enquanto a conta
+  // não tiver 2FA ativo. Some sozinha assim que o usuário ativa.
+  const needsMfaSetup = Boolean(
+    user && !user.mfa_enabled && user.kyc_status === 'approved' && !isImpersonationSession
+  );
+
+  const mfaNotification: Notification | null = needsMfaSetup
+    ? {
+        id: MFA_REMINDER_NOTIFICATION_ID,
+        type: 'warning',
+        title: 'Ative a autenticação de dois fatores',
+        message: 'Proteja sua conta contra acessos não autorizados ativando o 2FA.',
+        read: false,
+        time: 'Ação necessária',
+        created_at: new Date().toISOString(),
+      }
+    : null;
+
+  const notifications = [
+    ...(mfaNotification ? [mfaNotification] : []),
+    ...(notificationsData?.data || []),
+  ];
+  const unreadCount = (notificationsData?.meta?.unread_count || 0) + (mfaNotification ? 1 : 0);
 
   // Mark single notification as read
   const markAsReadMutation = useMutation({
@@ -198,6 +249,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const markAsRead = (id: string) => {
     markAsReadMutation.mutate(id);
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    // A notificação de 2FA é local: leva para a aba de segurança em vez de
+    // chamar a API de marcar como lida (o id não existe no backend).
+    if (notification.id === MFA_REMINDER_NOTIFICATION_ID) {
+      navigate('/settings?tab=security');
+      return;
+    }
+
+    markAsRead(notification.id);
   };
 
   const markAllAsRead = () => {
@@ -361,59 +423,181 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     setIsAiPanelOpen(true);
     setIsAiLoading(true);
 
-    try {
-      const commandResponse = await tryRunSystemCommand(question);
+    // Substitui o balão de loading pela resposta final (evita duplicação).
+    const finalize = (patch: Partial<AiSearchMessage>) => {
+      setAiMessages((current) =>
+        current.map((m) => (m.id === loadingMessage.id ? { ...m, ...patch, isLoading: false } : m))
+      );
+    };
 
+    try {
+      // 1) Comando do sistema (criar produto etc.) — atalho existente.
+      const commandResponse = await tryRunSystemCommand(question);
       if (commandResponse) {
-        setAiMessages((current) =>
-          current.map((message) =>
-            message.id === loadingMessage.id
-              ? {
-                  ...message,
-                  content: commandResponse,
-                  isLoading: false,
-                }
-              : message
-          )
-        );
+        finalize({ content: commandResponse });
         navigate('/products');
         return;
       }
 
-      const response = await wazerAIService.chat(
-        `Pesquise no sistema Vector Pagamentos e responda de forma pratica para o usuario: ${question}`,
-        getAiHistory()
-      );
+      // 2) Roteamento simples: query "cheira a pergunta natural" → vai direto para IA.
+      //    Regras: 3+ palavras E contém termo interrogativo/verbo comum de pergunta.
+      const looksLikeQuestion = isNaturalLanguageQuestion(question);
 
-      setAiMessages((current) =>
-        current.map((message) =>
-          message.id === loadingMessage.id
-            ? {
-                ...message,
-                content: response.success
-                  ? response.data.message
-                  : 'Nao consegui responder agora. Tente novamente em alguns instantes.',
-                isLoading: false,
-              }
-            : message
-        )
-      );
+      // 3) Busca no banco (charges/affiliates/products) — pula para queries claramente NL.
+      const results = looksLikeQuestion ? { query: question, hits: [] } : await runSmartSearch(question);
+
+      if (results.hits.length > 0) {
+        finalize({
+          content: `Encontrei ${results.hits.length} resultado(s) para "${question}":`,
+          results,
+        });
+        return;
+      }
+
+      // 4) Nenhum hit no banco (ou pergunta natural) → tenta IA com feedback claro.
+      finalize({ content: 'Consultando a Vector IA...', isLoading: true } as any);
+
+      try {
+        const aiRes = await wazerAIService.chat(question, getAiHistory());
+        const answer = aiRes?.data?.message?.trim();
+        if (aiRes.success && answer) {
+          finalize({ content: answer });
+        } else {
+          finalize({ content: aiFallbackNotFoundMessage(question) });
+        }
+      } catch (aiError: any) {
+        finalize({ content: aiErrorMessage(aiError, question) });
+      }
     } catch (error: any) {
       const fallbackMessage =
         error?.response?.data?.message ||
         error?.response?.data?.error ||
-        'Nao consegui conectar com a IA agora. Verifique se o backend esta rodando e tente novamente.';
+        'Não consegui pesquisar agora. Verifique se o backend está rodando e tente novamente.';
 
-      setAiMessages((current) =>
-        current.map((message) =>
-          message.id === loadingMessage.id
-            ? { ...message, content: fallbackMessage, isLoading: false }
-            : message
-        )
-      );
+      finalize({ content: fallbackMessage });
     } finally {
       setIsAiLoading(false);
     }
+  };
+
+  /**
+   * Detecta se a query parece uma pergunta em linguagem natural
+   * (3+ palavras E contém interrogativos / verbos típicos).
+   */
+  const isNaturalLanguageQuestion = (q: string): boolean => {
+    const norm = q.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (norm.endsWith('?')) return true;
+    const words = norm.split(/\s+/).filter(Boolean);
+    if (words.length < 3) return false;
+    const cues = [
+      'como', 'porque', 'por que', 'quando', 'onde', 'o que', 'quem',
+      'quais', 'qual', 'quanto', 'quantas', 'quantos',
+      'preciso', 'consigo', 'posso', 'sabe', 'explica', 'me ajuda', 'me ensina',
+      'devo', 'melhor forma', 'passo a passo', 'diferenca', 'vantagem',
+    ];
+    return cues.some((c) => norm.includes(c));
+  };
+
+  /**
+   * Mensagem quando a IA respondeu mas sem conteúdo útil.
+   */
+  const aiFallbackNotFoundMessage = (q: string): string =>
+    `Não encontrei uma resposta para "${q}". Se procura algo específico (cobrança, cliente, afiliado), tente por e-mail, nome ou ID.`;
+
+  /**
+   * Mensagem clara para erro da IA — distingue "não configurada" de outros erros.
+   */
+  const aiErrorMessage = (err: any, q: string): string => {
+    const backendMsg: string =
+      err?.response?.data?.data?.error ||
+      err?.response?.data?.error ||
+      err?.response?.data?.message ||
+      '';
+    const status: number | undefined = err?.response?.status;
+
+    // O backend retorna 422 + mensagem "não está configurada" quando falta a API key.
+    if (status === 422 || /n[aã]o est[aá] configurada|api key|chave da api/i.test(backendMsg)) {
+      return `A Vector IA ainda não está configurada, por isso não posso responder perguntas gerais como "${q}". Peça ao admin para configurar a chave da API no painel de sistema. Enquanto isso, use a busca por e-mail, nome ou ID.`;
+    }
+    if (status === 429) {
+      return 'Muitas perguntas em pouco tempo. Aguarde alguns segundos e tente de novo.';
+    }
+    return backendMsg
+      ? `A Vector IA não respondeu (${backendMsg}). Tente novamente em alguns instantes.`
+      : 'A Vector IA está indisponível agora. Tente novamente em alguns instantes.';
+  };
+
+  /**
+   * Consulta em paralelo os endpoints com filtro `search` do backend
+   * (charges / affiliates / products) e agrega os hits em uma lista única.
+   * Usa Promise.allSettled para que uma falha isolada não derrube a busca.
+   */
+  const runSmartSearch = async (query: string): Promise<SearchResults> => {
+    const q = query.trim();
+    const hits: SearchHit[] = [];
+    if (!q) return { query: q, hits };
+
+    const [chargesRes, affiliatesRes, productsRes] = await Promise.allSettled([
+      api.get('/charges', { params: { search: q, per_page: 10 } }),
+      api.get('/affiliates', { params: { search: q, per_page: 5 } }),
+      api.get('/products', { params: { search: q, per_page: 5 } }),
+    ]);
+
+    if (chargesRes.status === 'fulfilled') {
+      const list: any[] = chargesRes.value.data?.data || [];
+      list.forEach((c) => {
+        const amount = typeof c.amount === 'number' ? (c.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: c.currency || 'BRL' }) : '';
+        hits.push({
+          type: 'charge',
+          id: c.id,
+          title: `${amount} • ${c.customer?.name || c.customer?.email || 'Cliente'}`,
+          subtitle: c.customer?.email,
+          meta: `${(c.payment_method || '').toUpperCase()} • ${c.status}`,
+          href: `/charges?id=${c.id}`,
+          raw: {
+            amount,
+            customerName: c.customer?.name,
+            customerEmail: c.customer?.email,
+            paymentMethod: c.payment_method,
+            status: c.status,
+            createdAt: c.created_at,
+            paidAt: c.paid_at,
+            shortId: typeof c.id === 'string' ? c.id.slice(0, 8) : String(c.id),
+          },
+        });
+      });
+    }
+
+    if (affiliatesRes.status === 'fulfilled') {
+      const list: any[] = affiliatesRes.value.data?.data || [];
+      list.forEach((a) => {
+        hits.push({
+          type: 'affiliate',
+          id: a.id,
+          title: a.name || a.email || 'Afiliado',
+          subtitle: a.email,
+          meta: a.code ? `Código: ${a.code}` : undefined,
+          href: `/affiliates`,
+        });
+      });
+    }
+
+    if (productsRes.status === 'fulfilled') {
+      const list: any[] = productsRes.value.data?.data || [];
+      list.forEach((p) => {
+        const price = typeof p.price === 'number' ? (p.price / 100).toLocaleString('pt-BR', { style: 'currency', currency: p.currency || 'BRL' }) : '';
+        hits.push({
+          type: 'product',
+          id: p.id,
+          title: p.name || 'Produto',
+          subtitle: price,
+          meta: p.slug,
+          href: `/products`,
+        });
+      });
+    }
+
+    return { query: q, hits };
   };
 
   const handleGlobalSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -651,10 +835,39 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           </div>
                         ) : (
                           notifications.map((notification) => (
+                            notification.id === MFA_REMINDER_NOTIFICATION_ID ? (
+                              // Lembrete de 2FA: item com botão de ação próprio.
+                              // Usa <div> (não <button>) para permitir o botão aninhado.
+                              <Menu.Item key={notification.id} as="div">
+                                <div className="flex items-start gap-3 px-3 py-3 rounded-element my-1 bg-accent-subtle">
+                                  <div className="flex-shrink-0 mt-0.5">
+                                    {getNotificationIcon(notification.type)}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-tx-primary">
+                                      {notification.title}
+                                    </p>
+                                    <p className="text-xs text-tx-secondary">
+                                      {notification.message}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => navigate('/settings?tab=security')}
+                                      className="mt-2 rounded-md bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-amber-600"
+                                    >
+                                      Ativar agora
+                                    </button>
+                                  </div>
+                                  <div className="flex-shrink-0">
+                                    <span className="h-2 w-2 bg-accent-primary rounded-full block" />
+                                  </div>
+                                </div>
+                              </Menu.Item>
+                            ) : (
                             <Menu.Item key={notification.id}>
                               {({ active }) => (
                                 <button
-                                  onClick={() => markAsRead(notification.id)}
+                                  onClick={() => handleNotificationClick(notification)}
                                   className={clsx(
                                     'flex w-full items-start gap-3 px-3 py-3 text-left transition-colors duration-fast rounded-element my-1',
                                     active
@@ -693,6 +906,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                                 </button>
                               )}
                             </Menu.Item>
+                            )
                           ))
                         )}
                       </div>
@@ -714,11 +928,37 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
               {/* Profile Dropdown */}
               <Menu as="div" className="relative ml-1">
-                <Menu.Button className="flex items-center gap-2 py-1.5 pl-1.5 pr-3 rounded-full hover:bg-surface-hover border border-transparent hover:border-border-DEFAULT transition-all duration-fast">
-                  <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">{(user?.name || 'U')[0].toUpperCase()}</span>
+                {({ open }) => (
+                  <>
+                <Menu.Button
+                  className={clsx(
+                    'flex items-center gap-2 py-1.5 px-3 rounded-full border transition-all duration-fast',
+                    open
+                      ? 'bg-surface-hover border-border-DEFAULT'
+                      : 'border-transparent hover:bg-surface-hover hover:border-border-DEFAULT'
+                  )}
+                >
+                  {/* Nome completo + email no desktop */}
+                  <div className="hidden sm:flex min-w-0 max-w-[200px] flex-col items-start leading-tight">
+                    <span className="w-full truncate text-xs font-semibold text-tx-primary">
+                      {user?.name || 'ADMIN'}
+                    </span>
+                    {user?.email && (
+                      <span className="w-full truncate text-[11px] text-tx-muted">
+                        {user.email}
+                      </span>
+                    )}
                   </div>
-                  <span className="text-xs font-medium text-tx-primary hidden sm:block">{user?.name?.split(' ')[0] || 'ADMIN'}</span>
+                  {/* Só o primeiro nome no mobile */}
+                  <span className="sm:hidden text-xs font-semibold text-tx-primary">
+                    {user?.name?.split(' ')[0] || 'ADMIN'}
+                  </span>
+                  <ChevronDownIcon
+                    className={clsx(
+                      'h-3.5 w-3.5 shrink-0 text-tx-muted transition-transform duration-fast',
+                      open && 'rotate-180'
+                    )}
+                  />
                 </Menu.Button>
 
                 <Transition
@@ -856,6 +1096,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     </div>
                   </Menu.Items>
                 </Transition>
+                  </>
+                )}
               </Menu>
 
               {/* Mobile Menu Button */}
@@ -1046,7 +1288,120 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                             <span>{message.content}</span>
                           </div>
                         ) : (
-                          <p className="whitespace-pre-wrap">{message.content}</p>
+                          <>
+                            <p className="whitespace-pre-wrap">{message.content}</p>
+                            {message.results && message.results.hits.length > 0 && (
+                              <div className="mt-3 space-y-2">
+                                {(['charge', 'affiliate', 'product'] as const).map((type) => {
+                                  const group = message.results!.hits.filter((h) => h.type === type);
+                                  if (group.length === 0) return null;
+                                  const groupLabel = {
+                                    charge: 'Cobranças',
+                                    affiliate: 'Afiliados',
+                                    product: 'Produtos',
+                                  }[type];
+                                  return (
+                                    <div key={type}>
+                                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-tx-muted">
+                                        {groupLabel} ({group.length})
+                                      </p>
+                                      <div className="space-y-1.5">
+                                        {group.map((hit) => {
+                                          const openHit = () => {
+                                            navigate(hit.href);
+                                            setIsAiPanelOpen(false);
+                                          };
+
+                                          // Card rico para cobrança: mais campos + badges coloridos.
+                                          if (hit.type === 'charge' && hit.raw) {
+                                            const method = (hit.raw.paymentMethod || '').toLowerCase();
+                                            const methodConfig: Record<string, { label: string; cls: string }> = {
+                                              pix: { label: 'PIX', cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' },
+                                              credit_card: { label: 'Cartão', cls: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300' },
+                                              boleto: { label: 'Boleto', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
+                                            };
+                                            const m = methodConfig[method] || { label: method.toUpperCase() || '—', cls: 'bg-surface-hover text-tx-secondary' };
+                                            const statusConfig: Record<string, { label: string; cls: string }> = {
+                                              paid: { label: 'Pago', cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' },
+                                              approved: { label: 'Aprovado', cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' },
+                                              pending: { label: 'Pendente', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-300' },
+                                              processing: { label: 'Processando', cls: 'bg-blue-500/10 text-blue-700 dark:text-blue-300' },
+                                              failed: { label: 'Falhou', cls: 'bg-red-500/10 text-red-700 dark:text-red-300' },
+                                              refunded: { label: 'Estornado', cls: 'bg-purple-500/10 text-purple-700 dark:text-purple-300' },
+                                              cancelled: { label: 'Cancelado', cls: 'bg-surface-hover text-tx-secondary' },
+                                              expired: { label: 'Expirado', cls: 'bg-surface-hover text-tx-secondary' },
+                                              chargeback: { label: 'Chargeback', cls: 'bg-red-500/10 text-red-700 dark:text-red-300' },
+                                            };
+                                            const s = statusConfig[hit.raw.status || ''] || { label: hit.raw.status || '—', cls: 'bg-surface-hover text-tx-secondary' };
+                                            const created = hit.raw.createdAt
+                                              ? new Date(hit.raw.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                                              : '';
+                                            return (
+                                              <button
+                                                key={`${hit.type}-${hit.id}`}
+                                                type="button"
+                                                onClick={openHit}
+                                                className="group w-full rounded-lg border border-border-DEFAULT bg-surface-page p-3 text-left transition-all hover:border-accent-primary hover:shadow-sm"
+                                              >
+                                                <div className="flex items-start justify-between gap-2">
+                                                  <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-sm font-bold text-tx-primary">
+                                                      {hit.raw.amount}
+                                                    </p>
+                                                    <p className="mt-0.5 truncate text-xs text-tx-secondary">
+                                                      {hit.raw.customerName || 'Cliente sem nome'}
+                                                    </p>
+                                                    {hit.raw.customerEmail && (
+                                                      <p className="truncate text-[11px] text-tx-muted">
+                                                        {hit.raw.customerEmail}
+                                                      </p>
+                                                    )}
+                                                  </div>
+                                                  <div className="flex flex-col items-end gap-1">
+                                                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${s.cls}`}>
+                                                      {s.label}
+                                                    </span>
+                                                    <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${m.cls}`}>
+                                                      {m.label}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                                <div className="mt-2 flex items-center justify-between border-t border-border-DEFAULT pt-1.5 text-[10px] text-tx-muted">
+                                                  <span className="font-mono">#{hit.raw.shortId}</span>
+                                                  <span>{created}</span>
+                                                </div>
+                                                <p className="mt-1 text-[10px] font-semibold text-accent-primary opacity-0 transition-opacity group-hover:opacity-100">
+                                                  Abrir detalhes →
+                                                </p>
+                                              </button>
+                                            );
+                                          }
+
+                                          // Card padrão para affiliate/product.
+                                          return (
+                                            <button
+                                              key={`${hit.type}-${hit.id}`}
+                                              type="button"
+                                              onClick={openHit}
+                                              className="w-full rounded-lg border border-border-DEFAULT bg-surface-page px-3 py-2 text-left transition-colors hover:border-accent-primary hover:bg-accent-subtle"
+                                            >
+                                              <p className="truncate text-xs font-semibold text-tx-primary">{hit.title}</p>
+                                              {hit.subtitle && (
+                                                <p className="truncate text-[11px] text-tx-secondary">{hit.subtitle}</p>
+                                              )}
+                                              {hit.meta && (
+                                                <p className="truncate text-[10px] text-tx-muted">{hit.meta}</p>
+                                              )}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>

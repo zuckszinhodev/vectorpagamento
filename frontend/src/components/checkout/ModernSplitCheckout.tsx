@@ -7,9 +7,11 @@ import {
   LockClosedIcon,
   CreditCardIcon,
   TruckIcon,
-  QuestionMarkCircleIcon,
-  StarIcon,
-  GiftIcon,
+  UserIcon,
+  TagIcon,
+  ChevronDownIcon,
+  CheckIcon,
+  CheckBadgeIcon,
 } from '@heroicons/react/24/outline';
 import PixIcon from '@/components/icons/PixIcon';
 
@@ -18,6 +20,24 @@ interface CheckoutBlock {
   type: string;
   enabled: boolean;
   settings: Record<string, any>;
+}
+
+/**
+ * Todos os tokens configuráveis pelo Checkout Builder.
+ * Cores são obrigatórias; os demais têm default e são opcionais para
+ * manter compatibilidade com chamadas antigas.
+ */
+interface CheckoutTheme {
+  primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  cardBackground: string;
+  textColor: string;
+  mutedColor: string;
+  borderRadius?: string;
+  fontFamily?: string;
+  buttonStyle?: string;
+  shadow?: string;
 }
 
 interface ModernSplitCheckoutProps {
@@ -30,14 +50,7 @@ interface ModernSplitCheckoutProps {
     image_url?: string;
     shipping_required?: boolean;
   };
-  theme: {
-    primaryColor: string;
-    secondaryColor: string;
-    backgroundColor: string;
-    cardBackground: string;
-    textColor: string;
-    mutedColor: string;
-  };
+  theme: CheckoutTheme;
   payment?: {
     methods?: string[];
     maxInstallments?: number;
@@ -57,6 +70,30 @@ interface ModernSplitCheckoutProps {
   blocks?: CheckoutBlock[];
 }
 
+/** Tipagem do formulário — sem isto, errors.card.number não compila. */
+interface CheckoutFormValues {
+  email: string;
+  name: string;
+  phone?: string;
+  document?: string;
+  address?: {
+    zipcode?: string;
+    street?: string;
+    number?: string;
+    complement?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+  };
+  card?: {
+    number?: string;
+    holder_name?: string;
+    expiry?: string;
+    cvv?: string;
+    installments?: number;
+  };
+}
+
 const radiusMap: Record<string, string> = {
   none: '0px',
   sm: '4px',
@@ -66,6 +103,29 @@ const radiusMap: Record<string, string> = {
   '2xl': '16px',
   full: '9999px',
 };
+
+/** Liga o botão de compra do resumo ao <form> que fica na outra coluna. */
+const CHECKOUT_FORM_ID = 'vector-checkout-form';
+
+const shadowMap: Record<string, string> = {
+  none: 'none',
+  sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+  md: '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05)',
+  lg: '0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05)',
+  xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.05)',
+};
+
+/** Converte #rrggbb (ou #rgb) em rgba com alpha — usado para bordas/tints derivados. */
+function withAlpha(hex: string, alpha: number): string {
+  if (!hex?.startsWith('#')) return hex;
+  let h = hex.slice(1);
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length !== 6) return hex;
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export function ModernSplitCheckout({
   product,
@@ -86,7 +146,7 @@ export function ModernSplitCheckout({
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm();
+  } = useForm<CheckoutFormValues>();
 
   const enabledBlocks = blocks.filter((block) => block.enabled);
   const paymentMethods = payment?.methods?.length
@@ -112,12 +172,96 @@ export function ModernSplitCheckout({
     [orderBumps, selectedBumps]
   );
 
-  const handleFormSubmit = (data: any) => {
-    onSubmit({
-      ...data,
-      payment_method: paymentMethod,
-    });
+  /**
+   * Design tokens resolvidos a partir do tema do builder.
+   * Tudo que é visual deriva daqui — nada de cor hardcoded, para que o
+   * checkout funcione tanto em tema claro quanto escuro.
+   */
+  const ui = useMemo(() => {
+    const radius = radiusMap[theme.borderRadius || 'xl'] || radiusMap.xl;
+    return {
+      radius,
+      // Inputs/badges usam um raio menor que os cards para não ficar "bolha".
+      radiusInner: theme.borderRadius === 'full' ? '9999px' : `min(${radius}, 10px)`,
+      shadow: shadowMap[theme.shadow || 'lg'] || shadowMap.lg,
+      font: `${theme.fontFamily || 'Inter'}, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`,
+      border: withAlpha(theme.textColor, 0.12),
+      borderStrong: withAlpha(theme.textColor, 0.22),
+      subtle: withAlpha(theme.textColor, 0.04),
+      primarySoft: withAlpha(theme.primaryColor, 0.08),
+      primaryRing: withAlpha(theme.primaryColor, 0.18),
+    };
+  }, [theme]);
+
+  const cardStyle: React.CSSProperties = {
+    backgroundColor: theme.cardBackground,
+    borderRadius: ui.radius,
+    border: `1px solid ${ui.border}`,
+    boxShadow: ui.shadow,
   };
+
+  const inputStyle: React.CSSProperties = {
+    backgroundColor: theme.cardBackground,
+    color: theme.textColor,
+    borderRadius: ui.radiusInner,
+    border: `1px solid ${ui.border}`,
+  };
+
+  const inputClass =
+    'w-full px-3.5 py-2.5 text-sm outline-none transition-shadow placeholder:opacity-60 focus:ring-2';
+
+  /** Respeita buttonStyle do builder (solid / gradient / outline). */
+  const primaryButtonStyle = (): React.CSSProperties => {
+    const base: React.CSSProperties = { borderRadius: ui.radiusInner };
+    switch (theme.buttonStyle) {
+      case 'solid':
+        return { ...base, background: theme.primaryColor, color: '#ffffff' };
+      case 'outline':
+        return {
+          ...base,
+          background: 'transparent',
+          border: `2px solid ${theme.primaryColor}`,
+          color: theme.primaryColor,
+        };
+      case 'gradient':
+      default:
+        return {
+          ...base,
+          background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor || theme.primaryColor})`,
+          color: '#ffffff',
+        };
+    }
+  };
+
+  const handleFormSubmit = (data: CheckoutFormValues) => {
+    onSubmit({ ...data, payment_method: paymentMethod });
+  };
+
+  /** Cabeçalho de seção: ícone em pílula + título (padrão do layout). */
+  const SectionTitle = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
+    <h2 className="mb-4 flex items-center gap-2.5 text-[15px] font-semibold" style={{ color: theme.primaryColor }}>
+      <span
+        className="flex h-7 w-7 items-center justify-center"
+        style={{ backgroundColor: ui.primarySoft, borderRadius: ui.radiusInner, color: theme.primaryColor }}
+      >
+        {icon}
+      </span>
+      {children}
+    </h2>
+  );
+
+  const Field = ({
+    error,
+    children,
+  }: {
+    error?: string;
+    children: React.ReactNode;
+  }) => (
+    <div>
+      {children}
+      {error && <p className="mt-1.5 text-xs font-medium text-red-500">{error}</p>}
+    </div>
+  );
 
   const renderBanner = (block: CheckoutBlock, compact = false) => {
     if (!block.settings.imageUrl) return null;
@@ -135,7 +279,7 @@ export function ModernSplitCheckout({
     );
 
     return (
-      <div className={compact ? '' : 'rounded-2xl bg-white p-3 shadow-md border border-gray-100'}>
+      <div className={compact ? '' : 'p-2'} style={compact ? undefined : cardStyle}>
         {block.settings.linkUrl ? (
           <a
             href={block.settings.linkUrl}
@@ -150,161 +294,182 @@ export function ModernSplitCheckout({
   };
 
   const renderPaymentForm = (block: CheckoutBlock) => (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
-      <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-        <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primaryColor }}>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primaryColor}20` }}>
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-            </svg>
-          </div>
-          Dados Pessoais
-        </h2>
+    // id permite que o botão de compra do resumo (fora do form) submeta este form.
+    <form id={CHECKOUT_FORM_ID} onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+      {/* Dados pessoais */}
+      <div className="p-5" style={cardStyle}>
+        <SectionTitle icon={<UserIcon className="h-4 w-4" />}>Dados pessoais</SectionTitle>
 
         <div className="space-y-3">
-          <div>
+          <Field error={errors.email ? 'E-mail é obrigatório' : undefined}>
             <input
               {...register('email', { required: true })}
               type="email"
+              autoComplete="email"
               placeholder="E-mail*"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 focus:border-transparent transition-all text-sm font-medium"
-              style={{ '--tw-ring-color': theme.primaryColor } as React.CSSProperties}
+              className={inputClass}
+              style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }}
             />
-            {errors.email && <p className="text-red-500 text-sm mt-2 font-medium">E-mail é obrigatório</p>}
-          </div>
+          </Field>
 
-          <div>
+          <Field error={errors.name ? 'Nome é obrigatório' : undefined}>
             <input
               {...register('name', { required: true })}
               type="text"
+              autoComplete="name"
               placeholder="Nome completo*"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 focus:border-transparent transition-all text-sm font-medium"
-              style={{ '--tw-ring-color': theme.primaryColor } as React.CSSProperties}
+              className={inputClass}
+              style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }}
             />
-            {errors.name && <p className="text-red-500 text-sm mt-2 font-medium">Nome é obrigatório</p>}
-          </div>
+          </Field>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {checkoutSettings?.collect_phone !== false && (
-              <div>
+              <Field error={errors.phone ? 'Celular é obrigatório' : undefined}>
                 <input
                   {...register('phone', { required: true })}
                   type="tel"
+                  autoComplete="tel"
                   placeholder="Celular*"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 focus:border-transparent transition-all text-sm font-medium"
-                  style={{ '--tw-ring-color': theme.primaryColor } as React.CSSProperties}
+                  className={inputClass}
+                  style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }}
                 />
-              </div>
+              </Field>
             )}
             {checkoutSettings?.collect_cpf !== false && (
-              <div>
+              <Field error={errors.document ? 'CPF é obrigatório' : undefined}>
                 <input
                   {...register('document', { required: true })}
                   type="text"
+                  inputMode="numeric"
                   placeholder="CPF*"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 focus:border-transparent transition-all text-sm font-medium"
-                  style={{ '--tw-ring-color': theme.primaryColor } as React.CSSProperties}
+                  className={inputClass}
+                  style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }}
                 />
-              </div>
+              </Field>
             )}
           </div>
         </div>
       </div>
 
+      {/* Endereço */}
       {(checkoutSettings?.collect_address || product.shipping_required || shippingBlock?.settings?.type === 'physical') && (
-        <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-          <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primaryColor }}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primaryColor}20` }}>
-              <TruckIcon className="w-5 h-5" />
-            </div>
-            Endereço de Entrega
-          </h2>
+        <div className="p-5" style={cardStyle}>
+          <SectionTitle icon={<TruckIcon className="h-4 w-4" />}>Endereço de entrega</SectionTitle>
           <div className="space-y-3">
-            <input {...register('address.zipcode')} type="text" placeholder="CEP" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm" />
-            <input {...register('address.street')} type="text" placeholder="Rua/Avenida" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <input {...register('address.zipcode')} type="text" inputMode="numeric" placeholder="CEP*" className={inputClass} style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }} />
+              <input {...register('address.street')} type="text" placeholder="Rua/Avenida" className={`${inputClass} sm:col-span-2`} style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }} />
+            </div>
             <div className="grid grid-cols-3 gap-3">
-              <input {...register('address.number')} type="text" placeholder="Número" className="px-4 py-3 border-2 border-gray-200 rounded-lg text-sm" />
-              <input {...register('address.complement')} type="text" placeholder="Complemento" className="col-span-2 px-4 py-3 border-2 border-gray-200 rounded-lg text-sm" />
+              <input {...register('address.number')} type="text" placeholder="Número" className={inputClass} style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }} />
+              <input {...register('address.complement')} type="text" placeholder="Complemento" className={`${inputClass} col-span-2`} style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }} />
             </div>
-            <input {...register('address.neighborhood')} type="text" placeholder="Bairro" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg text-sm" />
+            <input {...register('address.neighborhood')} type="text" placeholder="Bairro" className={inputClass} style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }} />
             <div className="grid grid-cols-4 gap-3">
-              <input {...register('address.city')} type="text" placeholder="Cidade" className="col-span-3 px-4 py-3 border-2 border-gray-200 rounded-lg text-sm" />
-              <input {...register('address.state')} type="text" placeholder="UF" className="px-4 py-3 border-2 border-gray-200 rounded-lg text-sm text-center" />
+              <input {...register('address.city')} type="text" placeholder="Cidade" className={`${inputClass} col-span-3`} style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }} />
+              <input {...register('address.state')} type="text" placeholder="UF" maxLength={2} className={`${inputClass} text-center uppercase`} style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }} />
             </div>
           </div>
         </div>
       )}
 
+      {/* Order bumps */}
       {orderBumps.length > 0 && (
-        <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-          <h3 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
-            <span className="text-xl">🎁</span>
-            Aproveite estas ofertas especiais
+        <div className="p-5" style={cardStyle}>
+          <h3 className="mb-3 text-sm font-semibold" style={{ color: theme.textColor }}>
+            Aproveite estas ofertas
           </h3>
-          <div className="space-y-3">
-            {orderBumps.map((bump) => (
-              <div
-                key={bump.id}
-                onClick={() => onToggleBump?.(bump.id)}
-                className="relative cursor-pointer rounded-2xl border-2 p-4 transition-all hover:shadow-lg"
-                style={{
-                  borderColor: selectedBumps.has(bump.id) ? theme.primaryColor : '#e5e7eb',
-                  backgroundColor: selectedBumps.has(bump.id) ? `${theme.primaryColor}08` : '#ffffff',
-                }}
-              >
-                <div className="flex items-start gap-4">
-                  <div
-                    className="mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border-2"
-                    style={{
-                      borderColor: selectedBumps.has(bump.id) ? theme.primaryColor : '#d1d5db',
-                      backgroundColor: selectedBumps.has(bump.id) ? theme.primaryColor : 'transparent',
-                    }}
-                  >
-                    {selectedBumps.has(bump.id) && <span className="text-xs font-bold text-white">✓</span>}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-sm text-gray-900">{bump.call_to_action || bump.title}</p>
-                    {bump.description && <p className="text-xs mt-1 text-gray-600">{bump.description}</p>}
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="font-bold text-base" style={{ color: theme.primaryColor }}>
-                        + {formatCurrency(bump.price)}
+          <div className="space-y-2.5">
+            {orderBumps.map((bump) => {
+              const active = selectedBumps.has(bump.id);
+              return (
+                <button
+                  type="button"
+                  key={bump.id}
+                  onClick={() => onToggleBump?.(bump.id)}
+                  className="w-full p-3.5 text-left transition-all"
+                  style={{
+                    borderRadius: ui.radiusInner,
+                    border: `1.5px solid ${active ? theme.primaryColor : ui.border}`,
+                    backgroundColor: active ? ui.primarySoft : 'transparent',
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center"
+                      style={{
+                        borderRadius: '5px',
+                        border: `1.5px solid ${active ? theme.primaryColor : ui.borderStrong}`,
+                        backgroundColor: active ? theme.primaryColor : 'transparent',
+                      }}
+                    >
+                      {active && <CheckIcon className="h-3.5 w-3.5 text-white" strokeWidth={3} />}
+                    </span>
+                    <span className="flex-1">
+                      <span className="block text-sm font-semibold" style={{ color: theme.textColor }}>
+                        {bump.call_to_action || bump.title}
                       </span>
-                      {bump.original_price && bump.original_price > bump.price && (
-                        <span className="text-xs line-through text-gray-400">{formatCurrency(bump.original_price)}</span>
+                      {bump.description && (
+                        <span className="mt-0.5 block text-xs" style={{ color: theme.mutedColor }}>
+                          {bump.description}
+                        </span>
                       )}
-                    </div>
+                      <span className="mt-1.5 flex items-center gap-2">
+                        <span className="text-sm font-bold" style={{ color: theme.primaryColor }}>
+                          + {formatCurrency(bump.price)}
+                        </span>
+                        {bump.original_price > bump.price && (
+                          <span className="text-xs line-through" style={{ color: theme.mutedColor }}>
+                            {formatCurrency(bump.original_price)}
+                          </span>
+                        )}
+                      </span>
+                    </span>
                   </div>
-                </div>
-              </div>
-            ))}
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-        <h2 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primaryColor }}>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${theme.primaryColor}20` }}>
-            <CreditCardIcon className="w-5 h-5" />
-          </div>
-          Pagamento
-        </h2>
+      {/* Pagamento */}
+      <div className="p-5" style={cardStyle}>
+        <SectionTitle icon={<CreditCardIcon className="h-4 w-4" />}>Pagamento</SectionTitle>
 
-        <div className="space-y-4 mb-6">
+        <div className="mb-4 space-y-2.5">
           {paymentMethods.includes('pix') && (
             <button
               type="button"
               onClick={() => setPaymentMethod('pix')}
-              className="w-full flex items-center justify-between px-6 py-5 border-2 rounded-2xl transition-all"
+              className="flex w-full items-center justify-between px-4 py-3.5 transition-all"
               style={{
-                borderColor: paymentMethod === 'pix' ? theme.primaryColor : '#e5e7eb',
-                backgroundColor: paymentMethod === 'pix' ? `${theme.primaryColor}10` : 'white',
+                borderRadius: ui.radiusInner,
+                border: `1.5px solid ${paymentMethod === 'pix' ? theme.primaryColor : ui.border}`,
+                backgroundColor: paymentMethod === 'pix' ? ui.primarySoft : 'transparent',
               }}
             >
-              <div className="flex items-center gap-3">
-                <span className="font-bold text-lg">PIX</span>
-                {pixDiscount > 0 && <span className="text-xs font-bold text-green-600">-{pixDiscount}%</span>}
-              </div>
-              <PixIcon className="h-8 w-8" />
+              <span className="flex items-center gap-2.5">
+                <span
+                  className="flex h-4 w-4 items-center justify-center rounded-full border-[1.5px]"
+                  style={{ borderColor: paymentMethod === 'pix' ? theme.primaryColor : ui.borderStrong }}
+                >
+                  {paymentMethod === 'pix' && (
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
+                  )}
+                </span>
+                <span className="text-sm font-semibold" style={{ color: theme.textColor }}>PIX</span>
+                {pixDiscount > 0 && (
+                  <span
+                    className="px-1.5 py-0.5 text-[10px] font-bold"
+                    style={{ borderRadius: '4px', backgroundColor: withAlpha(theme.primaryColor, 0.15), color: theme.primaryColor }}
+                  >
+                    -{pixDiscount}%
+                  </span>
+                )}
+              </span>
+              <PixIcon className="h-6 w-6" />
             </button>
           )}
 
@@ -312,14 +477,25 @@ export function ModernSplitCheckout({
             <button
               type="button"
               onClick={() => setPaymentMethod('credit_card')}
-              className="w-full flex items-center justify-between px-6 py-5 border-2 rounded-2xl transition-all"
+              className="flex w-full items-center justify-between px-4 py-3.5 transition-all"
               style={{
-                borderColor: paymentMethod === 'credit_card' ? theme.primaryColor : '#e5e7eb',
-                backgroundColor: paymentMethod === 'credit_card' ? `${theme.primaryColor}10` : 'white',
+                borderRadius: ui.radiusInner,
+                border: `1.5px solid ${paymentMethod === 'credit_card' ? theme.primaryColor : ui.border}`,
+                backgroundColor: paymentMethod === 'credit_card' ? ui.primarySoft : 'transparent',
               }}
             >
-              <span className="font-bold text-lg">Cartão de crédito</span>
-              <CreditCardIcon className="h-7 w-7" />
+              <span className="flex items-center gap-2.5">
+                <span
+                  className="flex h-4 w-4 items-center justify-center rounded-full border-[1.5px]"
+                  style={{ borderColor: paymentMethod === 'credit_card' ? theme.primaryColor : ui.borderStrong }}
+                >
+                  {paymentMethod === 'credit_card' && (
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
+                  )}
+                </span>
+                <span className="text-sm font-semibold" style={{ color: theme.textColor }}>Cartão de crédito</span>
+              </span>
+              <CreditCardIcon className="h-5 w-5" style={{ color: theme.mutedColor }} />
             </button>
           )}
 
@@ -327,81 +503,86 @@ export function ModernSplitCheckout({
             <button
               type="button"
               onClick={() => setPaymentMethod('boleto')}
-              className="w-full flex items-center justify-between px-6 py-5 border-2 rounded-2xl transition-all"
+              className="flex w-full items-center justify-between px-4 py-3.5 transition-all"
               style={{
-                borderColor: paymentMethod === 'boleto' ? theme.primaryColor : '#e5e7eb',
-                backgroundColor: paymentMethod === 'boleto' ? `${theme.primaryColor}10` : 'white',
+                borderRadius: ui.radiusInner,
+                border: `1.5px solid ${paymentMethod === 'boleto' ? theme.primaryColor : ui.border}`,
+                backgroundColor: paymentMethod === 'boleto' ? ui.primarySoft : 'transparent',
               }}
             >
-              <span className="font-bold text-lg">Boleto</span>
-              <LockClosedIcon className="h-7 w-7" />
+              <span className="flex items-center gap-2.5">
+                <span
+                  className="flex h-4 w-4 items-center justify-center rounded-full border-[1.5px]"
+                  style={{ borderColor: paymentMethod === 'boleto' ? theme.primaryColor : ui.borderStrong }}
+                >
+                  {paymentMethod === 'boleto' && (
+                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
+                  )}
+                </span>
+                <span className="text-sm font-semibold" style={{ color: theme.textColor }}>Boleto</span>
+              </span>
+              <LockClosedIcon className="h-5 w-5" style={{ color: theme.mutedColor }} />
             </button>
           )}
         </div>
 
         {paymentMethod === 'credit_card' && (
-          <div className="space-y-3 mb-6">
-            <input
-              {...register('card.number', { required: 'Número do cartão é obrigatório' })}
-              type="text"
-              inputMode="numeric"
-              autoComplete="cc-number"
-              placeholder="Número do cartão"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 focus:border-transparent transition-all text-sm font-medium"
-              style={{ '--tw-ring-color': theme.primaryColor } as React.CSSProperties}
-            />
-            {errors.card?.number && <p className="text-red-500 text-sm mt-1 font-medium">{String(errors.card.number.message)}</p>}
+          <div className="mb-4 space-y-3">
+            <Field error={errors.card?.number?.message}>
+              <input
+                {...register('card.number', { required: 'Número do cartão é obrigatório' })}
+                type="text"
+                inputMode="numeric"
+                autoComplete="cc-number"
+                placeholder="Número do cartão"
+                className={inputClass}
+                style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }}
+              />
+            </Field>
 
-            <input
-              {...register('card.holder_name', { required: 'Nome do titular é obrigatório' })}
-              type="text"
-              autoComplete="cc-name"
-              placeholder="Nome do titular"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 focus:border-transparent transition-all text-sm font-medium"
-              style={{ '--tw-ring-color': theme.primaryColor } as React.CSSProperties}
-            />
-            {errors.card?.holder_name && <p className="text-red-500 text-sm mt-1 font-medium">{String(errors.card.holder_name.message)}</p>}
+            <Field error={errors.card?.holder_name?.message}>
+              <input
+                {...register('card.holder_name', { required: 'Nome do titular é obrigatório' })}
+                type="text"
+                autoComplete="cc-name"
+                placeholder="Nome do titular"
+                className={inputClass}
+                style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }}
+              />
+            </Field>
 
             <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-1">
+              <Field error={errors.card?.expiry?.message}>
                 <input
                   {...register('card.expiry', { required: 'Validade é obrigatória' })}
                   type="text"
                   autoComplete="cc-exp"
                   placeholder="MM/AA"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 focus:border-transparent transition-all text-sm font-medium"
-                  style={{ '--tw-ring-color': theme.primaryColor } as React.CSSProperties}
+                  className={inputClass}
+                  style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }}
                 />
-                {errors.card?.expiry && <p className="text-red-500 text-sm mt-1 font-medium">{String(errors.card.expiry.message)}</p>}
-              </div>
-
-              <div className="col-span-1">
+              </Field>
+              <Field error={errors.card?.cvv?.message}>
                 <input
                   {...register('card.cvv', { required: 'CVV é obrigatório' })}
                   type="text"
                   inputMode="numeric"
                   autoComplete="cc-csc"
                   placeholder="CVV"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 focus:border-transparent transition-all text-sm font-medium"
-                  style={{ '--tw-ring-color': theme.primaryColor } as React.CSSProperties}
+                  className={inputClass}
+                  style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }}
                 />
-                {errors.card?.cvv && <p className="text-red-500 text-sm mt-1 font-medium">{String(errors.card.cvv.message)}</p>}
-              </div>
-
-              <div className="col-span-1">
-                <select
-                  {...register('card.installments')}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 focus:border-transparent transition-all text-sm font-medium bg-white"
-                  style={{ '--tw-ring-color': theme.primaryColor } as React.CSSProperties}
-                  defaultValue={1}
-                >
-                  {Array.from({ length: payment?.maxInstallments || 12 }, (_, index) => index + 1).map((installment) => (
-                    <option key={installment} value={installment}>
-                      {installment}x
-                    </option>
-                  ))}
-                </select>
-              </div>
+              </Field>
+              <select
+                {...register('card.installments')}
+                className={inputClass}
+                style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }}
+                defaultValue={1}
+              >
+                {Array.from({ length: payment?.maxInstallments || 12 }, (_, index) => index + 1).map((installment) => (
+                  <option key={installment} value={installment}>{installment}x</option>
+                ))}
+              </select>
             </div>
           </div>
         )}
@@ -409,161 +590,42 @@ export function ModernSplitCheckout({
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-4 rounded-xl text-white font-bold text-lg transition-all hover:opacity-90 disabled:opacity-50"
-          style={{ background: `linear-gradient(135deg, ${theme.primaryColor}, ${theme.secondaryColor || theme.primaryColor})` }}
+          className="w-full py-3.5 text-base font-bold transition-all hover:opacity-90 disabled:opacity-50"
+          style={primaryButtonStyle()}
         >
-          {isLoading ? 'Processando...' : `Finalizar compra ${formatCurrency(total)}`}
+          {isLoading ? 'Processando...' : `Finalizar compra • ${formatCurrency(total)}`}
         </button>
 
-        <p className="text-center text-xs text-gray-500 mt-3">Seus dados estão protegidos com criptografia SSL</p>
+        <p className="mt-3 flex items-center justify-center gap-1.5 text-xs" style={{ color: theme.mutedColor }}>
+          <LockClosedIcon className="h-3.5 w-3.5" />
+          Pagamento seguro com criptografia SSL
+        </p>
       </div>
 
       {block.settings.showInstallments !== false && paymentMethod === 'credit_card' && (
-        <div className="rounded-xl bg-white p-4 border border-gray-100 shadow-sm text-sm text-gray-600">
+        <div className="px-4 py-3 text-xs" style={{ ...cardStyle, color: theme.mutedColor }}>
           Parcelamento disponível em até {payment?.maxInstallments || 12}x.
         </div>
       )}
-
-      <div className="flex items-center justify-center gap-4 text-xs text-gray-600 bg-gray-50 rounded-lg p-3">
-        <div className="flex items-center gap-1">
-          <ShieldCheckIcon className="w-4 h-4 text-green-600" />
-          <span className="font-medium">Compra Segura</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <LockClosedIcon className="w-4 h-4 text-green-600" />
-          <span className="font-medium">Dados Protegidos</span>
-        </div>
-      </div>
     </form>
   );
 
   const renderLeftBlock = (block: CheckoutBlock) => {
     switch (block.type) {
-      case 'header':
-        return (
-          <div className="text-center py-6 px-4 bg-white rounded-2xl shadow-md border border-gray-100">
-            {block.settings.logoUrl ? (
-              <img src={block.settings.logoUrl} alt="Logo" className="h-16 mx-auto object-contain mb-3" />
-            ) : null}
-            <h1 className="text-3xl font-bold" style={{ color: theme.primaryColor }}>
-              {block.settings.title || product.name}
-            </h1>
-            {block.settings.showSecureBadge && <p className="mt-2 text-sm font-medium text-green-600">Compra segura</p>}
-          </div>
-        );
-      case 'product':
-        return (
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-            {block.settings.showImage && product.image_url && (
-              <img src={product.image_url} alt={product.name} className="w-full rounded-xl object-cover mb-4" />
-            )}
-            <h2 className="text-2xl font-bold" style={{ color: theme.textColor }}>{product.name}</h2>
-            {block.settings.showDescription && product.description && (
-              <div
-                className="mt-3 text-sm leading-6"
-                style={{ color: theme.mutedColor }}
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }}
-              />
-            )}
-            <div className="mt-4 flex items-end gap-3">
-              <span className="text-3xl font-bold" style={{ color: theme.primaryColor }}>{formatCurrency(product.price)}</span>
-              {block.settings.showOriginalPrice && product.originalPrice && (
-                <span className="text-lg line-through" style={{ color: theme.mutedColor }}>{formatCurrency(product.originalPrice)}</span>
-              )}
-            </div>
-          </div>
-        );
-      case 'urgency':
-        return (
-          <div className="rounded-xl p-4 text-center font-bold shadow-sm" style={{ backgroundColor: block.settings.backgroundColor || '#fef3c7', color: block.settings.textColor || '#92400e' }}>
-            {block.settings.message || 'Últimas vagas disponíveis'}
-          </div>
-        );
-      case 'timer':
-        return (
-          <div className="rounded-2xl p-5 text-center shadow-md border bg-white border-gray-100">
-            <p className="text-sm font-semibold mb-2" style={{ color: theme.textColor }}>{block.settings.message || 'Oferta expira em:'}</p>
-            <p className="text-3xl font-bold tabular-nums" style={{ color: theme.primaryColor }}>
-              {String(block.settings.hours || 0).padStart(2, '0')}:{String(block.settings.minutes || 15).padStart(2, '0')}:{String(block.settings.seconds || 0).padStart(2, '0')}
-            </p>
-          </div>
-        );
-      case 'benefits':
-        return (
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-            <h3 className="text-lg font-bold mb-4" style={{ color: theme.primaryColor }}>{block.settings.title || 'Benefícios'}</h3>
-            <ul className="space-y-3">
-              {(block.settings.items || []).map((item: any, idx: number) => (
-                <li key={idx} className="flex items-start gap-3 text-sm text-gray-800">
-                  <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full" style={{ backgroundColor: `${theme.primaryColor}20`, color: theme.primaryColor }}>✓</span>
-                  <span>{item.text}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-      case 'bonus':
-        return (
-          <div className="rounded-2xl p-5 shadow-md" style={{ backgroundColor: `${theme.primaryColor}12`, border: `2px dashed ${theme.primaryColor}60` }}>
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: theme.primaryColor }}>
-              <GiftIcon className="w-5 h-5" />
-              {block.settings.title || 'Bônus Exclusivos'}
-            </h3>
-            <div className="space-y-3">
-              {(block.settings.items || []).map((item: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between bg-white rounded-lg p-3 shadow-sm">
-                  <span className="font-bold text-sm text-gray-900">{item.name}</span>
-                  <span className="line-through text-gray-500 text-sm">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      case 'video':
-        return block.settings.videoUrl ? (
-          <div className="bg-white rounded-2xl p-3 shadow-md border border-gray-100">
-            <div className="relative overflow-hidden rounded-xl" style={{ paddingBottom: '56.25%' }}>
-              <iframe
-                src={block.settings.videoUrl}
-                className="absolute top-0 left-0 w-full h-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
-            </div>
-          </div>
-        ) : null;
-      case 'faq':
-        return (
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primaryColor }}>
-              <QuestionMarkCircleIcon className="w-5 h-5" />
-              {block.settings.title || 'Perguntas Frequentes'}
-            </h3>
-            <div className="space-y-3">
-              {(block.settings.items || []).map((item: any, idx: number) => (
-                <div key={idx} className="border-b border-gray-200 pb-3 last:border-b-0 last:pb-0">
-                  <h4 className="font-bold text-sm text-gray-900 mb-1">{item.question}</h4>
-                  <p className="text-sm text-gray-600">{item.answer}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
       case 'testimonials':
         return (
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-            <h3 className="text-lg font-bold mb-4 flex items-center gap-2" style={{ color: theme.primaryColor }}>
-              <StarIcon className="w-5 h-5" />
-              Depoimentos
+          <div className="p-5" style={cardStyle}>
+            <h3 className="mb-3 text-sm font-semibold" style={{ color: theme.textColor }}>
+              {block.settings.title || 'O que dizem nossos clientes'}
             </h3>
-            <div className="space-y-4">
+            <div className="space-y-2.5">
               {(block.settings.items || []).slice(0, block.settings.count || 3).map((item: any, idx: number) => (
-                <div key={idx} className="rounded-xl bg-gray-50 p-4 border border-gray-100">
+                <div key={idx} className="p-3.5" style={{ backgroundColor: ui.subtle, borderRadius: ui.radiusInner }}>
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm text-gray-900">{item.name}</span>
-                    <span className="text-yellow-500">{'★'.repeat(item.rating || 5)}</span>
+                    <span className="text-sm font-semibold" style={{ color: theme.textColor }}>{item.name}</span>
+                    <span className="text-xs text-amber-400">{'★'.repeat(item.rating || 5)}</span>
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">{item.text}</p>
+                  <p className="mt-1.5 text-xs leading-relaxed" style={{ color: theme.mutedColor }}>{item.text}</p>
                 </div>
               ))}
             </div>
@@ -571,59 +633,59 @@ export function ModernSplitCheckout({
         );
       case 'guarantee':
         return (
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-5 border border-green-200 shadow-md">
-            <h3 className="font-bold text-green-900 text-lg">{block.settings.title || 'Garantia Incondicional'}</h3>
-            <p className="text-sm text-green-700 mt-1">{block.settings.days || 7} dias de garantia</p>
-            <p className="text-xs text-green-600 mt-1">{block.settings.description || 'Se não gostar, devolvemos 100% do seu dinheiro'}</p>
+          <div
+            className="flex items-start gap-3 p-5"
+            style={{ ...cardStyle, borderColor: withAlpha(theme.primaryColor, 0.25), backgroundColor: ui.primarySoft }}
+          >
+            <ShieldCheckIcon className="h-6 w-6 flex-shrink-0" style={{ color: theme.primaryColor }} />
+            <div>
+              <h3 className="text-sm font-bold" style={{ color: theme.textColor }}>
+                {block.settings.title || 'Garantia incondicional'}
+              </h3>
+              <p className="mt-0.5 text-xs" style={{ color: theme.mutedColor }}>
+                {block.settings.days || 7} dias — {block.settings.description || 'se não gostar, devolvemos 100% do seu dinheiro.'}
+              </p>
+            </div>
           </div>
         );
       case 'trust_badges':
         return (
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-            <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
-              <span className="rounded-full bg-gray-100 px-3 py-1">Compra segura</span>
-              <span className="rounded-full bg-gray-100 px-3 py-1">SSL</span>
-              <span className="rounded-full bg-gray-100 px-3 py-1">Satisfação garantida</span>
-            </div>
+          <div className="grid grid-cols-3 gap-2 p-4" style={cardStyle}>
+            {[
+              { icon: ShieldCheckIcon, label: 'Compra segura' },
+              { icon: LockClosedIcon, label: 'SSL' },
+              { icon: CheckBadgeIcon, label: 'Satisfação garantida' },
+            ].map(({ icon: Icon, label }) => (
+              <div key={label} className="flex flex-col items-center gap-1.5 text-center">
+                <span
+                  className="flex h-9 w-9 items-center justify-center"
+                  style={{ backgroundColor: ui.primarySoft, borderRadius: ui.radiusInner }}
+                >
+                  <Icon className="h-5 w-5" style={{ color: theme.primaryColor }} />
+                </span>
+                <span className="text-[11px] font-medium leading-tight" style={{ color: theme.mutedColor }}>
+                  {label}
+                </span>
+              </div>
+            ))}
           </div>
         );
       case 'shipping':
         return (
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-            <h3 className="font-bold text-base mb-2" style={{ color: theme.textColor }}>Entrega</h3>
-            <p className="text-sm" style={{ color: theme.mutedColor }}>
+          <div className="p-5" style={cardStyle}>
+            <h3 className="mb-1.5 text-sm font-semibold" style={{ color: theme.textColor }}>Entrega</h3>
+            <p className="text-xs" style={{ color: theme.mutedColor }}>
               {block.settings.type === 'physical'
                 ? block.settings.freeShipping
                   ? 'Frete grátis para este produto.'
-                  : `Frete: R$ ${Number(block.settings.shippingPrice || 0).toFixed(2)}`
+                  : `Frete: ${formatCurrency(shippingCost)}`
                 : block.settings.message || 'Entrega imediata por e-mail após a confirmação.'}
             </p>
           </div>
         );
-      case 'coupon':
-        return (
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
-            <button
-              type="button"
-              onClick={() => setShowCoupon((current) => !current)}
-              className="text-sm font-bold"
-              style={{ color: theme.primaryColor }}
-            >
-              Cupom de desconto
-            </button>
-            {showCoupon && (
-              <div className="mt-3 flex gap-2">
-                <input type="text" placeholder={block.settings.placeholder || 'Digite seu cupom'} className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm" />
-                <button type="button" className="px-4 py-2 rounded-lg text-sm font-bold text-white" style={{ backgroundColor: theme.primaryColor }}>
-                  Aplicar
-                </button>
-              </div>
-            )}
-          </div>
-        );
       case 'custom_html':
         return block.settings.html ? (
-          <div className="bg-white rounded-2xl p-5 shadow-md border border-gray-100">
+          <div className="p-5" style={cardStyle}>
             <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.settings.html) }} />
           </div>
         ) : null;
@@ -631,7 +693,7 @@ export function ModernSplitCheckout({
         return renderBanner(block);
       case 'social_proof':
         return (
-          <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-100 text-sm" style={{ color: theme.mutedColor }}>
+          <div className="px-4 py-3 text-xs" style={{ ...cardStyle, color: theme.mutedColor }}>
             {block.settings.names?.slice(0, 2).join(', ') || 'Clientes'} compraram recentemente.
           </div>
         );
@@ -643,60 +705,147 @@ export function ModernSplitCheckout({
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: theme.backgroundColor }}>
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="space-y-5">
-            {enabledBlocks.map((block) => (
-              <div key={block.id}>{renderLeftBlock(block)}</div>
-            ))}
-          </div>
-
-          <div className="lg:sticky lg:top-4 h-fit">
-            <div className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100">
-              <div className="pb-4 border-b border-gray-200">
-                <div className="flex gap-4">
+    <div className="min-h-screen" style={{ backgroundColor: theme.backgroundColor, fontFamily: ui.font }}>
+      <div className="mx-auto max-w-6xl px-4 py-6 lg:py-10">
+        {/* 7/5 em vez de 50/50: o formulário é o foco, o resumo é apoio. */}
+        <div className="grid gap-5 lg:grid-cols-12 lg:gap-8">
+          {/* Resumo aparece primeiro no mobile (contexto antes de preencher) */}
+          <aside className="lg:order-2 lg:col-span-5">
+            <div className="lg:sticky lg:top-6">
+              <div className="p-5" style={cardStyle}>
+                {/* Produto */}
+                <div className="flex gap-4 pb-4" style={{ borderBottom: `1px solid ${ui.border}` }}>
                   {product.image_url && (
-                    <img src={product.image_url} alt={product.name} className="w-20 h-20 object-cover rounded-lg shadow-sm" />
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      className="h-20 w-20 flex-shrink-0 object-cover"
+                      style={{ borderRadius: ui.radiusInner }}
+                    />
                   )}
-                  <div className="flex-1">
-                    <h3 className="font-bold text-sm leading-tight">{product.name}</h3>
-                    <p className="text-base font-bold mt-1" style={{ color: theme.primaryColor }}>{formatCurrency(basePrice)}</p>
-                    {product.originalPrice && <p className="text-xs line-through text-gray-400 mt-1">{formatCurrency(product.originalPrice)}</p>}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold leading-snug" style={{ color: theme.textColor }}>
+                      {product.name}
+                    </h3>
+                    <div className="mt-1.5 flex items-baseline gap-2">
+                      <span className="text-base font-bold" style={{ color: theme.primaryColor }}>
+                        {formatCurrency(basePrice)}
+                      </span>
+                      {product.originalPrice && product.originalPrice > basePrice && (
+                        <span className="text-xs line-through" style={{ color: theme.mutedColor }}>
+                          {formatCurrency(product.originalPrice)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {orderSummaryItems.length > 0 && (
-                <div className="py-4 border-b border-gray-200">
-                  <h4 className="text-xs font-bold text-gray-700 mb-3 uppercase">Itens adicionais</h4>
-                  <div className="space-y-3">
+                {/* Cupom */}
+                <div className="py-3.5" style={{ borderBottom: `1px solid ${ui.border}` }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowCoupon((c) => !c)}
+                    className="flex w-full items-center justify-between text-left"
+                  >
+                    <span className="flex items-center gap-2 text-sm" style={{ color: theme.textColor }}>
+                      <TagIcon className="h-4 w-4" style={{ color: theme.primaryColor }} />
+                      Tenho um cupom de desconto
+                    </span>
+                    <ChevronDownIcon
+                      className="h-4 w-4 transition-transform"
+                      style={{ color: theme.mutedColor, transform: showCoupon ? 'rotate(180deg)' : undefined }}
+                    />
+                  </button>
+                  {showCoupon && (
+                    <div className="mt-3 flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Digite seu cupom"
+                        className={inputClass}
+                        style={{ ...inputStyle, ['--tw-ring-color' as any]: ui.primaryRing }}
+                      />
+                      <button
+                        type="button"
+                        className="flex-shrink-0 px-4 text-sm font-semibold"
+                        style={primaryButtonStyle()}
+                      >
+                        Aplicar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bumps selecionados */}
+                {orderSummaryItems.length > 0 && (
+                  <div className="space-y-2 py-3.5" style={{ borderBottom: `1px solid ${ui.border}` }}>
                     {orderSummaryItems.map((bump) => (
-                      <div key={bump.id} className="flex justify-between gap-3 text-sm">
-                        <span className="text-gray-700">{bump.title}</span>
-                        <span className="font-bold" style={{ color: theme.primaryColor }}>{formatCurrency(bump.price)}</span>
+                      <div key={bump.id} className="flex justify-between gap-3 text-xs">
+                        <span style={{ color: theme.mutedColor }}>{bump.title}</span>
+                        <span className="font-semibold" style={{ color: theme.textColor }}>
+                          {formatCurrency(bump.price)}
+                        </span>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="py-4 space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-bold">{formatCurrency(subtotal)}</span>
+                {/* Totais */}
+                <div className="space-y-2 pt-3.5 text-sm">
+                  <div className="flex justify-between">
+                    <span style={{ color: theme.mutedColor }}>Subtotal</span>
+                    <span style={{ color: theme.textColor }}>{formatCurrency(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span style={{ color: theme.mutedColor }}>Entrega</span>
+                    <span style={{ color: shippingCost === 0 ? theme.primaryColor : theme.textColor }}>
+                      {shippingCost === 0 ? 'Grátis' : formatCurrency(shippingCost)}
+                    </span>
+                  </div>
+                  <div
+                    className="flex items-baseline justify-between pt-3"
+                    style={{ borderTop: `1px solid ${ui.border}` }}
+                  >
+                    <span className="text-sm font-semibold" style={{ color: theme.textColor }}>Total</span>
+                    <span className="text-xl font-bold" style={{ color: theme.primaryColor }}>
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Entrega</span>
-                  <span className="font-bold text-green-600">{shippingCost === 0 ? 'Grátis' : formatCurrency(shippingCost)}</span>
-                </div>
-                <div className="flex justify-between pt-3 border-t border-gray-200 text-lg font-bold">
-                  <span>Total</span>
-                  <span style={{ color: theme.primaryColor }}>{formatCurrency(total)}</span>
-                </div>
+
+                {/* CTA no resumo: submete o form da outra coluna via form=id */}
+                <button
+                  type="submit"
+                  form={CHECKOUT_FORM_ID}
+                  disabled={isLoading}
+                  className="mt-4 w-full py-3.5 text-base font-bold transition-all hover:opacity-90 disabled:opacity-50"
+                  style={primaryButtonStyle()}
+                >
+                  {isLoading ? 'Processando...' : `Finalizar compra • ${formatCurrency(total)}`}
+                </button>
+              </div>
+
+              {/* Selos de confiança sob o resumo */}
+              <div className="mt-3 flex items-center justify-center gap-4">
+                {[
+                  { icon: LockClosedIcon, label: 'SSL' },
+                  { icon: ShieldCheckIcon, label: 'Compra segura' },
+                  { icon: CheckBadgeIcon, label: 'Dados protegidos' },
+                ].map(({ icon: Icon, label }) => (
+                  <span key={label} className="flex items-center gap-1.5 text-[11px]" style={{ color: theme.mutedColor }}>
+                    <Icon className="h-3.5 w-3.5" style={{ color: theme.primaryColor }} />
+                    {label}
+                  </span>
+                ))}
               </div>
             </div>
-          </div>
+          </aside>
+
+          {/* Formulário */}
+          <main className="space-y-4 lg:order-1 lg:col-span-7">
+            {enabledBlocks.map((block) => (
+              <div key={block.id}>{renderLeftBlock(block)}</div>
+            ))}
+          </main>
         </div>
       </div>
     </div>

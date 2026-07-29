@@ -629,6 +629,8 @@ class WithdrawalService
                 'net_amount'    => $withdrawal->net_amount,
             ]);
 
+            try { app(\App\Services\AccountNotificationService::class)->withdrawalCompleted($withdrawal->fresh() ?? $withdrawal); } catch (\Throwable $e) { Log::warning('In-app notification (withdrawal completed) failed', ['withdrawal_id' => $withdrawal->id, 'error' => $e->getMessage()]); }
+
             return true;
         } catch (\Exception $e) {
             DB::rollBack();
@@ -663,6 +665,8 @@ class WithdrawalService
                 'withdrawal_id' => $withdrawal->id,
                 'reason'        => $reason,
             ]);
+
+            try { app(\App\Services\AccountNotificationService::class)->withdrawalFailed($withdrawal->fresh() ?? $withdrawal, $reason); } catch (\Throwable $e) { Log::warning('In-app notification (withdrawal failed) failed', ['withdrawal_id' => $withdrawal->id, 'error' => $e->getMessage()]); }
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('WithdrawalService: failed to revert withdrawal', [

@@ -27,9 +27,15 @@ export default function AuthLayout() {
             <p className="text-xs font-semibold uppercase tracking-[0.34em] text-emerald-200/80">
               Vector Pagamentos Gateway
             </p>
-            <h2 className="mx-auto mt-6 max-w-2xl text-5xl font-semibold leading-[1.02] tracking-normal text-white xl:text-6xl">
+            <h2 className="mx-auto mt-6 max-w-xl text-2xl font-semibold leading-tight tracking-normal text-white xl:text-3xl">
               Pagamentos digitais com controle operacional e liquidez Instantânea.
             </h2>
+            <img
+              src="/img/banner.png"
+              alt="Vector Pagamentos"
+              className="mx-auto mt-8 h-auto w-full max-w-md object-contain"
+              loading="lazy"
+            />
           </div>
         </div>
       </div>

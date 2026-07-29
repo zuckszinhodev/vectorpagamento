@@ -164,7 +164,7 @@ it('webhook endpoint does not expose internal exception details', function () {
     expect($body)
         ->not->toContain('vendor/')
         ->not->toContain('Stack trace')
-        ->not->toContain('Illuminate\');
+        ->not->toContain('Illuminate\\');
 });
 
 // 10. Sensitive cache headers on auth endpoints

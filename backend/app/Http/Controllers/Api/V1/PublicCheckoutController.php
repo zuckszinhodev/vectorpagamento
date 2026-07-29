@@ -139,6 +139,10 @@ class PublicCheckoutController extends Controller
                 'theme' => $checkout->theme,
                 'settings' => $checkout->settings,
                 'fields' => $checkout->fields,
+                // Métodos que o gateway realmente processa agora. O checkout só
+                // deve oferecer a interseção disto com settings.payment_methods,
+                // senão o cliente escolhe um método que vai falhar no pagamento.
+                'gateway_payment_methods' => $this->enabledGatewayPaymentMethods(),
                 'product' => $checkout->product ? [
                     'id' => $checkout->product->id,
                     'name' => $checkout->product->name,
@@ -231,6 +235,10 @@ class PublicCheckoutController extends Controller
                 'theme' => $checkout->theme,
                 'settings' => $checkout->settings,
                 'fields' => $checkout->fields,
+                // Métodos que o gateway realmente processa agora. O checkout só
+                // deve oferecer a interseção disto com settings.payment_methods,
+                // senão o cliente escolhe um método que vai falhar no pagamento.
+                'gateway_payment_methods' => $this->enabledGatewayPaymentMethods(),
                 'product' => $checkout->product ? [
                     'id' => $checkout->product->id,
                     'name' => $checkout->product->name,
@@ -1079,6 +1087,28 @@ class PublicCheckoutController extends Controller
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Métodos de pagamento que o gateway consegue processar neste momento.
+     *
+     * Espelha a checagem que o PaymentService faz na hora de cobrar
+     * (payments_enabled + flags por método). Exposto no payload público para
+     * o checkout não oferecer um método que falharia no submit.
+     *
+     * @return string[]
+     */
+    private function enabledGatewayPaymentMethods(): array
+    {
+        if (!(bool) \App\Models\SystemSetting::get('payments_enabled', true)) {
+            return [];
+        }
+
+        return array_values(array_filter([
+            (bool) \App\Models\SystemSetting::get('pix_enabled', true) ? 'pix' : null,
+            (bool) \App\Models\SystemSetting::get('credit_card_enabled', true) ? 'credit_card' : null,
+            (bool) \App\Models\SystemSetting::get('boleto_enabled', true) ? 'boleto' : null,
+        ]));
     }
 
     /**

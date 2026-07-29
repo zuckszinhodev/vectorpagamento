@@ -86,7 +86,7 @@ interface WithdrawalSettings {
 
 interface WithdrawalForm {
  amount: number;
- method: 'pix' | 'bank_transfer';
+ method: 'pix' | 'bank_transfer' | 'crypto';
  pix_key?: string;
  pix_type?: 'cpf' | 'cnpj' | 'email' | 'phone' | 'random';
  bank_code?: string;
@@ -96,6 +96,9 @@ interface WithdrawalForm {
  account_type?: 'checking' | 'savings';
  holder_name?: string;
  holder_document?: string;
+ crypto_asset?: 'USDT' | 'USDC' | 'BTC' | 'ETH' | 'BNB';
+ crypto_network?: string;
+ crypto_wallet_address?: string;
 }
 
 const statusConfig = {
@@ -118,6 +121,15 @@ const banks = [
  { code: '260', name: 'Nubank' },
  { code: '290', name: 'PagSeguro' },
  { code: '323', name: 'Mercado Pago' },
+];
+
+// Criptomoedas suportadas para saque e suas respectivas redes.
+const cryptoAssets: { symbol: 'USDT' | 'USDC' | 'BTC' | 'ETH' | 'BNB'; name: string; networks: string[] }[] = [
+ { symbol: 'USDT', name: 'Tether', networks: ['TRC20', 'ERC20', 'BEP20', 'Polygon'] },
+ { symbol: 'USDC', name: 'USD Coin', networks: ['ERC20', 'BEP20', 'Polygon', 'Solana'] },
+ { symbol: 'BTC', name: 'Bitcoin', networks: ['Bitcoin', 'Lightning'] },
+ { symbol: 'ETH', name: 'Ethereum', networks: ['ERC20', 'Arbitrum', 'Optimism'] },
+ { symbol: 'BNB', name: 'BNB', networks: ['BEP20'] },
 ];
 
 export default function WithdrawalsPage() {
@@ -183,18 +195,25 @@ export default function WithdrawalsPage() {
  method: 'pix',
  pix_type: 'email',
  account_type: 'checking',
+ crypto_asset: 'USDT',
+ crypto_network: 'TRC20',
  },
  });
 
  const withdrawMethod = watch('method');
  const withdrawAmount = watch('amount');
  const pixType = watch('pix_type');
+ const cryptoAsset = watch('crypto_asset');
+ const cryptoNetworks = cryptoAssets.find((a) => a.symbol === cryptoAsset)?.networks ?? cryptoAssets[0].networks;
 
  const calculateFees = (amountCents: number, method: string) => {
  // Base fee from settings
  let baseFee = 0;
  if (method === 'bank_transfer') {
  baseFee = settings?.standard_withdrawal_fee_bank ?? 200;
+ } else if (method === 'crypto') {
+ // Taxa de rede (network fee) é descontada no momento do processamento.
+ baseFee = 0;
  } else {
  baseFee = settings?.standard_withdrawal_fee_pix ?? 0;
  }
@@ -274,6 +293,13 @@ export default function WithdrawalsPage() {
  idempotency_key,
  destination: data.method === 'pix'
  ? { type: 'pix', pix_key: data.pix_key, pix_type: data.pix_type }
+ : data.method === 'crypto'
+ ? {
+ type: 'crypto',
+ asset: data.crypto_asset,
+ network: data.crypto_network,
+ wallet_address: data.crypto_wallet_address,
+ }
  : {
  type: 'bank_account',
  bank_code: data.bank_code,
@@ -1134,6 +1160,23 @@ export default function WithdrawalsPage() {
  </button>
  )}
  </Tab>
+ <Tab as={Fragment}>
+ {({ selected }) => (
+ <button
+ type="button"
+ onClick={() => setValue('method', 'crypto')}
+ className={clsx(
+ 'flex-1 py-3 px-4 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2',
+ selected
+ ? 'bg-surface-card text-accent-primary'
+ : 'text-tx-secondary hover:text-tx-primary'
+ )}
+ >
+ <CurrencyDollarIcon className="h-5 w-5" />
+ Cripto
+ </button>
+ )}
+ </Tab>
  </Tab.List>
 
  <Tab.Panels>
@@ -1413,6 +1456,147 @@ export default function WithdrawalsPage() {
  <ExclamationTriangleIcon className="h-5 w-5 text-status-warning flex-shrink-0" />
  <p className="text-xs text-status-warning">
  Saques via TED podem levar até 1 dia útil para serem processados.
+ </p>
+ </div>
+ </div>
+ </Tab.Panel>
+
+ {/* Crypto Panel */}
+ <Tab.Panel className="space-y-4">
+ <div>
+ <label className="block text-sm font-medium text-tx-secondary mb-2">
+ Valor do Saque (R$)
+ </label>
+ <input
+ type="number"
+ step="0.01"
+ min={minWithdrawal / 100}
+ max={availableBalance / 100}
+ {...register('amount', {
+ required: 'Valor é obrigatório',
+ valueAsNumber: true,
+ min: { value: minWithdrawal / 100, message: `Valor mínimo é ${formatCurrency(minWithdrawal)}` },
+ max: { value: availableBalance / 100, message: 'Saldo insuficiente' }
+ })}
+ className="input"
+ placeholder="0,00"
+ />
+ {errors.amount && (
+ <p className="text-status-error text-xs mt-1">{errors.amount.message}</p>
+ )}
+ <div className="mt-2 flex flex-wrap gap-2">
+ {quickWithdrawalPercents.map((percent) => (
+ <button
+ key={`crypto-${percent}`}
+ type="button"
+ onClick={() => setQuickAmount(percent)}
+ className="rounded-md border border-border-DEFAULT px-2.5 py-1 text-xs font-semibold text-tx-secondary transition hover:bg-surface-hover"
+ >
+ {percent}% do saldo
+ </button>
+ ))}
+ </div>
+ </div>
+
+ <div className="grid grid-cols-2 gap-4">
+ <div>
+ <label className="block text-sm font-medium text-tx-secondary mb-2">
+ Moeda
+ </label>
+ <select
+ {...register('crypto_asset')}
+ onChange={(e) => {
+ const symbol = e.target.value as WithdrawalForm['crypto_asset'];
+ setValue('crypto_asset', symbol);
+ const networks = cryptoAssets.find((a) => a.symbol === symbol)?.networks ?? [];
+ setValue('crypto_network', networks[0] ?? '');
+ }}
+ className="input"
+ >
+ {cryptoAssets.map((asset) => (
+ <option key={asset.symbol} value={asset.symbol}>
+ {asset.symbol} - {asset.name}
+ </option>
+ ))}
+ </select>
+ </div>
+
+ <div>
+ <label className="block text-sm font-medium text-tx-secondary mb-2">
+ Rede
+ </label>
+ <select {...register('crypto_network')} className="input">
+ {cryptoNetworks.map((network) => (
+ <option key={network} value={network}>
+ {network}
+ </option>
+ ))}
+ </select>
+ </div>
+ </div>
+
+ <div>
+ <label className="block text-sm font-medium text-tx-secondary mb-2">
+ Endereço da Carteira ({cryptoAsset})
+ </label>
+ <input
+ type="text"
+ {...register('crypto_wallet_address', {
+ required: withdrawMethod === 'crypto' ? 'Endereço da carteira é obrigatório' : false,
+ minLength: { value: 12, message: 'Endereço inválido' },
+ })}
+ className="input"
+ placeholder="Cole o endereço da sua carteira"
+ />
+ {errors.crypto_wallet_address && (
+ <p className="text-status-error text-xs mt-1">{errors.crypto_wallet_address.message}</p>
+ )}
+ <p className="mt-1 text-xs text-tx-muted">
+ Confira o endereço e a rede. Transações em cripto são irreversíveis.
+ </p>
+ </div>
+
+ {/* Summary */}
+ {safeAmount > 0 && (
+ <div className="rounded-lg bg-surface-page p-4 space-y-2">
+ <div className="flex justify-between text-sm">
+ <span className="text-tx-secondary">Valor solicitado:</span>
+ <span className="font-semibold text-tx-primary">
+ {formatCurrency(safeAmount * 100)}
+ </span>
+ </div>
+ {fees.withdrawalFee > 0 && (
+ <div className="flex justify-between text-sm">
+ <span className="text-tx-secondary">
+ Taxa de Saque ({settings?.instant_withdrawal_fee_type === 'percentage' ? `${settings?.instant_withdrawal_fee_value}%` : 'fixa'}):
+ </span>
+ <span className="font-semibold text-status-error">
+ - {formatCurrency(fees.withdrawalFee)}
+ </span>
+ </div>
+ )}
+ <div className="flex justify-between text-sm">
+ <span className="text-tx-secondary">Taxa de rede:</span>
+ <span className="font-semibold text-tx-secondary">Descontada no processamento</span>
+ </div>
+ <div className="border-t border-border-DEFAULT pt-2 flex justify-between">
+ <span className="text-sm font-semibold text-tx-primary">Você receberá em {cryptoAsset}:</span>
+ <span className={clsx('text-lg font-bold', netAmount > 0 ? 'text-accent-primary' : 'text-status-error')}>
+ {formatCurrency(Math.max(0, netAmount))}
+ </span>
+ </div>
+ <div className="flex justify-between text-xs text-tx-muted">
+ <span>Cotação:</span>
+ <span>Definida no momento do processamento</span>
+ </div>
+ </div>
+ )}
+
+ <div className="rounded-lg bg-status-warning-subtle border border-yellow-200 p-3">
+ <div className="flex gap-2">
+ <ExclamationTriangleIcon className="h-5 w-5 text-status-warning flex-shrink-0" />
+ <p className="text-xs text-status-warning">
+ Saque em cripto: confira o endereço e a rede antes de confirmar. Transações são irreversíveis e o valor em cripto é calculado pela cotação no processamento.
  </p>
  </div>
  </div>

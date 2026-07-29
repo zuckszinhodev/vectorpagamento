@@ -14,8 +14,57 @@ import {
   EyeIcon,
   ArrowDownTrayIcon,
   ClipboardDocumentIcon,
+  CreditCardIcon,
+  DocumentTextIcon,
+  BanknotesIcon,
 } from '@heroicons/react/24/outline';
 import PixIcon from '@/components/icons/PixIcon';
+
+/**
+ * Rótulo visual do método de pagamento: ícone + nome.
+ * Cores alinhadas às convenções de mercado (PIX verde, cartão índigo, boleto âmbar).
+ */
+function PaymentMethodBadge({ method }: { method?: string }) {
+  const m = (method || '').toLowerCase();
+  const config: Record<string, { label: string; icon: JSX.Element; bg: string; text: string }> = {
+    pix: {
+      label: 'PIX',
+      icon: <PixIcon className="h-3.5 w-3.5" />,
+      bg: 'bg-emerald-500/10',
+      text: 'text-emerald-700 dark:text-emerald-300',
+    },
+    credit_card: {
+      label: 'Cartão',
+      icon: <CreditCardIcon className="h-3.5 w-3.5" />,
+      bg: 'bg-indigo-500/10',
+      text: 'text-indigo-700 dark:text-indigo-300',
+    },
+    boleto: {
+      label: 'Boleto',
+      icon: <DocumentTextIcon className="h-3.5 w-3.5" />,
+      bg: 'bg-amber-500/10',
+      text: 'text-amber-700 dark:text-amber-300',
+    },
+    split: {
+      label: 'Split',
+      icon: <BanknotesIcon className="h-3.5 w-3.5" />,
+      bg: 'bg-purple-500/10',
+      text: 'text-purple-700 dark:text-purple-300',
+    },
+  };
+  const c = config[m] ?? {
+    label: method || '—',
+    icon: <BanknotesIcon className="h-3.5 w-3.5" />,
+    bg: 'bg-surface-hover',
+    text: 'text-tx-secondary',
+  };
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${c.bg} ${c.text}`}>
+      {c.icon}
+      {c.label}
+    </span>
+  );
+}
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -1046,6 +1095,42 @@ export default function ChargesPage() {
     setIsDetailOpen(true);
   };
 
+  // Deep-link: quando a URL contém ?id=<charge_id> (ex.: vindo da busca inteligente),
+  // busca a cobrança e abre o modal de detalhes automaticamente.
+  //
+  // Ref evita processar duas vezes no Strict Mode (que remonta o effect em dev).
+  // Sem ela, o cleanup da 1ª execução setava cancelled=true, o setState era
+  // silenciado e o `?id=` sumia da URL antes da 2ª execução — resultado: o
+  // usuário chegava em /charges?id=... e nenhum modal abria.
+  const deepLinkConsumedRef = useRef(false);
+  useEffect(() => {
+    if (deepLinkConsumedRef.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const chargeId = params.get('id');
+    if (!chargeId) return;
+    deepLinkConsumedRef.current = true;
+
+    (async () => {
+      try {
+        const response = await api.get(`/charges/${chargeId}`);
+        const charge: Charge | undefined = response.data?.data;
+        if (charge) {
+          setSelectedCharge(charge);
+          setIsDetailOpen(true);
+        } else {
+          toast.error('Cobrança não encontrada');
+        }
+      } catch {
+        toast.error('Cobrança não encontrada');
+      } finally {
+        // Limpa o parâmetro para não reabrir o modal em reloads/back.
+        const url = new URL(window.location.href);
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url.toString());
+      }
+    })();
+  }, []);
+
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Header */}
@@ -1164,9 +1249,7 @@ export default function ChargesPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-border-DEFAULT">
-                <span className="text-xs text-tx-muted">
-                  {charge.payment_method === 'credit_card' ? 'Cartão' : charge.payment_method === 'pix' ? 'PIX' : charge.payment_method === 'boleto' ? 'Boleto' : charge.payment_method}
-                </span>
+                <PaymentMethodBadge method={charge.payment_method} />
                 <span className="text-xs text-tx-muted">{formatDate(charge.created_at)}</span>
               </div>
             </div>
@@ -1271,16 +1354,8 @@ export default function ChargesPage() {
                         )}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-tx-muted">
-                      {charge.payment_method === 'credit_card'
-                        ? 'Cartão'
-                        : charge.payment_method === 'pix'
-                        ? 'PIX'
-                        : charge.payment_method === 'boleto'
-                        ? 'Boleto'
-                        : charge.payment_method === 'split'
-                        ? 'Split'
-                        : charge.payment_method}
+                    <td className="whitespace-nowrap px-6 py-4 text-sm">
+                      <PaymentMethodBadge method={charge.payment_method} />
                     </td>
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-tx-muted">
                       {formatDate(charge.created_at)}

@@ -977,6 +977,9 @@ class KycController extends Controller
                 ]);
             }
 
+            // In-app notification (sino do painel)
+            try { app(\App\Services\AccountNotificationService::class)->kycApproved($submission->user); } catch (\Throwable $e) { Log::warning('In-app notification (kyc approved) failed', ['user_id' => $submission->user_id, 'error' => $e->getMessage()]); }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -1093,6 +1096,9 @@ class KycController extends Controller
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::warning('Failed to send KYC rejection email', ['error' => $e->getMessage()]);
             }
+
+            // In-app notification (sino do painel)
+            try { app(\App\Services\AccountNotificationService::class)->kycRejected($submission->user, $submission, $request->input('reason')); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('In-app notification (kyc rejected) failed', ['user_id' => $submission->user_id, 'error' => $e->getMessage()]); }
 
             return response()->json([
                 'success' => true,

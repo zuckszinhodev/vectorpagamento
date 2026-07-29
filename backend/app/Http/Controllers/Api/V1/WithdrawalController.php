@@ -564,6 +564,9 @@ class WithdrawalController extends Controller
                 ]);
             }
 
+            // Notificação interna (sino do painel)
+            try { app(\App\Services\AccountNotificationService::class)->withdrawalRequested($withdrawal); } catch (\Throwable $e) { Log::warning('In-app notification (withdrawal requested) failed', ['withdrawal_id' => $withdrawal->id, 'error' => $e->getMessage()]); }
+
             // Auto-save PIX/bank info to account settings for future lookups
             try {
                 $account = \App\Models\Account::find($accountId);
