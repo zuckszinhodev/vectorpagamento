@@ -184,7 +184,7 @@ interface AuditLogItem {
   created_at: string;
 }
 
-type Tab = 'info' | 'charges' | 'withdrawals' | 'fees' | 'acquirers' | 'logs';
+type Tab = 'info' | 'charges' | 'withdrawals' | 'fees' | 'acquirers' | 'controls' | 'logs';
 
 interface WalletAdjustmentFormState {
   direction: 'credit' | 'debit';
@@ -437,6 +437,7 @@ export default function AdminCustomerDetail() {
     { key: 'withdrawals' as const, label: 'Saques', icon: BoltIcon },
     { key: 'fees' as const, label: 'Taxas', icon: AdjustmentsHorizontalIcon },
     { key: 'acquirers' as const, label: 'Adquirentes', icon: CreditCardIcon },
+    { key: 'controls' as const, label: 'Controles', icon: ShieldCheckIcon },
     { key: 'logs' as const, label: 'Logs / Auditoria', icon: DocumentTextIcon },
   ];
 
@@ -665,6 +666,7 @@ export default function AdminCustomerDetail() {
       )}
       {activeTab === 'fees' && <FeesTab customerId={customerId!} />}
       {activeTab === 'acquirers' && <AcquirersTab customerId={customerId!} />}
+      {activeTab === 'controls' && <ControlsTab customerId={customerId!} customerName={customer.name} />}
 
       {showWalletAdjustmentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowWalletAdjustmentModal(false)}>
@@ -2693,6 +2695,256 @@ interface AcquirerItem {
   is_active: boolean;
   priority: number;
   account_acquirer_id: string | null;
+}
+
+function ControlsTab({ customerId, customerName }: { customerId: string; customerName: string }) {
+  const queryClient = useQueryClient();
+
+  // ── Risk controls (limits, reserve, auto-approve) ──
+  const [limitsEnabled, setLimitsEnabled] = useState(false);
+  const [maxTx, setMaxTx] = useState('');
+  const [dailyVol, setDailyVol] = useState('');
+  const [monthlyVol, setMonthlyVol] = useState('');
+  const [maxWd, setMaxWd] = useState('');
+  const [reserveEnabled, setReserveEnabled] = useState(false);
+  const [reservePercent, setReservePercent] = useState('0');
+  const [reserveDays, setReserveDays] = useState('30');
+  const [autoApprove, setAutoApprove] = useState<'default' | 'auto' | 'manual'>('default');
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+
+  const centsToReais = (c?: number) => (c && c > 0 ? String((c / 100).toFixed(2)) : '');
+  const reaisToCents = (v: string) => Math.round((parseFloat(v) || 0) * 100);
+
+  const { data: controls, isLoading } = useQuery({
+    queryKey: ['admin-customer-controls', customerId],
+    queryFn: async () => (await api.get(`/admin/customers/${customerId}/risk-controls`)).data?.data,
+    enabled: !!customerId,
+  });
+
+  useEffect(() => {
+    if (!controls) return;
+    setLimitsEnabled(!!controls.limits?.enabled);
+    setMaxTx(centsToReais(controls.limits?.max_transaction));
+    setDailyVol(centsToReais(controls.limits?.daily_volume));
+    setMonthlyVol(centsToReais(controls.limits?.monthly_volume));
+    setMaxWd(centsToReais(controls.limits?.max_withdrawal));
+    setReserveEnabled(!!controls.rolling_reserve?.enabled);
+    setReservePercent(String(controls.rolling_reserve?.percent ?? 0));
+    setReserveDays(String(controls.rolling_reserve?.days ?? 30));
+    setAutoApprove(controls.withdrawal_auto_approve === true ? 'auto' : controls.withdrawal_auto_approve === false ? 'manual' : 'default');
+  }, [controls]);
+
+  const saveControls = useMutation({
+    mutationFn: async () => {
+      const payload = {
+        limits: {
+          enabled: limitsEnabled,
+          max_transaction: reaisToCents(maxTx),
+          daily_volume: reaisToCents(dailyVol),
+          monthly_volume: reaisToCents(monthlyVol),
+          max_withdrawal: reaisToCents(maxWd),
+        },
+        rolling_reserve: {
+          enabled: reserveEnabled,
+          percent: parseFloat(reservePercent) || 0,
+          days: parseInt(reserveDays) || 0,
+        },
+        withdrawal_auto_approve: autoApprove === 'auto' ? true : autoApprove === 'manual' ? false : null,
+      };
+      return (await api.put(`/admin/customers/${customerId}/risk-controls`, payload)).data;
+    },
+    onSuccess: () => {
+      toast.success('Controles salvos');
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-controls', customerId] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Erro ao salvar controles'),
+  });
+
+  // ── Security: password + API keys ──
+  const resetPassword = useMutation({
+    mutationFn: async () => (await api.post(`/admin/customers/${customerId}/reset-password`, {})).data,
+    onSuccess: (data: any) => {
+      const pwd = data?.data?.temporary_password;
+      if (pwd) setTempPassword(pwd);
+      toast.success('Senha redefinida');
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Erro ao redefinir senha'),
+  });
+
+  const { data: apiKeys } = useQuery({
+    queryKey: ['admin-customer-apikeys', customerId],
+    queryFn: async () => (await api.get(`/admin/customers/${customerId}/api-keys`)).data?.data || [],
+    enabled: !!customerId,
+  });
+
+  const revokeKey = useMutation({
+    mutationFn: async (keyId: string) => (await api.delete(`/admin/customers/${customerId}/api-keys/${keyId}`)).data,
+    onSuccess: () => {
+      toast.success('API key revogada');
+      queryClient.invalidateQueries({ queryKey: ['admin-customer-apikeys', customerId] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Erro ao revogar'),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
+      </div>
+    );
+  }
+
+  const numInput = 'w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none';
+
+  return (
+    <div className="space-y-6">
+      {/* Limits */}
+      <div className="rounded-lg border border-gray-200 bg-white p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Limites de operação</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {limitsEnabled ? 'Valores em R$. Deixe 0 (vazio) para "sem limite".' : 'Limites desativados para este vendedor.'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs font-medium ${limitsEnabled ? 'text-emerald-700' : 'text-gray-400'}`}>{limitsEnabled ? 'Ativado' : 'Desativado'}</span>
+            <button
+              onClick={() => setLimitsEnabled((v) => !v)}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${limitsEnabled ? 'bg-emerald-600' : 'bg-gray-300'}`}
+            >
+              <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${limitsEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        </div>
+        <div className={`mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 ${limitsEnabled ? '' : 'opacity-50 pointer-events-none'}`}>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Máx. por transação</label>
+            <input type="number" min="0" step="0.01" value={maxTx} onChange={(e) => setMaxTx(e.target.value)} className={numInput} placeholder="0,00" disabled={!limitsEnabled} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Volume diário</label>
+            <input type="number" min="0" step="0.01" value={dailyVol} onChange={(e) => setDailyVol(e.target.value)} className={numInput} placeholder="0,00" disabled={!limitsEnabled} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Volume mensal</label>
+            <input type="number" min="0" step="0.01" value={monthlyVol} onChange={(e) => setMonthlyVol(e.target.value)} className={numInput} placeholder="0,00" disabled={!limitsEnabled} />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Máx. por saque</label>
+            <input type="number" min="0" step="0.01" value={maxWd} onChange={(e) => setMaxWd(e.target.value)} className={numInput} placeholder="0,00" disabled={!limitsEnabled} />
+          </div>
+        </div>
+      </div>
+
+      {/* Rolling reserve */}
+      <div className="rounded-lg border border-gray-200 bg-white p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Reserva financeira (rolling reserve)</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Retém uma % de cada venda paga por N dias (fica em saldo bloqueado e é liberado depois).</p>
+          </div>
+          <button
+            onClick={() => setReserveEnabled((v) => !v)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${reserveEnabled ? 'bg-purple-600' : 'bg-gray-300'}`}
+          >
+            <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${reserveEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
+        </div>
+        {reserveEnabled && (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 max-w-md">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Percentual retido (%)</label>
+              <input type="number" min="0" max="100" step="0.1" value={reservePercent} onChange={(e) => setReservePercent(e.target.value)} className={numInput} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Dias de retenção</label>
+              <input type="number" min="0" max="365" value={reserveDays} onChange={(e) => setReserveDays(e.target.value)} className={numInput} />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Auto-approve withdrawals */}
+      <div className="rounded-lg border border-gray-200 bg-white p-5">
+        <h3 className="text-sm font-semibold text-gray-900">Aprovação de saques</h3>
+        <p className="text-xs text-gray-500 mt-0.5">Define se os saques deste vendedor são liberados automaticamente ou exigem revisão.</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {([['default', 'Padrão (limite)'], ['auto', 'Automático'], ['manual', 'Manual (sempre revisar)']] as const).map(([val, label]) => (
+            <button
+              key={val}
+              onClick={() => setAutoApprove(val)}
+              className={`rounded-lg px-3 py-2 text-xs font-medium transition-colors ${autoApprove === val ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => saveControls.mutate()}
+          disabled={saveControls.isPending}
+          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+        >
+          {saveControls.isPending ? 'Salvando...' : 'Salvar controles'}
+        </button>
+      </div>
+
+      {/* Security */}
+      <div className="rounded-lg border border-gray-200 bg-white p-5">
+        <h3 className="text-sm font-semibold text-gray-900">Segurança</h3>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => {
+              if (window.confirm(`Gerar uma nova senha temporária para ${customerName}? A senha atual deixará de funcionar.`)) {
+                resetPassword.mutate();
+              }
+            }}
+            disabled={resetPassword.isPending}
+            className="rounded-lg bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+          >
+            <KeyIcon className="inline h-3.5 w-3.5 mr-1" />
+            Redefinir senha
+          </button>
+          {tempPassword && (
+            <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2">
+              <span className="text-xs text-amber-800">Senha temporária: <span className="font-mono font-semibold">{tempPassword}</span></span>
+              <button onClick={() => { navigator.clipboard.writeText(tempPassword); toast.success('Copiado!'); }} className="rounded p-1 text-amber-700 hover:bg-amber-100">
+                <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        <h4 className="mt-6 text-xs font-semibold uppercase tracking-wide text-gray-500">API Keys do vendedor</h4>
+        <div className="mt-2 space-y-2">
+          {(!apiKeys || apiKeys.length === 0) ? (
+            <p className="text-xs text-gray-500">Nenhuma API key.</p>
+          ) : (
+            apiKeys.map((k: any) => (
+              <div key={k.id} className="flex items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{k.name || '(sem nome)'} <span className="text-xs font-mono text-gray-500">{k.key_prefix}…</span></p>
+                  <p className="text-xs text-gray-500">{k.type} · {k.environment} · {k.is_active ? 'ativa' : 'revogada'}{k.last_used_at ? ` · último uso ${formatDate(k.last_used_at)}` : ''}</p>
+                </div>
+                {k.is_active && (
+                  <button
+                    onClick={() => { if (window.confirm('Revogar esta API key?')) revokeKey.mutate(k.id); }}
+                    disabled={revokeKey.isPending}
+                    className="shrink-0 rounded-md bg-red-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600 disabled:opacity-50"
+                  >
+                    Revogar
+                  </button>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function AcquirersTab({ customerId }: { customerId: string }) {

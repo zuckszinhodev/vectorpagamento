@@ -193,6 +193,44 @@ class ChargeController extends Controller
                 ], 400);
             }
 
+            // Per-seller transaction limits (admin risk controls). Guarded so a
+            // failure here never blocks a legitimate charge.
+            try {
+                $acctForLimits = \App\Models\Account::find($accountId);
+                $limitCfg = (array) (($acctForLimits && is_array($acctForLimits->settings) ? ($acctForLimits->settings['limits'] ?? []) : []) ?: []);
+                $amountCents = (int) $request->input('amount');
+                $limitsOn = (bool) ($limitCfg['enabled'] ?? false);
+
+                $maxTx = $limitsOn ? (int) ($limitCfg['max_transaction'] ?? 0) : 0;
+                if ($maxTx > 0 && $amountCents > $maxTx) {
+                    return response()->json(['success' => false, 'error' => ['code' => 'transaction_limit_exceeded', 'message' => 'Valor acima do limite por transação definido para esta conta.']], 422);
+                }
+
+                $dailyCap = $limitsOn ? (int) ($limitCfg['daily_volume'] ?? 0) : 0;
+                if ($dailyCap > 0) {
+                    $usedToday = (int) \App\Models\Charge::where('account_id', $accountId)
+                        ->whereNotIn('status', ['failed', 'cancelled', 'expired', 'refunded'])
+                        ->where('created_at', '>=', now()->startOfDay())
+                        ->sum('amount');
+                    if ($usedToday + $amountCents > $dailyCap) {
+                        return response()->json(['success' => false, 'error' => ['code' => 'daily_volume_exceeded', 'message' => 'Limite de volume diário atingido para esta conta.']], 422);
+                    }
+                }
+
+                $monthlyCap = $limitsOn ? (int) ($limitCfg['monthly_volume'] ?? 0) : 0;
+                if ($monthlyCap > 0) {
+                    $usedMonth = (int) \App\Models\Charge::where('account_id', $accountId)
+                        ->whereNotIn('status', ['failed', 'cancelled', 'expired', 'refunded'])
+                        ->where('created_at', '>=', now()->startOfMonth())
+                        ->sum('amount');
+                    if ($usedMonth + $amountCents > $monthlyCap) {
+                        return response()->json(['success' => false, 'error' => ['code' => 'monthly_volume_exceeded', 'message' => 'Limite de volume mensal atingido para esta conta.']], 422);
+                    }
+                }
+            } catch (\Throwable $limitEx) {
+                \Illuminate\Support\Facades\Log::warning('Charge limit check failed (allowing charge)', ['error' => $limitEx->getMessage()]);
+            }
+
             $idempotencyKey = trim((string) (
                 $request->input('idempotency_key')
                 ?? $request->header('X-Idempotency-Key')

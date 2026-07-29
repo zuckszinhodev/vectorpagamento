@@ -13,6 +13,7 @@ use App\Models\AccountCustomFee;
 use App\Models\AccountWallet;
 use App\Models\Withdrawal;
 use App\Models\AccountAcquirer;
+use App\Models\ApiKey;
 use App\Models\AuditLog;
 use App\Models\Transaction;
 use App\Models\WalletAdjustment;
@@ -26,6 +27,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use PragmaRX\Google2FA\Google2FA;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -1641,6 +1643,199 @@ class CustomerAdminController extends Controller
             DB::rollBack();
             Log::error('CustomerAdminController::setExclusiveAcquirer error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
             return response()->json(['success' => false, 'message' => 'Erro ao configurar adquirente exclusiva'], 500);
+        }
+    }
+
+    // ── Risk controls: limits, rolling reserve, auto-approve ─────
+
+    private function defaultRiskControls(): array
+    {
+        return [
+            'limits' => [
+                'enabled' => false,       // master switch: limits only apply when true
+                'max_transaction' => 0,   // cents, 0 = unlimited
+                'daily_volume' => 0,
+                'monthly_volume' => 0,
+                'max_withdrawal' => 0,
+            ],
+            'rolling_reserve' => [
+                'enabled' => false,
+                'percent' => 0,           // 0-100
+                'days' => 30,
+            ],
+            'withdrawal_auto_approve' => null, // null = default threshold, true = auto, false = always manual
+        ];
+    }
+
+    public function getRiskControls(string $customerId): JsonResponse
+    {
+        try {
+            $user = User::with('account')->find($customerId);
+            if (!$user || !$user->account) {
+                return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+            }
+
+            $settings = (array) ($user->account->settings ?? []);
+            $defaults = $this->defaultRiskControls();
+
+            $data = [
+                'limits' => array_merge($defaults['limits'], (array) ($settings['limits'] ?? [])),
+                'rolling_reserve' => array_merge($defaults['rolling_reserve'], (array) ($settings['rolling_reserve'] ?? [])),
+                'withdrawal_auto_approve' => $settings['withdrawal_auto_approve'] ?? null,
+            ];
+
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (\Throwable $e) {
+            Log::error('CustomerAdminController::getRiskControls error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
+            return response()->json(['success' => false, 'message' => 'Erro ao carregar controles'], 500);
+        }
+    }
+
+    public function updateRiskControls(Request $request, string $customerId): JsonResponse
+    {
+        $validated = $request->validate([
+            'limits.enabled' => ['nullable', 'boolean'],
+            'limits.max_transaction' => ['nullable', 'integer', 'min:0'],
+            'limits.daily_volume' => ['nullable', 'integer', 'min:0'],
+            'limits.monthly_volume' => ['nullable', 'integer', 'min:0'],
+            'limits.max_withdrawal' => ['nullable', 'integer', 'min:0'],
+            'rolling_reserve.enabled' => ['required', 'boolean'],
+            'rolling_reserve.percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'rolling_reserve.days' => ['nullable', 'integer', 'min:0', 'max:365'],
+            'withdrawal_auto_approve' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            $user = User::with('account')->find($customerId);
+            if (!$user || !$user->account) {
+                return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+            }
+
+            $account = $user->account;
+            $settings = (array) ($account->settings ?? []);
+
+            $settings['limits'] = [
+                'enabled' => (bool) ($validated['limits']['enabled'] ?? false),
+                'max_transaction' => (int) ($validated['limits']['max_transaction'] ?? 0),
+                'daily_volume' => (int) ($validated['limits']['daily_volume'] ?? 0),
+                'monthly_volume' => (int) ($validated['limits']['monthly_volume'] ?? 0),
+                'max_withdrawal' => (int) ($validated['limits']['max_withdrawal'] ?? 0),
+            ];
+            $settings['rolling_reserve'] = [
+                'enabled' => (bool) $validated['rolling_reserve']['enabled'],
+                'percent' => (float) ($validated['rolling_reserve']['percent'] ?? 0),
+                'days' => (int) ($validated['rolling_reserve']['days'] ?? 30),
+            ];
+            $settings['withdrawal_auto_approve'] = array_key_exists('withdrawal_auto_approve', $validated)
+                ? $validated['withdrawal_auto_approve']
+                : ($settings['withdrawal_auto_approve'] ?? null);
+
+            $account->update(['settings' => $settings]);
+
+            Log::info('Admin updated seller risk controls', [
+                'account_id' => $account->id,
+                'admin_id' => $request->user()?->id,
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Controles atualizados com sucesso']);
+        } catch (\Throwable $e) {
+            Log::error('CustomerAdminController::updateRiskControls error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
+            return response()->json(['success' => false, 'message' => 'Erro ao salvar controles'], 500);
+        }
+    }
+
+    // ── Security: password + API keys ────────────────────────────
+
+    /**
+     * Admin forces a password reset. If no password is provided, a strong
+     * temporary one is generated and returned (shown once). Also clears the
+     * remember token.
+     */
+    public function resetPassword(Request $request, string $customerId): JsonResponse
+    {
+        $validated = $request->validate([
+            'password' => ['nullable', 'string', 'min:8', 'max:100'],
+        ]);
+
+        try {
+            $user = User::find($customerId);
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+            }
+
+            $generated = null;
+            $password = $validated['password'] ?? null;
+            if (!$password) {
+                $generated = Str::password(14, true, true, false);
+                $password = $generated;
+            }
+
+            $user->forceFill([
+                'password' => Hash::make($password),
+                'remember_token' => null,
+            ])->save();
+
+            Log::info('Admin reset seller password', [
+                'customer_id' => $user->id,
+                'admin_id' => $request->user()?->id,
+                'generated' => $generated !== null,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Senha redefinida com sucesso.',
+                'data' => ['temporary_password' => $generated],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('CustomerAdminController::resetPassword error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
+            return response()->json(['success' => false, 'message' => 'Erro ao redefinir senha'], 500);
+        }
+    }
+
+    public function getApiKeys(string $customerId): JsonResponse
+    {
+        try {
+            $user = User::find($customerId);
+            if (!$user || !$user->account_id) {
+                return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+            }
+
+            $keys = ApiKey::where('account_id', $user->account_id)
+                ->orderByDesc('created_at')
+                ->get(['id', 'name', 'type', 'key_prefix', 'environment', 'is_active', 'last_used_at', 'expires_at', 'created_at']);
+
+            return response()->json(['success' => true, 'data' => $keys]);
+        } catch (\Throwable $e) {
+            Log::error('CustomerAdminController::getApiKeys error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
+            return response()->json(['success' => false, 'message' => 'Erro ao carregar API keys'], 500);
+        }
+    }
+
+    public function revokeApiKey(Request $request, string $customerId, string $keyId): JsonResponse
+    {
+        try {
+            $user = User::find($customerId);
+            if (!$user || !$user->account_id) {
+                return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
+            }
+
+            $key = ApiKey::where('account_id', $user->account_id)->where('id', $keyId)->first();
+            if (!$key) {
+                return response()->json(['success' => false, 'message' => 'API key não encontrada'], 404);
+            }
+
+            $key->update(['is_active' => false]);
+
+            Log::info('Admin revoked seller API key', [
+                'customer_id' => $user->id,
+                'api_key_id' => $keyId,
+                'admin_id' => $request->user()?->id,
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'API key revogada']);
+        } catch (\Throwable $e) {
+            Log::error('CustomerAdminController::revokeApiKey error', ['error' => $e->getMessage(), 'customer_id' => $customerId]);
+            return response()->json(['success' => false, 'message' => 'Erro ao revogar API key'], 500);
         }
     }
 

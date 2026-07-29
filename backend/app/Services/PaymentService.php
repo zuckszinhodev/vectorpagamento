@@ -477,6 +477,48 @@ class PaymentService
      * When an account is flagged as "exclusive acquirer", returns the acquirer
      * slug it is locked to (uses only that one, no failover). Null otherwise.
      */
+    /**
+     * Rolling reserve: when a seller has reserve enabled, holds a percentage of
+     * the paid net amount for N days (recorded in reserve_holds). Returns the
+     * amount held (in cents), 0 when disabled. Fully guarded — never throws.
+     */
+    private function applyRollingReserve(Charge $charge, int $netAmount): int
+    {
+        try {
+            if ($netAmount <= 0 || !$charge->account_id) {
+                return 0;
+            }
+            $account = \App\Models\Account::find($charge->account_id);
+            $cfg = (array) (is_array($account?->settings) ? ($account->settings['rolling_reserve'] ?? []) : []);
+            if (empty($cfg['enabled'])) {
+                return 0;
+            }
+            $percent = (float) ($cfg['percent'] ?? 0);
+            if ($percent <= 0) {
+                return 0;
+            }
+            $days = (int) ($cfg['days'] ?? 30);
+            $reserve = (int) floor($netAmount * $percent / 100);
+            if ($reserve <= 0) {
+                return 0;
+            }
+
+            \App\Models\ReserveHold::create([
+                'id' => Str::uuid()->toString(),
+                'account_id' => $charge->account_id,
+                'charge_id' => $charge->id,
+                'amount' => $reserve,
+                'status' => 'held',
+                'release_at' => now()->addDays($days),
+            ]);
+
+            return $reserve;
+        } catch (\Throwable $e) {
+            Log::warning('applyRollingReserve failed (no reserve applied)', ['error' => $e->getMessage()]);
+            return 0;
+        }
+    }
+
     private function getExclusiveAcquirerSlug(?string $accountId): ?string
     {
         if (!$accountId) {
@@ -2485,7 +2527,13 @@ class PaymentService
                 'net_amount' => $netAmount,
             ]);
 
-            $wallet->increment('available_balance', $netAmount);
+            // Rolling reserve: hold a % of the net in blocked balance for N days.
+            $reserveHeld = $this->applyRollingReserve($charge, (int) $netAmount);
+            $creditToAvailable = max(0, (int) $netAmount - $reserveHeld);
+            $wallet->increment('available_balance', $creditToAvailable);
+            if ($reserveHeld > 0) {
+                $wallet->increment('blocked_balance', $reserveHeld);
+            }
 
             Log::info('Wallet updated on payment', [
                 'account_id' => $charge->account_id,

@@ -467,6 +467,12 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::post('/{customerId}/approve-kyc', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'approveKyc']);
             Route::post('/{customerId}/reset-mfa', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'resetMfa']);
             Route::post('/{customerId}/exclusive-acquirer', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'setExclusiveAcquirer']);
+            // Risk controls + security
+            Route::get('/{customerId}/risk-controls', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'getRiskControls']);
+            Route::put('/{customerId}/risk-controls', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updateRiskControls']);
+            Route::post('/{customerId}/reset-password', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'resetPassword']);
+            Route::get('/{customerId}/api-keys', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'getApiKeys']);
+            Route::delete('/{customerId}/api-keys/{keyId}', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'revokeApiKey']);
         });
 
         // Admin: Acquirers Management - SECURITY: Added admin audit logging

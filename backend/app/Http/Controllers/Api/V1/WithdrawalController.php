@@ -450,9 +450,30 @@ class WithdrawalController extends Controller
             }
         }
 
+        // Per-seller max withdrawal limit (admin risk control) — only when limits enabled
+        $limitsEnabledForAccount = (bool) ($accountSettings['limits']['enabled'] ?? false);
+        $maxWithdrawal = $limitsEnabledForAccount ? (int) ($accountSettings['limits']['max_withdrawal'] ?? 0) : 0;
+        if ($maxWithdrawal > 0 && (int) $amount > $maxWithdrawal) {
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'withdrawal_limit_exceeded', 'message' => 'Valor acima do limite de saque definido para esta conta.'],
+            ], 422);
+        }
+
         // Large withdrawal threshold — requires admin approval (default: R$ 10.000,00)
         $largeWithdrawalThreshold = (float) SystemSetting::get('large_withdrawal_threshold', 1000000);
         $requiresAdminApproval = $amount >= $largeWithdrawalThreshold;
+
+        // Per-seller auto-approve override (admin risk control):
+        // true  → trusted seller, never needs manual approval
+        // false → always requires manual approval
+        // null  → keep default threshold behaviour above
+        $autoApprove = $accountSettings['withdrawal_auto_approve'] ?? null;
+        if ($autoApprove === true) {
+            $requiresAdminApproval = false;
+        } elseif ($autoApprove === false) {
+            $requiresAdminApproval = true;
+        }
 
         // Cooldown: prevent rapid consecutive withdrawals (minimum 60s between)
         $lastWithdrawal = Withdrawal::where('account_id', $accountId)
