@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useThemeStore } from '@/stores/themeStore';
 import {
   DocumentTextIcon,
   KeyIcon,
@@ -73,6 +74,7 @@ const EXTERNAL_API_BASE_URL = 'https://api.vectorpagamentos.com/api/v1/external'
 
 // --- Main Component ---
 export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
+  const platformName = useThemeStore((s) => s.platformName);
   const [activeSection, setActiveSection] = useState('introduction');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const displayKey = apiKey || 'sk_live_xxxxxxxxxxxx';
@@ -97,7 +99,7 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <h1 className="text-3xl font-bold text-white">Documentação da API</h1>
           <p className="mt-2 text-gray-400">
-            Integre a Vector Pagamentos na sua aplicação com nossa API REST.
+            Integre a {platformName} na sua aplicação com nossa API REST.
           </p>
           <div className="mt-4 inline-flex items-center gap-2 bg-gray-800 rounded-lg px-4 py-2 border border-gray-700">
             <span className="text-gray-400 text-sm">Base URL:</span>
@@ -157,7 +159,7 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
               <h2 className="text-2xl font-bold text-tx-primary">Introduction</h2>
               <div className="mt-4 bg-surface-card rounded-lg border border-border-DEFAULT p-6 space-y-4">
                 <p className="text-tx-secondary">
-                  The Vector Pagamentos API is organized around REST. Our API accepts JSON-encoded
+                  The {platformName} API is organized around REST. Our API accepts JSON-encoded
                   request bodies, returns JSON-encoded responses, and uses standard HTTP response codes
                   and authentication.
                 </p>

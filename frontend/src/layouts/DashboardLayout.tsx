@@ -115,7 +115,7 @@ interface AiSearchMessage extends WazerAIChatMessage {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout, isImpersonating, stopImpersonation } = useAuthStore();
-  const { theme, toggleTheme } = useThemeStore();
+  const { theme, toggleTheme, platformName, logoUrl } = useThemeStore();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -186,13 +186,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       '/integrations': 'Integrações',
       '/messaging': 'Mensagens',
       '/support': 'Suporte',
-      '/vector-ia': 'VectorIA',
-      '/wazer-ia': 'VectorIA',
+      '/vector-ia': `${platformName} IA`,
+      '/wazer-ia': `${platformName} IA`,
       '/admin': 'Administração',
     };
     const path = location.pathname;
     const title = pageTitles[path] || Object.entries(pageTitles).find(([key]) => path.startsWith(key))?.[1] || 'Dashboard';
-    document.title = `${title} | VectorPagamentos`;
+    document.title = `${title} | ${platformName}`;
   }, [location.pathname]);
 
   // Verifica se o usuário tem permissão de admin
@@ -455,7 +455,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       }
 
       // 4) Nenhum hit no banco (ou pergunta natural) → tenta IA com feedback claro.
-      finalize({ content: 'Consultando a Vector IA...', isLoading: true } as any);
+      finalize({ content: `Consultando a ${platformName} IA...`, isLoading: true } as any);
 
       try {
         const aiRes = await wazerAIService.chat(question, getAiHistory());
@@ -517,14 +517,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
     // O backend retorna 422 + mensagem "não está configurada" quando falta a API key.
     if (status === 422 || /n[aã]o est[aá] configurada|api key|chave da api/i.test(backendMsg)) {
-      return `A Vector IA ainda não está configurada, por isso não posso responder perguntas gerais como "${q}". Peça ao admin para configurar a chave da API no painel de sistema. Enquanto isso, use a busca por e-mail, nome ou ID.`;
+      return `A ${platformName} IA ainda não está configurada, por isso não posso responder perguntas gerais como "${q}". Peça ao admin para configurar a chave da API no painel de sistema. Enquanto isso, use a busca por e-mail, nome ou ID.`;
     }
     if (status === 429) {
       return 'Muitas perguntas em pouco tempo. Aguarde alguns segundos e tente de novo.';
     }
     return backendMsg
-      ? `A Vector IA não respondeu (${backendMsg}). Tente novamente em alguns instantes.`
-      : 'A Vector IA está indisponível agora. Tente novamente em alguns instantes.';
+      ? `A ${platformName} IA não respondeu (${backendMsg}). Tente novamente em alguns instantes.`
+      : `A ${platformName} IA está indisponível agora. Tente novamente em alguns instantes.`;
   };
 
   /**
@@ -633,12 +633,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           <div className="flex h-14 items-center justify-between gap-3">
             {/* Logo */}
             <div className="flex items-center gap-6">
-              <NavLink to="/dashboard" className="flex items-center group">
+              <NavLink to="/dashboard" className="flex items-center gap-2 group">
                 <img
-                  src="/img/logo.png"
-                  alt="VectorPagamentos"
+                  src={logoUrl || '/img/logo.png'}
+                  alt={platformName}
                   className="h-8 w-auto object-contain"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                 />
+                {!logoUrl && <span className="text-base font-bold text-gray-900 dark:text-white">{platformName}</span>}
               </NavLink>
 
               {/* Desktop Navigation */}

@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 import SEO from '@/components/SEO';
 import toast from 'react-hot-toast';
 import {
@@ -33,6 +34,7 @@ function Spinner() {
 }
 
 export default function LoginPage() {
+  const { platformName } = useThemeStore();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mfaCode, setMfaCode] = useState(['', '', '', '', '', '']);
@@ -142,7 +144,7 @@ export default function LoginPage() {
     <>
       <SEO
         title="Login"
-        description="Acesse sua conta VectorPagamentos e gerencie seus pagamentos, produtos e afiliados"
+        description={`Acesse sua conta ${platformName} e gerencie seus pagamentos, produtos e afiliados`}
         url="/login"
       />
 
@@ -151,7 +153,7 @@ export default function LoginPage() {
           <div className="mb-10 md:hidden">
             <img
               src="/img/logo.png"
-              alt="Vector"
+              alt={platformName}
               className="h-10 w-auto object-contain"
             />
           </div>
@@ -243,7 +245,7 @@ export default function LoginPage() {
             <div className="mb-10 md:hidden">
               <img
                 src="/img/logo.png"
-                alt="Vector"
+                alt={platformName}
                 className="h-10 w-auto object-contain"
               />
             </div>

@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
+import { useThemeStore } from '@/stores/themeStore';
 
 export default function KycPrivacyPage() {
+  const platformName = useThemeStore((s) => s.platformName);
   return (
     <div className="min-h-screen bg-white px-5 py-8 text-gray-900">
       <main className="mx-auto max-w-3xl">
@@ -11,7 +13,7 @@ export default function KycPrivacyPage() {
         <header className="mt-8 border-b border-gray-200 pb-6">
           <h1 className="text-3xl font-semibold tracking-tight">Politica de Privacidade do KYC</h1>
           <p className="mt-3 text-sm leading-6 text-gray-600">
-            Esta politica explica como a Vector Pagamentos coleta, utiliza, protege e armazena
+            Esta politica explica como a {platformName} coleta, utiliza, protege e armazena
             os dados enviados durante o processo de verificacao de identidade.
           </p>
           <p className="mt-2 text-xs text-gray-500">Ultima atualizacao: 02 de julho de 2026</p>
@@ -52,7 +54,7 @@ export default function KycPrivacyPage() {
               internos da plataforma.
             </p>
             <p className="mt-2">
-              A Vector Pagamentos nao utiliza os documentos de KYC para publicidade, venda de dados,
+              A {platformName} nao utiliza os documentos de KYC para publicidade, venda de dados,
               enriquecimento comercial de base ou qualquer finalidade que nao esteja relacionada a
               seguranca, verificacao ou operacao da conta.
             </p>
@@ -131,7 +133,7 @@ export default function KycPrivacyPage() {
             <h2 className="text-lg font-semibold text-gray-950">10. Contato</h2>
             <p className="mt-2">
               Em caso de duvidas sobre esta politica ou sobre o tratamento de dados no KYC, entre em
-              contato com o suporte da Vector Pagamentos pelos canais oficiais da plataforma.
+              contato com o suporte da {platformName} pelos canais oficiais da plataforma.
             </p>
           </article>
         </section>

@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ShieldExclamationIcon } from '@heroicons/react/24/outline';
+import { useThemeStore } from '@/stores/themeStore';
 
 export default function AccountBlockedPage() {
   const location = useLocation();
+  const { platformName } = useThemeStore();
   const blockReason = (location.state as any)?.blockReason 
     || (() => { try { return sessionStorage.getItem('block_reason'); } catch { return null; } })();
 
@@ -11,10 +13,7 @@ export default function AccountBlockedPage() {
       <div className="w-full max-w-lg text-center">
         {/* Logo */}
         <div className="mb-8">
-          <span className="text-3xl font-bold">
-            <span className="text-emerald-400">Vector</span>
-            <span className="text-white">Pagamentos</span>
-          </span>
+          <span className="text-3xl font-bold text-white">{platformName}</span>
         </div>
 
         {/* Icon */}

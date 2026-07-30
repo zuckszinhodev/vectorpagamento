@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useThemeStore } from '@/stores/themeStore';
 import { useForm } from 'react-hook-form';
 import { api, formatCurrency } from '@/lib/api';
 import { safeHref } from '@/lib/safeUrl';
@@ -738,6 +739,7 @@ const defaultBlocks: CheckoutBlock[] = [
 ];
 
 export default function PublicCheckoutPage() {
+  const platformName = useThemeStore((s) => s.platformName);
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const affiliateCode = searchParams.get('ref');
@@ -1375,7 +1377,7 @@ export default function PublicCheckoutPage() {
                         className="text-xl font-bold"
                         style={{ color: theme.primaryColor }}
                       >
-                        {block.settings.title || 'VectorPagamentos'}
+                        {block.settings.title || platformName}
                       </h1>
                     )}
                     {block.settings.showSecureBadge && (
@@ -1884,7 +1886,7 @@ export default function PublicCheckoutPage() {
 
         {/* Footer */}
         <div className="mt-6 text-center text-xs" style={{ color: theme.mutedColor }}>
-          <p>© {new Date().getFullYear()} Powered by VectorPagamentos</p>
+          <p>© {new Date().getFullYear()} Powered by {platformName}</p>
           <p className="mt-1">
             <a href="#" className="hover:underline">Termos de Uso</a>
             {' · '}

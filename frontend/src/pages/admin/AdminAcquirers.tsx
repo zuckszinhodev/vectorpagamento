@@ -1,6 +1,7 @@
 import { type ComponentType, useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useThemeStore } from '@/stores/themeStore';
 import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
 import {
   CreditCardIcon,
@@ -103,6 +104,7 @@ interface RefreshAllNominalsResponse {
 const rotationMethods: RotationMethod[] = ['pix', 'credit_card', 'boleto', 'pix_out'];
 
 export default function AdminAcquirers() {
+  const platformName = useThemeStore((s) => s.platformName);
   const queryClient = useQueryClient();
   const [selectedAcquirer, setSelectedAcquirer] = useState<Acquirer | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -1091,7 +1093,7 @@ function EditAcquirerModal({
 
           {/* Gateway/Platform Fees - Cashin */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-1">Taxa da Plataforma - Cashin (Vector Pagamentos)</h3>
+            <h3 className="text-sm font-semibold text-gray-600 mb-1">Taxa da Plataforma - Cashin ({platformName})</h3>
             <p className="text-xs text-gray-500 mb-3">Taxa que cobramos do vendedor por transação de entrada</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -1119,7 +1121,7 @@ function EditAcquirerModal({
 
           {/* Gateway/Platform Fees - Cashout */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-1">Taxa da Plataforma - Cashout (Vector Pagamentos)</h3>
+            <h3 className="text-sm font-semibold text-gray-600 mb-1">Taxa da Plataforma - Cashout ({platformName})</h3>
             <p className="text-xs text-gray-500 mb-3">Taxa que cobramos do vendedor por saque/transferência</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>

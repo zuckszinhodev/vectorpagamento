@@ -90,7 +90,7 @@ export default function AdminCustomers() {
       />
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -147,10 +147,21 @@ export default function AdminCustomers() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {customers.map((customer: Customer) => (
-                    <tr key={customer.id} className="hover:bg-gray-50">
+                    <tr
+                      key={customer.id}
+                      onClick={() => navigate(`/admin/sellers/${customer.id}`)}
+                      className="cursor-pointer hover:bg-gray-50"
+                    >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900">{customer.name}</p>
-                        <p className="text-xs text-gray-500">{customer.email}</p>
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gray-100 to-gray-200 text-xs font-semibold text-gray-600">
+                            {(customer.name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?'}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-gray-900">{customer.name || 'Sem nome'}</p>
+                            <p className="truncate text-xs text-gray-500">{customer.email}</p>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${statusLabel[customer.status]?.cls || 'bg-gray-100 text-gray-600'}`}>
@@ -169,14 +180,14 @@ export default function AdminCustomers() {
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => navigate(`/admin/sellers/${customer.id}`)}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/admin/sellers/${customer.id}`); }}
                             className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
                             title="Ver detalhes"
                           >
                             <EyeIcon className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => recalculateBalanceMutation.mutate(customer.id)}
+                            onClick={(e) => { e.stopPropagation(); recalculateBalanceMutation.mutate(customer.id); }}
                             className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
                             title="Recalcular saldo"
                           >

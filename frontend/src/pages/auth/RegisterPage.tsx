@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/stores/authStore';
 import SEO from '@/components/SEO';
+import { useThemeStore } from '@/stores/themeStore';
 import toast from 'react-hot-toast';
 import {
   ArrowRightIcon,
@@ -53,6 +54,7 @@ function getApiErrorMessage(error: any): string {
 }
 
 export default function RegisterPage() {
+  const platformName = useThemeStore((s) => s.platformName);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
@@ -85,7 +87,7 @@ export default function RegisterPage() {
     <>
       <SEO
         title="Criar conta"
-        description="Crie sua conta VectorPagamentos para gerenciar pagamentos, produtos e afiliados"
+        description={`Crie sua conta ${platformName} para gerenciar pagamentos, produtos e afiliados`}
         url="/register"
       />
 

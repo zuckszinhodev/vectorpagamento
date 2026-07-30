@@ -2,6 +2,7 @@ import { useState, Fragment } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, Transition } from '@headlessui/react';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import {
@@ -18,6 +19,7 @@ import {
   ChevronDownIcon,
   DocumentCheckIcon,
   ServerIcon,
+  Cog6ToothIcon,
   ExclamationTriangleIcon,
   CpuChipIcon,
   LifebuoyIcon,
@@ -87,6 +89,7 @@ const navigationGroups: NavGroup[] = [
     title: 'Plataforma',
     items: [
       { name: 'Adquirentes', href: '/admin/acquirers', icon: ServerIcon, permission: 'admin.acquirers.manage' },
+      { name: 'Configurações', href: '/admin/settings', icon: Cog6ToothIcon, permission: 'admin.config.manage' },
     ],
   },
 ];
@@ -309,12 +312,14 @@ function SidebarContent({
     pulseData?.state === 'critical' ? 'bg-red-500' :
     pulseData?.state === 'attention' ? 'bg-amber-500' : 'bg-emerald-500';
 
+  const { platformName } = useThemeStore();
+
   return (
     <div className="flex grow flex-col overflow-y-auto border-r border-gray-200 bg-white px-4 pb-4">
       {/* Logo */}
       <div className="flex h-14 shrink-0 items-center px-2">
         <Link to="/admin" className="flex items-center gap-2">
-          <span className="text-base font-semibold text-gray-900">Vector</span>
+          <span className="text-base font-semibold text-gray-900">{platformName}</span>
           <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500">
             Admin
           </span>

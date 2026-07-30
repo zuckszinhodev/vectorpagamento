@@ -9,11 +9,15 @@ interface ThemeState {
   themeVariant: ThemeVariant;
   primaryColor: string;
   platformName: string;
+  platformDescription: string;
+  logoUrl: string;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
   setThemeVariant: (variant: ThemeVariant) => void;
   setPrimaryColor: (color: string) => void;
   setPlatformName: (name: string) => void;
+  setPlatformDescription: (desc: string) => void;
+  setLogoUrl: (url: string) => void;
   applyPrimaryColor: (color: string) => void;
   applyThemeVariant: (variant: ThemeVariant, mode?: Theme) => void;
 }
@@ -61,6 +65,8 @@ export const useThemeStore = create<ThemeState>()(
       themeVariant: 'classic' as ThemeVariant,
       primaryColor: '#16a34a',
       platformName: 'VectorPagamentos',
+      platformDescription: 'Gateway de pagamentos',
+      logoUrl: '',
       setTheme: (theme: Theme) => {
         set({ theme });
         // Reapply theme variant CSS vars for the new mode
@@ -86,6 +92,8 @@ export const useThemeStore = create<ThemeState>()(
         get().applyPrimaryColor(color);
       },
       setPlatformName: (name: string) => set({ platformName: name }),
+      setPlatformDescription: (desc: string) => set({ platformDescription: desc }),
+      setLogoUrl: (url: string) => set({ logoUrl: url }),
       applyPrimaryColor: (color: string) => {
         const rgb = hexToRgb(color);
         document.documentElement.style.setProperty('--primary', rgb);

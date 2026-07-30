@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
+import { useThemeStore } from '@/stores/themeStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, Transition, Menu } from '@headlessui/react';
 import {
@@ -61,6 +62,7 @@ const emptyRecipient: SplitRecipient = {
 // ══════════════════════════════════════════════════════
 
 export default function SplitManagement() {
+  const platformName = useThemeStore((s) => s.platformName);
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const [view, setView] = useState<'rules' | 'config'>('rules');
@@ -1042,7 +1044,7 @@ function RuleModal({
                                 onChange={(e) => updateRecipient(idx, 'recipient_type', e.target.value)}
                                 className="input w-full text-sm"
                               >
-                                <option value="account">Conta VectorPagamentos</option>
+                                <option value="account">Conta {platformName}</option>
                                 <option value="affiliate">Afiliado</option>
                                 <option value="external">Externo</option>
                               </select>

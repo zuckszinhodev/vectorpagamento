@@ -496,6 +496,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         Route::prefix('admin/system-config')->middleware(['role:admin,owner,support,financial,antifraud', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\V1\SystemConfigAdminController::class, 'getSystemConfig']);
             Route::put('/', [\App\Http\Controllers\Api\V1\SystemConfigAdminController::class, 'updateSystemConfig']);
+            Route::post('/logo', [\App\Http\Controllers\Api\V1\SystemConfigAdminController::class, 'uploadLogo']);
         });
 
         // Admin: Platform Settings - Settings page configuration

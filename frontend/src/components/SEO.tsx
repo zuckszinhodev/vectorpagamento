@@ -1,5 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { SEO_CONFIG, getFullUrl, getImageUrl } from '@/config/seo';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface SEOProps {
   title?: string;
@@ -18,7 +19,11 @@ export default function SEO({
   type = 'website',
   keywords = SEO_CONFIG.defaultKeywords,
 }: SEOProps) {
-  const fullTitle = title.includes('VectorPagamentos') ? title : `${title} | VectorPagamentos`;
+  const platformName = useThemeStore((s) => s.platformName);
+  const baseTitle = title === SEO_CONFIG.siteTitle ? platformName : title;
+  const fullTitle = baseTitle.includes(platformName) || baseTitle.includes('VectorPagamentos')
+    ? baseTitle.replace('VectorPagamentos', platformName)
+    : `${baseTitle} | ${platformName}`;
   const fullUrl = url ? getFullUrl(url) : SEO_CONFIG.baseUrl;
   const fullImage = getImageUrl(image);
 

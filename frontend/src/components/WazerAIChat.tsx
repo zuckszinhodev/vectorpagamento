@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
+import { useThemeStore } from '@/stores/themeStore';
 import {
   XMarkIcon, PaperAirplaneIcon, ChatBubbleLeftRightIcon, ArrowPathIcon,
   ChartBarIcon, RocketLaunchIcon, CubeIcon, CurrencyDollarIcon,
@@ -33,6 +34,8 @@ interface ChatMessage extends WazerAIChatMessage {
 }
 
 export default function WazerAIChat() {
+  const platformName = useThemeStore((s) => s.platformName);
+  const aiName = `${platformName} IA`;
   const { user } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -163,7 +166,7 @@ export default function WazerAIChat() {
             onClick={() => setIsOpen(true)}
             className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-500/40 hover:bg-emerald-500 hover:shadow-xl hover:shadow-emerald-500/50 transition-all hover:scale-105 active:scale-95"
             style={{ opacity: 1 }}
-            title="VectorIA"
+            title={aiName}
           >
             <ChatBubbleLeftRightIconSolid className="h-6 w-6" />
           </motion.button>
@@ -188,7 +191,7 @@ export default function WazerAIChat() {
                   <ChatBubbleLeftRightIconSolid className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white">VectorIA</h3>
+                  <h3 className="text-sm font-bold text-white">{aiName}</h3>
                   <p className="text-[11px] text-white/70">Assistente inteligente</p>
                 </div>
               </div>
@@ -217,7 +220,7 @@ export default function WazerAIChat() {
                     Olá, {firstName}! 👋
                   </h4>
                   <p className="text-xs text-tx-muted text-center max-w-[280px] mb-6">
-                    Sou a VectorIA, sua assistente inteligente. Posso te ajudar com vendas, métricas, estratégias e mais!
+                    Sou a {aiName}, sua assistente inteligente. Posso te ajudar com vendas, métricas, estratégias e mais!
                   </p>
 
                   {/* Suggestions */}
@@ -307,7 +310,7 @@ export default function WazerAIChat() {
                 </button>
               </div>
               <p className="mt-1.5 text-center text-[10px] text-tx-muted/60">
-                @VectorPagamentos inteligência para o seu negócio.
+                {platformName} — inteligência para o seu negócio.
               </p>
             </div>
           </motion.div>

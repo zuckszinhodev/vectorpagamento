@@ -2,6 +2,22 @@
  * Glow Spinner — classic border-spin loader with purple neon glow.
  * Supports three sizes: lg (full-page), md (section), sm (inline).
  */
+import { useThemeStore } from '@/stores/themeStore';
+
+/** Split a brand name into a main part + a highlighted trailing part (à la "Vector"+"Pay"). */
+function splitBrand(name: string): { main: string; accent: string } {
+  const clean = (name || 'VectorPay').trim();
+  const words = clean.split(/\s+/);
+  if (words.length > 1) {
+    const accent = words.pop() as string;
+    return { main: words.join(' ') + ' ', accent };
+  }
+  const m = clean.match(/^(.+?)(pay|pagamentos)$/i);
+  if (m && m[1]) {
+    return { main: m[1], accent: m[2] };
+  }
+  return { main: clean, accent: '' };
+}
 
 interface SpinnerProps {
   /** Optional text shown below the spinner */
@@ -32,6 +48,8 @@ export function Spinner({ text, size = 'lg', className = '' }: SpinnerProps) {
 
 /** Full-page centered spinner (h-screen) */
 export function PageSpinner({ text }: { text?: string }) {
+  const platformName = useThemeStore((s) => s.platformName);
+  const { main, accent } = splitBrand(platformName);
   return (
     <div className="flex h-screen items-center justify-center px-6">
       <div className="brand-loader-stage text-center">
@@ -40,13 +58,13 @@ export function PageSpinner({ text }: { text?: string }) {
 
         <div className="brand-loader-wordmark-shell">
           <div className="brand-loader-wordmark brand-loader-wordmark--sheen text-5xl font-black tracking-tight sm:text-6xl md:text-7xl" aria-hidden="true">
-            <span className="brand-loader-wazer">Vector</span>
-            <span className="brand-loader-pay">Pay</span>
+            <span className="brand-loader-wazer">{main}</span>
+            {accent && <span className="brand-loader-pay">{accent}</span>}
           </div>
 
           <div className="brand-loader-wordmark brand-loader-wordmark--main text-5xl font-black tracking-tight sm:text-6xl md:text-7xl">
-            <span className="brand-loader-wazer">Vector</span>
-            <span className="brand-loader-pay">Pay</span>
+            <span className="brand-loader-wazer">{main}</span>
+            {accent && <span className="brand-loader-pay">{accent}</span>}
           </div>
         </div>
 

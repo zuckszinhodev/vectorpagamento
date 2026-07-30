@@ -1,5 +1,6 @@
 import { formatCurrency } from '@/lib/api';
 import DOMPurify from 'dompurify';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface Product {
   id?: string;
@@ -52,6 +53,7 @@ const getBorderRadiusValue = (value?: string) => {
 };
 
 export function ClassicCheckoutPreview({ theme, product, blocks }: ClassicCheckoutPreviewProps) {
+  const platformName = useThemeStore((s) => s.platformName);
   const enabledBlocks = (blocks || []).filter((block) => block.enabled);
 
   if (enabledBlocks.length === 0) {
@@ -82,7 +84,7 @@ export function ClassicCheckoutPreview({ theme, product, blocks }: ClassicChecko
               <div key={block.id} className="flex items-center justify-between gap-2 p-4 border-b" style={{ borderColor: `${theme.primaryColor || '#10b981'}20` }}>
                 <div>
                   <h1 className="text-xl font-bold" style={{ color: theme.primaryColor || '#10b981' }}>
-                    {settings.title || product?.name || 'VectorPagamentos'}
+                    {settings.title || product?.name || platformName}
                   </h1>
                   {settings.showSecureBadge && (
                     <span className="text-xs font-semibold text-status-success">Compra Segura</span>

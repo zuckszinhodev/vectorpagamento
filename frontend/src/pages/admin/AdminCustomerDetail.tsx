@@ -198,6 +198,7 @@ export default function AdminCustomerDetail() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('info');
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [chargesPage, setChargesPage] = useState(1);
   const [chargesStatus, setChargesStatus] = useState('all');
   const [chargesSearch, setChargesSearch] = useState('');
@@ -491,25 +492,10 @@ export default function AdminCustomerDetail() {
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            title="Atualizar"
+            className="flex items-center justify-center rounded-lg border border-gray-200 bg-white p-2 text-gray-500 hover:bg-gray-100 transition-colors"
           >
-            <ArrowPathIcon className="h-3.5 w-3.5" />
-            Atualizar
-          </button>
-          <button
-            onClick={() => recalculateBalanceMutation.mutate()}
-            disabled={recalculateBalanceMutation.isPending}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-          >
-            <ArrowPathIcon className="h-3.5 w-3.5" />
-            Recalcular Saldo
-          </button>
-          <button
-            onClick={() => setShowWalletAdjustmentModal(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
-          >
-            <AdjustmentsHorizontalIcon className="h-3.5 w-3.5" />
-            Ajustar Saldo
+            <ArrowPathIcon className="h-4 w-4" />
           </button>
           <button
             onClick={() => {
@@ -518,79 +504,122 @@ export default function AdminCustomerDetail() {
               }
             }}
             disabled={impersonateMutation.isPending}
-            className="flex items-center gap-1.5 rounded-md bg-gray-900 px-3 py-2 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 transition-colors"
           >
-            <KeyIcon className="h-3.5 w-3.5" />
-            Login como Vendedor
+            <KeyIcon className="h-4 w-4" />
+            Entrar como vendedor
           </button>
-          <button
-            onClick={() => {
-              if (window.confirm(`Aprovar o KYC de ${customer.name} manualmente, sem exigir documentação?`)) {
-                approveKycMutation.mutate();
-              }
-            }}
-            disabled={approveKycMutation.isPending || customer.kyc_status === 'approved'}
-            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            <ShieldCheckIcon className="h-3.5 w-3.5" />
-            {customer.kyc_status === 'approved' ? 'KYC Aprovado' : 'Aprovar KYC'}
-          </button>
-          <button
-            onClick={() => {
-              if (window.confirm(`Remover / resetar o 2FA de ${customer.name}? O vendedor poderá configurar novamente.`)) {
-                resetMfaMutation.mutate();
-              }
-            }}
-            disabled={resetMfaMutation.isPending || !customer.mfa_enabled}
-            className="flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-2 text-xs font-medium text-white hover:bg-rose-700 disabled:opacity-50 transition-colors"
-          >
-            <KeyIcon className="h-3.5 w-3.5" />
-            {customer.mfa_enabled ? 'Resetar 2FA' : '2FA já desativado'}
-          </button>
+
+          {/* Actions dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setActionsOpen((o) => !o)}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <AdjustmentsHorizontalIcon className="h-4 w-4" />
+              Ações
+              <ChevronRightIcon className={`h-3.5 w-3.5 transition-transform ${actionsOpen ? 'rotate-90' : ''}`} />
+            </button>
+            {actionsOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setActionsOpen(false)} />
+                <div className="absolute right-0 z-20 mt-2 w-64 overflow-hidden rounded-xl border border-gray-200 bg-white py-1.5 shadow-xl">
+                  <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Financeiro</p>
+                  <button
+                    onClick={() => { setActionsOpen(false); recalculateBalanceMutation.mutate(); }}
+                    disabled={recalculateBalanceMutation.isPending}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <ArrowPathIcon className="h-4 w-4 text-emerald-600" /> Recalcular saldo
+                  </button>
+                  <button
+                    onClick={() => { setActionsOpen(false); setShowWalletAdjustmentModal(true); }}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <AdjustmentsHorizontalIcon className="h-4 w-4 text-amber-600" /> Ajustar saldo
+                  </button>
+                  <div className="my-1 border-t border-gray-100" />
+                  <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Segurança / KYC</p>
+                  <button
+                    onClick={() => {
+                      setActionsOpen(false);
+                      if (window.confirm(`Aprovar o KYC de ${customer.name} manualmente, sem exigir documentação?`)) {
+                        approveKycMutation.mutate();
+                      }
+                    }}
+                    disabled={approveKycMutation.isPending || customer.kyc_status === 'approved'}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                  >
+                    <ShieldCheckIcon className="h-4 w-4 text-blue-600" /> {customer.kyc_status === 'approved' ? 'KYC já aprovado' : 'Aprovar KYC (sem doc)'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActionsOpen(false);
+                      if (window.confirm(`Remover / resetar o 2FA de ${customer.name}? O vendedor poderá configurar novamente.`)) {
+                        resetMfaMutation.mutate();
+                      }
+                    }}
+                    disabled={resetMfaMutation.isPending || !customer.mfa_enabled}
+                    className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                  >
+                    <KeyIcon className="h-4 w-4 text-rose-600" /> {customer.mfa_enabled ? 'Resetar 2FA' : '2FA já desativado'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Financial Summary Cards */}
+      {/* Financial KPIs */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-md bg-emerald-50 p-4">
-          <p className="text-xs text-emerald-600 mb-1">Saldo Disponível</p>
-          <p className="text-xl font-bold text-emerald-600">{formatCurrency(customer.financials.available_balance)}</p>
-        </div>
-        <div className="rounded-md bg-green-50 p-4">
-          <p className="text-xs text-green-600 mb-1">Faturamento Total</p>
-          <p className="text-xl font-bold text-green-600">{formatCurrency(customer.financials.total_revenue)}</p>
-        </div>
-        <div className="rounded-md bg-blue-50 p-4">
-          <p className="text-xs text-blue-600 mb-1">Total Sacado</p>
-          <p className="text-xl font-bold text-blue-600">{formatCurrency(customer.financials.total_withdrawn)}</p>
-        </div>
-        <div className="rounded-md bg-amber-50 p-4">
-          <p className="text-xs text-amber-600 mb-1">Saques Pendentes</p>
-          <p className="text-xl font-bold text-amber-600">{formatCurrency(customer.financials.pending_withdrawals)}</p>
-        </div>
+        {[
+          { label: 'Saldo disponível', value: customer.financials.available_balance, color: 'text-emerald-600', accent: 'bg-emerald-500' },
+          { label: 'Faturamento total', value: customer.financials.total_revenue, color: 'text-gray-900', accent: 'bg-green-500' },
+          { label: 'Total sacado', value: customer.financials.total_withdrawn, color: 'text-gray-900', accent: 'bg-blue-500' },
+          { label: 'Saques pendentes', value: customer.financials.pending_withdrawals, color: 'text-amber-600', accent: 'bg-amber-500' },
+        ].map((c) => (
+          <div key={c.label} className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <span className={`absolute left-0 top-0 h-full w-1 ${c.accent}`} />
+            <p className="text-xs font-medium text-gray-500">{c.label}</p>
+            <p className={`mt-1 text-2xl font-bold tracking-tight ${c.color}`}>{formatCurrency(c.value)}</p>
+          </div>
+        ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-md bg-slate-500/10 p-4">
-          <p className="text-xs text-slate-600 mb-1">Compliance KYC</p>
-          <p className="text-sm font-bold text-slate-700">
-            {customer.kyc_status === 'approved' ? 'Aprovado' : customer.kyc_status === 'rejected' ? 'Rejeitado' : 'Em análise'}
-          </p>
-        </div>
-        <div className="rounded-md bg-cyan-500/10 p-4">
-          <p className="text-xs text-cyan-600 mb-1">MFA</p>
-          <p className="text-sm font-bold text-cyan-700">{customer.mfa_enabled ? 'Ativo' : 'Desativado'}</p>
-        </div>
-        <div className="rounded-md bg-green-50 p-4">
-          <p className="text-xs text-green-600 mb-1">Último Login</p>
-          <p className="text-sm font-bold text-green-700">{customer.last_login_at ? formatDate(customer.last_login_at) : 'Sem registro'}</p>
-        </div>
-        <div className="rounded-md bg-red-50 p-4">
-          <p className="text-xs text-red-600 mb-1">Risco Operacional</p>
-          <p className="text-sm font-bold text-red-700">
-            {customer.status === 'blocked' || !customer.mfa_enabled || customer.kyc_status !== 'approved' ? 'Atenção' : 'Controlado'}
-          </p>
-        </div>
+      {/* Compact status strip */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border border-gray-200 bg-white px-4 py-3">
+        {(() => {
+          const kyc = customer.kyc_status === 'approved'
+            ? { t: 'Aprovado', c: 'bg-emerald-50 text-emerald-700' }
+            : customer.kyc_status === 'rejected'
+              ? { t: 'Rejeitado', c: 'bg-red-50 text-red-700' }
+              : { t: 'Em análise', c: 'bg-amber-50 text-amber-700' };
+          const mfa = customer.mfa_enabled
+            ? { t: 'Ativo', c: 'bg-emerald-50 text-emerald-700' }
+            : { t: 'Desativado', c: 'bg-gray-100 text-gray-500' };
+          const riskAttention = customer.status === 'blocked' || !customer.mfa_enabled || customer.kyc_status !== 'approved';
+          const risk = riskAttention
+            ? { t: 'Atenção', c: 'bg-red-50 text-red-700' }
+            : { t: 'Controlado', c: 'bg-emerald-50 text-emerald-700' };
+          const item = (label: string, s: { t: string; c: string }) => (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400">{label}</span>
+              <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${s.c}`}>{s.t}</span>
+            </div>
+          );
+          return (
+            <>
+              {item('KYC', kyc)}
+              {item('MFA', mfa)}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">Último login</span>
+                <span className="text-xs font-medium text-gray-700">{customer.last_login_at ? formatDate(customer.last_login_at) : 'Sem registro'}</span>
+              </div>
+              {item('Risco', risk)}
+            </>
+          );
+        })()}
       </div>
 
       {/* Tabs */}
@@ -809,8 +838,8 @@ function InfoTab({
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       {/* Personal Info */}
-      <div className="rounded-lg bg-white p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <h3 className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3 text-sm font-semibold text-gray-900">
           <UserCircleIcon className="h-4 w-4 text-green-700" />
           Dados Pessoais
         </h3>
@@ -829,8 +858,8 @@ function InfoTab({
       </div>
 
       {/* KYC Info */}
-      <div className="rounded-lg bg-white p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <h3 className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3 text-sm font-semibold text-gray-900">
           <IdentificationIcon className="h-4 w-4 text-green-700" />
           KYC / Verificação
         </h3>
@@ -895,8 +924,8 @@ function InfoTab({
       </div>
 
       {/* Payment Info */}
-      <div className="rounded-lg bg-white p-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <h3 className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3 text-sm font-semibold text-gray-900">
           <BanknotesIcon className="h-4 w-4 text-green-700" />
           Dados de Pagamento
         </h3>
@@ -949,8 +978,8 @@ function InfoTab({
 
       {/* Financial Stats + Status Control */}
       <div className="space-y-6">
-        <div className="rounded-lg bg-white p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Resumo Financeiro</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 border-b border-gray-100 pb-3 text-sm font-semibold text-gray-900">Resumo Financeiro</h3>
           <div className="grid grid-cols-2 gap-3">
             <StatMini label="Total Cobranças" value={customer.financials.total_charges.toString()} />
             <StatMini label="Aprovadas" value={customer.financials.approved_charges.toString()} color="emerald" />
@@ -960,8 +989,8 @@ function InfoTab({
         </div>
 
         {/* Status Control */}
-        <div className="rounded-lg bg-white p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 flex items-center gap-2 border-b border-gray-100 pb-3 text-sm font-semibold text-gray-900">
             <ShieldCheckIcon className="h-4 w-4 text-green-700" />
             Controle de Conta
           </h3>
@@ -1033,8 +1062,8 @@ function InfoTab({
 
         {/* Activity Timeline */}
         {customer.logs && customer.logs.length > 0 && (
-          <div className="rounded-lg bg-white p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-900 mb-4">Histórico Rápido</h3>
+          <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-4 border-b border-gray-100 pb-3 text-sm font-semibold text-gray-900">Histórico Rápido</h3>
             <div className="space-y-3">
               {customer.logs.map((log, i) => (
                 <div key={i} className="flex items-start gap-3">
@@ -2205,8 +2234,8 @@ function LogsTab({
     <div className="space-y-6">
       {/* Activity timeline */}
       {activityLogs.length > 0 && (
-        <div className="rounded-lg bg-white p-5 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Timeline de Eventos</h3>
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 border-b border-gray-100 pb-3 text-sm font-semibold text-gray-900">Timeline de Eventos</h3>
           <div className="space-y-3">
             {activityLogs.map((log, i) => (
               <div key={i} className="flex items-start gap-3">
@@ -2423,8 +2452,8 @@ function LogsTab({
 function InfoRow({ label, value, mono, badge }: { label: string; value?: string | null; mono?: boolean; badge?: boolean }) {
   if (!value) return null;
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs text-gray-500">{label}</span>
+    <div className="flex items-center justify-between gap-4 border-b border-gray-50 py-1.5 last:border-b-0">
+      <span className="shrink-0 text-xs text-gray-500">{label}</span>
       {badge ? (
         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
           value === 'approved' ? 'bg-emerald-50 text-emerald-700' :
@@ -2435,7 +2464,7 @@ function InfoRow({ label, value, mono, badge }: { label: string; value?: string 
           {value === 'approved' ? 'Aprovado' : value === 'submitted' ? 'Enviado' : value === 'under_review' ? 'Em Análise' : value === 'pending' ? 'Pendente' : 'Rejeitado'}
         </span>
       ) : (
-        <span className={`text-xs font-medium text-gray-900 ${mono ? 'font-mono' : ''}`}>{value}</span>
+        <span className={`text-right text-xs font-medium text-gray-900 break-words ${mono ? 'font-mono' : ''}`}>{value}</span>
       )}
     </div>
   );
@@ -2444,7 +2473,7 @@ function InfoRow({ label, value, mono, badge }: { label: string; value?: string 
 function StatMini({ label, value, color }: { label: string; value: string; color?: string }) {
   const colorClass = color === 'emerald' ? 'text-emerald-700' : color === 'amber' ? 'text-amber-700' : color === 'purple' ? 'text-green-700' : 'text-gray-900';
   return (
-    <div className="rounded-lg bg-gray-50 p-3">
+    <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
       <p className="text-xs text-gray-500 mb-0.5">{label}</p>
       <p className={`text-lg font-bold ${colorClass}`}>{value}</p>
     </div>

@@ -79,6 +79,7 @@ import PixIcon from '@/components/icons/PixIcon';
 import { GlowLineChart, ChartCard } from '@/components/ui/GlowChart';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 
 const GOAL_TARGET_SEQUENCE_CENTS = [1000000, 5000000] as const;
 const GOAL_ADVANCE_DELAY_MS = 2 * 24 * 60 * 60 * 1000;
@@ -452,6 +453,7 @@ function DateRangePicker({
 }
 
 export default function DashboardPage() {
+  const platformName = useThemeStore((s) => s.platformName);
   const navigate = useNavigate();
   const { user, isImpersonating, stopImpersonation } = useAuthStore();
   const [showBalance, setShowBalance] = useState(true);
@@ -648,8 +650,8 @@ export default function DashboardPage() {
 
   const supportWhatsAppUrl = useMemo(() => {
     const message = user?.name
-      ? `Olá! Sou ${user.name} e bati minha meta de faturamento na VectorPagamentos. Gostaria de falar com o suporte.`
-      : 'Olá! Bati minha meta de faturamento na VectorPagamentos e gostaria de falar com o suporte.';
+      ? `Olá! Sou ${user.name} e bati minha meta de faturamento na ${platformName}. Gostaria de falar com o suporte.`
+      : `Olá! Bati minha meta de faturamento na ${platformName} e gostaria de falar com o suporte.`;
 
     return `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
   }, [user?.name]);
@@ -1114,7 +1116,7 @@ export default function DashboardPage() {
       <footer className="border-t border-border-DEFAULT/60 mt-8 pt-6">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
           <div className="text-xs text-tx-muted">
-            <p>VectorPagamentos Intermediadora de Pagamentos</p>
+            <p>{platformName} Intermediadora de Pagamentos</p>
             <a 
               href="https://wa.me/5511940968290" 
               target="_blank" 
@@ -1128,7 +1130,7 @@ export default function DashboardPage() {
             <a href="/privacy" className="hover:text-tx-primary transition-colors">
               Política de Privacidade
             </a>
-            <span>VectorPagamentos © 2026</span>
+            <span>{platformName} © 2026</span>
           </div>
         </div>
       </footer>

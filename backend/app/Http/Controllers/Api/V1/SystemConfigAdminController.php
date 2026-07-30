@@ -30,12 +30,19 @@ class SystemConfigAdminController extends Controller
                 $appearance = [];
             }
 
+            $name = $this->normalizePlatformName($appearance['platform_name'] ?? config('app.name', 'Vector Pagamentos'));
+
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'platform_name' => $this->normalizePlatformName($appearance['platform_name'] ?? config('app.name', 'Vector Pagamentos')),
+                    'platform_name' => $name,
+                    'platform_description' => $appearance['platform_description'] ?? 'Gateway de pagamentos',
                     'primary_color' => $appearance['primary_color'] ?? '#9333ea',
                     'logo_url' => $appearance['logo_url'] ?? '',
+                    'support_email' => $appearance['support_email'] ?? '',
+                    'seo_title' => $appearance['seo_title'] ?? $name,
+                    'seo_description' => $appearance['seo_description'] ?? ($appearance['platform_description'] ?? ''),
+                    'seo_keywords' => $appearance['seo_keywords'] ?? '',
                 ],
             ]);
         } catch (\Throwable $e) {
@@ -58,8 +65,13 @@ class SystemConfigAdminController extends Controller
                 'data' => [
                     'appearance' => [
                         'platform_name' => $this->normalizePlatformName($appearance['platform_name'] ?? config('app.name', 'Vector Pagamentos')),
+                        'platform_description' => $appearance['platform_description'] ?? 'Gateway de pagamentos',
                         'primary_color' => $appearance['primary_color'] ?? '#9333ea',
                         'logo_url' => $appearance['logo_url'] ?? '',
+                        'support_email' => $appearance['support_email'] ?? '',
+                        'seo_title' => $appearance['seo_title'] ?? '',
+                        'seo_description' => $appearance['seo_description'] ?? '',
+                        'seo_keywords' => $appearance['seo_keywords'] ?? '',
                     ],
                     'api' => [
                         'rate_limit_per_minute' => $api['rate_limit_per_minute'] ?? 1000,
@@ -82,15 +94,38 @@ class SystemConfigAdminController extends Controller
         try {
             $validated = $request->validate([
                 'platform_name' => ['sometimes', 'string', 'max:100'],
+                'platform_description' => ['sometimes', 'nullable', 'string', 'max:255'],
                 'primary_color' => ['sometimes', 'string', 'max:7'],
                 'logo_url' => ['sometimes', 'nullable', 'string'],
+                'support_email' => ['sometimes', 'nullable', 'string', 'max:120'],
+                'seo_title' => ['sometimes', 'nullable', 'string', 'max:120'],
+                'seo_description' => ['sometimes', 'nullable', 'string', 'max:255'],
+                'seo_keywords' => ['sometimes', 'nullable', 'string', 'max:255'],
                 'rate_limit_per_minute' => ['sometimes', 'integer', 'min:10', 'max:10000'],
                 'webhook_timeout' => ['sometimes', 'integer', 'min:5', 'max:120'],
                 'cors_enabled' => ['sometimes', 'boolean'],
             ]);
 
+            // key => group mapping so getByGroup() reads them back correctly.
+            $groups = [
+                'platform_name' => 'appearance', 'platform_description' => 'appearance',
+                'primary_color' => 'appearance', 'logo_url' => 'appearance',
+                'support_email' => 'appearance', 'seo_title' => 'appearance',
+                'seo_description' => 'appearance', 'seo_keywords' => 'appearance',
+                'rate_limit_per_minute' => 'api', 'webhook_timeout' => 'api', 'cors_enabled' => 'api',
+            ];
+
             foreach ($validated as $key => $value) {
-                SystemSetting::set($key, $value);
+                $type = is_bool($value) ? 'boolean' : (is_int($value) ? 'integer' : 'string');
+                SystemSetting::updateOrCreate(
+                    ['key' => $key],
+                    [
+                        'value' => is_bool($value) ? ($value ? '1' : '0') : (string) ($value ?? ''),
+                        'group' => $groups[$key] ?? 'general',
+                        'type' => $type,
+                    ]
+                );
+                \Illuminate\Support\Facades\Cache::forget("system_setting_{$key}");
             }
 
             return response()->json([
@@ -101,6 +136,42 @@ class SystemConfigAdminController extends Controller
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('SystemConfigAdminController::updateSystemConfig error', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'Erro interno do servidor'], 500);
+        }
+    }
+
+    /**
+     * Upload a logo image and set it as the platform logo (logo_url).
+     */
+    public function uploadLogo(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'logo' => ['required', 'file', 'max:2048', 'mimes:png,jpg,jpeg,webp,svg,gif'],
+            ]);
+
+            $file = $request->file('logo');
+            $ext = strtolower($file->getClientOriginalExtension() ?: 'png');
+            $name = 'logo-' . time() . '-' . Str::random(6) . '.' . $ext;
+            $file->storeAs('public/branding', $name);
+
+            $url = '/storage/branding/' . $name;
+
+            SystemSetting::updateOrCreate(
+                ['key' => 'logo_url'],
+                ['value' => $url, 'group' => 'appearance', 'type' => 'string']
+            );
+            \Illuminate\Support\Facades\Cache::forget('system_setting_logo_url');
+
+            return response()->json([
+                'success' => true,
+                'data' => ['logo_url' => $url],
+                'message' => 'Logo enviada com sucesso',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => 'Arquivo inválido. Envie PNG, JPG, WEBP ou SVG até 2MB.'], 422);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('SystemConfigAdminController::uploadLogo error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Erro ao enviar logo'], 500);
         }
     }
 

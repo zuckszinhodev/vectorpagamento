@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import { wazerAIService, type WazerAIChatMessage, type WazerAIActionResult } from '@/services/api/wazerAI.service';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore } from '@/stores/themeStore';
 
 interface ChatMessage extends WazerAIChatMessage {
   id: string;
@@ -19,6 +20,7 @@ const suggestions = [
 ];
 
 export default function WazerIAPage() {
+  const platformName = useThemeStore((s) => s.platformName);
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -118,7 +120,7 @@ export default function WazerIAPage() {
       <div className="flex flex-col gap-3 border-b border-border-DEFAULT px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-semibold text-tx-primary sm:text-xl">VectorIA</h1>
+            <h1 className="text-lg font-semibold text-tx-primary sm:text-xl">{platformName} IA</h1>
             <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
               Online
             </span>

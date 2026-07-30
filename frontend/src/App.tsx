@@ -41,6 +41,7 @@ const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
 const AdminControlTower = lazy(() => import('@/pages/admin/AdminControlTower'));
 const AdminCustomers = lazy(() => import('@/pages/admin/AdminCustomers'));
 const AdminCustomerDetail = lazy(() => import('@/pages/admin/AdminCustomerDetail'));
+const AdminGatewaySettings = lazy(() => import('@/pages/admin/AdminGatewaySettings'));
 const AdminKYC = lazy(() => import('@/pages/admin/AdminKYC'));
 const AdminFinance = lazy(() => import('@/pages/admin/AdminFinance'));
 const AdminAcquirers = lazy(() => import('@/pages/admin/AdminAcquirers'));
@@ -307,7 +308,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
-  const { theme, themeVariant, setPrimaryColor, setPlatformName, applyPrimaryColor, applyThemeVariant, primaryColor } = useThemeStore();
+  const { theme, themeVariant, setPrimaryColor, setPlatformName, setPlatformDescription, setLogoUrl, applyPrimaryColor, applyThemeVariant, primaryColor } = useThemeStore();
   const { checkAuth, isAuthenticated, user, resetAdminMfaVerification, startImpersonation } = useAuthStore();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -357,13 +358,32 @@ function App() {
           if (config.platform_name) {
             setPlatformName(config.platform_name);
           }
+          if (config.platform_description) {
+            setPlatformDescription(config.platform_description);
+          }
+          setLogoUrl(config.logo_url || '');
+          // Apply SEO: document title + meta description
+          const title = config.seo_title || config.platform_name;
+          if (title) {
+            document.title = title;
+          }
+          const metaDesc = config.seo_description || config.platform_description;
+          if (metaDesc) {
+            let tag = document.querySelector('meta[name="description"]');
+            if (!tag) {
+              tag = document.createElement('meta');
+              tag.setAttribute('name', 'description');
+              document.head.appendChild(tag);
+            }
+            tag.setAttribute('content', metaDesc);
+          }
         }
       } catch {
         // Silently fail - use cached/default values
       }
     };
     fetchBranding();
-  }, [setPrimaryColor, setPlatformName]);
+  }, [setPrimaryColor, setPlatformName, setPlatformDescription, setLogoUrl]);
 
   useLayoutEffect(() => {
     const isAdminRoute = location.pathname.startsWith('/admin');
@@ -467,7 +487,7 @@ function App() {
         <Route path="support" element={<AdminSupport />} />
         <Route path="approvals" element={<AdminFinance mode="transactions" />} />
         <Route path="security" element={<Navigate to="/admin" replace />} />
-        <Route path="settings" element={<Navigate to="/admin" replace />} />
+        <Route path="settings" element={<AdminGatewaySettings />} />
         <Route path="api" element={<Navigate to="/admin" replace />} />
         <Route path="branding" element={<Navigate to="/admin" replace />} />
         <Route path="monitoring" element={<AdminMonitoring />} />

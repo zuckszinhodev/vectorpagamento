@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { api } from '@/lib/api';
 import SEO from '@/components/SEO';
+import { useThemeStore } from '@/stores/themeStore';
 import toast from 'react-hot-toast';
 import {
   ArrowLeftIcon,
@@ -28,6 +29,7 @@ function Spinner() {
 }
 
 export default function ForgotPasswordPage() {
+  const platformName = useThemeStore((s) => s.platformName);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
@@ -57,7 +59,7 @@ export default function ForgotPasswordPage() {
     <>
       <SEO
         title="Recuperar senha"
-        description="Recupere o acesso a sua conta VectorPagamentos"
+        description={`Recupere o acesso a sua conta ${platformName}`}
         url="/forgot-password"
       />
 
