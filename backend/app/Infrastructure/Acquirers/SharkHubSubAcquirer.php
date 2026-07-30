@@ -104,24 +104,46 @@ class SharkHubSubAcquirer implements AcquirerInterface
                 'payload' => $payload,
             ]);
 
-            $response = $this->paymentClient()
-                ->post("{$this->baseUrl}/v1/payment", $payload);
+            // Retry on transient provider errors — SharkHub intermittently
+            // returns {"message":"Provider error."} / 5xx even for valid requests.
+            $maxAttempts = 3;
+            $response = null;
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                $response = $this->paymentClient()
+                    ->post("{$this->baseUrl}/v1/payment", $payload);
+
+                if ($response->successful()) {
+                    break;
+                }
+
+                $err = $this->responseJson($response);
+                $msg = strtolower((string) ($err['message'] ?? $err['error'] ?? ''));
+                $retryable = str_contains($msg, 'provider error')
+                    || in_array($response->status(), [429, 500, 502, 503, 504], true);
+
+                Log::warning('SharkHubSub: PIX payment attempt failed', [
+                    'charge_id' => $charge->id,
+                    'attempt' => $attempt,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                    'retryable' => $retryable,
+                ]);
+
+                if (!$retryable || $attempt === $maxAttempts) {
+                    break;
+                }
+
+                usleep(700000); // 0.7s backoff before retrying
+            }
 
             Log::info('SharkHubSub: PIX payment response', [
                 'charge_id' => $charge->id,
                 'status' => $response->status(),
-                'headers' => $response->headers(),
                 'body' => $response->body(),
             ]);
 
             if (!$response->successful()) {
                 $error = $this->responseJson($response);
-
-                Log::warning('SharkHubSub: PIX payment failed', [
-                    'charge_id' => $charge->id,
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
 
                 return [
                     'success' => false,
@@ -319,7 +341,17 @@ class SharkHubSubAcquirer implements AcquirerInterface
         $account = $charge->relationLoaded('account') ? $charge->account : Account::find($charge->account_id);
         $document = $this->normalizeTaxId((string) ($customer['document'] ?? ''));
         $sellerDocument = $this->resolveSellerTaxId($account);
-        $description = (string) ($charge->description ?? 'Pagamento PIX');
+
+        // SharkHub requires several string fields to be >= 5 characters.
+        $rawDescription = trim((string) ($charge->description ?? ''));
+        $description = mb_strlen($rawDescription) >= 5
+            ? $rawDescription
+            : ($rawDescription !== '' ? $rawDescription . ' - Pagamento' : 'Pagamento PIX');
+
+        $rawPayerName = trim((string) ($customer['name'] ?? ''));
+        $payerName = mb_strlen($rawPayerName) >= 5
+            ? $rawPayerName
+            : ($rawPayerName !== '' ? $rawPayerName . ' Cliente' : 'Cliente PIX');
         $metadata = array_merge($charge->metadata ?? [], [
             'charge_id' => $charge->id,
             'account_id' => $charge->account_id,
@@ -341,7 +373,7 @@ class SharkHubSubAcquirer implements AcquirerInterface
             'externalRef' => $charge->id,
             'notificationUrl' => $this->webhookUrl,
             'payer' => array_filter([
-                'name' => (string) ($customer['name'] ?? 'Cliente'),
+                'name' => $payerName,
                 'taxId' => $document,
                 'email' => (string) ($customer['email'] ?? 'cliente@email.com'),
                 'phone' => preg_replace('/\D/', '', (string) ($customer['phone'] ?? '')),
@@ -485,7 +517,7 @@ class SharkHubSubAcquirer implements AcquirerInterface
             'Authorization' => 'Bearer ' . $this->apiKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->connectTimeout(3)->timeout(10);
+        ])->connectTimeout(5)->timeout(30);
     }
 
     private function transferClient()
@@ -494,7 +526,7 @@ class SharkHubSubAcquirer implements AcquirerInterface
             'Authorization' => 'Bearer ' . $this->withdrawalKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->connectTimeout(3)->timeout(10);
+        ])->connectTimeout(5)->timeout(30);
     }
 
     private function responseJson($response): array
