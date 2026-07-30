@@ -284,6 +284,12 @@ class WitetecAcquirer implements AcquirerInterface
         $documentType = $this->getDocumentType($customer['document'] ?? '');
         $phone = preg_replace('/\D/', '', $customer['phone'] ?? '');
 
+        // Witetec requires a non-empty customer phone. Use a safe fallback when
+        // the seller didn't collect one so the charge can still be generated.
+        if (strlen((string) $phone) < 10) {
+            $phone = '11999999999';
+        }
+
         // Build customer data
         $customerData = [
             'name' => $customer['name'] ?? 'Cliente',
