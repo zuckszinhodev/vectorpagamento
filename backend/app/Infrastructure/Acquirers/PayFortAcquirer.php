@@ -22,6 +22,8 @@ use Illuminate\Support\Facades\Log;
  */
 class PayFortAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private string $apiKey;
     private string $apiSecret;
     private string $baseUrl;
@@ -57,7 +59,7 @@ class PayFortAcquirer implements AcquirerInterface
             $response = Http::withHeaders([
                 'Authorization' => 'Basic ' . $basicAuth,
                 'Content-Type' => 'application/json',
-            ])->connectTimeout(3)->timeout(5)->post("{$this->baseUrl}/api/auth");
+            ])->connectTimeout($this->httpConnectTimeout(3))->timeout($this->httpTimeout(5))->post("{$this->baseUrl}/api/auth");
 
             if (!$response->successful()) {
                 Log::error('PayFort auth failed', [
@@ -119,7 +121,7 @@ class PayFortAcquirer implements AcquirerInterface
             'Authorization' => 'Bearer ' . $token,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->connectTimeout(3)->timeout(8);
+        ])->connectTimeout($this->httpConnectTimeout(3))->timeout($this->httpTimeout(8));
 
         if (config('app.env') === 'local') {
             $client = $client->withoutVerifying();

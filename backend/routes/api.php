@@ -492,6 +492,32 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::post('/{acquirerId}/health-check', [\App\Http\Controllers\Api\V1\AcquirerAdminController::class, 'healthCheck']);
         });
 
+        // Admin: novo motor de roteamento de adquirentes (cadastro, credenciais
+        // criptografadas, políticas de balanceamento, monitoramento em tempo real).
+        Route::prefix('admin/routing')->middleware(['role:admin,owner,financial', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
+            $controller = \App\Http\Controllers\Api\V1\Admin\AcquirerRoutingAdminController::class;
+
+            // Dashboard e observabilidade
+            Route::get('/dashboard', [$controller, 'dashboard']);
+            Route::get('/logs', [$controller, 'routingLogs']);
+            Route::get('/events', [$controller, 'events']);
+            Route::post('/preview', [$controller, 'previewRouting']);
+
+            // Políticas de balanceamento (global ou por estabelecimento)
+            Route::get('/policies', [$controller, 'getPolicies']);
+            Route::put('/policies', [$controller, 'savePolicy']);
+
+            // CRUD de adquirentes
+            Route::get('/acquirers', [$controller, 'index']);
+            Route::post('/acquirers', [$controller, 'store']);
+            Route::get('/acquirers/{acquirerId}', [$controller, 'show']);
+            Route::put('/acquirers/{acquirerId}', [$controller, 'update']);
+            Route::delete('/acquirers/{acquirerId}', [$controller, 'destroy']);
+            Route::post('/acquirers/{acquirerId}/toggle', [$controller, 'toggle']);
+            Route::post('/acquirers/{acquirerId}/test-connection', [$controller, 'testConnection']);
+            Route::post('/acquirers/{acquirerId}/reset-circuit', [$controller, 'resetCircuit']);
+        });
+
         // Admin: System Config - SECURITY: Added admin audit logging
         Route::prefix('admin/system-config')->middleware(['role:admin,owner,support,financial,antifraud', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\V1\SystemConfigAdminController::class, 'getSystemConfig']);

@@ -52,6 +52,7 @@ return [
 
         // Application Service Providers
         App\Providers\AppServiceProvider::class,
+        App\Providers\AcquirerRoutingServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         
         // Third Party Service Providers

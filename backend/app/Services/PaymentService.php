@@ -55,6 +55,12 @@ class PaymentService
     private string $defaultAcquirer;
     private AcquirerFactory $factory;
 
+    /**
+     * New intelligent routing engine. Null when it could not be resolved, in
+     * which case every payment keeps using the legacy path.
+     */
+    private ?\App\Application\Routing\PaymentRoutingService $routingEngine = null;
+
     /** @var array<string, CircuitBreaker> */
     private array $circuitBreakers = [];
 
@@ -88,6 +94,14 @@ class PaymentService
             $this->rotationService = app(AcquirerRotationService::class);
         } catch (\Throwable $e) {
             Log::warning('AcquirerRotationService failed to initialize', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            $this->routingEngine = app(\App\Application\Routing\PaymentRoutingService::class);
+        } catch (\Throwable $e) {
+            Log::warning('Motor de roteamento inteligente indisponível; usando caminho legado', [
                 'error' => $e->getMessage(),
             ]);
         }
@@ -289,6 +303,14 @@ class PaymentService
                 return $forcedRoutingError;
             }
 
+            // New intelligent routing engine: handles every payment method with
+            // one fallback chain, circuit breaker and metrics. Returns null when
+            // it is disabled or not applicable, so the legacy path still runs.
+            $routed = $this->processViaRoutingEngine($charge, $paymentData, $lockedAccountRouting);
+            if ($routed !== null) {
+                return $routed;
+            }
+
             // Route PIX payments with automatic fallback chain based on account acquirers
             if ($charge->payment_method === 'pix') {
                 return $this->processPixWithFallback($charge, $acquirer, $lockedAccountRouting);
@@ -324,6 +346,125 @@ class PaymentService
                 'error' => 'Erro interno ao processar pagamento: ' . $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Bridge into the intelligent routing engine.
+     *
+     * Returns null when the engine should not handle this charge — the caller
+     * then falls through to the legacy path untouched. That is what makes the
+     * migration reversible: flipping ACQUIRER_ROUTING_ENGINE_ENABLED off, or
+     * dialling the rollout percentage down, restores the previous behaviour
+     * without a deploy.
+     *
+     * @param array<string, mixed> $paymentData
+     * @param array<string, mixed> $lockedAccountRouting
+     * @return array<string, mixed>|null
+     */
+    private function processViaRoutingEngine(Charge $charge, array $paymentData, array $lockedAccountRouting): ?array
+    {
+        if ($this->routingEngine === null || !$this->shouldUseRoutingEngine($charge)) {
+            return null;
+        }
+
+        try {
+            $context = $this->buildRoutingContext($charge, $lockedAccountRouting);
+            $result = $this->routingEngine->charge($charge, $context, $paymentData);
+
+            if (!$result->successful) {
+                $charge->update(['status' => 'failed']);
+
+                return $result->toLegacyArray();
+            }
+
+            $selected = $result->selectedAcquirer();
+
+            // Persist which acquirer actually processed it — webhooks, status
+            // sync and refunds all route by this field.
+            if ($selected !== null && ($charge->acquirer ?? null) !== $selected) {
+                $charge->acquirer = $selected;
+            }
+
+            $charge->status = 'pending';
+            $charge->save();
+
+            return $result->toLegacyArray();
+        } catch (\Throwable $e) {
+            // Any unexpected failure inside the new engine must not take
+            // payments down: log it and let the legacy path try.
+            Log::error('Motor de roteamento falhou; caindo para o caminho legado', [
+                'charge_id' => $charge->id,
+                'payment_method' => $charge->payment_method,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Feature flag + deterministic canary.
+     *
+     * Hashing the charge id means a given charge always gets the same answer,
+     * so a retry of the same charge never switches engines mid-flight.
+     */
+    private function shouldUseRoutingEngine(Charge $charge): bool
+    {
+        if (!config('acquirer_routing.engine_enabled', true)) {
+            return false;
+        }
+
+        $percentage = (int) config('acquirer_routing.rollout_percentage', 100);
+
+        if ($percentage >= 100) {
+            return true;
+        }
+
+        if ($percentage <= 0) {
+            return false;
+        }
+
+        $bucket = hexdec(substr(md5((string) $charge->id), 0, 8)) % 100;
+
+        return $bucket < $percentage;
+    }
+
+    /**
+     * Translate the charge and the account's routing constraints into a
+     * RoutingContext for the engine.
+     *
+     * @param array<string, mixed> $lockedAccountRouting
+     */
+    private function buildRoutingContext(Charge $charge, array $lockedAccountRouting): \App\Domain\Routing\ValueObjects\RoutingContext
+    {
+        $context = \App\Domain\Routing\ValueObjects\RoutingContext::make(
+            method: (string) ($charge->payment_method ?? 'pix'),
+            amountCents: (int) ($charge->amount ?? 0),
+            accountId: $charge->account_id,
+            chargeId: $charge->id,
+        )->withInstallments((int) ($charge->installments ?? 1));
+
+        // An account flagged as exclusive is pinned to a single acquirer with
+        // no fallback at all.
+        $exclusiveSlug = $this->getExclusiveAcquirerSlug($charge->account_id);
+        if ($exclusiveSlug !== null) {
+            return $context->restrictedTo([$exclusiveSlug], exclusive: true);
+        }
+
+        // An account with its own acquirer assignments is restricted to them,
+        // in its configured priority order, but may still fail over between them.
+        $lockedOrder = array_values(array_filter($lockedAccountRouting['order'] ?? []));
+        if (($lockedAccountRouting['locked'] ?? false) && $lockedOrder !== []) {
+            $context = $context->restrictedTo($lockedOrder);
+        }
+
+        $forced = $this->getForcedAcquirer();
+        if ($forced !== null) {
+            $context = $context->forcedTo($forced);
+        }
+
+        return $context;
     }
 
     private function isPaymentMethodEnabled(string $paymentMethod): bool

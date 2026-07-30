@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 
 class EnkiAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private string $publicKey;
     private string $secretKey;
     private string $withdrawalKey;
@@ -266,7 +268,7 @@ class EnkiAcquirer implements AcquirerInterface
             'Authorization' => 'Basic ' . base64_encode($this->publicKey . ':' . $this->secretKey),
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ], $extraHeaders))->connectTimeout(1)->timeout(4);
+        ], $extraHeaders))->connectTimeout($this->httpConnectTimeout(1))->timeout($this->httpTimeout(4));
 
         if (config('app.env') === 'local') {
             $client = $client->withoutVerifying();

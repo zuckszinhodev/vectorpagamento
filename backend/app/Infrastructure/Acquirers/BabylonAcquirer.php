@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Log;
  */
 class BabylonAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private string $secretKey;
     private string $companyId;
     private string $baseUrl = 'https://api.bancobabylon.com/functions/v1';
@@ -52,7 +54,7 @@ class BabylonAcquirer implements AcquirerInterface
             'Authorization' => 'Basic ' . $this->getAuthHeader(),
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->connectTimeout(3)->timeout(10);
+        ])->connectTimeout($this->httpConnectTimeout(3))->timeout($this->httpTimeout(10));
 
         // Disable SSL verification in local/development environment only
         if (config('app.env') === 'local') {

@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Http;
 
 class PagarmeAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private string $apiKey;
     private string $baseUrl = 'https://api.pagar.me/core/v5';
 

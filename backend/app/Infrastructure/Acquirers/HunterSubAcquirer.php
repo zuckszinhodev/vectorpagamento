@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Log;
 
 class HunterSubAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private const DEFAULT_PIX_EXPIRATION_SECONDS = 86400;
 
     private string $baseUrl = 'https://api.bluevisionsolucoes.com.br/functions/v1';
@@ -92,7 +94,7 @@ class HunterSubAcquirer implements AcquirerInterface
                 'Authorization' => 'Basic ' . $this->withdrawalAuthToken(),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
-            ])->connectTimeout(3)->timeout(10)->post("{$this->baseUrl}/withdrawals", $payload);
+            ])->connectTimeout($this->httpConnectTimeout(3))->timeout($this->httpTimeout(10))->post("{$this->baseUrl}/withdrawals", $payload);
 
             if (!$response->successful()) {
                 Log::error('HunterSub: PIX OUT failed', [
@@ -395,7 +397,7 @@ class HunterSubAcquirer implements AcquirerInterface
             'Accept' => 'application/json',
         ], $extraHeaders))
             ->connectTimeout(1)
-            ->timeout(4);
+            ->timeout($this->httpTimeout(4));
     }
 
     public function getTransaction(string $transactionId): ?array
@@ -404,7 +406,7 @@ class HunterSubAcquirer implements AcquirerInterface
             $response = Http::withHeaders([
                 'Authorization' => 'Basic ' . $this->transactionAuthToken(),
                 'Accept' => 'application/json',
-            ])->connectTimeout(1)->timeout(4)->get("{$this->baseUrl}/transactions/{$transactionId}");
+            ])->connectTimeout($this->httpConnectTimeout(1))->timeout($this->httpTimeout(4))->get("{$this->baseUrl}/transactions/{$transactionId}");
 
             if ($response->successful()) {
                 return $response->json();

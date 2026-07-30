@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Log;
 
 class SharkHubSubAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private string $apiKey;
     private string $withdrawalKey;
     private string $baseUrl;
@@ -517,7 +519,7 @@ class SharkHubSubAcquirer implements AcquirerInterface
             'Authorization' => 'Bearer ' . $this->apiKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->connectTimeout(5)->timeout(30);
+        ])->connectTimeout($this->httpConnectTimeout(5))->timeout($this->httpTimeout(30));
     }
 
     private function transferClient()
@@ -526,7 +528,7 @@ class SharkHubSubAcquirer implements AcquirerInterface
             'Authorization' => 'Bearer ' . $this->withdrawalKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->connectTimeout(5)->timeout(30);
+        ])->connectTimeout($this->httpConnectTimeout(5))->timeout($this->httpTimeout(30));
     }
 
     private function responseJson($response): array

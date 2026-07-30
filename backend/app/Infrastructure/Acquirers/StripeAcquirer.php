@@ -9,6 +9,8 @@ use Stripe\Exception\ApiErrorException;
 
 class StripeAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private StripeClient $stripe;
 
     public function __construct(array $credentials)

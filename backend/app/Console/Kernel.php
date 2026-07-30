@@ -40,12 +40,21 @@ class Kernel extends ConsoleKernel
             ->onOneServer()
             ->appendOutputTo(storage_path('logs/expire-charges.log'));
 
-        // Health check acquirers every 5 minutes
-        $schedule->job(new \App\Infrastructure\Jobs\HealthCheckAcquirersJob)
-            ->everyFiveMinutes()
+        // Health check acquirers every minute. The job itself decides which
+        // acquirers are actually due, based on each one's configured interval,
+        // and probes acquirers that are down twice as often so recovery is fast.
+        $schedule->job(new \App\Jobs\RunAcquirerHealthChecksJob)
+            ->everyMinute()
             ->withoutOverlapping()
             ->onOneServer()
             ->appendOutputTo(storage_path('logs/acquirer-health.log'));
+
+        // Retention: drop routing telemetry past its configured window.
+        $schedule->command('acquirer:prune-telemetry')
+            ->dailyAt('04:10')
+            ->withoutOverlapping()
+            ->onOneServer()
+            ->appendOutputTo(storage_path('logs/acquirer-prune.log'));
 
         // Process pending splits every 5 minutes
         $schedule->job(new \App\Jobs\ProcessPendingSplitsJob)

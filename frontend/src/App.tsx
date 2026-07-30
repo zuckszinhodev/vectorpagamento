@@ -45,6 +45,7 @@ const AdminGatewaySettings = lazy(() => import('@/pages/admin/AdminGatewaySettin
 const AdminKYC = lazy(() => import('@/pages/admin/AdminKYC'));
 const AdminFinance = lazy(() => import('@/pages/admin/AdminFinance'));
 const AdminAcquirers = lazy(() => import('@/pages/admin/AdminAcquirers'));
+const AdminAcquirerRouting = lazy(() => import('@/pages/admin/AdminAcquirerRouting'));
 const AdminMonitoring = lazy(() => import('@/pages/admin/AdminMonitoring'));
 const AdminChargebacks = lazy(() => import('@/pages/admin/AdminChargebacks'));
 const AdminSupport = lazy(() => import('@/pages/admin/AdminSupport'));
@@ -483,6 +484,7 @@ function App() {
         <Route path="finance" element={<Navigate to="/admin/transactions" replace />} />
         <Route path="kyc" element={<AdminKYC />} />
         <Route path="acquirers" element={<AdminAcquirers />} />
+        <Route path="acquirers/routing" element={<AdminAcquirerRouting />} />
         <Route path="chargebacks" element={<AdminChargebacks />} />
         <Route path="support" element={<AdminSupport />} />
         <Route path="approvals" element={<AdminFinance mode="transactions" />} />

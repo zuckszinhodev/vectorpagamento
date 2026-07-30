@@ -32,6 +32,8 @@ use Illuminate\Support\Facades\Log;
  */
 class AsaasAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private string $apiKey;
     private string $baseUrl;
     private string $webhookToken;
@@ -62,7 +64,7 @@ class AsaasAcquirer implements AcquirerInterface
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
             'User-Agent' => 'Vector Pagamentos',
-        ])->connectTimeout(3)->timeout(10);
+        ])->connectTimeout($this->httpConnectTimeout(3))->timeout($this->httpTimeout(10));
     }
 
     private function makeRequest(string $method, string $endpoint, array $data = []): array

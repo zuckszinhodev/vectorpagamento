@@ -25,6 +25,8 @@ use Illuminate\Support\Facades\Log;
  */
 class AscentPayAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private string $secretKey;
     private string $publicKey;
     private string $companyId;
@@ -84,7 +86,7 @@ class AscentPayAcquirer implements AcquirerInterface
         $client = Http::withHeaders([
             'Authorization' => 'Basic ' . $this->getAuthHeader(),
             'Accept' => 'application/json',
-        ])->asJson()->connectTimeout(3)->timeout(10);
+        ])->asJson()->connectTimeout($this->httpConnectTimeout(3))->timeout($this->httpTimeout(10));
 
         // Disable SSL verification in local/development environment only
         if (config('app.env') === 'local') {

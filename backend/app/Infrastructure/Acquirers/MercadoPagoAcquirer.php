@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Http;
 
 class MercadoPagoAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private string $accessToken;
     private string $baseUrl = 'https://api.mercadopago.com/v1';
 

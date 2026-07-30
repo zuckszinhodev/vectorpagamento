@@ -19,6 +19,8 @@ use Illuminate\Support\Facades\Log;
  */
 class WitetecAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private string $apiKey;
     private string $baseUrl = 'https://api.witetec.net';
     private string $webhookSecret;
@@ -44,7 +46,7 @@ class WitetecAcquirer implements AcquirerInterface
             'x-api-key' => $this->apiKey,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->connectTimeout(3)->timeout(10);
+        ])->connectTimeout($this->httpConnectTimeout(3))->timeout($this->httpTimeout(10));
 
         if (config('app.env') === 'local') {
             $client = $client->withoutVerifying();

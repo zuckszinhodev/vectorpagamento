@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\Log;
  */
 class BluPayAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private string $secretKey;
     private string $publicKey;
     private string $baseUrl;
@@ -63,7 +65,7 @@ class BluPayAcquirer implements AcquirerInterface
             'Authorization' => 'Basic ' . $basicAuth,
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
-        ])->connectTimeout(3)->timeout(10);
+        ])->connectTimeout($this->httpConnectTimeout(3))->timeout($this->httpTimeout(10));
 
         if (config('app.env') === 'local') {
             $client = $client->withoutVerifying();

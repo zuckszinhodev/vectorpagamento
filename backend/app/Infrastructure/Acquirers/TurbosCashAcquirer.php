@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\Log;
  */
 class TurbosCashAcquirer implements AcquirerInterface
 {
+    use Concerns\ConfigurableTimeouts;
+
     private const DEFAULT_PIX_EXPIRATION_MINUTES = 1440;
 
     private string $publicKey;
@@ -73,7 +75,7 @@ class TurbosCashAcquirer implements AcquirerInterface
 
         $client = Http::withHeaders($headers)
             ->connectTimeout(3)
-            ->timeout(10);
+            ->timeout($this->httpTimeout(10));
 
         if (config('app.env') === 'local') {
             $client = $client->withoutVerifying();
