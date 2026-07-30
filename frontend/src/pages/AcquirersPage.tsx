@@ -230,20 +230,6 @@ export default function AcquirersPage() {
                                     </span>
                                   )}
                                 </div>
-                                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                                  <div className="rounded-md bg-surface-page px-2.5 py-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-tx-muted">Aprovacao</p>
-                                    <p className="mt-1 text-xs font-bold text-tx-primary">{getOperationalMetrics(item, index).approval}%</p>
-                                  </div>
-                                  <div className="rounded-md bg-surface-page px-2.5 py-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-tx-muted">Volume hoje</p>
-                                    <p className="mt-1 text-xs font-bold text-tx-primary">{getOperationalMetrics(item, index).volume}</p>
-                                  </div>
-                                  <div className="rounded-md bg-surface-page px-2.5 py-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-tx-muted">Falhas</p>
-                                    <p className="mt-1 text-xs font-bold text-tx-primary">{getOperationalMetrics(item, index).failures}</p>
-                                  </div>
-                                </div>
                               </div>
                             </div>
                           </div>
