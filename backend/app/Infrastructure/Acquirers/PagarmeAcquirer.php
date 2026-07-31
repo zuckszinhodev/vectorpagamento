@@ -3,7 +3,7 @@
 namespace App\Infrastructure\Acquirers;
 
 use App\Domain\Acquirer\Contracts\AcquirerInterface;
-use App\Domain\Payment\Entities\Charge;
+use App\Models\Charge;
 use Illuminate\Support\Facades\Http;
 
 class PagarmeAcquirer implements AcquirerInterface
@@ -16,6 +16,14 @@ class PagarmeAcquirer implements AcquirerInterface
     public function __construct(array $credentials)
     {
         $this->apiKey = $credentials['secret_key'] ?? '';
+    }
+
+    /**
+     * Get acquirer name
+     */
+    public function getName(): string
+    {
+        return 'Pagar.me';
     }
 
     /**

@@ -3,7 +3,7 @@
 namespace App\Infrastructure\Acquirers;
 
 use App\Domain\Acquirer\Contracts\AcquirerInterface;
-use App\Domain\Payment\Entities\Charge;
+use App\Models\Charge;
 use Illuminate\Support\Facades\Http;
 
 class MercadoPagoAcquirer implements AcquirerInterface
@@ -16,6 +16,14 @@ class MercadoPagoAcquirer implements AcquirerInterface
     public function __construct(array $credentials)
     {
         $this->accessToken = $credentials['access_token'] ?? '';
+    }
+
+    /**
+     * Get acquirer name
+     */
+    public function getName(): string
+    {
+        return 'Mercado Pago';
     }
 
     /**

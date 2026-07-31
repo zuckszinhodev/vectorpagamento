@@ -354,6 +354,20 @@ class SharkHubSubAcquirer implements AcquirerInterface
         $payerName = mb_strlen($rawPayerName) >= 5
             ? $rawPayerName
             : ($rawPayerName !== '' ? $rawPayerName . ' Cliente' : 'Cliente PIX');
+
+        // O checkout nem sempre coleta e-mail e telefone, mas a SharkHub recusa
+        // o pedido quando o bloco `payer` chega incompleto — o array_filter abaixo
+        // remove os vazios e o campo simplesmente some. Preenchemos aqui.
+        $rawPayerEmail = trim((string) ($customer['email'] ?? ''));
+        $payerEmail = filter_var($rawPayerEmail, FILTER_VALIDATE_EMAIL)
+            ? $rawPayerEmail
+            : 'cliente@vectorpagamentos.com';
+
+        $rawPayerPhone = preg_replace('/\D/', '', (string) ($customer['phone'] ?? ''));
+        $payerPhone = strlen((string) $rawPayerPhone) >= 10
+            ? (string) $rawPayerPhone
+            : '11999999999';
+
         $metadata = array_merge($charge->metadata ?? [], [
             'charge_id' => $charge->id,
             'account_id' => $charge->account_id,
@@ -377,8 +391,8 @@ class SharkHubSubAcquirer implements AcquirerInterface
             'payer' => array_filter([
                 'name' => $payerName,
                 'taxId' => $document,
-                'email' => (string) ($customer['email'] ?? 'cliente@email.com'),
-                'phone' => preg_replace('/\D/', '', (string) ($customer['phone'] ?? '')),
+                'email' => $payerEmail,
+                'phone' => $payerPhone,
             ], static fn ($value) => $value !== null && $value !== ''),
             'items' => [[
                 'quantity' => 1,

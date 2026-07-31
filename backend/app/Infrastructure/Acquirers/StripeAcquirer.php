@@ -3,7 +3,7 @@
 namespace App\Infrastructure\Acquirers;
 
 use App\Domain\Acquirer\Contracts\AcquirerInterface;
-use App\Domain\Payment\Entities\Charge;
+use App\Models\Charge;
 use Stripe\StripeClient;
 use Stripe\Exception\ApiErrorException;
 
@@ -16,6 +16,14 @@ class StripeAcquirer implements AcquirerInterface
     public function __construct(array $credentials)
     {
         $this->stripe = new StripeClient($credentials['secret_key'] ?? '');
+    }
+
+    /**
+     * Get acquirer name
+     */
+    public function getName(): string
+    {
+        return 'Stripe';
     }
 
     /**
