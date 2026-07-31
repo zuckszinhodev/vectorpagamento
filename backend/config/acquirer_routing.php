@@ -78,6 +78,34 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Leitura de saldo por adquirente
+    |--------------------------------------------------------------------------
+    |
+    | Cada PSP devolve o saldo com um nome de campo e uma UNIDADE diferente.
+    | Errar a unidade é um erro de fator 100 num saque, então o mapeamento é
+    | explícito aqui em vez de ficar num match espalhado pelo código.
+    |
+    |   field   → caminho do campo na resposta de getBalance() (dot notation)
+    |   unit    → 'cents' ou 'reais'
+    |   blocked → campo opcional do saldo bloqueado
+    |
+    | Adquirente não listada: tenta os campos comuns abaixo, assumindo reais.
+    | Se nada casar, o saldo é reportado como indisponível — nunca como zero,
+    | para não parecer "sem fundos" quando na verdade não sabemos ler.
+    |
+    */
+    'balances' => [
+        'enki' => ['field' => 'available', 'unit' => 'cents', 'blocked' => 'reserved'],
+        'blupay' => ['field' => 'pix_balance', 'unit' => 'reais', 'blocked' => 'pix_blocked'],
+        'witetec' => ['field' => 'balance', 'unit' => 'reais', 'blocked' => 'blocked_balance'],
+
+        // Campos tentados quando a adquirente não está mapeada acima.
+        'fallback_fields' => ['available_balance', 'available', 'balance', 'amount'],
+        'fallback_unit' => 'reais',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Padrões de roteamento
     |--------------------------------------------------------------------------
     */

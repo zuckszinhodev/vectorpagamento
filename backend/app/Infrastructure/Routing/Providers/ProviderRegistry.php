@@ -46,6 +46,7 @@ final class ProviderRegistry implements ProviderRegistryInterface
 
     public function __construct(
         private readonly AcquirerCredentialRepositoryInterface $credentials,
+        private readonly \App\Domain\Routing\Services\CredentialSchemaResolver $schema,
     ) {
     }
 
@@ -150,7 +151,7 @@ final class ProviderRegistry implements ProviderRegistryInterface
                 return null;
             }
 
-            if (!$config->validateCredentialsByKey($config->acquirer_key, $credentials)) {
+            if (!$this->schema->validate($config, $credentials)) {
                 Log::warning('Credenciais da adquirente incompletas; fora do roteamento', [
                     'acquirer' => $key,
                     'account_id' => $accountId,

@@ -83,9 +83,15 @@ class AcquirerRoutingServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton(
+            \App\Domain\Routing\Services\CredentialSchemaResolver::class,
+            static fn (): \App\Domain\Routing\Services\CredentialSchemaResolver => new \App\Domain\Routing\Services\CredentialSchemaResolver()
+        );
+
+        $this->app->singleton(
             AcquirerCredentialRepositoryInterface::class,
             static fn ($app): AcquirerCredentialRepositoryInterface => new EloquentAcquirerCredentialRepository(
-                $app->make(CredentialVaultInterface::class)
+                $app->make(CredentialVaultInterface::class),
+                $app->make(\App\Domain\Routing\Services\CredentialSchemaResolver::class),
             )
         );
     }
@@ -166,7 +172,8 @@ class AcquirerRoutingServiceProvider extends ServiceProvider
         $this->app->singleton(
             ProviderRegistryInterface::class,
             static fn ($app): ProviderRegistryInterface => new ProviderRegistry(
-                $app->make(AcquirerCredentialRepositoryInterface::class)
+                $app->make(AcquirerCredentialRepositoryInterface::class),
+                $app->make(\App\Domain\Routing\Services\CredentialSchemaResolver::class),
             )
         );
 
@@ -192,6 +199,15 @@ class AcquirerRoutingServiceProvider extends ServiceProvider
                 $app->make(MetricsRepositoryInterface::class),
                 $app->make(HealthStateRepositoryInterface::class),
                 $app->make(RoutingLogger::class),
+            )
+        );
+
+        $this->app->singleton(
+            \App\Application\Routing\AcquirerBalanceService::class,
+            static fn ($app): \App\Application\Routing\AcquirerBalanceService => new \App\Application\Routing\AcquirerBalanceService(
+                $app->make(ProviderRegistryInterface::class),
+                $app->make(AcquirerCatalogInterface::class),
+                Cache::store(),
             )
         );
 

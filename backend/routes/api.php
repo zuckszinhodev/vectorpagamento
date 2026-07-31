@@ -499,6 +499,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
 
             // Dashboard e observabilidade
             Route::get('/dashboard', [$controller, 'dashboard']);
+            Route::get('/balances', [$controller, 'payoutBalances']);
             Route::get('/logs', [$controller, 'routingLogs']);
             Route::get('/events', [$controller, 'events']);
             Route::post('/preview', [$controller, 'previewRouting']);

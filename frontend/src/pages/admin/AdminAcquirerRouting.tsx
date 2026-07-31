@@ -27,6 +27,7 @@ interface CredentialField {
   field_key: string;
   label: string;
   type: string;
+  required?: boolean;
   options?: string[] | null;
   masked: string;
   length: number;
@@ -34,6 +35,19 @@ interface CredentialField {
   rotated_at: string | null;
   deprecated?: boolean;
 }
+
+/** Definição de um campo de credencial declarada pelo operador. */
+interface SchemaField {
+  key: string;
+  label: string;
+  type: 'text' | 'password';
+  required: boolean;
+}
+
+const DEFAULT_SCHEMA: SchemaField[] = [
+  { key: 'access_token', label: 'Token de Acesso', type: 'password', required: true },
+  { key: 'base_url', label: 'URL da API', type: 'text', required: false },
+];
 
 interface RoutingProfile {
   routing_enabled: boolean;
@@ -133,6 +147,16 @@ interface Policy {
 interface StrategyOption {
   value: string;
   label: string;
+}
+
+interface PayoutBalance {
+  acquirer_key: string;
+  display_name: string;
+  available: boolean;
+  available_cents: number;
+  blocked_cents: number;
+  error: string | null;
+  health: HealthStateValue | null;
 }
 
 /* ── Utilitários ────────────────────────────────────────────── */
@@ -276,6 +300,8 @@ export default function AdminAcquirerRouting() {
       />
 
       <SummaryCards summary={summary} windowMinutes={windowMinutes} />
+
+      <PayoutBalancesPanel />
 
       <PoliciesPanel policies={policiesQuery.data?.global ?? []} strategies={strategies} onSaved={invalidate} />
 
@@ -511,6 +537,107 @@ function IconButton({
   );
 }
 
+/* ── Saldos disponíveis para saque ──────────────────────────── */
+
+/**
+ * Mostra onde o dinheiro está antes de aprovar um saque.
+ *
+ * Um saque pode ser dividido entre nominais quando nenhuma adquirente sozinha
+ * cobre o valor, então o total combinado importa tanto quanto o maior saldo
+ * individual — os dois são exibidos.
+ */
+function PayoutBalancesPanel() {
+  const queryClient = useQueryClient();
+
+  const { data, isFetching } = useQuery({
+    queryKey: ['routing', 'balances'],
+    queryFn: async () => {
+      const res = await api.get('/admin/routing/balances');
+      return res.data.data as {
+        balances: PayoutBalance[];
+        total_available_cents: number;
+        unreadable: string[];
+        checked_at: string;
+      };
+    },
+    refetchInterval: 60000,
+  });
+
+  const balances = data?.balances ?? [];
+  const readable = balances.filter((b) => b.available);
+  const largest = readable.length > 0 ? Math.max(...readable.map((b) => b.available_cents)) : 0;
+
+  if (balances.length === 0) return null;
+
+  return (
+    <section className="rounded-3xl border border-border-DEFAULT bg-surface-DEFAULT p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="text-lg font-semibold">Saldo disponível para saque</h2>
+          <p className="text-sm text-slate-400">
+            Total combinado {currency(data?.total_available_cents ?? 0)} · maior saldo individual{' '}
+            {currency(largest)}
+          </p>
+        </div>
+
+        <button
+          onClick={async () => {
+            await api.get('/admin/routing/balances', { params: { fresh: 1 } });
+            queryClient.invalidateQueries({ queryKey: ['routing', 'balances'] });
+            toast.success('Saldos atualizados.');
+          }}
+          disabled={isFetching}
+          className="inline-flex items-center gap-2 rounded-xl border border-border-DEFAULT px-3 py-2 text-sm disabled:opacity-50"
+        >
+          <ArrowPathIcon className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+          Atualizar
+        </button>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {balances.map((balance) => (
+          <div key={balance.acquirer_key} className="rounded-2xl border border-border-DEFAULT p-4">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{balance.display_name}</span>
+              {balance.health && (
+                <span className={`rounded-full border px-2 py-0.5 text-xs ${HEALTH_STYLES[balance.health]}`}>
+                  {balance.health}
+                </span>
+              )}
+            </div>
+
+            {balance.available ? (
+              <>
+                <p className="mt-2 text-xl font-bold text-emerald-400">
+                  {currency(balance.available_cents)}
+                </p>
+                {balance.blocked_cents > 0 && (
+                  <p className="text-xs text-slate-500">
+                    bloqueado: {currency(balance.blocked_cents)}
+                  </p>
+                )}
+              </>
+            ) : (
+              // Deliberadamente não mostramos "R$ 0,00": não saber ler o saldo
+              // é diferente de não haver saldo.
+              <p className="mt-2 text-sm text-amber-400" title={balance.error ?? undefined}>
+                Saldo indisponível
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {(data?.unreadable.length ?? 0) > 0 && (
+        <p className="mt-3 text-xs text-slate-500">
+          Sem leitura de saldo: {data!.unreadable.join(', ')} — essas adquirentes não participam
+          da divisão automática de saques.
+        </p>
+      )}
+    </section>
+  );
+}
+
 /* ── Políticas de balanceamento ─────────────────────────────── */
 
 function PoliciesPanel({
@@ -665,6 +792,9 @@ function AcquirerFormModal({
   // então salvar sem redigitar um segredo não o apaga.
   const [credentials, setCredentials] = useState<Record<string, string>>({});
 
+  // Ao cadastrar uma adquirente nova, o operador declara quais campos ela usa.
+  const [schema, setSchema] = useState<SchemaField[]>(DEFAULT_SCHEMA);
+
   const credentialFields = useMemo(
     () => Object.values(acquirer?.credentials ?? {}),
     [acquirer],
@@ -672,7 +802,14 @@ function AcquirerFormModal({
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const payload = { ...form, credentials, routing };
+      const payload: Record<string, unknown> = { ...form, credentials, routing };
+
+      // Uma adquirente conhecida já traz seus campos curados do backend;
+      // só enviamos o esquema quando o operador o definiu aqui.
+      if (!isEdit) {
+        payload.credential_schema = schema.filter((f) => f.key.trim() !== '');
+      }
+
       return isEdit
         ? api.put(`/admin/routing/acquirers/${acquirer!.id}`, payload)
         : api.post('/admin/routing/acquirers', payload);
@@ -750,11 +887,16 @@ function AcquirerFormModal({
             title="Credenciais"
             subtitle="Criptografadas com AES-256-GCM antes de gravar. Valores existentes aparecem apenas mascarados; deixe em branco para manter."
           >
-            {credentialFields.length === 0 ? (
+            {!isEdit ? (
+              <SchemaEditor
+                schema={schema}
+                credentials={credentials}
+                onSchemaChange={setSchema}
+                onCredentialChange={(key, value) => setCredentials({ ...credentials, [key]: value })}
+              />
+            ) : credentialFields.length === 0 ? (
               <p className="text-sm text-slate-400">
-                {isEdit
-                  ? 'Nenhum campo de credencial definido para esta adquirente.'
-                  : 'Salve a adquirente para que os campos de credencial sejam exibidos.'}
+                Nenhum campo de credencial definido para esta adquirente.
               </p>
             ) : (
               <div className="grid gap-3 md:grid-cols-2">
@@ -837,6 +979,124 @@ function AcquirerFormModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── Editor de esquema de credenciais ───────────────────────── */
+
+/**
+ * Deixa o operador declarar os campos de credencial da adquirente e já digitar
+ * os valores, no mesmo passo do cadastro.
+ *
+ * Sem isto, uma adquirente cujo `acquirer_key` não constava do `match`
+ * hardcoded no backend renderizava um formulário vazio — não havia onde digitar
+ * o token.
+ */
+function SchemaEditor({
+  schema,
+  credentials,
+  onSchemaChange,
+  onCredentialChange,
+}: {
+  schema: SchemaField[];
+  credentials: Record<string, string>;
+  onSchemaChange: (schema: SchemaField[]) => void;
+  onCredentialChange: (key: string, value: string) => void;
+}) {
+  const updateField = (index: number, patch: Partial<SchemaField>) => {
+    onSchemaChange(schema.map((field, i) => (i === index ? { ...field, ...patch } : field)));
+  };
+
+  return (
+    <div className="space-y-3">
+      {schema.map((field, index) => (
+        <div key={index} className="rounded-xl border border-border-DEFAULT p-3">
+          <div className="grid gap-2 md:grid-cols-[1fr_1fr_auto_auto]">
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Identificador</label>
+              <input
+                type="text"
+                value={field.key}
+                placeholder="access_token"
+                onChange={(e) =>
+                  updateField(index, { key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })
+                }
+                className="w-full rounded-lg border border-border-DEFAULT bg-transparent px-3 py-2 font-mono text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Rótulo</label>
+              <input
+                type="text"
+                value={field.label}
+                placeholder="Token de Acesso"
+                onChange={(e) => updateField(index, { label: e.target.value })}
+                className="w-full rounded-lg border border-border-DEFAULT bg-transparent px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">Tipo</label>
+              <select
+                value={field.type}
+                onChange={(e) => updateField(index, { type: e.target.value as 'text' | 'password' })}
+                className="rounded-lg border border-border-DEFAULT bg-transparent px-2 py-2 text-sm"
+              >
+                <option value="password">Secreto</option>
+                <option value="text">Texto</option>
+              </select>
+            </div>
+
+            <div className="flex items-end gap-2 pb-2">
+              <label className="flex items-center gap-1 text-xs text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={field.required}
+                  onChange={(e) => updateField(index, { required: e.target.checked })}
+                />
+                Obrigatório
+              </label>
+              <button
+                type="button"
+                title="Remover campo"
+                onClick={() => onSchemaChange(schema.filter((_, i) => i !== index))}
+                className="rounded-lg p-1.5 text-red-400 hover:bg-red-500/15"
+              >
+                <TrashIcon className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {field.key && (
+            <div className="mt-2">
+              <label className="mb-1 block text-xs text-slate-400">
+                Valor {field.required && <span className="text-red-400">*</span>}
+              </label>
+              <input
+                type={field.type === 'password' ? 'password' : 'text'}
+                autoComplete="new-password"
+                value={credentials[field.key] ?? ''}
+                placeholder={`Cole aqui o ${field.label.toLowerCase()}`}
+                onChange={(e) => onCredentialChange(field.key, e.target.value)}
+                className="w-full rounded-lg border border-border-DEFAULT bg-transparent px-3 py-2 text-sm"
+              />
+            </div>
+          )}
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={() =>
+          onSchemaChange([...schema, { key: '', label: '', type: 'password', required: false }])
+        }
+        className="inline-flex items-center gap-2 rounded-lg border border-border-DEFAULT px-3 py-2 text-sm text-slate-300 hover:bg-slate-500/10"
+      >
+        <PlusIcon className="h-4 w-4" />
+        Adicionar campo
+      </button>
     </div>
   );
 }

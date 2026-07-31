@@ -76,6 +76,7 @@ class AcquirerConfig extends Model
         'enabled',
         'credentials',
         'supported_methods',
+        'credential_schema',
         'acquirer_fee_percentage',
         'acquirer_fee_fixed',
         'acquirer_fee_pix_out_percentage',
@@ -91,6 +92,7 @@ class AcquirerConfig extends Model
     protected $casts = [
         'enabled' => 'boolean',
         'supported_methods' => 'array',
+        'credential_schema' => 'array',
         'settings' => 'array',
         'acquirer_fee_percentage' => 'decimal:2',
         'acquirer_fee_fixed' => 'decimal:2',

@@ -1000,15 +1000,14 @@ class AcquirerFactory
             return [$forced];
         }
 
-        $fallbackCapable = ['payfort', 'blupay', 'enki', 'babylon', 'huntersub', 'sharkhubsub'];
-
+        // Capability is asked of the instance, not looked up in a fixed list.
+        // The previous allow-list silently excluded any acquirer registered
+        // later, so a new PSP could never take a payout no matter how it was
+        // configured in the panel.
         $candidates = $this->appendConfiguredFallbacks($this->listConfiguredAcquirerKeys('pix_out'));
-        $candidates = array_values(array_filter($candidates, function (string $key) use ($fallbackCapable): bool {
-            if (!in_array($key, $fallbackCapable, true) && !str_starts_with($key, 'sharkhubsub')) {
-                return false;
-            }
-
+        $candidates = array_values(array_filter($candidates, function (string $key): bool {
             $instance = $this->getAcquirerInstance($key);
+
             return $instance && method_exists($instance, 'sendPixTransfer');
         }));
 

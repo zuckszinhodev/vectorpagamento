@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Infrastructure\Routing\Providers;
 
+use App\Domain\Routing\Contracts\BalanceInquiryInterface;
 use App\Domain\Routing\Contracts\PaymentProviderInterface;
 use App\Domain\Routing\Enums\FailureReason;
 use App\Domain\Routing\Enums\PaymentMethod;
+use App\Domain\Routing\ValueObjects\AcquirerBalance;
 use App\Domain\Routing\ValueObjects\ProbeResult;
 use App\Domain\Routing\ValueObjects\ProviderRequest;
 use App\Domain\Routing\ValueObjects\ProviderResponse;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -27,7 +30,7 @@ use Illuminate\Support\Facades\Log;
  * which is what lets the router tell "acquirer is down" (fail over, trip the
  * breaker) from "card was declined" (final answer, breaker untouched).
  */
-final class LegacyAcquirerProvider implements PaymentProviderInterface
+final class LegacyAcquirerProvider implements PaymentProviderInterface, BalanceInquiryInterface
 {
     /**
      * @param object $acquirer one of the App\Infrastructure\Acquirers classes
@@ -197,6 +200,82 @@ final class LegacyAcquirerProvider implements PaymentProviderInterface
         return ProbeResult::skipped(
             "Adquirente '{$this->acquirerKey}' não expõe endpoint de verificação sem efeito colateral."
         );
+    }
+
+    /**
+     * Funds held at this acquirer, normalised to cents.
+     *
+     * The field name and the unit differ per PSP (Enki reports cents as an int,
+     * BluPay and Witetec report reais as a float), so the mapping lives in
+     * config/acquirer_routing.php → balances rather than in a `match` here.
+     * That `match` previously had `default => 0`, which silently reported every
+     * unmapped acquirer as having no funds — indistinguishable from being broke.
+     */
+    public function balance(): AcquirerBalance
+    {
+        if (!method_exists($this->acquirer, 'getBalance')) {
+            return AcquirerBalance::notSupported($this->acquirerKey);
+        }
+
+        try {
+            $payload = $this->acquirer->getBalance();
+        } catch (\Throwable $e) {
+            return AcquirerBalance::unavailable($this->acquirerKey, $e->getMessage());
+        }
+
+        if (!is_array($payload) || ($payload['success'] ?? false) !== true) {
+            return AcquirerBalance::unavailable(
+                $this->acquirerKey,
+                (string) ($payload['error'] ?? 'Consulta de saldo não retornou sucesso.')
+            );
+        }
+
+        $config = (array) config('acquirer_routing.balances', []);
+        $mapping = $config[$this->acquirerKey] ?? null;
+
+        if (is_array($mapping)) {
+            $value = Arr::get($payload, (string) $mapping['field']);
+
+            if (!is_numeric($value)) {
+                return AcquirerBalance::unavailable(
+                    $this->acquirerKey,
+                    sprintf("Campo de saldo '%s' ausente na resposta.", $mapping['field'])
+                );
+            }
+
+            $blocked = isset($mapping['blocked']) ? Arr::get($payload, (string) $mapping['blocked']) : null;
+
+            return AcquirerBalance::of(
+                acquirerKey: $this->acquirerKey,
+                availableCents: $this->toCents($value, (string) ($mapping['unit'] ?? 'reais')),
+                blockedCents: is_numeric($blocked) ? $this->toCents($blocked, (string) ($mapping['unit'] ?? 'reais')) : 0,
+                raw: $payload,
+            );
+        }
+
+        foreach ((array) ($config['fallback_fields'] ?? []) as $field) {
+            $value = Arr::get($payload, (string) $field);
+
+            if (is_numeric($value)) {
+                return AcquirerBalance::of(
+                    acquirerKey: $this->acquirerKey,
+                    availableCents: $this->toCents($value, (string) ($config['fallback_unit'] ?? 'reais')),
+                    raw: $payload,
+                );
+            }
+        }
+
+        return AcquirerBalance::unavailable(
+            $this->acquirerKey,
+            'Formato de saldo não reconhecido. Mapeie a adquirente em config/acquirer_routing.php → balances.'
+        );
+    }
+
+    private function toCents(mixed $value, string $unit): int
+    {
+        return $unit === 'cents'
+            ? (int) round((float) $value)
+            : (int) round(((float) $value) * 100);
     }
 
     /**

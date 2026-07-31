@@ -34,6 +34,11 @@ class WithdrawalService
     /** @var array<string, CircuitBreaker> */
     private array $circuitBreakers = [];
 
+    /** Intelligent routing engine; null when it could not be resolved. */
+    private ?\App\Application\Routing\PaymentRoutingService $routingEngine = null;
+
+    private ?\App\Application\Routing\AcquirerBalanceService $balances = null;
+
     public function __construct()
     {
         $this->factory = AcquirerFactory::instance();
@@ -42,6 +47,15 @@ class WithdrawalService
         // PIX OUT circuit breakers follow the globally supported payout acquirers.
         foreach (['payfort', 'blupay', 'enki', 'babylon', 'huntersub', 'sharkhubsub'] as $name) {
             $this->circuitBreakers[$name] = new CircuitBreaker("acquirer:{$name}", 3, 60);
+        }
+
+        try {
+            $this->routingEngine = app(\App\Application\Routing\PaymentRoutingService::class);
+            $this->balances = app(\App\Application\Routing\AcquirerBalanceService::class);
+        } catch (\Throwable $e) {
+            Log::warning('Motor de roteamento indisponível para saques; usando caminho legado', [
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -474,6 +488,13 @@ class WithdrawalService
      */
     private function sendPixOutWithFallback(array $transferData): array
     {
+        // New engine: credentials come from the encrypted vault, the fallback
+        // chain, circuit breaker and metrics are shared with the charge path.
+        $routed = $this->sendPixOutViaRoutingEngine($transferData);
+        if ($routed !== null) {
+            return $routed;
+        }
+
         $lastError = null;
         $skipReasons = [];
         $attemptedAcquirers = [];
@@ -590,6 +611,108 @@ class WithdrawalService
             'success' => false,
             'error'   => $fragmentedResult['error'] ?? $lastError ?? 'Falha ao processar PIX OUT em todas as adquirentes',
         ];
+    }
+
+    /**
+     * Send the payout through the intelligent routing engine.
+     *
+     * Returns null when the engine is disabled or unavailable, in which case
+     * the caller falls through to the legacy path untouched — same escape
+     * hatch as the charge flow, so this is reversible with an env var.
+     *
+     * @param array<string, mixed> $transferData
+     * @return array<string, mixed>|null
+     */
+    private function sendPixOutViaRoutingEngine(array $transferData): ?array
+    {
+        if ($this->routingEngine === null || !$this->shouldUseRoutingEngine($transferData)) {
+            return null;
+        }
+
+        $withdrawalId = (string) ($transferData['external_ref'] ?? '');
+        $accountId = $transferData['metadata']['account_id'] ?? null;
+
+        try {
+            $context = \App\Domain\Routing\ValueObjects\RoutingContext::make(
+                method: \App\Domain\Routing\Enums\PaymentMethod::PIX_OUT,
+                amountCents: (int) ($transferData['amount_cents'] ?? 0),
+                accountId: is_string($accountId) ? $accountId : null,
+            );
+
+            $result = $this->routingEngine->payout($context, $transferData);
+
+            if ($result->successful) {
+                $payload = $result->toLegacyArray();
+                $payload['acquirer'] = $result->selectedAcquirer();
+
+                Log::info('WithdrawalService: PIX OUT roteado pelo motor novo', [
+                    'withdrawal_id' => $withdrawalId !== '' ? $withdrawalId : null,
+                    'acquirer' => $result->selectedAcquirer(),
+                    'attempts' => $result->attemptCount(),
+                    'correlation_id' => $result->correlationId,
+                ]);
+
+                return $payload;
+            }
+
+            // Chain exhausted. Before failing, try to combine nominal balances —
+            // no single acquirer holds enough, but together they might.
+            $split = $this->sendPixOutAcrossAcquirers($transferData, $result->error);
+            if (($split['success'] ?? false) === true) {
+                return $split;
+            }
+
+            Log::error('WithdrawalService: PIX OUT esgotou a cadeia e o split', [
+                'withdrawal_id' => $withdrawalId !== '' ? $withdrawalId : null,
+                'correlation_id' => $result->correlationId,
+                'attempts' => $result->attemptsAsArray(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $split['error'] ?? $result->error ?? 'Falha ao processar PIX OUT em todas as adquirentes',
+            ];
+        } catch (\Throwable $e) {
+            // Never let an engine defect block payouts: fall back to the legacy path.
+            Log::error('Motor de roteamento falhou no PIX OUT; caindo para o caminho legado', [
+                'withdrawal_id' => $withdrawalId !== '' ? $withdrawalId : null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Feature flag + deterministic canary, keyed on the withdrawal id so a
+     * retry of the same withdrawal never switches engines mid-flight.
+     *
+     * @param array<string, mixed> $transferData
+     */
+    private function shouldUseRoutingEngine(array $transferData): bool
+    {
+        if (!config('acquirer_routing.engine_enabled', true)) {
+            return false;
+        }
+
+        $percentage = (int) config('acquirer_routing.rollout_percentage', 100);
+
+        if ($percentage >= 100) {
+            return true;
+        }
+
+        if ($percentage <= 0) {
+            return false;
+        }
+
+        $reference = (string) ($transferData['external_ref'] ?? $transferData['idempotency_key'] ?? '');
+
+        if ($reference === '') {
+            return false;
+        }
+
+        return hexdec(substr(md5($reference), 0, 8)) % 100 < $percentage;
     }
 
     /**
@@ -789,8 +912,54 @@ class WithdrawalService
      */
     private function collectSplittableAcquirerBalances(array $transferData): array
     {
-        $balances = [];
         $accountId = $transferData['metadata']['account_id'] ?? null;
+        $accountId = is_string($accountId) ? $accountId : null;
+
+        // Balance reading is normalised centrally (field name AND unit differ
+        // per PSP). The previous local `match` handled only enki and blupay and
+        // returned 0 for everything else, so any other acquirer silently
+        // contributed nothing to a split — looking identical to "no funds".
+        if ($this->balances !== null) {
+            return $this->collectBalancesViaRoutingEngine($accountId);
+        }
+
+        return $this->collectBalancesLegacy($transferData, $accountId);
+    }
+
+    /**
+     * @return array<int, array{acquirer: string, instance: mixed, available_cents: int}>
+     */
+    private function collectBalancesViaRoutingEngine(?string $accountId): array
+    {
+        $collected = [];
+
+        foreach ($this->balances->splittableBalances($accountId) as $balance) {
+            // The split still calls sendPixTransfer() on the legacy instance,
+            // because it drives per-part transfer ids that the webhook handler
+            // reconciles against `transfer_parts`.
+            $instance = $this->resolvePixOutAcquirerInstance($balance->acquirerKey, $accountId);
+
+            if (!$instance || !method_exists($instance, 'sendPixTransfer')) {
+                continue;
+            }
+
+            $collected[] = [
+                'acquirer' => $balance->acquirerKey,
+                'instance' => $instance,
+                'available_cents' => $balance->availableCents,
+            ];
+        }
+
+        return $collected;
+    }
+
+    /**
+     * @param array<string, mixed> $transferData
+     * @return array<int, array{acquirer: string, instance: mixed, available_cents: int}>
+     */
+    private function collectBalancesLegacy(array $transferData, ?string $accountId): array
+    {
+        $balances = [];
 
         foreach ($this->factory->getPixOutAcquirerOrder() as $name) {
             $instance = $this->resolvePixOutAcquirerInstance($name, $accountId);

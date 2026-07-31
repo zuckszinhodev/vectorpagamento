@@ -30,6 +30,7 @@ final class EloquentAcquirerCredentialRepository implements AcquirerCredentialRe
 
     public function __construct(
         private readonly CredentialVaultInterface $vault,
+        private readonly \App\Domain\Routing\Services\CredentialSchemaResolver $schema,
     ) {
     }
 
@@ -72,7 +73,7 @@ final class EloquentAcquirerCredentialRepository implements AcquirerCredentialRe
 
         $masked = [];
 
-        foreach (AcquirerConfig::getCredentialFields($config->acquirer_key) as $field) {
+        foreach ($this->schema->fieldsFor($config) as $field) {
             $key = $field['key'];
             $row = $stored->get($key);
 
@@ -81,6 +82,7 @@ final class EloquentAcquirerCredentialRepository implements AcquirerCredentialRe
                     'field_key' => $key,
                     'label' => $field['label'] ?? $key,
                     'type' => $field['type'] ?? 'text',
+                    'required' => (bool) ($field['required'] ?? false),
                     'options' => $field['options'] ?? null,
                 ],
                 $row
@@ -170,7 +172,7 @@ final class EloquentAcquirerCredentialRepository implements AcquirerCredentialRe
             return false;
         }
 
-        return $config->validateCredentialsByKey($config->acquirer_key, $credentials);
+        return $this->schema->validate($config, $credentials);
     }
 
     /**

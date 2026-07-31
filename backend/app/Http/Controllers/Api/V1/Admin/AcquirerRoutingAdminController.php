@@ -48,7 +48,62 @@ class AcquirerRoutingAdminController extends Controller
         private readonly AcquirerCatalogInterface $catalog,
         private readonly StrategyRegistry $strategies,
         private readonly SmartAcquirerRouter $router,
+        private readonly \App\Domain\Routing\Services\CredentialSchemaResolver $credentialSchema,
+        private readonly \App\Application\Routing\AcquirerBalanceService $balances,
     ) {
+    }
+
+    /**
+     * Funds held at each payout-capable acquirer.
+     *
+     * This is what makes withdrawals operable from the panel: an operator can
+     * see where the money actually is before approving a payout, instead of
+     * discovering mid-transfer that no single acquirer can cover it.
+     */
+    public function payoutBalances(Request $request): JsonResponse
+    {
+        $fresh = $request->boolean('fresh');
+        $accountId = $request->query('account_id');
+
+        $balances = $this->balances->forPayoutAcquirers(
+            is_string($accountId) ? $accountId : null,
+            $fresh
+        );
+
+        $configs = AcquirerConfig::query()
+            ->whereIn('acquirer_key', array_keys($balances))
+            ->get()
+            ->keyBy('acquirer_key');
+
+        $rows = [];
+        $totalCents = 0;
+
+        foreach ($balances as $key => $balance) {
+            if ($balance->available) {
+                $totalCents += $balance->availableCents;
+            }
+
+            $rows[] = array_merge($balance->toArray(), [
+                'display_name' => $configs->get($key)?->display_name ?? $key,
+                'health' => $this->health->find($key)?->state,
+            ]);
+        }
+
+        // Richest first — the order a split payout consumes them in.
+        usort($rows, static fn (array $a, array $b): int => $b['available_cents'] <=> $a['available_cents']);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'balances' => $rows,
+                'total_available_cents' => $totalCents,
+                'unreadable' => array_values(array_map(
+                    static fn (array $r): string => $r['acquirer_key'],
+                    array_filter($rows, static fn (array $r): bool => !$r['available'])
+                )),
+                'checked_at' => now()->toIso8601String(),
+            ],
+        ]);
     }
 
     /**
@@ -120,7 +175,8 @@ class AcquirerRoutingAdminController extends Controller
                 'type' => $config->type,
                 'enabled' => (bool) $config->enabled,
                 'supported_methods' => $config->supported_methods ?? [],
-                'credential_fields' => AcquirerConfig::getCredentialFields($config->acquirer_key),
+                'credential_fields' => $this->credentialSchema->fieldsFor($config),
+                'credential_schema_is_custom' => is_array($config->credential_schema) && $config->credential_schema !== [],
                 'credentials' => $this->credentials->masked($config),
                 'routing' => $this->profilePayload($profile),
                 'health' => $this->health->find($config->acquirer_key)?->toDashboardArray()
@@ -148,6 +204,13 @@ class AcquirerRoutingAdminController extends Controller
             'supported_methods' => ['nullable', 'array'],
             'supported_methods.*' => ['string'],
             'credentials' => ['nullable', 'array'],
+            // Lets the operator declare which credential fields this acquirer
+            // needs, so a brand-new PSP has inputs to type its token into.
+            'credential_schema' => ['nullable', 'array'],
+            'credential_schema.*.key' => ['required_with:credential_schema', 'string', 'max:64'],
+            'credential_schema.*.label' => ['nullable', 'string', 'max:120'],
+            'credential_schema.*.type' => ['nullable', 'string', 'in:text,password,select,textarea'],
+            'credential_schema.*.required' => ['nullable', 'boolean'],
             'routing' => ['nullable', 'array'],
         ]);
 
@@ -174,6 +237,7 @@ class AcquirerRoutingAdminController extends Controller
                     // enabled: it has not been connection-tested yet.
                     'enabled' => (bool) ($validated['enabled'] ?? false),
                     'supported_methods' => $this->normaliseMethods($validated['supported_methods'] ?? ['pix']),
+                    'credential_schema' => $this->credentialSchema->sanitiseInput($validated['credential_schema'] ?? null) ?: null,
                     'priority' => (int) ($request->input('routing.priority', 100)),
                 ]);
 
@@ -214,6 +278,7 @@ class AcquirerRoutingAdminController extends Controller
             'enabled' => ['sometimes', 'boolean'],
             'supported_methods' => ['sometimes', 'array'],
             'credentials' => ['sometimes', 'array'],
+            'credential_schema' => ['sometimes', 'nullable', 'array'],
             'routing' => ['sometimes', 'array'],
         ]);
 
@@ -234,6 +299,12 @@ class AcquirerRoutingAdminController extends Controller
 
                 if (array_key_exists('supported_methods', $validated)) {
                     $attributes['supported_methods'] = $this->normaliseMethods($validated['supported_methods']);
+                }
+
+                if (array_key_exists('credential_schema', $validated)) {
+                    // Passing null clears the custom schema and falls back to
+                    // the curated definition for a known acquirer.
+                    $attributes['credential_schema'] = $this->credentialSchema->sanitiseInput($validated['credential_schema']) ?: null;
                 }
 
                 if ($attributes !== []) {
