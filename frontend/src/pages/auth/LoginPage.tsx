@@ -164,14 +164,8 @@ export default function LoginPage() {
             Voltar
           </button>
 
-          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600">
-            <ShieldCheckIcon className="h-6 w-6" />
-          </div>
 
           <div className="mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">
-              Verificacao adicional
-            </p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
               Confirme seu acesso
             </h1>
