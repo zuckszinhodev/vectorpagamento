@@ -63,7 +63,9 @@ class SplitRule extends Model
 
     public function scopeActive($query)
     {
-        return $query->whereRaw('"is_active" = true');
+        // `whereRaw('"is_active" = true')` quebra no MySQL (aspas duplas viram
+        // string fora do modo ANSI). O builder resolve o dialeto sozinho.
+        return $query->where('is_active', true);
     }
 
     public function scopeForAccount($query, string $accountId)

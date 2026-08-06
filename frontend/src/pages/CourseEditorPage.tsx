@@ -1318,7 +1318,7 @@ function LessonModal({ lesson, onClose, onSave, isLoading }: {
           <div>
             <label className="block text-sm font-medium text-tx-secondary mb-2">Tipo de Conteúdo</label>
             <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-              {Object.entries(contentTypes).map(([key, config]) => {
+              {Object.entries(CONTENT_TYPE_CONFIG).map(([key, config]) => {
                 const Icon = config.icon;
                 return (
                   <button key={key} type="button" onClick={() => setContentType(key as Lesson['content_type'])}

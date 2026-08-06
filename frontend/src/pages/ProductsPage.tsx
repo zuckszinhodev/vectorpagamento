@@ -34,6 +34,14 @@ import {
   XCircleIcon,
   SwatchIcon,
   ChartBarIcon,
+  DocumentTextIcon,
+  CreditCardIcon,
+  TruckIcon,
+  ArchiveBoxIcon,
+  ReceiptPercentIcon,
+  CheckBadgeIcon,
+  InformationCircleIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
@@ -193,6 +201,45 @@ function SalesIcon({
       <path d="M16 30V18h8a5 5 0 0 1 0 10h-8M29 18h5M29 24h5M29 30h5" className={common} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="37" cy="11" r="4" className="fill-current opacity-25" />
     </svg>
+  );
+}
+
+/** Toggle switch padrão do formulário — usado com `peer` no input irmão. */
+const TOGGLE_TRACK_CLASS =
+  "h-6 w-11 rounded-full bg-neutral-200 dark:bg-neutral-700 peer transition-colors peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-accent-primary/20 peer-checked:bg-accent-primary after:content-[''] after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow-sm after:transition-all peer-checked:after:translate-x-full peer-checked:after:border-white";
+
+/** Card de seção do formulário: cabeçalho com ícone, título, descrição e ação opcional. */
+function FormSection({
+  icon: Icon,
+  iconTone = 'text-accent-primary',
+  iconBg = 'bg-accent-primary/10',
+  title,
+  description,
+  action,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  iconTone?: string;
+  iconBg?: string;
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  children?: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-border-DEFAULT bg-surface-card shadow-sm">
+      <header className="flex items-center gap-3 border-b border-border-DEFAULT bg-surface-hover/30 px-5 py-3.5">
+        <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ${iconBg} ${iconTone}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold text-tx-primary">{title}</h2>
+          {description && <p className="mt-0.5 text-xs leading-relaxed text-tx-muted">{description}</p>}
+        </div>
+        {action && <div className="flex-shrink-0">{action}</div>}
+      </header>
+      {children && <div className="p-5">{children}</div>}
+    </section>
   );
 }
 
@@ -396,115 +443,90 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-tx-primary">Produtos</h1>
-          <p className="text-sm text-tx-muted">
-            {stats.total} {stats.total === 1 ? 'produto' : 'produtos'} • {stats.active} {stats.active === 1 ? 'ativo' : 'ativos'}
-          </p>
+      <div className="relative overflow-hidden rounded-2xl border border-border-DEFAULT bg-gradient-to-br from-surface-card via-surface-card to-emerald-50/40 dark:to-emerald-950/10 p-5 sm:p-7">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-400/15 blur-3xl"
+        />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-primary/15 text-accent-primary shadow-inner">
+              <CubeIcon className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-tx-primary">
+                Produtos
+              </h1>
+              <p className="mt-1 text-sm text-tx-muted">
+                {stats.total > 0
+                  ? `Você tem ${stats.total} ${stats.total === 1 ? 'produto cadastrado' : 'produtos cadastrados'} — ${stats.active} ${stats.active === 1 ? 'ativo' : 'ativos'} no checkout.`
+                  : 'Cadastre seu primeiro produto para começar a vender.'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleCreate}
+            className="hidden lg:inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-accent-primary text-white text-sm font-semibold shadow-lg shadow-accent-primary/25 hover:bg-accent-primary/90 hover:shadow-accent-primary/40 transition-all hover:-translate-y-0.5 active:translate-y-0"
+          >
+            <PlusIcon className="h-5 w-5" />
+            Criar produto
+          </button>
         </div>
-        <button
-          onClick={handleCreate}
-          className="hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-lg bg-accent-primary text-white font-medium hover:bg-accent-primary/90 transition-all hover:scale-105 active:scale-95 shadow-lg"
-        >
-          <PlusIcon className="h-5 w-5" />
-          Criar Produto
-        </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <div className="card p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10">
-              <CubeIcon className="h-5 w-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="text-xs text-tx-muted">Total</p>
-              <p className="text-xl font-bold text-tx-primary">{stats.total}</p>
-            </div>
-          </div>
-        </div>
-        <div className="card p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10">
-              <CheckCircleIcon className="h-5 w-5 text-green-500" />
-            </div>
-            <div>
-              <p className="text-xs text-tx-muted">Ativos</p>
-              <p className="text-xl font-bold text-green-600">{stats.active}</p>
-            </div>
-          </div>
-        </div>
-        <div className="card p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
-              <UsersIcon className="h-5 w-5 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-xs text-tx-muted">Afiliados</p>
-              <p className="text-xl font-bold text-emerald-600">{stats.withAffiliates}</p>
-            </div>
-          </div>
-        </div>
-        <div className="card p-4 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
-              <TagIcon className="h-5 w-5 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-xs text-tx-muted">Digital</p>
-              <p className="text-xl font-bold text-amber-600">{stats.digital}</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Search & Filters Bar */}
-      <div className="rounded-2xl bg-surface-card p-3 sm:p-4 shadow-sm border border-border-DEFAULT">
-        <div className="flex flex-col gap-2 sm:gap-3">
+      <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-3 sm:p-4 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
           {/* Search */}
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
+          <div className="relative flex-1">
+            <MagnifyingGlassIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
             <input
               type="text"
-              placeholder="Buscar produtos..."
-              className="w-full rounded-lg border border-border-DEFAULT bg-surface-input pl-10 pr-4 py-2.5 text-sm text-tx-primary placeholder-tx-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all"
+              placeholder="Buscar por nome, categoria ou slug..."
+              className="w-full rounded-xl border border-border-DEFAULT bg-surface-input pl-11 pr-10 py-3 text-sm text-tx-primary placeholder-tx-muted transition-all focus:border-accent-primary focus:outline-none focus:ring-4 focus:ring-accent-primary/10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-tx-muted hover:bg-surface-hover hover:text-tx-primary"
+                aria-label="Limpar busca"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
-          {/* Controls Row */}
-          <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2">
-            {/* Filter Toggle */}
+          {/* Controls */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                showFilters 
-                  ? 'bg-accent-primary text-white shadow-sm' 
-                  : 'bg-surface-hover text-tx-secondary hover:bg-surface-page border border-border-DEFAULT'
+              className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${
+                showFilters
+                  ? 'bg-accent-primary text-white shadow-sm'
+                  : 'border border-border-DEFAULT bg-surface-input text-tx-secondary hover:bg-surface-hover'
               }`}
             >
               <FunnelIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Filtros</span>
+              Filtros
               {activeFiltersCount > 0 && (
-                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold ${
-                  showFilters ? 'bg-white/20' : 'bg-accent-primary text-white'
+                <span className={`ml-0.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[11px] font-bold ${
+                  showFilters ? 'bg-white/25' : 'bg-accent-primary text-white'
                 }`}>
                   {activeFiltersCount}
                 </span>
               )}
             </button>
 
-            {/* Sort */}
-            <div className="relative sm:flex-1 sm:max-w-[200px]">
+            <div className="relative">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full appearance-none rounded-lg border border-border-DEFAULT bg-surface-input pl-3 pr-8 py-2.5 text-sm font-medium text-tx-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all cursor-pointer hover:bg-surface-hover"
+                className="appearance-none cursor-pointer rounded-xl border border-border-DEFAULT bg-surface-input pl-3.5 pr-9 py-2.5 text-sm font-medium text-tx-primary transition-all hover:bg-surface-hover focus:border-accent-primary focus:outline-none focus:ring-4 focus:ring-accent-primary/10"
               >
                 <option value="newest">Mais recentes</option>
                 <option value="oldest">Mais antigos</option>
@@ -512,114 +534,111 @@ export default function ProductsPage() {
                 <option value="price_desc">Maior preço</option>
                 <option value="name">Nome A-Z</option>
               </select>
-              <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
+              <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
             </div>
 
-            {/* View Toggle - Hidden on mobile */}
-            <div className="hidden sm:flex items-center rounded-lg border border-border-DEFAULT bg-surface-input overflow-hidden">
+            <div className="hidden sm:flex items-center rounded-xl border border-border-DEFAULT bg-surface-input p-0.5">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2.5 transition-all ${
-                  viewMode === 'grid' 
-                    ? 'bg-accent-primary text-white' 
-                    : 'text-tx-muted hover:bg-surface-hover hover:text-tx-primary'
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-accent-primary text-white shadow-sm'
+                    : 'text-tx-muted hover:text-tx-primary'
                 }`}
-                title="Visualização em grade"
+                title="Grade"
               >
                 <Squares2X2Icon className="h-4 w-4" />
+                Grade
               </button>
-              <div className="w-px h-6 bg-border-DEFAULT" />
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2.5 transition-all ${
-                  viewMode === 'list' 
-                    ? 'bg-accent-primary text-white' 
-                    : 'text-tx-muted hover:bg-surface-hover hover:text-tx-primary'
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-accent-primary text-white shadow-sm'
+                    : 'text-tx-muted hover:text-tx-primary'
                 }`}
-                title="Visualização em lista"
+                title="Lista"
               >
                 <ListBulletIcon className="h-4 w-4" />
+                Lista
               </button>
             </div>
 
-            {/* Refresh Button */}
             <button
               onClick={() => refetch()}
-              className="col-span-2 sm:col-span-1 sm:w-auto p-2.5 rounded-lg border border-border-DEFAULT bg-surface-input text-tx-muted hover:bg-surface-hover hover:text-tx-primary transition-all flex items-center justify-center gap-2"
+              className="rounded-xl border border-border-DEFAULT bg-surface-input p-2.5 text-tx-muted transition-all hover:bg-surface-hover hover:text-tx-primary"
               title="Atualizar"
             >
               <ArrowPathIcon className="h-4 w-4" />
-              <span className="sm:hidden text-sm font-medium">Atualizar</span>
             </button>
           </div>
         </div>
 
         {/* Expanded Filters */}
         {showFilters && (
-          <div className="mt-3 pt-3 border-t border-border-DEFAULT">
-            <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-3 sm:items-center">
-              {/* Status Filter */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-tx-secondary min-w-[60px]">Status:</span>
-                <div className="relative flex-1 sm:flex-initial">
+          <div className="mt-4 border-t border-border-DEFAULT pt-4">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-tx-muted">Status</label>
+                <div className="relative mt-1.5">
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value as any)}
-                    className="w-full sm:w-auto appearance-none rounded-lg border border-border-DEFAULT bg-surface-input pl-3 pr-8 py-2 text-sm text-tx-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all cursor-pointer"
+                    className="w-full cursor-pointer appearance-none rounded-lg border border-border-DEFAULT bg-surface-input pl-3 pr-9 py-2 text-sm text-tx-primary transition-all focus:border-accent-primary focus:outline-none focus:ring-4 focus:ring-accent-primary/10"
                   >
                     <option value="all">Todos</option>
                     <option value="active">Ativos</option>
                     <option value="inactive">Inativos</option>
                   </select>
-                  <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
+                  <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
                 </div>
               </div>
 
-              {/* Type Filter */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-tx-secondary min-w-[60px]">Tipo:</span>
-                <div className="relative flex-1 sm:flex-initial">
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-tx-muted">Tipo</label>
+                <div className="relative mt-1.5">
                   <select
                     value={filterType}
                     onChange={(e) => setFilterType(e.target.value as any)}
-                    className="w-full sm:w-auto appearance-none rounded-lg border border-border-DEFAULT bg-surface-input pl-3 pr-8 py-2 text-sm text-tx-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all cursor-pointer"
+                    className="w-full cursor-pointer appearance-none rounded-lg border border-border-DEFAULT bg-surface-input pl-3 pr-9 py-2 text-sm text-tx-primary transition-all focus:border-accent-primary focus:outline-none focus:ring-4 focus:ring-accent-primary/10"
                   >
                     <option value="all">Todos</option>
                     <option value="digital">Digital</option>
                     <option value="physical">Físico</option>
                     <option value="service">Serviço</option>
                   </select>
-                  <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
+                  <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
                 </div>
               </div>
 
-              {/* Affiliate Filter */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-tx-secondary min-w-[60px]">Afiliados:</span>
-                <div className="relative flex-1 sm:flex-initial">
+              <div>
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-tx-muted">Afiliados</label>
+                <div className="relative mt-1.5">
                   <select
                     value={filterAffiliate}
                     onChange={(e) => setFilterAffiliate(e.target.value as any)}
-                    className="w-full sm:w-auto appearance-none rounded-lg border border-border-DEFAULT bg-surface-input pl-3 pr-8 py-2 text-sm text-tx-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 transition-all cursor-pointer"
+                    className="w-full cursor-pointer appearance-none rounded-lg border border-border-DEFAULT bg-surface-input pl-3 pr-9 py-2 text-sm text-tx-primary transition-all focus:border-accent-primary focus:outline-none focus:ring-4 focus:ring-accent-primary/10"
                   >
                     <option value="all">Todos</option>
                     <option value="enabled">Ativado</option>
                     <option value="disabled">Desativado</option>
                   </select>
-                  <ChevronDownIcon className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
+                  <ChevronDownIcon className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" />
                 </div>
               </div>
+            </div>
 
-              {activeFiltersCount > 0 && (
+            {activeFiltersCount > 0 && (
+              <div className="mt-3 flex justify-end">
                 <button
                   onClick={clearFilters}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-accent-primary hover:bg-accent-subtle transition-all w-full sm:w-auto"
+                  className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-accent-primary transition-all hover:bg-accent-subtle"
                 >
                   <XMarkIcon className="h-4 w-4" />
                   Limpar filtros
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -628,103 +647,118 @@ export default function ProductsPage() {
       {isLoading ? (
         <SectionSpinner />
       ) : filteredProducts.length === 0 ? (
-        <div className="card p-12 text-center">
-          <CubeIcon className="mx-auto h-16 w-16 text-tx-muted" />
-          <h3 className="mt-4 text-lg font-semibold text-tx-primary">
-            {products.length === 0 ? 'Nenhum produto cadastrado' : 'Nenhum produto encontrado'}
-          </h3>
-          <p className="mt-2 text-base text-tx-muted">
-            {products.length === 0 
-              ? 'Comece criando seu primeiro produto'
-              : 'Tente ajustar os filtros'}
-          </p>
-          {products.length === 0 && (
-            <button onClick={handleCreate} className="btn-primary mt-4 text-base px-6 py-3">
-              Criar Produto
-            </button>
-          )}
+        <div className="relative overflow-hidden rounded-2xl border border-dashed border-border-DEFAULT bg-surface-card p-10 sm:p-14 text-center">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,0.08),transparent_60%)]"
+          />
+          <div className="relative">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-accent-primary/10 text-accent-primary ring-1 ring-accent-primary/20">
+              <CubeIcon className="h-10 w-10" />
+            </div>
+            <h3 className="mt-6 text-xl font-semibold text-tx-primary">
+              {products.length === 0 ? 'Nenhum produto ainda' : 'Nada por aqui'}
+            </h3>
+            <p className="mx-auto mt-2 max-w-md text-sm text-tx-muted">
+              {products.length === 0
+                ? 'Crie seu primeiro produto para gerar um link de checkout e começar a receber pagamentos.'
+                : 'Nenhum produto corresponde aos filtros atuais. Ajuste ou limpe os filtros para ver mais resultados.'}
+            </p>
+            {products.length === 0 ? (
+              <button
+                onClick={handleCreate}
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-accent-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-accent-primary/25 transition-all hover:-translate-y-0.5 hover:bg-accent-primary/90"
+              >
+                <PlusIcon className="h-5 w-5" />
+                Criar meu primeiro produto
+              </button>
+            ) : (
+              activeFiltersCount > 0 && (
+                <button
+                  onClick={clearFilters}
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl border border-border-DEFAULT bg-surface-input px-5 py-3 text-sm font-semibold text-tx-primary transition-all hover:bg-surface-hover"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                  Limpar filtros
+                </button>
+              )
+            )}
+          </div>
         </div>
       ) : viewMode === 'grid' ? (
-        /* Grid View - Compact Cards */
-        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        /* Grid View — polished cards */
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="card overflow-hidden hover:shadow-md transition-shadow group">
-              {/* Product Image - Smaller */}
-              <div className="aspect-square bg-surface-hover relative">
+            <div
+              key={product.id}
+              className="group relative flex flex-col overflow-hidden rounded-2xl border border-border-DEFAULT bg-surface-card transition-all hover:-translate-y-1 hover:border-accent-primary/40 hover:shadow-xl hover:shadow-black/5"
+            >
+              <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-surface-hover to-surface-page">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
                     alt={product.name}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center">
-                    <PhotoIcon className="h-8 w-8 text-tx-muted" />
+                    <PhotoIcon className="h-12 w-12 text-tx-muted/60" />
                   </div>
                 )}
-                {/* Quick Actions Overlay */}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 p-3 opacity-0 transition-all translate-y-2 group-hover:translate-y-0 group-hover:opacity-100">
                   <button
                     onClick={() => viewCheckout(product)}
-                    className="p-2 bg-white rounded-full hover:bg-gray-100"
+                    className="rounded-lg bg-white/95 p-2 text-gray-700 shadow-sm backdrop-blur transition-transform hover:scale-110"
                     title="Visualizar"
                   >
-                    <EyeIcon className="h-4 w-4 text-gray-700" />
-                  </button>
-                  <button
-                    onClick={() => openProductAnalytics(product)}
-                    className="p-2 bg-white rounded-full hover:bg-gray-100"
-                    title="Analisar"
-                  >
-                    <ChartBarIcon className="h-4 w-4 text-gray-700" />
+                    <EyeIcon className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => copyCheckoutLink(product)}
-                    className="p-2 bg-white rounded-full hover:bg-gray-100"
+                    className="rounded-lg bg-white/95 p-2 text-gray-700 shadow-sm backdrop-blur transition-transform hover:scale-110"
                     title="Copiar link"
                   >
-                    <LinkIcon className="h-4 w-4 text-gray-700" />
+                    <LinkIcon className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => openCheckoutBuilder(product)}
-                    className="p-2 bg-white rounded-full hover:bg-gray-100"
-                    title="Personalizar Checkout"
+                    className="rounded-lg bg-white/95 p-2 text-gray-700 shadow-sm backdrop-blur transition-transform hover:scale-110"
+                    title="Checkout Builder"
                   >
-                    <SwatchIcon className="h-4 w-4 text-gray-700" />
+                    <SwatchIcon className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => handleEdit(product)}
-                    className="p-2 bg-white rounded-full hover:bg-gray-100"
-                    title="Editar"
+                    onClick={() => openProductAnalytics(product)}
+                    className="rounded-lg bg-white/95 p-2 text-gray-700 shadow-sm backdrop-blur transition-transform hover:scale-110"
+                    title="Analytics"
                   >
-                    <PencilIcon className="h-4 w-4 text-gray-700" />
+                    <ChartBarIcon className="h-4 w-4" />
                   </button>
                 </div>
-                {/* Status Badge */}
-                <span
-                  className={`absolute top-2 right-2 px-1.5 py-0.5 text-[10px] font-medium rounded ${
-                    product.status === 'active' 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-gray-500 text-white'
-                  }`}
-                >
-                  {product.status === 'active' ? 'Ativo' : 'Inativo'}
-                </span>
+
+                <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold backdrop-blur ${
+                      product.status === 'active'
+                        ? 'bg-emerald-500/90 text-white'
+                        : 'bg-neutral-500/90 text-white'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${product.status === 'active' ? 'bg-white animate-pulse' : 'bg-white/70'}`} />
+                    {product.status === 'active' ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
               </div>
 
-              {/* Product Info - Compact */}
-              <div className="p-2.5">
-                <h3 className="font-medium text-sm text-tx-primary line-clamp-1" title={product.name}>
-                  {product.name}
-                </h3>
-
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-sm font-bold text-accent-primary">
-                    {formatCurrency(product.price)}
-                  </span>
-                  <Menu as="div" className="relative">
-                    <Menu.Button className="rounded p-1 hover:bg-surface-hover">
-                      <EllipsisVerticalIcon className="h-4 w-4 text-tx-muted" />
+              <div className="flex flex-1 flex-col p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="line-clamp-2 flex-1 text-sm font-semibold text-tx-primary" title={product.name}>
+                    {product.name}
+                  </h3>
+                  <Menu as="div" className="relative flex-shrink-0">
+                    <Menu.Button className="rounded-lg p-1.5 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary">
+                      <EllipsisVerticalIcon className="h-4 w-4" />
                     </Menu.Button>
                     <Transition
                       as={Fragment}
@@ -735,71 +769,35 @@ export default function ProductsPage() {
                       leaveFrom="transform opacity-100 scale-100"
                       leaveTo="transform opacity-0 scale-95"
                     >
-                      <Menu.Items className="absolute right-0 z-10 mt-1 w-36 origin-top-right rounded-lg bg-surface-card shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                        <div className="py-1">
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                onClick={() => viewCheckout(product)}
-                                className={`${active ? 'bg-surface-hover' : ''} flex w-full items-center px-3 py-1.5 text-xs text-tx-secondary`}
-                              >
-                                <EyeIcon className="mr-2 h-4 w-4" />
-                                Visualizar
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                onClick={() => copyCheckoutLink(product)}
-                                className={`${active ? 'bg-surface-hover' : ''} flex w-full items-center px-3 py-1.5 text-xs text-tx-secondary`}
-                              >
-                                <LinkIcon className="mr-2 h-4 w-4" />
-                                Copiar link
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                onClick={() => openProductAnalytics(product)}
-                                className={`${active ? 'bg-surface-hover' : ''} flex w-full items-center px-3 py-1.5 text-xs text-tx-secondary`}
-                              >
-                                <ChartBarIcon className="mr-2 h-4 w-4" />
-                                Analytics
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                onClick={() => openCheckoutBuilder(product)}
-                                className={`${active ? 'bg-surface-hover' : ''} flex w-full items-center px-3 py-1.5 text-xs text-tx-secondary`}
-                              >
-                                <SwatchIcon className="mr-2 h-4 w-4" />
-                                Checkout Builder
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <Menu.Item>
-                            {({ active }) => (
-                              <button
-                                onClick={() => handleEdit(product)}
-                                className={`${active ? 'bg-surface-hover' : ''} flex w-full items-center px-3 py-1.5 text-xs text-tx-secondary`}
-                              >
-                                <PencilIcon className="mr-2 h-4 w-4" />
-                                Editar
-                              </button>
-                            )}
-                          </Menu.Item>
-                          <hr className="my-1" />
+                      <Menu.Items className="absolute right-0 z-10 mt-1 w-44 origin-top-right rounded-xl border border-border-DEFAULT bg-surface-card shadow-lg ring-1 ring-black/5 focus:outline-none">
+                        <div className="py-1.5">
+                          {[
+                            { onClick: () => viewCheckout(product), Icon: EyeIcon, label: 'Visualizar' },
+                            { onClick: () => copyCheckoutLink(product), Icon: LinkIcon, label: 'Copiar link' },
+                            { onClick: () => openProductAnalytics(product), Icon: ChartBarIcon, label: 'Analytics' },
+                            { onClick: () => openCheckoutBuilder(product), Icon: SwatchIcon, label: 'Checkout Builder' },
+                            { onClick: () => handleEdit(product), Icon: PencilIcon, label: 'Editar' },
+                          ].map(({ onClick, Icon, label }) => (
+                            <Menu.Item key={label}>
+                              {({ active }) => (
+                                <button
+                                  onClick={onClick}
+                                  className={`${active ? 'bg-surface-hover' : ''} flex w-full items-center gap-2 px-3 py-2 text-xs text-tx-secondary`}
+                                >
+                                  <Icon className="h-4 w-4" />
+                                  {label}
+                                </button>
+                              )}
+                            </Menu.Item>
+                          ))}
+                          <div className="my-1 h-px bg-border-DEFAULT" />
                           <Menu.Item>
                             {({ active }) => (
                               <button
                                 onClick={() => handleDelete(product)}
-                                className={`${active ? 'bg-surface-hover' : ''} flex w-full items-center px-3 py-1.5 text-xs text-status-error`}
+                                className={`${active ? 'bg-status-error/10' : ''} flex w-full items-center gap-2 px-3 py-2 text-xs text-status-error`}
                               >
-                                <TrashIcon className="mr-2 h-4 w-4" />
+                                <TrashIcon className="h-4 w-4" />
                                 Remover
                               </button>
                             )}
@@ -810,155 +808,182 @@ export default function ProductsPage() {
                   </Menu>
                 </div>
 
-                <div className="mt-2 flex items-center gap-1 flex-wrap">
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
                   <span
-                    className={`px-1.5 py-0.5 text-[10px] rounded ${
+                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium ${
                       product.type === 'digital'
-                        ? 'bg-blue-100 text-blue-700'
+                        ? 'bg-sky-500/10 text-sky-700 ring-1 ring-sky-500/20'
                         : product.type === 'physical'
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-gray-100 text-gray-700'
+                        ? 'bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20'
+                        : 'bg-neutral-500/10 text-neutral-700 ring-1 ring-neutral-500/20'
                     }`}
                   >
                     {product.type === 'digital' ? 'Digital' : product.type === 'physical' ? 'Físico' : 'Serviço'}
                   </span>
                   {product.affiliate_enabled && (
-                    <span className="px-1.5 py-0.5 text-[10px] rounded bg-emerald-100 text-emerald-700">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-700 ring-1 ring-violet-500/20">
+                      <UsersIcon className="h-3 w-3" />
                       {product.affiliate_commission_percent}%
                     </span>
                   )}
+                </div>
+
+                <div className="mt-auto flex items-end justify-between pt-4">
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-tx-muted">Preço</p>
+                    <p className="text-lg font-bold text-accent-primary">{formatCurrency(product.price)}</p>
+                  </div>
+                  <button
+                    onClick={() => handleEdit(product)}
+                    className="rounded-lg border border-border-DEFAULT bg-surface-input px-3 py-1.5 text-xs font-semibold text-tx-primary transition-all hover:bg-accent-primary hover:text-white hover:border-accent-primary"
+                  >
+                    Editar
+                  </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
       ) : (
-        /* List View */
-        <div className="card overflow-hidden">
+        /* List View — polished table */
+        <div className="overflow-hidden rounded-2xl border border-border-DEFAULT bg-surface-card shadow-sm">
           <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-surface-hover border-b border-border-DEFAULT">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-tx-muted uppercase">Produto</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-tx-muted uppercase hidden sm:table-cell">Tipo</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium text-tx-muted uppercase">Preço</th>
-                <th className="px-4 py-2.5 text-center text-xs font-medium text-tx-muted uppercase hidden md:table-cell">Status</th>
-                <th className="px-4 py-2.5 text-center text-xs font-medium text-tx-muted uppercase hidden lg:table-cell">Afiliados</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium text-tx-muted uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-DEFAULT">
-              {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-surface-hover">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg bg-surface-hover overflow-hidden flex-shrink-0">
-                        {product.image_url ? (
-                          <img src={product.image_url} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="h-full w-full flex items-center justify-center">
-                            <PhotoIcon className="h-5 w-5 text-tx-muted" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-tx-primary truncate">{product.name}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className={`px-2 py-0.5 text-xs rounded ${
-                      product.type === 'digital' ? 'bg-blue-100 text-blue-700' :
-                      product.type === 'physical' ? 'bg-amber-100 text-amber-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {product.type === 'digital' ? 'Digital' : product.type === 'physical' ? 'Físico' : 'Serviço'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="text-sm font-semibold text-accent-primary">{formatCurrency(product.price)}</span>
-                  </td>
-                  <td className="px-4 py-3 text-center hidden md:table-cell">
-                    <span className={`px-2 py-0.5 text-xs rounded ${
-                      product.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {product.status === 'active' ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center hidden lg:table-cell">
-                    {product.affiliate_enabled ? (
-                      <span className="px-2 py-0.5 text-xs rounded bg-emerald-100 text-emerald-700">
-                        {product.affiliate_commission_percent}%
-                      </span>
-                    ) : (
-                      <span className="text-xs text-tx-muted">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => viewCheckout(product)}
-                        className="p-1.5 rounded hover:bg-surface-page text-tx-muted hover:text-tx-primary"
-                        title="Visualizar"
-                      >
-                        <EyeIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => copyCheckoutLink(product)}
-                        className="p-1.5 rounded hover:bg-surface-page text-tx-muted hover:text-tx-primary"
-                        title="Copiar link"
-                      >
-                        <LinkIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => openProductAnalytics(product)}
-                        className="p-1.5 rounded hover:bg-surface-page text-tx-muted hover:text-tx-primary"
-                        title="Analisar"
-                      >
-                        <ChartBarIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => openCheckoutBuilder(product)}
-                        className="p-1.5 rounded hover:bg-surface-page text-tx-muted hover:text-accent-primary"
-                        title="Personalizar Checkout"
-                      >
-                        <SwatchIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleEdit(product)}
-                        className="p-1.5 rounded hover:bg-surface-page text-tx-muted hover:text-tx-primary"
-                        title="Editar"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product)}
-                        className="p-1.5 rounded hover:bg-surface-page text-status-error"
-                        title="Remover"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
+            <table className="w-full">
+              <thead className="bg-surface-hover/60">
+                <tr>
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted">Produto</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-tx-muted hidden sm:table-cell">Tipo</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-tx-muted">Preço</th>
+                  <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-tx-muted hidden md:table-cell">Status</th>
+                  <th className="px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-wider text-tx-muted hidden lg:table-cell">Afiliados</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wider text-tx-muted">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border-DEFAULT">
+                {filteredProducts.map((product) => (
+                  <tr key={product.id} className="group transition-colors hover:bg-surface-hover/50">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-xl bg-surface-hover ring-1 ring-border-DEFAULT">
+                          {product.image_url ? (
+                            <img src={product.image_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <PhotoIcon className="h-5 w-5 text-tx-muted" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-tx-primary">{product.name}</p>
+                          {product.category && (
+                            <p className="mt-0.5 text-xs text-tx-muted">{product.category}</p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 hidden sm:table-cell">
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${
+                          product.type === 'digital'
+                            ? 'bg-sky-500/10 text-sky-700 ring-1 ring-sky-500/20'
+                            : product.type === 'physical'
+                            ? 'bg-amber-500/10 text-amber-700 ring-1 ring-amber-500/20'
+                            : 'bg-neutral-500/10 text-neutral-700 ring-1 ring-neutral-500/20'
+                        }`}
+                      >
+                        {product.type === 'digital' ? 'Digital' : product.type === 'physical' ? 'Físico' : 'Serviço'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <span className="text-sm font-bold text-accent-primary">{formatCurrency(product.price)}</span>
+                    </td>
+                    <td className="px-5 py-3.5 text-center hidden md:table-cell">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          product.status === 'active'
+                            ? 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20'
+                            : 'bg-neutral-500/10 text-neutral-600 ring-1 ring-neutral-500/20'
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${product.status === 'active' ? 'bg-emerald-500' : 'bg-neutral-400'}`} />
+                        {product.status === 'active' ? 'Ativo' : 'Inativo'}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-center hidden lg:table-cell">
+                      {product.affiliate_enabled ? (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-violet-500/20">
+                          <UsersIcon className="h-3 w-3" />
+                          {product.affiliate_commission_percent}%
+                        </span>
+                      ) : (
+                        <span className="text-xs text-tx-muted">—</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-0.5 opacity-70 transition-opacity group-hover:opacity-100">
+                        <button
+                          onClick={() => viewCheckout(product)}
+                          className="rounded-lg p-1.5 text-tx-muted transition-colors hover:bg-surface-page hover:text-tx-primary"
+                          title="Visualizar"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => copyCheckoutLink(product)}
+                          className="rounded-lg p-1.5 text-tx-muted transition-colors hover:bg-surface-page hover:text-tx-primary"
+                          title="Copiar link"
+                        >
+                          <LinkIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => openProductAnalytics(product)}
+                          className="rounded-lg p-1.5 text-tx-muted transition-colors hover:bg-surface-page hover:text-tx-primary"
+                          title="Analytics"
+                        >
+                          <ChartBarIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => openCheckoutBuilder(product)}
+                          className="rounded-lg p-1.5 text-tx-muted transition-colors hover:bg-surface-page hover:text-accent-primary"
+                          title="Checkout Builder"
+                        >
+                          <SwatchIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEdit(product)}
+                          className="rounded-lg p-1.5 text-tx-muted transition-colors hover:bg-surface-page hover:text-tx-primary"
+                          title="Editar"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product)}
+                          className="rounded-lg p-1.5 text-status-error transition-colors hover:bg-status-error/10"
+                          title="Remover"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
 
       {/* Results count */}
       {filteredProducts.length > 0 && (
-        <p className="text-xs text-tx-muted text-center">
-          Exibindo {filteredProducts.length} de {products.length} produtos
+        <p className="text-center text-xs text-tx-muted">
+          Exibindo <span className="font-semibold text-tx-secondary">{filteredProducts.length}</span> de <span className="font-semibold text-tx-secondary">{products.length}</span> produtos
         </p>
       )}
 
-      {/* Floating Action Button */}
+      {/* Floating Action Button (mobile) */}
       <button
         onClick={handleCreate}
-        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent-primary text-white shadow-lg hover:bg-accent-primary/90 transition-all hover:scale-110 active:scale-95 lg:hidden"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent-primary text-white shadow-xl shadow-accent-primary/30 transition-all hover:scale-110 hover:bg-accent-primary/90 active:scale-95 lg:hidden"
         title="Criar Produto"
       >
         <PlusIcon className="h-6 w-6" />
@@ -1220,6 +1245,7 @@ function ProductFormPage({
 
   const affiliateEnabled = watch('affiliate_enabled');
   const productType = watch('type');
+  const productName = watch('name');
   const isPhysicalProduct = productType === 'physical';
   const freeShipping = watch('free_shipping');
   const orderBumpEnabled = watch('order_bump_enabled');
@@ -1367,36 +1393,489 @@ function ProductFormPage({
     mutation.mutate(data);
   };
 
+  const submitLabel = isUploading
+    ? 'Enviando imagem...'
+    : mutation.isPending
+    ? 'Salvando...'
+    : isEditing
+    ? 'Salvar alterações'
+    : 'Criar produto';
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 sm:gap-4">
-        <button
-          onClick={onClose}
-          className="rounded-lg p-2 hover:bg-surface-hover transition-colors"
-        >
-          <ArrowLeftIcon className="h-5 w-5 text-tx-secondary" />
-        </button>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-tx-primary">
-            {isEditing ? 'Editar Produto' : 'Novo Produto'}
-          </h1>
-          <p className="text-sm text-tx-muted mt-1">
-            {isEditing ? 'Atualize as informações do produto' : 'Preencha as informações do seu produto'}
-          </p>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      {/* Header sticky com ações sempre visíveis */}
+      <div className="sticky top-0 z-30 -mx-4 border-b border-border-DEFAULT bg-surface-page/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-shrink-0 rounded-xl border border-border-DEFAULT bg-surface-card p-2.5 text-tx-secondary transition-colors hover:bg-surface-hover hover:text-tx-primary"
+            title="Voltar para produtos"
+          >
+            <ArrowLeftIcon className="h-5 w-5" />
+          </button>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-tx-muted">
+              <button type="button" onClick={onClose} className="transition-colors hover:text-accent-primary">
+                Produtos
+              </button>
+              <span>/</span>
+              <span className="text-tx-secondary">{isEditing ? 'Editar' : 'Novo'}</span>
+            </div>
+            <h1 className="truncate text-lg font-bold tracking-tight text-tx-primary sm:text-xl">
+              {productName?.trim() || (isEditing ? 'Editar produto' : 'Novo produto')}
+            </h1>
+          </div>
+
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="hidden rounded-xl border border-border-DEFAULT bg-surface-card px-4 py-2.5 text-sm font-semibold text-tx-secondary transition-colors hover:bg-surface-hover sm:inline-flex"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={mutation.isPending || isUploading}
+              className="inline-flex items-center gap-2 rounded-xl bg-accent-primary px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent-primary/25 transition-all hover:bg-accent-primary/90 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
+            >
+              {submitLabel}
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3">
           {/* Coluna Principal - Informações básicas */}
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            {/* Card de Imagem */}
-            <div className="card p-4 sm:p-6">
-              <h2 className="text-lg font-semibold text-tx-primary mb-4">
-                Imagem do Produto
-              </h2>
+          <div className="lg:col-span-2 space-y-5">
+            <FormSection
+              icon={DocumentTextIcon}
+              title="Informações básicas"
+              description="Nome, descrição e precificação que o cliente vê no checkout."
+            >
+              <div className="space-y-5">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                    Nome do produto <span className="text-status-error">*</span>
+                  </label>
+                  <input
+                    {...register('name', { required: 'Nome é obrigatório' })}
+                    type="text"
+                    className="input"
+                    placeholder="Ex: Curso de Marketing Digital"
+                  />
+                  {errors.name && (
+                    <p className="mt-1.5 text-sm text-status-error">{errors.name.message}</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                      Preço (R$) <span className="text-status-error">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={priceDisplay}
+                      onChange={handlePriceChange}
+                      className="input"
+                      placeholder="99,90"
+                    />
+                    <input type="hidden" {...register('price', {
+                      required: 'Preço é obrigatório',
+                      min: { value: 0.01, message: 'Preço mínimo é R$ 0,01' },
+                    })} />
+                    {errors.price && (
+                      <p className="mt-1.5 text-sm text-status-error">{errors.price.message}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                      Tipo de produto
+                    </label>
+                    <select {...register('type')} className="input">
+                      <option value="digital">Digital</option>
+                      <option value="physical">Físico</option>
+                      <option value="service">Serviço</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                    Descrição
+                  </label>
+                  <Controller
+                    name="description"
+                    control={control}
+                    render={({ field }) => (
+                      <RichTextEditor
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                        placeholder="Descreva seu produto detalhadamente. Você pode adicionar formatação, imagens e vídeos..."
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+            </FormSection>
+
+            <FormSection
+              icon={CreditCardIcon}
+              iconTone="text-emerald-600"
+              iconBg="bg-emerald-500/10"
+              title="Métodos de pagamento"
+              description="Formas de pagamento aceitas no checkout deste produto."
+            >
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <label className="flex cursor-not-allowed items-center gap-3 rounded-xl border border-border-DEFAULT bg-surface-hover/40 p-3 opacity-50">
+                  <input
+                    {...register('payment_methods.credit_card')}
+                    type="checkbox"
+                    defaultChecked={false}
+                    disabled
+                    className="h-4 w-4 flex-shrink-0 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
+                  />
+                  <SalesIcon type="card" className="h-6 w-6 flex-shrink-0 text-emerald-600" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-tx-primary">Cartão</p>
+                    <p className="text-[11px] text-tx-muted">Em breve</p>
+                  </div>
+                </label>
+
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 transition-all hover:border-emerald-500/50 hover:bg-emerald-500/10">
+                  <input
+                    {...register('payment_methods.pix')}
+                    type="checkbox"
+                    defaultChecked
+                    className="h-4 w-4 flex-shrink-0 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
+                  />
+                  <PixIcon className="h-6 w-6 flex-shrink-0 text-emerald-600" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-tx-primary">PIX</p>
+                    <p className="text-[11px] text-emerald-600">Disponível</p>
+                  </div>
+                </label>
+
+                <label className="flex cursor-not-allowed items-center gap-3 rounded-xl border border-border-DEFAULT bg-surface-hover/40 p-3 opacity-50">
+                  <input
+                    {...register('payment_methods.boleto')}
+                    type="checkbox"
+                    defaultChecked={false}
+                    disabled
+                    className="h-4 w-4 flex-shrink-0 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
+                  />
+                  <SalesIcon type="boleto" className="h-6 w-6 flex-shrink-0 text-emerald-600" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-tx-primary">Boleto</p>
+                    <p className="text-[11px] text-tx-muted">Em breve</p>
+                  </div>
+                </label>
+              </div>
+            </FormSection>
+
+            <FormSection
+              icon={ChartBarIcon}
+              iconTone="text-violet-600"
+              iconBg="bg-violet-500/10"
+              title="Ofertas e rastreamento"
+              description="Aumente o ticket médio e acompanhe conversões."
+            >
+              <div className="space-y-3">
+                {/* Order Bump */}
+                <div className={`rounded-xl border transition-all ${orderBumpEnabled ? 'border-accent-primary/40 bg-accent-subtle' : 'border-border-DEFAULT'}`}>
+                  <div className="flex items-center gap-3 p-4">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
+                      <SalesIcon type="bump" className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-tx-primary">Order Bump</h3>
+                      <p className="text-xs text-tx-muted">Oferta adicional exibida dentro do checkout</p>
+                    </div>
+                    <label className="relative inline-flex flex-shrink-0 cursor-pointer items-center">
+                      <input {...register('order_bump_enabled')} type="checkbox" className="peer sr-only" />
+                      <div className={TOGGLE_TRACK_CLASS} />
+                    </label>
+                  </div>
+                  {orderBumpEnabled && (
+                    <div className="grid grid-cols-1 gap-3 border-t border-border-DEFAULT p-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-tx-secondary">Produto ofertado</label>
+                        <select {...register('order_bump_product_id')} className="input text-sm">
+                          <option value="">Selecione...</option>
+                          {availableProducts.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-tx-secondary">Desconto (%)</label>
+                        <input {...register('order_bump_discount_percent')} type="number" min="0" max="90" className="input text-sm" placeholder="10" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Upsell */}
+                <div className={`rounded-xl border transition-all ${upsellEnabled ? 'border-accent-primary/40 bg-accent-subtle' : 'border-border-DEFAULT'}`}>
+                  <div className="flex items-center gap-3 p-4">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-500/10">
+                      <SalesIcon type="upsell" className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-tx-primary">Upsell</h3>
+                      <p className="text-xs text-tx-muted">Oferta exibida logo após a compra</p>
+                    </div>
+                    <label className="relative inline-flex flex-shrink-0 cursor-pointer items-center">
+                      <input {...register('upsell_enabled')} type="checkbox" className="peer sr-only" />
+                      <div className={TOGGLE_TRACK_CLASS} />
+                    </label>
+                  </div>
+                  {upsellEnabled && (
+                    <div className="grid grid-cols-1 gap-3 border-t border-border-DEFAULT p-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-tx-secondary">Produto ofertado</label>
+                        <select {...register('upsell_product_id')} className="input text-sm">
+                          <option value="">Selecione...</option>
+                          {availableProducts.map((p) => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-tx-secondary">Desconto (%)</label>
+                        <input {...register('upsell_discount_percent')} type="number" min="0" max="90" className="input text-sm" placeholder="15" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Meta Pixel */}
+                <div className={`rounded-xl border transition-all ${facebookPixelEnabled ? 'border-accent-primary/40 bg-accent-subtle' : 'border-border-DEFAULT'}`}>
+                  <div className="flex items-center gap-3 p-4">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-sky-500/10">
+                      <SalesIcon type="pixel" className="h-6 w-6 text-sky-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-tx-primary">Meta Pixel</h3>
+                      <p className="text-xs text-tx-muted">Rastreie visitas e compras deste checkout</p>
+                    </div>
+                    <label className="relative inline-flex flex-shrink-0 cursor-pointer items-center">
+                      <input {...register('facebook_pixel_enabled')} type="checkbox" className="peer sr-only" />
+                      <div className={TOGGLE_TRACK_CLASS} />
+                    </label>
+                  </div>
+                  {facebookPixelEnabled && (
+                    <div className="space-y-4 border-t border-border-DEFAULT p-4">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium text-tx-secondary">ID do Pixel</label>
+                        <input
+                          {...register('facebook_pixel_id', {
+                            required: facebookPixelEnabled ? 'Informe o ID do Pixel' : false,
+                            pattern: {
+                              value: /^[0-9]{8,30}$/,
+                              message: 'Use apenas numeros do ID do Pixel',
+                            },
+                          })}
+                          className="input text-sm"
+                          placeholder="Ex: 123456789012345"
+                        />
+                        {errors.facebook_pixel_id && (
+                          <p className="mt-1 text-xs text-status-error">{errors.facebook_pixel_id.message}</p>
+                        )}
+                      </div>
+                      <div>
+                        <p className="mb-1.5 text-xs font-medium text-tx-secondary">Eventos rastreados</p>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                          {[
+                            ['facebook_pixel_track_page_view', 'PageView'],
+                            ['facebook_pixel_track_initiate_checkout', 'InitiateCheckout'],
+                            ['facebook_pixel_track_purchase', 'Purchase'],
+                          ].map(([field, label]) => (
+                            <label key={field} className="flex cursor-pointer items-center gap-2 rounded-lg border border-border-DEFAULT bg-surface-card px-3 py-2 text-xs font-medium text-tx-secondary transition-colors hover:bg-surface-hover">
+                              <input
+                                {...register(field as keyof ProductForm)}
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
+                              />
+                              {label}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </FormSection>
+
+            {/* Envio e Estoque - Produtos Físicos */}
+            {isPhysicalProduct && (
+              <>
+              <FormSection
+                icon={TruckIcon}
+                iconTone="text-blue-600"
+                iconBg="bg-blue-500/10"
+                title="Envio"
+                description="Dimensões e frete usados no cálculo do checkout."
+              >
+                <div className="space-y-5">
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-tx-secondary">
+                      Dimensões do pacote
+                    </label>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {[
+                        { field: 'shipping_length' as const, label: 'Comprimento', unit: 'cm', step: '0.1' },
+                        { field: 'shipping_width' as const, label: 'Largura', unit: 'cm', step: '0.1' },
+                        { field: 'shipping_height' as const, label: 'Altura', unit: 'cm', step: '0.1' },
+                        { field: 'shipping_weight' as const, label: 'Peso', unit: 'kg', step: '0.001' },
+                      ].map(({ field, label, unit, step }) => (
+                        <div key={field}>
+                          <label className="mb-1 block text-[11px] font-medium text-tx-muted">
+                            {label} ({unit})
+                          </label>
+                          <input
+                            {...register(field)}
+                            type="number"
+                            step={step}
+                            className="input text-sm"
+                            placeholder="0"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 transition-colors hover:bg-emerald-500/10">
+                    <input
+                      {...register('free_shipping')}
+                      type="checkbox"
+                      className="h-4 w-4 flex-shrink-0 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-tx-primary">Frete grátis</p>
+                      <p className="text-xs text-tx-muted">O cliente não paga frete neste produto</p>
+                    </div>
+                  </label>
+
+                  {!freeShipping && (
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                        Valor do frete (R$)
+                      </label>
+                      <input
+                        {...register('shipping_price')}
+                        type="number"
+                        step="0.01"
+                        className="input"
+                        placeholder="15.00"
+                      />
+                      <p className="mt-1.5 text-xs text-tx-muted">
+                        Valor fixo. Deixe em branco para calcular automaticamente.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-start gap-2 rounded-xl bg-sky-500/5 p-3 ring-1 ring-sky-500/20">
+                    <InformationCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-sky-600" />
+                    <p className="text-xs leading-relaxed text-sky-700 dark:text-sky-400">
+                      O endereço de entrega é solicitado automaticamente no checkout.
+                    </p>
+                  </div>
+                </div>
+              </FormSection>
+
+              <FormSection
+                icon={ArchiveBoxIcon}
+                iconTone="text-amber-600"
+                iconBg="bg-amber-500/10"
+                title="Controle de estoque"
+                description="Limite a quantidade disponível para venda."
+                action={
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input {...register('stock_enabled')} type="checkbox" className="peer sr-only" />
+                    <div className={TOGGLE_TRACK_CLASS} />
+                  </label>
+                }
+              >
+                {watch('stock_enabled') ? (
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                          Quantidade em estoque
+                        </label>
+                        <input
+                          {...register('stock_quantity', {
+                            min: { value: 0, message: 'Quantidade não pode ser negativa' }
+                          })}
+                          type="number"
+                          min="0"
+                          className="input"
+                          placeholder="100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                          Alerta de estoque baixo
+                        </label>
+                        <input
+                          {...register('stock_alert_threshold', {
+                            min: { value: 0, message: 'Valor não pode ser negativo' }
+                          })}
+                          type="number"
+                          min="0"
+                          className="input"
+                          placeholder="10"
+                        />
+                      </div>
+                    </div>
+
+                    {watch('stock_quantity') !== undefined && (
+                      (watch('stock_quantity') || 0) <= (watch('stock_alert_threshold') || 0) ? (
+                        <div className="flex items-center gap-2 rounded-xl bg-amber-500/5 p-3 ring-1 ring-amber-500/25">
+                          <ExclamationTriangleIcon className="h-5 w-5 flex-shrink-0 text-amber-600" />
+                          <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                            Estoque baixo: {watch('stock_quantity')} unidades
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 rounded-xl bg-emerald-500/5 p-3 ring-1 ring-emerald-500/25">
+                          <CheckCircleIcon className="h-5 w-5 flex-shrink-0 text-emerald-600" />
+                          <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                            Estoque disponível: {watch('stock_quantity')} unidades
+                          </p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-tx-muted">
+                    Estoque ilimitado. Ative o controle para definir uma quantidade.
+                  </p>
+                )}
+              </FormSection>
+              </>
+            )}
+          </div>
+
+          {/* Coluna Lateral - Configurações */}
+          <div className="space-y-5 lg:sticky lg:top-24 lg:self-start">
+            {/* Imagem do produto */}
+            <FormSection
+              icon={PhotoIcon}
+              iconTone="text-sky-600"
+              iconBg="bg-sky-500/10"
+              title="Imagem do produto"
+              description="Aparece no checkout e na vitrine."
+            >
               <div
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={(e) => {
@@ -1418,11 +1897,11 @@ function ProductFormPage({
                     setSelectedImageFile(file);
                   }
                 }}
-                className={`relative cursor-pointer rounded-card border-2 border-dashed transition-all ${
+                className={`relative cursor-pointer rounded-xl border-2 border-dashed transition-all ${
                   isDragging
                     ? 'border-accent-primary bg-accent-subtle'
-                    : 'border-border-DEFAULT hover:border-accent-primary/70'
-                } ${imagePreview ? 'p-2' : 'p-8'}`}
+                    : 'border-border-DEFAULT hover:border-accent-primary/70 hover:bg-surface-hover/40'
+                } ${imagePreview ? 'p-2' : 'p-6'}`}
               >
                 <input
                   ref={fileInputRef}
@@ -1442,24 +1921,24 @@ function ProductFormPage({
                     }
                   }}
                 />
-                
+
                 {imagePreview ? (
-                  <div className="relative group">
+                  <div className="group relative">
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="w-full h-auto max-h-96 object-contain rounded-lg mx-auto"
+                      className="mx-auto aspect-[4/3] w-full rounded-lg object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-3">
+                    <div className="absolute inset-0 flex items-center justify-center gap-2 rounded-lg bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           fileInputRef.current?.click();
                         }}
-                        className="px-4 py-2 bg-surface-card text-tx-primary text-sm font-medium rounded-element hover:bg-surface-hover transition-colors"
+                        className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-neutral-900 transition-transform hover:scale-105"
                       >
-                        Trocar imagem
+                        Trocar
                       </button>
                       <button
                         type="button"
@@ -1468,7 +1947,7 @@ function ProductFormPage({
                           setImagePreview(null);
                           setImageFile(null);
                         }}
-                        className="px-4 py-2 bg-red-500 text-white text-sm font-medium rounded-element hover:bg-red-600 transition-colors"
+                        className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-semibold text-white transition-transform hover:scale-105"
                       >
                         Remover
                       </button>
@@ -1476,513 +1955,42 @@ function ProductFormPage({
                   </div>
                 ) : (
                   <div className="text-center">
-                    <CloudArrowUpIcon className="mx-auto h-12 w-12 text-tx-muted" />
-                    <p className="mt-3 text-sm font-medium text-tx-secondary">
-                      Clique ou arraste uma imagem
+                    <CloudArrowUpIcon className="mx-auto h-9 w-9 text-tx-muted" />
+                    <p className="mt-2 text-sm font-medium text-tx-secondary">
+                      Clique ou arraste
                     </p>
-                    <p className="mt-1 text-xs text-tx-muted">
-                      PNG, JPG ou WEBP até 5MB
+                    <p className="mt-0.5 text-xs text-tx-muted">
+                      PNG, JPG ou WEBP · até 5MB
                     </p>
                   </div>
                 )}
               </div>
-            </div>
+            </FormSection>
 
-            {/* Card de Informações */}
-            <div className="card p-4 sm:p-6">
-              <h2 className="text-lg font-semibold text-tx-primary mb-4">
-                Informações do Produto
-              </h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-tx-secondary">
-                    Nome do Produto
-                  </label>
-                  <input
-                    {...register('name', { required: 'Nome é obrigatório' })}
-                    type="text"
-                    className="input mt-1"
-                    placeholder="Ex: Curso de Marketing Digital"
-                  />
-                  {errors.name && (
-                    <p className="mt-1 text-sm text-status-error">{errors.name.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-tx-secondary mb-1">
-                    Descrição
-                  </label>
-                  <Controller
-                    name="description"
-                    control={control}
-                    render={({ field }) => (
-                      <RichTextEditor
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                        placeholder="Descreva seu produto detalhadamente. Você pode adicionar formatação, imagens e vídeos..."
-                      />
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-tx-secondary">
-                      Preço (R$)
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={priceDisplay}
-                      onChange={handlePriceChange}
-                      className="input mt-1"
-                      placeholder="99,90"
-                    />
-                    <input type="hidden" {...register('price', {
-                      required: 'Preço é obrigatório',
-                      min: { value: 0.01, message: 'Preço mínimo é R$ 0,01' },
-                    })} />
-                    {errors.price && (
-                      <p className="mt-1 text-sm text-status-error">{errors.price.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-tx-secondary">
-                      Tipo
-                    </label>
-                    <select {...register('type')} className="input mt-1">
-                      <option value="digital">Digital</option>
-                      <option value="physical">Físico</option>
-                      <option value="service">Serviço</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Configurações comerciais do checkout */}
-            <div className="card p-4 sm:p-6">
-              <h2 className="text-lg font-semibold text-tx-primary mb-4">Configurações de Vendas</h2>
-              
-              {/* Métodos de Pagamento */}
-              <div className="mb-6 p-4 rounded-xl border-2 border-border-DEFAULT bg-gradient-to-br from-surface-card to-surface-hover/30">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
-                    <SalesIcon type="payment" className="h-6 w-6 text-emerald-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-tx-primary">Métodos de Pagamento</h3>
-                    <p className="text-xs text-tx-muted">Selecione os métodos aceitos</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <label className="flex items-center gap-3 p-3 rounded-lg bg-surface-card cursor-not-allowed border-2 border-transparent transition-all opacity-50">
-                    <input
-                      {...register('payment_methods.credit_card')}
-                      type="checkbox"
-                      defaultChecked={false}
-                      disabled
-                      className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
-                    />
-                    <div className="flex items-center gap-2">
-                      <SalesIcon type="card" className="h-6 w-6 text-emerald-500" />
-                      <span className="text-sm font-medium text-tx-primary">Cartão</span>
-                      <span className="text-xs text-tx-muted">(em breve)</span>
-                    </div>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 rounded-lg bg-surface-card hover:bg-surface-hover cursor-pointer border-2 border-transparent hover:border-emerald-500/30 transition-all">
-                    <input
-                      {...register('payment_methods.pix')}
-                      type="checkbox"
-                      defaultChecked
-                      className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
-                    />
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-                        <PixIcon className="h-5 w-5" />
-                      </span>
-                      <span className="text-sm font-medium text-tx-primary">PIX</span>
-                    </div>
-                  </label>
-                  <label className="flex items-center gap-3 p-3 rounded-lg bg-surface-card hover:bg-surface-hover cursor-pointer border-2 border-transparent hover:border-emerald-500/30 transition-all opacity-50">
-                    <input
-                      {...register('payment_methods.boleto')}
-                      type="checkbox"
-                      defaultChecked={false}
-                      disabled
-                      className="h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
-                    />
-                    <div className="flex items-center gap-2">
-                      <SalesIcon type="boleto" className="h-6 w-6 text-emerald-500" />
-                      <span className="text-sm font-medium text-tx-primary">Boleto</span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                {/* Order Bump */}
-                <div className={`p-4 rounded-lg border-2 transition-all ${orderBumpEnabled ? 'border-accent-primary bg-accent-subtle' : 'border-border-DEFAULT'}`}>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                      <SalesIcon type="bump" className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-tx-primary">Order Bump</h3>
-                      <p className="text-xs text-tx-muted">Oferta adicional no checkout</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input {...register('order_bump_enabled')} type="checkbox" className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-primary"></div>
-                    </label>
-                  </div>
-                  {orderBumpEnabled && (
-                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-tx-secondary mb-1">Produto</label>
-                        <select {...register('order_bump_product_id')} className="input text-sm">
-                          <option value="">Selecione...</option>
-                          {availableProducts.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-tx-secondary mb-1">Desconto (%)</label>
-                        <input {...register('order_bump_discount_percent')} type="number" min="0" max="90" className="input text-sm" placeholder="10" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Upsell */}
-                <div className={`p-4 rounded-lg border-2 transition-all ${upsellEnabled ? 'border-accent-primary bg-accent-subtle' : 'border-border-DEFAULT'}`}>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <SalesIcon type="upsell" className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-tx-primary">Upsell</h3>
-                      <p className="text-xs text-tx-muted">Oferta pós-compra</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input {...register('upsell_enabled')} type="checkbox" className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-primary"></div>
-                    </label>
-                  </div>
-                  {upsellEnabled && (
-                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-tx-secondary mb-1">Produto</label>
-                        <select {...register('upsell_product_id')} className="input text-sm">
-                          <option value="">Selecione...</option>
-                          {availableProducts.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-tx-secondary mb-1">Desconto (%)</label>
-                        <input {...register('upsell_discount_percent')} type="number" min="0" max="90" className="input text-sm" placeholder="15" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Meta Pixel */}
-                <div className={`p-4 rounded-lg border-2 transition-all ${facebookPixelEnabled ? 'border-accent-primary bg-accent-subtle' : 'border-border-DEFAULT'}`}>
-                  <div className="flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center">
-                      <SalesIcon type="pixel" className="h-6 w-6 text-sky-600 dark:text-sky-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-tx-primary">Meta Pixel</h3>
-                      <p className="text-xs text-tx-muted">Rastreie visitas e compras deste checkout</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input {...register('facebook_pixel_enabled')} type="checkbox" className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-accent-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-accent-primary"></div>
-                    </label>
-                  </div>
-                  {facebookPixelEnabled && (
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <label className="block text-xs font-medium text-tx-secondary mb-1">ID do Pixel</label>
-                        <input
-                          {...register('facebook_pixel_id', {
-                            required: facebookPixelEnabled ? 'Informe o ID do Pixel' : false,
-                            pattern: {
-                              value: /^[0-9]{8,30}$/,
-                              message: 'Use apenas numeros do ID do Pixel',
-                            },
-                          })}
-                          className="input text-sm"
-                          placeholder="Ex: 123456789012345"
-                        />
-                        {errors.facebook_pixel_id && (
-                          <p className="mt-1 text-xs text-red-500">{errors.facebook_pixel_id.message}</p>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        {[
-                          ['facebook_pixel_track_page_view', 'PageView'],
-                          ['facebook_pixel_track_initiate_checkout', 'InitiateCheckout'],
-                          ['facebook_pixel_track_purchase', 'Purchase'],
-                        ].map(([field, label]) => (
-                          <label key={field} className="flex items-center gap-2 rounded-lg border border-border-DEFAULT bg-surface-card px-3 py-2 text-xs font-medium text-tx-secondary">
-                            <input
-                              {...register(field as keyof ProductForm)}
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
-                            />
-                            {label}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Informações de Envio - Produtos Físicos */}
-            {isPhysicalProduct && (
-              <>
-              <div className="card p-4 sm:p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                  <h2 className="text-lg font-semibold text-tx-primary">
-                    Informações de Envio
-                  </h2>
-                </div>
-                <p className="text-sm text-tx-muted mb-4">
-                  Configure as informações de envio para este produto físico
-                </p>
-
-                <div className="space-y-4">
-                  {/* Dimensões do Produto */}
-                  <div>
-                    <label className="block text-sm font-medium text-tx-secondary mb-2">
-                      Dimensões do Pacote (cm)
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      <div>
-                        <input
-                          {...register('shipping_length')}
-                          type="number"
-                          step="0.1"
-                          className="input text-sm"
-                          placeholder="Comp."
-                        />
-                        <p className="text-xs text-tx-muted mt-1">Compr.</p>
-                      </div>
-                      <div>
-                        <input
-                          {...register('shipping_width')}
-                          type="number"
-                          step="0.1"
-                          className="input text-sm"
-                          placeholder="Larg."
-                        />
-                        <p className="text-xs text-tx-muted mt-1">Largura</p>
-                      </div>
-                      <div>
-                        <input
-                          {...register('shipping_height')}
-                          type="number"
-                          step="0.1"
-                          className="input text-sm"
-                          placeholder="Alt."
-                        />
-                        <p className="text-xs text-tx-muted mt-1">Altura</p>
-                      </div>
-                      <div>
-                        <input
-                          {...register('shipping_weight')}
-                          type="number"
-                          step="0.001"
-                          className="input text-sm"
-                          placeholder="Peso"
-                        />
-                        <p className="text-xs text-tx-muted mt-1">Peso (kg)</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Frete Grátis */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-status-success-subtle border border-green-200">
-                    <div>
-                      <p className="text-sm font-medium text-tx-primary">
-                        Frete Grátis
-                      </p>
-                      <p className="text-xs text-tx-muted">
-                        Oferecer frete grátis para este produto
-                      </p>
-                    </div>
-                    <input
-                      {...register('free_shipping')}
-                      type="checkbox"
-                      className="h-5 w-5 rounded border-border-DEFAULT text-status-success focus:ring-green-500"
-                    />
-                  </div>
-
-                  {/* Preço do Frete */}
-                  {!freeShipping && (
-                    <div>
-                      <label className="block text-sm font-medium text-tx-secondary mb-1">
-                        Valor do Frete (R$)
-                      </label>
-                      <input
-                        {...register('shipping_price')}
-                        type="number"
-                        step="0.01"
-                        className="input"
-                        placeholder="15.00"
-                      />
-                      <p className="mt-1 text-xs text-tx-muted">
-                        Valor fixo de frete. Deixe em branco para calcular automaticamente.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Aviso sobre endereço no checkout */}
-                  <div className="p-3 rounded-lg bg-accent-subtle border border-blue-200">
-                    <p className="text-xs text-accent-primary flex items-center gap-2">
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      O endereço de entrega será solicitado automaticamente no checkout
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Controle de Estoque - Produtos Físicos */}
-              <div className="card p-4 sm:p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <svg className="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                  </svg>
-                  <h2 className="text-lg font-semibold text-tx-primary">
-                    Controle de Estoque
-                  </h2>
-                  <input
-                    {...register('stock_enabled')}
-                    type="checkbox"
-                    className="ml-auto h-5 w-5 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
-                  />
-                </div>
-                <p className="text-sm text-tx-muted mb-4">
-                  Ative para controlar a quantidade disponível deste produto
-                </p>
-
-                {watch('stock_enabled') && (
-                  <div className="space-y-4 pt-4 border-t border-border-DEFAULT">
-                    <div>
-                      <label className="block text-sm font-medium text-tx-secondary mb-1">
-                        Quantidade em Estoque
-                      </label>
-                      <input
-                        {...register('stock_quantity', {
-                          min: { value: 0, message: 'Quantidade não pode ser negativa' }
-                        })}
-                        type="number"
-                        min="0"
-                        className="input"
-                        placeholder="100"
-                      />
-                      <p className="mt-1 text-xs text-tx-muted">
-                        Quantidade total disponível para venda
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-tx-secondary mb-1">
-                        Alerta de Estoque Baixo
-                      </label>
-                      <input
-                        {...register('stock_alert_threshold', {
-                          min: { value: 0, message: 'Valor não pode ser negativo' }
-                        })}
-                        type="number"
-                        min="0"
-                        className="input"
-                        placeholder="10"
-                      />
-                      <p className="mt-1 text-xs text-tx-muted">
-                        Você será notificado quando o estoque atingir este valor
-                      </p>
-                    </div>
-
-                    {/* Preview do estoque */}
-                    {watch('stock_quantity') !== undefined && (
-                      <div className={`p-3 rounded-lg border-2 ${
-                        (watch('stock_quantity') || 0) <= (watch('stock_alert_threshold') || 0)
-                          ? 'bg-amber-50 border-amber-200'
-                          : 'bg-green-50 border-green-200'
-                      }`}>
-                        <div className="flex items-center gap-2">
-                          {(watch('stock_quantity') || 0) <= (watch('stock_alert_threshold') || 0) ? (
-                            <>
-                              <svg className="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                              </svg>
-                              <p className="text-sm font-medium text-amber-700">
-                                Estoque baixo: {watch('stock_quantity')} unidades
-                              </p>
-                            </>
-                          ) : (
-                            <>
-                              <svg className="h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              <p className="text-sm font-medium text-green-700">
-                                Estoque disponível: {watch('stock_quantity')} unidades
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              </>
-            )}
-          </div>
-
-          {/* Coluna Lateral - Configurações */}
-          <div className="space-y-4 sm:space-y-6">
             {/* Desconto */}
-            <div className="card p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-tx-primary">
-                  Desconto
-                </h2>
-                <input
-                  {...register('discount_enabled')}
-                  type="checkbox"
-                  className="h-5 w-5 rounded border-border-DEFAULT text-accent-primary focus:ring-accent-primary/30"
-                />
-              </div>
-              <p className="text-sm text-tx-muted mb-4">
-                Aplicar desconto promocional neste produto
-              </p>
-
-              {watch('discount_enabled') && (
-                <div className="space-y-4 pt-4 border-t border-border-DEFAULT">
+            <FormSection
+              icon={ReceiptPercentIcon}
+              iconTone="text-rose-600"
+              iconBg="bg-rose-500/10"
+              title="Desconto"
+              description="Preço promocional no checkout."
+              action={
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input {...register('discount_enabled')} type="checkbox" className="peer sr-only" />
+                  <div className={TOGGLE_TRACK_CLASS} />
+                </label>
+              }
+            >
+              {watch('discount_enabled') ? (
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-tx-secondary mb-2">
                       Tipo de Desconto
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <label className={`flex items-center justify-center gap-2 p-3 rounded-element border-2 cursor-pointer transition-all ${
-                        watch('discount_type') === 'percentage' 
-                          ? 'border-accent-primary bg-accent-subtle text-accent-primary' 
+                        watch('discount_type') === 'percentage'
+                          ? 'border-accent-primary bg-accent-subtle text-accent-primary'
                           : 'border-border-DEFAULT hover:border-border-DEFAULT'
                       }`}>
                         <input
@@ -2025,8 +2033,8 @@ function ProductFormPage({
                       placeholder={watch('discount_type') === 'percentage' ? '10' : '50.00'}
                     />
                     {watch('discount_value') && watch('price') && (
-                      <div className="mt-2 p-2 rounded-lg bg-status-success-subtle">
-                        <p className="text-sm font-medium text-status-success">
+                      <div className="mt-2 rounded-lg bg-emerald-500/5 p-2.5 ring-1 ring-emerald-500/20">
+                        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
                           Preço final: {formatCurrency(
                             watch('discount_type') === 'percentage'
                               ? (watch('price') * 100) - ((watch('price') * 100) * (watch('discount_value') || 0) / 100)
@@ -2037,118 +2045,109 @@ function ProductFormPage({
                     )}
                   </div>
                 </div>
+              ) : (
+                <p className="text-sm text-tx-muted">
+                  Sem desconto. Ative para definir um preço promocional.
+                </p>
               )}
-            </div>
+            </FormSection>
 
             {/* Afiliados e Vitrine */}
-            <div className="card p-4 sm:p-6">
-              <div className="space-y-6">
-                {/* Programa de Afiliados */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <h3 className="text-lg font-semibold text-tx-primary">
-                        Programa de Afiliados
-                      </h3>
-                      <p className="text-sm text-tx-muted">
-                        Permitir que afiliados promovam este produto
-                      </p>
-                    </div>
+            <FormSection
+              icon={UsersIcon}
+              iconTone="text-violet-600"
+              iconBg="bg-violet-500/10"
+              title="Programa de afiliados"
+              description="Permitir que afiliados promovam este produto."
+              action={
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input {...register('affiliate_enabled')} type="checkbox" className="peer sr-only" />
+                  <div className={TOGGLE_TRACK_CLASS} />
+                </label>
+              }
+            >
+              {affiliateEnabled ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                      Comissão para afiliados (%)
+                    </label>
                     <input
-                      {...register('affiliate_enabled')}
-                      type="checkbox"
-                      className="h-5 w-5 rounded border-border-DEFAULT text-accent-primary focus:ring-accent-primary"
+                      {...register('affiliate_commission_percent', {
+                        min: { value: 1, message: 'Mínimo 1%' },
+                        max: { value: 50, message: 'Máximo 50%' },
+                      })}
+                      type="number"
+                      step="0.1"
+                      className="input"
+                      placeholder="10"
                     />
+                    {watch('affiliate_commission_percent') && watch('price') && (
+                      <p className="mt-1.5 text-sm font-medium text-accent-primary">
+                        Comissão por venda: {formatCurrency(Math.round((watch('price') * 100) * (watch('affiliate_commission_percent') || 0) / 100))}
+                      </p>
+                    )}
+                    {errors.affiliate_commission_percent && (
+                      <p className="mt-1.5 text-sm text-status-error">
+                        {errors.affiliate_commission_percent.message}
+                      </p>
+                    )}
                   </div>
 
-                  {affiliateEnabled && (
-                    <div className="mt-4 space-y-4 p-4 rounded-lg bg-accent-subtle border border-border-DEFAULT">
-                      <div>
-                        <label className="block text-sm font-medium text-tx-secondary mb-1">
-                          Comissão para Afiliados (%)
-                        </label>
-                        <input
-                          {...register('affiliate_commission_percent', {
-                            min: { value: 1, message: 'Mínimo 1%' },
-                            max: { value: 50, message: 'Máximo 50%' },
-                          })}
-                          type="number"
-                          step="0.1"
-                          className="input"
-                          placeholder="10"
-                        />
-                        {watch('affiliate_commission_percent') && watch('price') && (
-                          <p className="mt-1 text-sm text-accent-primary">
-                            Comissão por venda: {formatCurrency(Math.round((watch('price') * 100) * (watch('affiliate_commission_percent') || 0) / 100))}
-                          </p>
-                        )}
-                        {errors.affiliate_commission_percent && (
-                          <p className="mt-1 text-sm text-status-error">
-                            {errors.affiliate_commission_percent.message}
-                          </p>
-                        )}
-                      </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                      Categoria <span className="text-status-error">*</span>
+                    </label>
+                    <select
+                      {...register('category', {
+                        validate: (value) => {
+                          if (affiliateEnabled && !value) {
+                            return 'Categoria é obrigatória para produtos com afiliados';
+                          }
+                          return true;
+                        }
+                      })}
+                      className={`input ${errors.category ? 'border-status-error' : ''}`}
+                    >
+                      <option value="">Selecione uma categoria...</option>
+                      <option value="Tecnologia">Tecnologia</option>
+                      <option value="Marketing">Marketing</option>
+                      <option value="Finanças">Finanças</option>
+                      <option value="Design">Design</option>
+                      <option value="Negócios">Negócios</option>
+                      <option value="Saúde">Saúde</option>
+                      <option value="Desenvolvimento Pessoal">Desenvolvimento Pessoal</option>
+                      <option value="Educação">Educação</option>
+                    </select>
+                    {errors.category && (
+                      <p className="mt-1.5 text-sm text-status-error">
+                        {errors.category.message}
+                      </p>
+                    )}
+                  </div>
 
-                      {/* Categoria obrigatória para afiliados */}
-                      <div>
-                        <label className="block text-sm font-medium text-tx-secondary mb-1">
-                          Categoria <span className="text-status-error">*</span>
-                        </label>
-                        <select
-                          {...register('category', {
-                            validate: (value) => {
-                              if (affiliateEnabled && !value) {
-                                return 'Categoria é obrigatória para produtos com afiliados';
-                              }
-                              return true;
-                            }
-                          })}
-                          className={`input ${errors.category ? 'border-red-500' : ''}`}
-                        >
-                          <option value="">Selecione uma categoria...</option>
-                          <option value="Tecnologia">Tecnologia</option>
-                          <option value="Marketing">Marketing</option>
-                          <option value="Finanças">Finanças</option>
-                          <option value="Design">Design</option>
-                          <option value="Negócios">Negócios</option>
-                          <option value="Saúde">Saúde</option>
-                          <option value="Desenvolvimento Pessoal">Desenvolvimento Pessoal</option>
-                          <option value="Educação">Educação</option>
-                        </select>
-                        {errors.category && (
-                          <p className="mt-1 text-sm text-status-error">
-                            {errors.category.message}
-                          </p>
-                        )}
-                        <p className="mt-1 text-xs text-tx-muted">
-                          A categoria é necessária para seu produto aparecer na vitrine de afiliados
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Info: produto aparece automaticamente na vitrine */}
-                  <div className="mt-4 p-4 rounded-lg bg-status-success-subtle border border-green-200">
-                    <p className="text-sm text-status-success flex items-center gap-2">
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Este produto aparecerá automaticamente na vitrine pública (/vitrine) para afiliados promoverem
+                  <div className="flex items-start gap-2 rounded-xl bg-emerald-500/5 p-3 ring-1 ring-emerald-500/20">
+                    <CheckCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-600" />
+                    <p className="text-xs leading-relaxed text-emerald-700 dark:text-emerald-400">
+                      Este produto aparecerá na vitrine pública <span className="font-medium">/vitrine</span> para afiliados promoverem.
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
+              ) : (
+                <p className="text-sm text-tx-muted">
+                  Desativado. Ative para definir comissão e listar na vitrine de afiliados.
+                </p>
+              )}
+            </FormSection>
 
             {/* Página de Obrigado */}
-            <div className="card p-4 sm:p-6">
-              <h2 className="text-lg font-semibold text-tx-primary mb-2">
-                Página de Obrigado <span className="text-xs font-normal text-tx-muted">(Opcional)</span>
-              </h2>
-              <p className="text-sm text-tx-muted mb-4">
-                Configure o que acontece após a compra ser aprovada
-              </p>
-
+            <FormSection
+              icon={CheckBadgeIcon}
+              iconTone="text-emerald-600"
+              iconBg="bg-emerald-500/10"
+              title="Página de obrigado"
+              description="O que acontece após a compra ser aprovada."
+            >
               <div className="space-y-4">
                 <div className="grid grid-cols-3 gap-1 sm:gap-2">
                   <label className={`flex flex-col items-center justify-center p-3 rounded-element border-2 cursor-pointer transition-all ${
@@ -2212,39 +2211,36 @@ function ProductFormPage({
                       className="input"
                       placeholder="https://seusite.com/obrigado"
                     />
-                    <p className="mt-1 text-xs text-tx-muted">
-                      {thankYouPageType === 'redirect' 
-                        ? 'O cliente será redirecionado para esta URL após a compra' 
+                    <p className="mt-1.5 text-xs text-tx-muted">
+                      {thankYouPageType === 'redirect'
+                        ? 'O cliente será redirecionado para esta URL após a compra'
                         : 'URL da sua página de obrigado personalizada'
                       }
                     </p>
                   </div>
                 )}
               </div>
-            </div>
+            </FormSection>
 
-            {/* Botões de ação */}
-            <div className="card p-4 sm:p-6">
-              <div className="flex flex-col gap-3">
-                <button
-                  type="submit"
-                  disabled={mutation.isPending || isUploading}
-                  className="btn-primary w-full justify-center"
-                >
-                  {isUploading ? 'Enviando imagem...' : mutation.isPending ? 'Salvando...' : isEditing ? 'Salvar Alterações' : 'Criar Produto'}
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="btn-secondary w-full justify-center"
-                >
-                  Cancelar
-                </button>
-              </div>
+            {/* Ações (mobile — no desktop ficam no header sticky) */}
+            <div className="flex flex-col gap-2 lg:hidden">
+              <button
+                type="submit"
+                disabled={mutation.isPending || isUploading}
+                className="flex h-12 w-full items-center justify-center rounded-xl bg-accent-primary text-sm font-semibold text-white shadow-lg shadow-accent-primary/25 transition-all hover:bg-accent-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitLabel}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-12 w-full items-center justify-center rounded-xl border border-border-DEFAULT bg-surface-card text-sm font-semibold text-tx-secondary transition-colors hover:bg-surface-hover"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
-        </div>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 }

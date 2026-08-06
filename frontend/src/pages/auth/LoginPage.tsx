@@ -33,6 +33,12 @@ function Spinner() {
   );
 }
 
+const inputClass =
+  'h-12 w-full rounded-xl border border-neutral-200 bg-white px-11 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 hover:border-neutral-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
+
+const primaryButtonClass =
+  'group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-neutral-800 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-neutral-900/15 disabled:cursor-not-allowed disabled:opacity-60';
+
 export default function LoginPage() {
   const { platformName } = useThemeStore();
   const [isLoading, setIsLoading] = useState(false);
@@ -150,34 +156,26 @@ export default function LoginPage() {
 
       {mfaPending ? (
         <section className="w-full">
-          <div className="mb-10 md:hidden">
-            <img
-              src="/img/logo.png"
-              alt={platformName}
-              className="h-10 w-auto object-contain"
-            />
-          </div>
-
           <button
             onClick={handleBackToLogin}
-            className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-emerald-300 transition-colors hover:text-emerald-200"
+            className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
           >
             <ArrowLeftIcon className="h-4 w-4" />
             Voltar
           </button>
 
-          <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-lg border border-emerald-300/25 bg-emerald-300/10 text-emerald-200">
+          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600">
             <ShieldCheckIcon className="h-6 w-6" />
           </div>
 
           <div className="mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200/70">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">
               Verificacao adicional
             </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-normal text-white">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
               Confirme seu acesso
             </h1>
-            <p className="mt-3 text-sm leading-6 text-slate-400">
+            <p className="mt-3 text-sm leading-6 text-neutral-600">
               Digite o codigo de 6 digitos gerado pelo Google Authenticator.
             </p>
           </div>
@@ -197,17 +195,17 @@ export default function LoginPage() {
                   onChange={(e) => handleMfaChange(i, e.target.value)}
                   onKeyDown={(e) => handleMfaKeyDown(i, e)}
                   autoFocus={i === 0}
-                  className="h-14 w-full rounded-lg border border-white/10 bg-white/[0.035] text-center text-xl font-semibold text-white outline-none transition-colors focus:border-emerald-300 focus:ring-2 focus:ring-emerald-300/15"
+                  className="h-14 w-full rounded-xl border border-neutral-200 bg-white text-center text-xl font-semibold text-neutral-900 outline-none transition-all hover:border-neutral-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
                 />
               ))}
             </div>
 
-            <label className="flex items-center gap-3 text-sm text-slate-400">
+            <label className="flex cursor-pointer items-center gap-3 text-sm text-neutral-600">
               <input
                 type="checkbox"
                 checked={rememberDevice}
                 onChange={(e) => setRememberDevice(e.target.checked)}
-                className="h-4 w-4 rounded border-white/15 bg-[#101312] text-emerald-300 focus:ring-emerald-300"
+                className="h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900"
               />
               Lembrar este dispositivo por 30 dias
             </label>
@@ -215,7 +213,7 @@ export default function LoginPage() {
             <button
               onClick={handleMfaSubmit}
               disabled={mfaLoading || mfaCode.join('').length !== 6}
-              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-emerald-300 px-5 text-sm font-semibold text-[#052e1a] transition-colors hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-[#0b0d0c] disabled:cursor-not-allowed disabled:opacity-50"
+              className={primaryButtonClass}
             >
               {mfaLoading ? (
                 <>
@@ -227,11 +225,11 @@ export default function LoginPage() {
               )}
             </button>
 
-            <p className="text-sm leading-6 text-slate-500">
+            <p className="text-sm leading-6 text-neutral-500">
               Em caso de problemas, contate o suporte pelo WhatsApp{' '}
               <a
                 href="https://wa.me/5511940968290?text=Ola%2C%20preciso%20de%20ajuda%20com%20a%20autenticacao%20de%202%20fatores"
-                className="font-medium text-emerald-300 transition-colors hover:text-emerald-200"
+                className="font-medium text-emerald-600 transition-colors hover:text-emerald-700"
               >
                 11 94096-8290
               </a>
@@ -242,27 +240,22 @@ export default function LoginPage() {
       ) : (
         <section className="w-full">
           <div className="mb-8">
-            <div className="mb-10 md:hidden">
-              <img
-                src="/img/logo.png"
-                alt={platformName}
-                className="h-10 w-auto object-contain"
-              />
-            </div>
-
-            <h1 className="text-3xl font-semibold tracking-normal text-white">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">
+              Bem-vindo de volta
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
               Acesse sua conta
             </h1>
-            <p className="mt-3 text-sm leading-6 text-slate-400">
-              Entre para acompanhar suas vendas
+            <p className="mt-3 text-sm leading-6 text-neutral-600">
+              Entre para acompanhar suas vendas e movimentacoes.
             </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-200">E-mail</label>
+              <label className="text-sm font-medium text-neutral-800">E-mail</label>
               <div className="relative">
-                <EnvelopeIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+                <EnvelopeIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" />
                 <input
                   {...register('email', {
                     required: 'E-mail e obrigatorio',
@@ -273,25 +266,25 @@ export default function LoginPage() {
                   })}
                   type="email"
                   autoComplete="email"
-                  className="h-12 w-full rounded-lg border border-white/10 bg-white/[0.035] px-11 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-emerald-300 focus:bg-white/[0.055] focus:ring-2 focus:ring-emerald-300/15"
+                  className={inputClass}
                   placeholder="seu@email.com"
                 />
               </div>
-              {errors.email && <p className="text-sm text-red-300">{errors.email.message}</p>}
+              {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-4">
-                <label className="text-sm font-medium text-slate-200">Senha</label>
+                <label className="text-sm font-medium text-neutral-800">Senha</label>
                 <Link
                   to="/forgot-password"
-                  className="text-sm font-medium text-emerald-300 transition-colors hover:text-emerald-200"
+                  className="text-sm font-medium text-emerald-600 transition-colors hover:text-emerald-700"
                 >
                   Esqueci minha senha
                 </Link>
               </div>
               <div className="relative">
-                <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+                <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" />
                 <input
                   {...register('password', {
                     required: 'Senha e obrigatoria',
@@ -302,26 +295,22 @@ export default function LoginPage() {
                   })}
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  className="h-12 w-full rounded-lg border border-white/10 bg-white/[0.035] px-11 pr-12 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-emerald-300 focus:bg-white/[0.055] focus:ring-2 focus:ring-emerald-300/15"
+                  className={`${inputClass} pr-12`}
                   placeholder="Sua senha"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-slate-200"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors hover:text-neutral-700"
                   aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
                 </button>
               </div>
-              {errors.password && <p className="text-sm text-red-300">{errors.password.message}</p>}
+              {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
             </div>
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-emerald-300 px-5 text-sm font-semibold text-[#052e1a] transition-colors hover:bg-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:ring-offset-2 focus:ring-offset-[#0b0d0c] disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <button type="submit" disabled={isLoading} className={`${primaryButtonClass} mt-2`}>
               {isLoading ? (
                 <>
                   <Spinner />
@@ -330,18 +319,18 @@ export default function LoginPage() {
               ) : (
                 <>
                   Entrar na plataforma
-                  <ArrowRightIcon className="h-4 w-4" />
+                  <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-8 border-t border-white/10 pt-6">
-            <p className="text-sm text-slate-500">
+          <div className="mt-8 border-t border-neutral-200 pt-6">
+            <p className="text-sm text-neutral-600">
               Nao tem uma conta?{' '}
               <Link
                 to="/register"
-                className="font-medium text-emerald-300 transition-colors hover:text-emerald-200"
+                className="font-semibold text-neutral-900 transition-colors hover:text-emerald-700"
               >
                 Cadastre-se
               </Link>

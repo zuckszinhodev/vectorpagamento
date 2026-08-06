@@ -196,6 +196,17 @@ class SplitConfigController extends Controller
                 ], 422);
             }
 
+            // Destinatários precisam existir de fato — senão o valor seria creditado
+            // numa carteira fantasma no momento do pagamento.
+            $recipientErrors = $this->splitService->validateRecipients($validated['recipients']);
+            if (!empty($recipientErrors)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Destinatário inválido na regra de split',
+                    'errors' => $recipientErrors,
+                ], 422);
+            }
+
             $rule = $this->splitService->createRule($accountId, $validated);
 
             return response()->json([
@@ -274,6 +285,15 @@ class SplitConfigController extends Controller
                         'success' => false,
                         'message' => 'A soma das porcentagens não pode ultrapassar 100%',
                         'errors' => ['recipients' => ["Total: {$totalPercentage}%, máximo: 100%"]],
+                    ], 422);
+                }
+
+                $recipientErrors = $this->splitService->validateRecipients($validated['recipients']);
+                if (!empty($recipientErrors)) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Destinatário inválido na regra de split',
+                        'errors' => $recipientErrors,
                     ], 422);
                 }
             }

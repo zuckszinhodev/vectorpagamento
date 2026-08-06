@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api\V1;
 
+use App\Services\Split\RecipientValidator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -49,7 +50,63 @@ class CreateChargeRequest extends FormRequest
             'split_rules.*.percentage' => ['required_without:split_rules.*.amount', 'nullable', 'numeric', 'min:0.01', 'max:100'],
             'split_rules.*.type' => ['required_with:split_rules', 'string', 'in:percentage,fixed,flat'],
             'split_rules.*.charge_processing_fee' => ['sometimes', 'boolean'],
+            'split_rules.*.recipient_type' => ['sometimes', 'string', 'in:account,affiliate'],
         ];
+    }
+
+    /**
+     * Regras que dependem de olhar o split_rules como um todo — o validador de
+     * campo isolado deixa passar 3 recebedores com 50% cada.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            $splitRules = $this->input('split_rules');
+            if (!is_array($splitRules) || empty($splitRules)) {
+                return;
+            }
+
+            $totalPercentage = 0.0;
+            $totalFixed = 0;
+
+            foreach ($splitRules as $rule) {
+                if (($rule['type'] ?? null) === 'percentage') {
+                    $totalPercentage += (float) ($rule['percentage'] ?? 0);
+                } else {
+                    $totalFixed += (int) ($rule['amount'] ?? 0);
+                }
+            }
+
+            if ($totalPercentage > 100) {
+                $validator->errors()->add(
+                    'split_rules',
+                    "A soma dos percentuais do split é {$totalPercentage}%, acima do máximo de 100%."
+                );
+            }
+
+            $amount = (int) $this->input('amount', 0);
+            if ($amount > 0 && $totalFixed > $amount) {
+                $validator->errors()->add(
+                    'split_rules',
+                    "A soma dos valores fixos do split ({$totalFixed}) excede o valor da cobrança ({$amount})."
+                );
+            }
+
+            // Destinatários precisam existir; senão o dinheiro iria para o vazio.
+            $recipientErrors = app(RecipientValidator::class)->validate(
+                array_map(fn ($rule) => [
+                    'recipient_id' => $rule['recipient_id'] ?? '',
+                    'recipient_type' => $rule['recipient_type'] ?? 'account',
+                ], $splitRules)
+            );
+
+            foreach ($recipientErrors as $field => $message) {
+                $validator->errors()->add(
+                    str_replace('recipients.', 'split_rules.', $field),
+                    $message
+                );
+            }
+        });
     }
 
     public function messages(): array

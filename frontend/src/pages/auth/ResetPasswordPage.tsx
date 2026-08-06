@@ -3,15 +3,44 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
+import {
+  ArrowRightIcon,
+  CheckIcon,
+  ExclamationTriangleIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  LockClosedIcon,
+} from '@heroicons/react/24/outline';
 
 interface ResetPasswordForm {
   password: string;
   password_confirmation: string;
 }
 
+function Spinner() {
+  return (
+    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" aria-hidden="true">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+      <path
+        className="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+      />
+    </svg>
+  );
+}
+
+const inputClass =
+  'h-12 w-full rounded-xl border border-neutral-200 bg-white px-11 pr-12 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 hover:border-neutral-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
+
+const primaryButtonClass =
+  'group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-neutral-800 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-neutral-900/15 disabled:cursor-not-allowed disabled:opacity-60';
+
 export default function ResetPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const token = searchParams.get('token');
@@ -25,7 +54,7 @@ export default function ResetPasswordPage() {
 
   const onSubmit = async (data: ResetPasswordForm) => {
     if (!token) {
-      toast.error('Token inválido');
+      toast.error('Token invalido');
       return;
     }
 
@@ -50,114 +79,131 @@ export default function ResetPasswordPage() {
 
   if (!token) {
     return (
-      <div className="p-8 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-status-error-subtle">
-          <svg className="h-6 w-6 text-status-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+      <section className="w-full text-center">
+        <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-red-200 bg-red-50 text-red-600">
+          <ExclamationTriangleIcon className="h-6 w-6" />
         </div>
-        <h2 className="text-xl font-bold text-white">Link inválido</h2>
-        <p className="mt-2 text-sm text-gray-400">
-          Este link de redefinição de senha é inválido ou expirou.
+        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Link invalido</h1>
+        <p className="mt-3 text-sm leading-6 text-neutral-600">
+          Este link de redefinicao de senha e invalido ou expirou.
         </p>
-        <Link to="/forgot-password" className="btn-primary mt-6 inline-block">
+        <Link to="/forgot-password" className={`${primaryButtonClass} mt-8`}>
           Solicitar novo link
+          <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
-      </div>
+      </section>
     );
   }
 
   if (isSuccess) {
     return (
-      <div className="p-8 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-status-success-subtle">
-          <svg className="h-6 w-6 text-status-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
+      <section className="w-full text-center">
+        <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600">
+          <CheckIcon className="h-6 w-6" />
         </div>
-        <h2 className="text-xl font-bold text-white">Senha alterada!</h2>
-        <p className="mt-2 text-sm text-gray-400">
+        <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">Senha alterada!</h1>
+        <p className="mt-3 text-sm leading-6 text-neutral-600">
           Sua senha foi redefinida com sucesso. Redirecionando para o login...
         </p>
-        <Link to="/login" className="btn-primary mt-6 inline-block">
+        <Link to="/login" className={`${primaryButtonClass} mt-8`}>
           Ir para login
+          <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </Link>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8 text-center">
-        <h2 className="text-2xl font-bold text-white">Redefinir senha</h2>
-        <p className="mt-2 text-sm text-gray-400">
-          Digite sua nova senha abaixo.
+    <section className="w-full">
+      <div className="mb-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">
+          Nova senha
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+          Redefinir senha
+        </h1>
+        <p className="mt-3 text-sm leading-6 text-neutral-600">
+          Escolha uma nova senha segura para acessar sua conta.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-300">
-            Nova senha
-          </label>
-          <input
-            {...register('password', {
-              required: 'Senha é obrigatória',
-              minLength: { value: 8, message: 'Mínimo 8 caracteres' },
-            })}
-            type="password"
-            autoComplete="new-password"
-            className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            placeholder="••••••••"
-          />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-neutral-800">Nova senha</label>
+          <div className="relative">
+            <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" />
+            <input
+              {...register('password', {
+                required: 'Senha e obrigatoria',
+                minLength: { value: 8, message: 'Minimo 8 caracteres' },
+              })}
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              className={inputClass}
+              placeholder="Sua nova senha"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors hover:text-neutral-700"
+              aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+            >
+              {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+            </button>
+          </div>
           {errors.password && (
-            <p className="mt-1 text-sm text-status-error">{errors.password.message}</p>
+            <p className="text-sm text-red-600">{errors.password.message}</p>
           )}
         </div>
 
-        <div>
-          <label htmlFor="password_confirmation" className="block text-sm font-medium text-gray-300">
-            Confirmar nova senha
-          </label>
-          <input
-            {...register('password_confirmation', {
-              required: 'Confirmação é obrigatória',
-              validate: (val) => val === watch('password') || 'As senhas não conferem',
-            })}
-            type="password"
-            autoComplete="new-password"
-            className="mt-1 w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder-gray-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            placeholder="••••••••"
-          />
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-neutral-800">Confirmar nova senha</label>
+          <div className="relative">
+            <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" />
+            <input
+              {...register('password_confirmation', {
+                required: 'Confirmacao e obrigatoria',
+                validate: (val) => val === watch('password') || 'As senhas nao conferem',
+              })}
+              type={showConfirmation ? 'text' : 'password'}
+              autoComplete="new-password"
+              className={inputClass}
+              placeholder="Repita a nova senha"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirmation(!showConfirmation)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors hover:text-neutral-700"
+              aria-label={showConfirmation ? 'Ocultar confirmacao' : 'Mostrar confirmacao'}
+            >
+              {showConfirmation ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+            </button>
+          </div>
           {errors.password_confirmation && (
-            <p className="mt-1 text-sm text-status-error">{errors.password_confirmation.message}</p>
+            <p className="text-sm text-red-600">{errors.password_confirmation.message}</p>
           )}
         </div>
 
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="btn-primary w-full"
-        >
+        <button type="submit" disabled={isLoading} className={primaryButtonClass}>
           {isLoading ? (
-            <span className="flex items-center justify-center gap-2">
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Redefinindo...
-            </span>
+            <>
+              <Spinner />
+              Redefinindo
+            </>
           ) : (
-            'Redefinir senha'
+            <>
+              Redefinir senha
+              <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </>
           )}
         </button>
 
-        <div className="text-center">
-          <Link to="/login" className="text-sm text-emerald-500 hover:text-emerald-400">
+        <p className="text-center text-sm text-neutral-600">
+          <Link to="/login" className="font-semibold text-neutral-900 transition-colors hover:text-emerald-700">
             Voltar para login
           </Link>
-        </div>
+        </p>
       </form>
-    </div>
+    </section>
   );
 }

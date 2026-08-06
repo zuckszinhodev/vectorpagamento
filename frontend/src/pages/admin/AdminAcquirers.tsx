@@ -970,6 +970,7 @@ function EditAcquirerModal({
   onSave: (data: Partial<Acquirer>) => void;
   isSaving: boolean;
 }) {
+  const platformName = useThemeStore((s) => s.platformName);
   const [form, setForm] = useState({
     display_name: acquirer.display_name,
     priority: acquirer.priority,

@@ -124,6 +124,20 @@ class AccountNotificationService
         ]);
     }
 
+    /** KYC pendente logo após o cadastro. */
+    public function kycPending(User $user): void
+    {
+        $this->push($user->account_id, $user->id, [
+            'type'    => 'warning',
+            'title'   => 'Complete sua verificação',
+            'message' => 'Envie seus documentos para liberar vendas e saques na sua conta.',
+            'data'    => [
+                'event' => 'kyc.pending',
+                'url'   => '/kyc',
+            ],
+        ]);
+    }
+
     /** KYC aprovado. */
     public function kycApproved(User $user): void
     {

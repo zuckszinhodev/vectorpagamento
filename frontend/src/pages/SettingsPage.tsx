@@ -1881,7 +1881,7 @@ export default function SettingsPage() {
 
  {/* Security Tab */}
  {activeTab === 'security' && (
- <SecuritySection />
+ <SecuritySection onMfaEnabled={() => setShowMfaRequiredBanner(false)} />
  )}
 
  {/* Modals */}
@@ -1915,7 +1915,7 @@ export default function SettingsPage() {
 
 // ── Security Section ────────────────────────────────────────
 
-function SecuritySection() {
+function SecuritySection({ onMfaEnabled }: { onMfaEnabled?: () => void }) {
  const queryClient = useQueryClient();
  const { user, updateUser, checkAuth } = useAuthStore();
 
@@ -1990,7 +1990,7 @@ function SecuritySection() {
        setMfaSecret('');
        setMfaQrUrl('');
        // Hide MFA required banner when user enables MFA
-       setShowMfaRequiredBanner(false);
+       onMfaEnabled?.();
        // Sync user state from backend to ensure mfa_enabled persists
        checkAuth().catch(() => {});
      }

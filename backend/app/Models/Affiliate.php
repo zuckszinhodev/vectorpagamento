@@ -78,4 +78,24 @@ class Affiliate extends Model
     {
         return $this->hasMany(Charge::class);
     }
+
+    /**
+     * Conta do próprio afiliado — para onde vai a comissão dele.
+     *
+     * Cuidado: `account_id` é a conta do PRODUTOR (dono do programa de
+     * afiliados), não a do afiliado. Creditar nela devolveria o dinheiro para
+     * quem vendeu. A conta do afiliado vem do metadata (gravado no convite) ou,
+     * na falta dele, do usuário vinculado.
+     */
+    public function payoutAccountId(): ?string
+    {
+        $fromMetadata = $this->metadata['affiliate_account_id'] ?? null;
+        if (is_string($fromMetadata) && $fromMetadata !== '') {
+            return $fromMetadata;
+        }
+
+        return $this->user_id
+            ? User::whereKey($this->user_id)->value('account_id')
+            : null;
+    }
 }

@@ -16,6 +16,11 @@ use Illuminate\Support\Str;
 
 class AccountRegistrationService
 {
+    public function __construct(
+        private readonly AccountNotificationService $notifications,
+    ) {
+    }
+
     /**
      * Create a new account with user and wallet atomically.
      *
@@ -76,6 +81,7 @@ class AccountRegistrationService
         }
 
         $this->sendWelcomeEmail($user);
+        $this->notifications->kycPending($user);
 
         return ['account' => $account, 'user' => $user];
     }

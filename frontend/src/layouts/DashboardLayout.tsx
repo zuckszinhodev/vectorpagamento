@@ -634,13 +634,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* Logo */}
             <div className="flex items-center gap-6">
               <NavLink to="/dashboard" className="flex items-center gap-2 group">
-                <img
-                  src={logoUrl || '/img/logo.png'}
-                  alt={platformName}
-                  className="h-8 w-auto object-contain"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                />
-                {!logoUrl && <span className="text-base font-bold text-gray-900 dark:text-white">{platformName}</span>}
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={platformName}
+                    className="h-8 w-auto object-contain"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ) : (
+                  <span className="text-base font-bold text-gray-900 dark:text-white">{platformName}</span>
+                )}
               </NavLink>
 
               {/* Desktop Navigation */}

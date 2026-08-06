@@ -97,6 +97,21 @@ function makePaidCharge(string $accountId, ?string $productId = null, ?string $c
         'net_amount'  => $charge->net_amount ?? $charge->amount,
     ]);
 
+    // Espelha o que o PaymentService faz antes de chamar o split: o líquido
+    // inteiro já está na carteira do produtor. O split redistribui esse saldo,
+    // então sem esse crédito não haveria de onde tirar o valor dos recebedores.
+    $wallet = AccountWallet::firstOrCreate(
+        ['account_id' => $accountId],
+        [
+            'id'                => Str::uuid()->toString(),
+            'currency'          => 'BRL',
+            'available_balance' => 0,
+            'pending_balance'   => 0,
+            'blocked_balance'   => 0,
+        ],
+    );
+    $wallet->increment('available_balance', (int) ($charge->net_amount ?? $charge->amount));
+
     return [$charge, $transaction];
 }
 
@@ -329,16 +344,23 @@ it('creates splits from a percentage rule', function () {
 
     $splits = $this->service->createSplitsForCharge($charge);
 
-    expect($splits)->toHaveCount(1);
+    // Duas parcelas: a do recebedor e a do produtor com o restante.
+    expect($splits)->toHaveCount(2);
 
-    // The split should be created from the rule, with 10% of net_amount
     $split = is_array($splits[0]) ? $splits[0] : $splits[0]->toArray();
     expect($split['recipient_id'])->toBe($recipientId)
         ->and($split['type'])->toBe('percentage');
 
-    // 10% of 9910 (net_amount) = 991
-    $expectedAmount = (int) round(9910 * (10 / 100));
-    expect($split['amount'])->toBe($expectedAmount);
+    // charge_fee_to_producer = true: o recebedor leva 10% do BRUTO (10000) e o
+    // produtor absorve a taxa sozinho. Antes, a taxa era descontada duas vezes
+    // (uma no net_amount, outra por recebedor).
+    expect($split['amount'])->toBe(1000);
+
+    // O rateio fecha exatamente com o líquido: 1000 + 8910 = 9910.
+    $producerSplit = $splits[1];
+    expect($producerSplit['recipient_id'])->toBe($this->account->id)
+        ->and($producerSplit['amount'])->toBe(8910)
+        ->and($split['amount'] + $producerSplit['amount'])->toBe(9910);
 });
 
 it('creates multi-recipient splits', function () {
@@ -358,9 +380,16 @@ it('creates multi-recipient splits', function () {
 
     $splits = $this->service->createSplitsForCharge($charge);
 
-    expect($splits)->toHaveCount(2)
+    // Dois recebedores + a parcela do produtor.
+    expect($splits)->toHaveCount(3)
         ->and($splits[0]['recipient_id'])->toBe($recipient1)
-        ->and($splits[1]['recipient_id'])->toBe($recipient2);
+        ->and($splits[1]['recipient_id'])->toBe($recipient2)
+        ->and($splits[2]['recipient_id'])->toBe($this->account->id);
+
+    // 10% + 5% do bruto, produtor com o resto — soma igual ao líquido.
+    expect($splits[0]['amount'])->toBe(1000)
+        ->and($splits[1]['amount'])->toBe(500)
+        ->and($splits[0]['amount'] + $splits[1]['amount'] + $splits[2]['amount'])->toBe(9910);
 });
 
 it('creates fixed amount splits', function () {
@@ -383,10 +412,12 @@ it('creates fixed amount splits', function () {
 
     $splits = $this->service->createSplitsForCharge($charge);
 
-    expect($splits)->toHaveCount(1);
+    // Valor fixo do recebedor + restante do produtor.
+    expect($splits)->toHaveCount(2);
     $split = is_array($splits[0]) ? $splits[0] : $splits[0]->toArray();
     expect($split['recipient_id'])->toBe($recipientId)
-        ->and($split['amount'])->toBe(500);
+        ->and($split['amount'])->toBe(500)
+        ->and($split['amount'] + $splits[1]['amount'])->toBe(9910);
 });
 
 it('does not create splits for non-paid charge', function () {
@@ -427,11 +458,12 @@ it('is idempotent — does not duplicate splits', function () {
     $first  = $this->service->createSplitsForCharge($charge);
     $second = $this->service->createSplitsForCharge($charge);
 
-    expect($first)->toHaveCount(1);
-    expect($second)->toHaveCount(1);
+    // Recebedor + produtor, e a segunda chamada devolve os mesmos registros.
+    expect($first)->toHaveCount(2);
+    expect($second)->toHaveCount(2);
 
-    // Only 1 split in DB
-    expect(Split::count())->toBe(1);
+    // Nada foi duplicado no banco.
+    expect(Split::count())->toBe(2);
 });
 
 /* ═══════════════════════════════════════════
@@ -487,21 +519,26 @@ it('processes pending splits and credits wallet', function () {
     [$charge] = makePaidCharge($this->account->id);
     $this->service->createSplitsForCharge($charge);
 
-    // Splits should be pending
-    expect(Split::where('status', 'pending')->count())->toBe(1);
+    // Recebedor + produtor, ambos aguardando processamento.
+    expect(Split::where('status', 'pending')->count())->toBe(2);
 
-    // Process
     $result = $this->service->processPendingSplits();
 
-    expect($result['processed'])->toBeGreaterThanOrEqual(1);
+    expect($result['processed'])->toBe(2)
+        ->and($result['failed'])->toBe(0);
 
-    // Split should be transferred
-    $split = Split::first();
-    expect($split->status)->toBe('transferred');
+    expect(Split::where('status', 'transferred')->count())->toBe(2);
 
-    // Wallet should be credited
-    $wallet = AccountWallet::where('account_id', $recipient->id)->first();
-    expect($wallet->available_balance)->toBeGreaterThan(0);
+    // O recebedor ficou com 10% do bruto...
+    $recipientWallet = AccountWallet::where('account_id', $recipient->id)->first();
+    expect((int) $recipientWallet->available_balance)->toBe(1000);
+
+    // ...e saiu exatamente esse valor da carteira do produtor. O total em
+    // circulação continua sendo o líquido da cobrança.
+    $producerWallet = AccountWallet::where('account_id', $this->account->id)->first();
+    expect((int) $producerWallet->available_balance)->toBe(8910)
+        ->and((int) $producerWallet->available_balance + (int) $recipientWallet->available_balance)
+        ->toBe(9910);
 });
 
 /* ═══════════════════════════════════════════

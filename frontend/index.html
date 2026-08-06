@@ -1,3 +1,14 @@
+<!-- DESENVOLVIDO POR: -->
+ <!--   
+
+███████╗██╗   ██╗ ██████╗██╗  ██╗███████╗███████╗██╗███╗   ██╗██╗  ██╗ ██████╗ 
+╚══███╔╝██║   ██║██╔════╝██║ ██╔╝██╔════╝╚══███╔╝██║████╗  ██║██║  ██║██╔═══██╗
+  ███╔╝ ██║   ██║██║     █████╔╝ ███████╗  ███╔╝ ██║██╔██╗ ██║███████║██║   ██║
+ ███╔╝  ██║   ██║██║     ██╔═██╗ ╚════██║ ███╔╝  ██║██║╚██╗██║██╔══██║██║   ██║
+███████╗╚██████╔╝╚██████╗██║  ██╗███████║███████╗██║██║ ╚████║██║  ██║╚██████╔╝
+╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝ ╚═════╝ 
+
+ -->
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -13,11 +24,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- Primary Meta Tags -->
-    <title>Vector Pagamentos - Gateway de Pagamento</title>
-    <meta name="title" content="Vector Pagamentos - Gateway de Pagamento Completo | Checkout, Afiliados e Gestão Financeira" />
+    <title>Gateway de Pagamento</title>
+    <meta name="title" content="Gateway de Pagamento Completo | Checkout, Afiliados e Gestão Financeira" />
     <meta name="description" content="Plataforma completa de pagamentos com checkout personalizável, sistema de afiliados, gestão de produtos digitais e físicos, webhooks, API robusta e muito mais. Aceite pagamentos com PIX, cartão de crédito e boleto." />
     <meta name="keywords" content="gateway de pagamento, checkout, afiliados, pagamento online, pix, cartão de crédito, boleto, api de pagamento, webhook, gestão financeira, produtos digitais, ecommerce" />
-    <meta name="author" content="Vector Pagamentos" />
+    <meta name="author" content="Zuckszinho" />
     <meta name="robots" content="index, follow" />
     <meta name="language" content="Portuguese" />
     <meta name="revisit-after" content="7 days" />
@@ -55,35 +66,6 @@
     />
   </head>
   <body class="antialiased" style="background-color:#08080c">
-    <script>
-      // Prevent white flash: apply dark mode before first paint
-      try {
-        var raw =
-          localStorage.getItem('Vector Pagamentos-theme') ||
-          localStorage.getItem('vectorpagamentos-theme') ||
-          '{}';
-        var stored = JSON.parse(raw);
-        var theme = stored && stored.state && stored.state.theme;
-        var isAdminRoute = location.pathname.indexOf('/admin') === 0;
-        var effectiveTheme = isAdminRoute ? (theme || 'light') : 'dark';
-        if (isAdminRoute) {
-          document.documentElement.classList.add('app-admin-route');
-        } else {
-          document.documentElement.classList.add('app-dark-forced');
-        }
-
-        if (effectiveTheme === 'dark') {
-          document.documentElement.classList.add('dark');
-          document.body.style.backgroundColor = '#0a0a0a';
-        } else {
-          document.body.style.backgroundColor = '#FAFAFA';
-        }
-      } catch(e) {
-        document.documentElement.classList.add('dark');
-        document.documentElement.classList.add('app-dark-forced');
-        document.body.style.backgroundColor = '#0a0a0a';
-      }
-    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

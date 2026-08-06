@@ -697,6 +697,7 @@ function RuleModal({
   checkouts: any[];
 }) {
   const queryClient = useQueryClient();
+  const platformName = useThemeStore((s) => s.platformName);
   const isEdit = !!rule;
 
   const [form, setForm] = useState<CreateSplitRuleData>({

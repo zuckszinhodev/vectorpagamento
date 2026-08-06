@@ -10,6 +10,11 @@ use App\Models\Charge;
 use App\Models\Split;
 use App\Models\SplitRule;
 use App\Models\Transaction;
+use App\Services\Split\InsufficientProducerBalanceException;
+use App\Services\Split\RecipientValidator;
+use App\Services\Split\SplitAllocation;
+use App\Services\Split\SplitCalculator;
+use App\Services\Split\SplitResult;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -17,6 +22,21 @@ use Illuminate\Support\Str;
 
 class SplitService
 {
+    public function __construct(
+        private readonly SplitCalculator $calculator = new SplitCalculator(),
+        private readonly RecipientValidator $recipientValidator = new RecipientValidator(),
+    ) {}
+
+    /**
+     * Valida os destinatários de uma regra antes de gravar.
+     *
+     * @return array<string, string>  Erros por campo; vazio significa válido.
+     */
+    public function validateRecipients(array $recipients): array
+    {
+        return $this->recipientValidator->validate($recipients);
+    }
+
     // ══════════════════════════════════════════════════════
     //  SPLIT RULE MANAGEMENT (CRUD)
     // ══════════════════════════════════════════════════════
@@ -46,11 +66,15 @@ class SplitService
     public function createRule(string $accountId, array $data): SplitRule
     {
         return DB::transaction(function () use ($accountId, $data) {
-            // Deduplicate: if a rule with same recipients already exists, return it
+            // Deduplica só dentro do MESMO escopo (produto + checkout). Comparar
+            // apenas os destinatários fazia uma regra nova de outro produto
+            // devolver a regra existente, e a segunda nunca era criada.
             $recipientIds = collect($data['recipients'] ?? [])->pluck('recipient_id')->sort()->values()->toArray();
             if (!empty($recipientIds)) {
                 $existing = SplitRule::forAccount($accountId)
-                    ->whereRaw('"is_active" = true')
+                    ->where('is_active', true)
+                    ->where('product_id', $data['product_id'] ?? null)
+                    ->where('checkout_id', $data['checkout_id'] ?? null)
                     ->get()
                     ->first(function ($rule) use ($recipientIds) {
                         $existingIds = collect($rule->recipients ?? [])->pluck('recipient_id')->sort()->values()->toArray();
@@ -259,106 +283,43 @@ class SplitService
      */
     private function createSplitsFromInlineRules(array $inlineRules, Transaction $transaction, Charge $charge): array
     {
-        return DB::transaction(function () use ($inlineRules, $transaction, $charge) {
-            $totalAmount = $charge->net_amount ?? $charge->amount;
-            $feeAmount = $charge->fee_amount ?? 0;
-            $splits = [];
-            $distributedAmount = 0;
-
-            foreach ($inlineRules as $index => $rule) {
-                $recipientId = $rule['recipient_id'] ?? null;
-                if (!$recipientId) {
-                    Log::warning('Inline split_rule missing recipient_id', [
-                        'charge_id' => $charge->id,
-                        'rule_index' => $index,
-                    ]);
-                    continue;
-                }
-
-                $recipientType = $rule['recipient_type'] ?? 'account';
-                $splitType = $rule['type'] ?? 'fixed';
-                // DB enum only supports 'percentage' and 'fixed'; map 'flat' → 'fixed'
-                $dbType = $splitType === 'flat' ? 'fixed' : $splitType;
-                $chargeProcessingFee = $rule['charge_processing_fee'] ?? false;
-
-                // Calculate amount
-                $recipientAmount = 0;
-                if ($splitType === 'percentage') {
-                    $percentage = (float) ($rule['percentage'] ?? 0);
-                    $recipientAmount = (int) round($totalAmount * ($percentage / 100));
-                } else {
-                    // fixed/flat — 'amount' is in centavos
-                    $fixedAmount = (int) ($rule['amount'] ?? 0);
-                    $recipientAmount = (int) min($fixedAmount, $totalAmount - $distributedAmount);
-                }
-
-                if ($recipientAmount <= 0) {
-                    continue;
-                }
-
-                // Fee: if charge_processing_fee, this recipient absorbs fees
-                $recipientFee = $chargeProcessingFee ? $feeAmount : 0;
-                $netAmount = max(0, $recipientAmount - $recipientFee);
-                $distributedAmount += $recipientAmount;
-
-                $split = Split::create([
-                    'id' => Str::uuid()->toString(),
-                    'transaction_id' => $transaction->id,
-                    'recipient_id' => $recipientId,
-                    'recipient_type' => $recipientType,
-                    'type' => $dbType,
-                    'amount' => $recipientAmount,
-                    'percentage' => $dbType === 'percentage' ? (float) ($rule['percentage'] ?? 0) : null,
-                    'fee_amount' => $recipientFee,
-                    'net_amount' => $netAmount,
-                    'status' => 'pending',
+        // Normaliza o formato da API (amount/percentage) para o formato interno (type/value).
+        $recipients = [];
+        foreach ($inlineRules as $index => $rule) {
+            $recipientId = $rule['recipient_id'] ?? null;
+            if (!$recipientId) {
+                Log::warning('Inline split_rule missing recipient_id', [
+                    'charge_id' => $charge->id,
+                    'rule_index' => $index,
                 ]);
-
-                $splits[] = $split;
+                continue;
             }
 
-            // Remaining amount goes to charge owner (gateway/producer)
-            $remainingAmount = $totalAmount - $distributedAmount;
-            if ($remainingAmount > 0) {
-                $producerFee = $feeAmount - collect($splits)->sum('fee_amount');
-                $producerSplit = Split::create([
-                    'id' => Str::uuid()->toString(),
-                    'transaction_id' => $transaction->id,
-                    'recipient_id' => $charge->account_id,
-                    'recipient_type' => 'account',
-                    'type' => 'fixed',
-                    'amount' => $remainingAmount,
-                    'percentage' => null,
-                    'fee_amount' => max(0, $producerFee),
-                    'net_amount' => max(0, $remainingAmount - max(0, $producerFee)),
-                    'status' => 'pending',
-                ]);
-                $splits[] = $producerSplit;
-            }
+            $type = ($rule['type'] ?? 'fixed') === 'percentage' ? 'percentage' : 'fixed';
 
-            Log::info('Inline splits created from API split_rules', [
-                'charge_id' => $charge->id,
-                'transaction_id' => $transaction->id,
-                'total_amount' => $totalAmount,
-                'recipients_count' => count($splits),
-                'distributed' => $distributedAmount,
-                'remaining_to_producer' => $remainingAmount ?? 0,
-            ]);
+            $recipients[] = [
+                'recipient_id' => $recipientId,
+                'recipient_type' => $rule['recipient_type'] ?? 'account',
+                'type' => $type,
+                'value' => $type === 'percentage'
+                    ? (float) ($rule['percentage'] ?? 0)
+                    : (float) ($rule['amount'] ?? 0),
+                'description' => $rule['description'] ?? '',
+            ];
+        }
 
-            // Auto-process: credit wallets immediately
-            foreach ($splits as $split) {
-                try {
-                    $this->processSplit($split);
-                } catch (\Exception $e) {
-                    Log::error('Auto-process inline split failed', [
-                        'split_id' => $split->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
+        $feeMode = collect($inlineRules)->contains(fn ($r) => !empty($r['charge_processing_fee']))
+            ? SplitCalculator::FEE_PROPORTIONAL
+            : SplitCalculator::FEE_PRODUCER;
 
-            return array_map(fn($s) => $s->fresh()->toArray(), $splits);
-        });
+        return $this->persistSplits(
+            recipients: $recipients,
+            transaction: $transaction,
+            charge: $charge,
+            feeMode: $feeMode,
+            autoProcess: true,
+            context: ['source' => 'inline_api'],
+        );
     }
 
     /**
@@ -366,91 +327,110 @@ class SplitService
      */
     private function createSplitsFromRule(SplitRule $rule, Transaction $transaction, Charge $charge): array
     {
-        return DB::transaction(function () use ($rule, $transaction, $charge) {
-            $totalAmount = $charge->net_amount ?? $charge->amount;
-            $feeAmount = $charge->fee_amount ?? 0;
-            $splits = [];
-            $distributedAmount = 0;
-
-            $recipients = $rule->recipients;
-
-            foreach ($recipients as $index => $recipient) {
-                $recipientId = $recipient['recipient_id'];
-                $recipientType = $recipient['recipient_type'] ?? 'account';
-                $splitType = $recipient['type'] ?? 'percentage';
-                $value = (float) ($recipient['value'] ?? 0);
-
-                // Calculate amount
-                $recipientAmount = 0;
-                if ($splitType === 'percentage') {
-                    $recipientAmount = (int) round($totalAmount * ($value / 100));
-                } else {
-                    $recipientAmount = (int) min($value, $totalAmount - $distributedAmount);
-                }
-
-                // Fee distribution
-                $recipientFee = 0;
-                if ($rule->charge_fee_to_producer && $index === 0) {
-                    $recipientFee = $feeAmount;
-                } elseif (!$rule->charge_fee_to_producer) {
-                    $recipientFee = $totalAmount > 0
-                        ? (int) round($feeAmount * ($recipientAmount / $totalAmount))
-                        : 0;
-                }
-
-                $netAmount = max(0, $recipientAmount - $recipientFee);
-                $distributedAmount += $recipientAmount;
-
-                $split = Split::create([
-                    'id' => Str::uuid()->toString(),
-                    'transaction_id' => $transaction->id,
-                    'recipient_id' => $recipientId,
-                    'recipient_type' => $recipientType,
-                    'type' => $splitType,
-                    'amount' => $recipientAmount,
-                    'percentage' => $splitType === 'percentage' ? $value : null,
-                    'fee_amount' => $recipientFee,
-                    'net_amount' => $netAmount,
-                    'status' => 'pending',
-                ]);
-
-                $splits[] = $split;
-            }
-
-            // Fix rounding errors (max ±1 cent per recipient) — give to last recipient
-            $remainder = $totalAmount - $distributedAmount;
-            if ($remainder > 0 && $remainder <= count($recipients) && !empty($splits)) {
-                $lastSplit = end($splits);
-                $lastSplit->increment('amount', $remainder);
-                $lastSplit->increment('net_amount', $remainder);
-            }
-
-            Log::info('Auto-splits created from rule', [
+        return $this->persistSplits(
+            recipients: $rule->recipients ?? [],
+            transaction: $transaction,
+            charge: $charge,
+            feeMode: $rule->charge_fee_to_producer
+                ? SplitCalculator::FEE_PRODUCER
+                : SplitCalculator::FEE_PROPORTIONAL,
+            autoProcess: $rule->auto_process && $rule->transfer_delay_hours === 0,
+            context: [
+                'source' => 'rule',
                 'rule_id' => $rule->id,
                 'rule_name' => $rule->name,
-                'charge_id' => $charge->id,
-                'transaction_id' => $transaction->id,
-                'total_amount' => $totalAmount,
-                'recipients_count' => count($splits),
-                'auto_process' => $rule->auto_process,
-            ]);
+            ],
+        );
+    }
 
-            // Auto-process if configured
-            if ($rule->auto_process && $rule->transfer_delay_hours === 0) {
-                foreach ($splits as $split) {
-                    try {
-                        $this->processSplit($split);
-                    } catch (\Exception $e) {
-                        Log::error('Auto-process split failed', [
-                            'split_id' => $split->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
-                }
+    /**
+     * Calcula, grava e (opcionalmente) processa as parcelas de um split.
+     *
+     * Caminho único de criação — regra do banco e split inline da API passam
+     * por aqui, então o rateio nunca diverge entre os dois.
+     *
+     * @param  array<int, array<string, mixed>>  $recipients
+     */
+    private function persistSplits(
+        array $recipients,
+        Transaction $transaction,
+        Charge $charge,
+        string $feeMode,
+        bool $autoProcess,
+        array $context = [],
+    ): array {
+        $splits = DB::transaction(function () use ($recipients, $transaction, $charge, $feeMode, $autoProcess, $context) {
+            $result = $this->calculator->calculate(
+                recipients: $recipients,
+                grossAmount: (int) $charge->amount,
+                feeAmount: (int) ($charge->fee_amount ?? 0),
+                producerAccountId: $charge->account_id,
+                feeMode: $feeMode,
+            );
+
+            // Se o rateio não fecha, algo está errado no cálculo — não movimenta dinheiro.
+            if (!$result->isBalanced()) {
+                Log::error('Split rejeitado: rateio não fecha com o líquido da cobrança', [
+                    'charge_id' => $charge->id,
+                    'result' => $result->toArray(),
+                ] + $context);
+
+                throw new \RuntimeException('Split inválido: a soma das parcelas não confere com o valor da cobrança.');
             }
 
-            return array_map(fn($s) => $s->fresh()->toArray(), $splits);
+            $created = [];
+            foreach ($result->persistable() as $allocation) {
+                $created[] = $this->createSplitRecord($allocation, $transaction);
+            }
+
+            Log::info('Splits criados', [
+                'charge_id' => $charge->id,
+                'transaction_id' => $transaction->id,
+                'gross_amount' => $result->grossAmount,
+                'fee_amount' => $result->feeAmount,
+                'distributable' => $result->distributable,
+                'to_recipients' => $result->distributedToRecipients(),
+                'to_producer' => $result->producerAmount(),
+                'splits_count' => count($created),
+                'fee_mode' => $feeMode,
+                'auto_process' => $autoProcess,
+            ] + $context);
+
+            return $created;
         });
+
+        if ($autoProcess) {
+            foreach ($splits as $split) {
+                try {
+                    $this->processSplit($split);
+                } catch (\Throwable $e) {
+                    Log::error('Falha ao processar split automaticamente', [
+                        'split_id' => $split->id,
+                        'charge_id' => $charge->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        return array_map(fn (Split $s) => $s->fresh()->toArray(), $splits);
+    }
+
+    private function createSplitRecord(SplitAllocation $allocation, Transaction $transaction): Split
+    {
+        return Split::create([
+            'id' => Str::uuid()->toString(),
+            'transaction_id' => $transaction->id,
+            'recipient_id' => $allocation->recipientId,
+            'recipient_type' => $allocation->recipientType,
+            // A tabela só aceita 'percentage' ou 'fixed'; 'remainder' é conceito interno.
+            'type' => $allocation->type === 'percentage' ? 'percentage' : 'fixed',
+            'amount' => $allocation->gross,
+            'percentage' => $allocation->type === 'percentage' ? $allocation->value : null,
+            'fee_amount' => $allocation->fee,
+            'net_amount' => $allocation->net,
+            'status' => 'pending',
+        ]);
     }
 
     /**
@@ -546,16 +526,27 @@ class SplitService
 
         $results = ['processed' => 0, 'failed' => 0, 'errors' => []];
 
+        $results['deferred'] = 0;
+
         foreach ($pendingSplits as $split) {
             try {
                 $this->processSplit($split);
                 $results['processed']++;
-            } catch (\Exception $e) {
-                $split->markAsFailed();
+            } catch (InsufficientProducerBalanceException $e) {
+                // Continua pendente — entra de novo na próxima rodada.
+                $results['deferred']++;
+                $results['errors'][] = [
+                    'split_id' => $split->id,
+                    'error' => $e->getMessage(),
+                    'retriable' => true,
+                ];
+            } catch (\Throwable $e) {
+                // processSplit() já gravou o status 'failed' após o rollback.
                 $results['failed']++;
                 $results['errors'][] = [
                     'split_id' => $split->id,
                     'error' => $e->getMessage(),
+                    'retriable' => false,
                 ];
                 Log::error('Split processing failed', [
                     'split_id' => $split->id,
@@ -572,53 +563,162 @@ class SplitService
      */
     public function processSplit(Split $split): void
     {
-        DB::transaction(function () use ($split) {
-            $split->update(['status' => 'processing']);
-
-            $recipientAccountId = null;
-
-            if ($split->recipient_type === 'account') {
-                $recipientAccountId = $split->recipient_id;
-                $wallet = AccountWallet::where('account_id', $split->recipient_id)
-                    ->lockForUpdate()
-                    ->first();
-                if (!$wallet) {
-                    $wallet = AccountWallet::create([
-                        'id' => Str::uuid()->toString(),
-                        'account_id' => $split->recipient_id,
-                        'available_balance' => 0,
-                        'pending_balance' => 0,
-                    ]);
-                    $wallet = $wallet->fresh();
-                }
-                $wallet->increment('available_balance', $split->net_amount);
-            } elseif ($split->recipient_type === 'affiliate') {
-                $affiliate = Affiliate::find($split->recipient_id);
-                if ($affiliate && $affiliate->affiliate_account_id) {
-                    $recipientAccountId = $affiliate->affiliate_account_id;
-                    $wallet = AccountWallet::where('account_id', $affiliate->affiliate_account_id)
-                        ->lockForUpdate()
-                        ->first();
-                    if ($wallet) {
-                        $wallet->increment('available_balance', $split->net_amount);
-                    }
-                }
-            }
-
-            $split->markAsTransferred();
-
-            // Create a visible charge record for the recipient
-            if ($recipientAccountId) {
-                $this->createSplitChargeForRecipient($split, $recipientAccountId);
-            }
-
-            Log::info('Split processed', [
+        try {
+            $this->processSplitTransactionally($split);
+        } catch (InsufficientProducerBalanceException $e) {
+            // Falta de saldo é transitória: mantém `pending` para ser retentado.
+            Log::warning('Split adiado por saldo insuficiente', [
                 'split_id' => $split->id,
-                'recipient_id' => $split->recipient_id,
-                'recipient_type' => $split->recipient_type,
-                'net_amount' => $split->net_amount,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        } catch (\Throwable $e) {
+            // A transação já sofreu rollback, então marcar como falho lá dentro
+            // seria desfeito junto. Só aqui fora o status persiste.
+            Split::whereKey($split->id)
+                ->where('status', '!=', Split::STATUS_TRANSFERRED)
+                ->update(['status' => Split::STATUS_FAILED]);
+
+            throw $e;
+        }
+    }
+
+    private function processSplitTransactionally(Split $split): void
+    {
+        DB::transaction(function () use ($split) {
+            // Idempotência: relê sob lock e só segue se ainda estiver pendente.
+            // Sem isso, uma segunda chamada (job + auto-process, webhook duplicado)
+            // creditaria a carteira de novo.
+            $locked = Split::whereKey($split->id)->lockForUpdate()->first();
+            if (!$locked || $locked->status !== Split::STATUS_PENDING) {
+                Log::info('Split ignorado: já processado', [
+                    'split_id' => $split->id,
+                    'status' => $locked?->status,
+                ]);
+
+                return;
+            }
+
+            $producerAccountId = $this->producerAccountIdFor($locked);
+
+            // A parcela do produtor não movimenta carteira: o valor líquido inteiro
+            // já foi creditado nele em updateWalletOnPayment. O que sai daqui para
+            // os outros recebedores é debitado dele logo abaixo.
+            if ($producerAccountId && $locked->recipient_type === 'account' && $locked->recipient_id === $producerAccountId) {
+                $locked->markAsTransferred();
+
+                Log::info('Split do produtor liquidado (sem movimentação)', [
+                    'split_id' => $locked->id,
+                    'account_id' => $producerAccountId,
+                    'net_amount' => $locked->net_amount,
+                ]);
+
+                return;
+            }
+
+            $recipientAccountId = $this->recipientValidator->resolvePayoutAccountId(
+                $locked->recipient_id,
+                $locked->recipient_type,
+            );
+
+            // Destinatário inexistente: falha alto. Antes, criava uma carteira
+            // fantasma para o UUID e o dinheiro sumia sem rastro.
+            // O status 'failed' é gravado por processSplit() após o rollback.
+            if (!$recipientAccountId) {
+                throw new \RuntimeException(
+                    "Destinatário do split não encontrado no sistema: {$locked->recipient_type}:{$locked->recipient_id}"
+                );
+            }
+
+            $locked->update(['status' => Split::STATUS_PROCESSING]);
+
+            $this->transferBetweenWallets(
+                fromAccountId: $producerAccountId,
+                toAccountId: $recipientAccountId,
+                amount: (int) $locked->net_amount,
+                splitId: $locked->id,
+            );
+
+            $locked->markAsTransferred();
+
+            $this->createSplitChargeForRecipient($locked, $recipientAccountId);
+
+            Log::info('Split processado', [
+                'split_id' => $locked->id,
+                'recipient_id' => $locked->recipient_id,
+                'recipient_type' => $locked->recipient_type,
+                'payout_account_id' => $recipientAccountId,
+                'net_amount' => $locked->net_amount,
             ]);
         });
+    }
+
+    /**
+     * Conta dona da cobrança que originou o split.
+     */
+    private function producerAccountIdFor(Split $split): ?string
+    {
+        $transaction = Transaction::find($split->transaction_id);
+        if (!$transaction) {
+            return null;
+        }
+
+        return Charge::whereKey($transaction->charge_id)->value('account_id');
+    }
+
+    /**
+     * Move o valor da carteira do produtor para a do recebedor.
+     *
+     * O split redistribui dinheiro que já entrou — não cria saldo novo. Creditar
+     * o recebedor sem debitar o produtor faria a plataforma pagar duas vezes a
+     * mesma venda.
+     */
+    private function transferBetweenWallets(
+        ?string $fromAccountId,
+        string $toAccountId,
+        int $amount,
+        string $splitId,
+    ): void {
+        if ($amount <= 0) {
+            return;
+        }
+
+        if ($fromAccountId) {
+            $producerWallet = AccountWallet::where('account_id', $fromAccountId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$producerWallet) {
+                throw new \RuntimeException("Carteira do produtor não encontrada: {$fromAccountId}");
+            }
+
+            if ((int) $producerWallet->available_balance < $amount) {
+                throw new InsufficientProducerBalanceException(
+                    "Saldo insuficiente na carteira do produtor para o split {$splitId}: "
+                    . "disponível {$producerWallet->available_balance}, necessário {$amount}"
+                );
+            }
+
+            $producerWallet->decrement('available_balance', $amount);
+        }
+
+        $recipientWallet = AccountWallet::where('account_id', $toAccountId)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$recipientWallet) {
+            $recipientWallet = AccountWallet::create([
+                'id' => Str::uuid()->toString(),
+                'account_id' => $toAccountId,
+                'available_balance' => 0,
+                'pending_balance' => 0,
+                'blocked_balance' => 0,
+                'currency' => 'BRL',
+            ]);
+        }
+
+        $recipientWallet->increment('available_balance', $amount);
     }
 
     /**
@@ -723,55 +823,31 @@ class SplitService
             return ['error' => 'Regra não encontrada'];
         }
 
-        $totalAmount = $amount - $feeAmount;
-        $recipients = $rule->recipients;
-        $result = [];
-        $distributedAmount = 0;
-
-        foreach ($recipients as $index => $recipient) {
-            $splitType = $recipient['type'] ?? 'percentage';
-            $value = (float) ($recipient['value'] ?? 0);
-
-            $recipientAmount = 0;
-            if ($splitType === 'percentage') {
-                $recipientAmount = (int) round($totalAmount * ($value / 100));
-            } else {
-                $recipientAmount = (int) min($value, $totalAmount - $distributedAmount);
-            }
-
-            $recipientFee = 0;
-            if ($rule->charge_fee_to_producer && $index === 0) {
-                $recipientFee = $feeAmount;
-            } elseif (!$rule->charge_fee_to_producer) {
-                $recipientFee = $totalAmount > 0
-                    ? (int) round($feeAmount * ($recipientAmount / $totalAmount))
-                    : 0;
-            }
-
-            $netAmount = max(0, $recipientAmount - $recipientFee);
-            $distributedAmount += $recipientAmount;
-
-            $result[] = [
-                'recipient_id' => $recipient['recipient_id'],
-                'recipient_type' => $recipient['recipient_type'] ?? 'account',
-                'description' => $recipient['description'] ?? '',
-                'type' => $splitType,
-                'value' => $value,
-                'gross_amount' => $recipientAmount,
-                'fee_amount' => $recipientFee,
-                'net_amount' => $netAmount,
-            ];
-        }
+        // Mesmo calculador usado na criação real — a simulação nunca mente.
+        $result = $this->calculator->calculate(
+            recipients: $rule->recipients ?? [],
+            grossAmount: $amount,
+            feeAmount: $feeAmount,
+            producerAccountId: $accountId,
+            feeMode: $rule->charge_fee_to_producer
+                ? SplitCalculator::FEE_PRODUCER
+                : SplitCalculator::FEE_PROPORTIONAL,
+        );
 
         return [
             'rule_id' => $rule->id,
             'rule_name' => $rule->name,
             'input_amount' => $amount,
-            'fee_amount' => $feeAmount,
-            'distributable_amount' => $totalAmount,
-            'distributed_amount' => $distributedAmount,
-            'remainder' => $totalAmount - $distributedAmount,
-            'recipients' => $result,
+            'fee_amount' => $result->feeAmount,
+            'distributable_amount' => $result->distributable,
+            'distributed_amount' => $result->distributedToRecipients(),
+            'remainder' => $result->producerAmount(),
+            'balanced' => $result->isBalanced(),
+            'recipients' => array_map(
+                fn (SplitAllocation $a) => $a->toArray(),
+                $result->allocations,
+            ),
+            'producer' => $result->producer->toArray(),
         ];
     }
 

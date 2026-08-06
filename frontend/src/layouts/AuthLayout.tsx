@@ -4,8 +4,9 @@ import { useThemeStore } from '@/stores/themeStore';
 
 export default function AuthLayout() {
   const { platformName } = useThemeStore();
+
   return (
-    <div className="flex min-h-screen overflow-hidden bg-[#080b0a]">
+    <div className="flex min-h-screen overflow-hidden bg-white text-neutral-900">
       <div className="relative hidden min-h-screen overflow-hidden bg-black lg:flex lg:w-[56%]">
         <LightPillar
           topColor="#047857"
@@ -42,7 +43,7 @@ export default function AuthLayout() {
         </div>
       </div>
 
-      <div className="flex min-h-screen w-full flex-col bg-[#0b0d0c] lg:w-[44%]">
+      <div className="flex min-h-screen w-full flex-col bg-white lg:w-[44%]">
         <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-8 sm:px-10 lg:px-14 xl:px-20">
           <div className="w-full max-w-[440px]">
             <Outlet />
