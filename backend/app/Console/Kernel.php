@@ -88,7 +88,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('cache:prune-stale-tags')->daily();
 
         // Clean old logs and temp files weekly
-        $schedule->command('telescope:prune --hours=168')->weekly()->withoutOverlapping();
+        if (class_exists(\Laravel\Telescope\Telescope::class)) {
+            $schedule->command('telescope:prune --hours=168')->weekly()->withoutOverlapping();
+        }
     }
 
     /**
