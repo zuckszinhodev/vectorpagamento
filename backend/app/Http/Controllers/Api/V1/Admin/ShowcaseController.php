@@ -50,7 +50,7 @@ class ShowcaseController extends Controller
                         $q->where(function ($q2) {
                             $q2->where('is_showcase', true)->where('showcase_status', 'approved');
                         })->orWhere(function ($q2) {
-                            $q2->whereRaw('"is_active" = true')->where('affiliate_enabled', true);
+                            $q2->where('is_active', true)->where('affiliate_enabled', true);
                         });
                     });
                 } elseif ($status === 'rejected') {
@@ -119,12 +119,12 @@ class ShowcaseController extends Controller
             // Stats
             $allProducts = Product::query();
             $totalProducts = (clone $allProducts)->count();
-            $totalActive = (clone $allProducts)->whereRaw('"is_active" = true')->count();
+            $totalActive = (clone $allProducts)->where('is_active', true)->count();
             $totalShowcase = Product::where('is_showcase', true)->count();
             $totalPending = Product::where('is_showcase', true)->where('showcase_status', 'pending')->count();
             $totalApproved = Product::where('is_showcase', true)->where('showcase_status', 'approved')->count();
             $totalRejected = Product::where('is_showcase', true)->where('showcase_status', 'rejected')->count();
-            $totalAffiliate = Product::where('affiliate_enabled', true)->whereRaw('"is_active" = true')->count();
+            $totalAffiliate = Product::where('affiliate_enabled', true)->where('is_active', true)->count();
 
             return response()->json([
                 'success' => true,

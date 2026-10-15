@@ -202,7 +202,11 @@ class ChargebackController extends Controller
      */
     public function submitEvidence(Request $request, string $chargebackId): JsonResponse
     {
-        $cb = Chargeback::find($chargebackId);
+        $query = Chargeback::query();
+        if (!$request->is('api/v1/admin/chargebacks/*')) {
+            $query->where('account_id', $request->user()->account_id);
+        }
+        $cb = $query->find($chargebackId);
 
         if (!$cb) {
             return response()->json([
@@ -211,12 +215,14 @@ class ChargebackController extends Controller
             ], 404);
         }
 
-        $validated = $request->validate([
-            'description' => ['required', 'string'],
-            'tracking_number' => ['nullable', 'string'],
-            'delivery_proof' => ['nullable', 'string'],
-            'images.*' => ['nullable', 'image', 'max:5120'], // 5MB max per image
-        ]);
+        if ($cb->isResolved()) {
+            return response()->json(['success' => false, 'message' => 'Disputa já encerrada'], 422);
+        }
+
+        $validated = $request->validate(\App\Http\Requests\ChargebackEvidenceRules::rules());
+        if (collect($request->file('images', []))->sum(fn ($file) => $file->getSize()) > 20 * 1024 * 1024) {
+            return response()->json(['success' => false, 'message' => 'Os anexos devem somar no máximo 20 MB.'], 422);
+        }
 
         try {
             $evidence = [
@@ -224,21 +230,26 @@ class ChargebackController extends Controller
                 'tracking_number' => $validated['tracking_number'] ?? null,
                 'delivery_proof' => $validated['delivery_proof'] ?? null,
                 'images' => [],
+                'med' => $validated['med'] ?? null,
+                'submitted_at' => now()->toIso8601String(),
             ];
 
             // Handle image uploads
             if ($request->hasFile('images')) {
                 $accountId = $cb->account_id;
                 foreach ($request->file('images') as $image) {
-                    $filename = \Illuminate\Support\Str::uuid() . '.' . $image->getClientOriginalExtension();
+                    $filename = \Illuminate\Support\Str::uuid() . '.' . $image->extension();
                     $path = "chargebacks/{$accountId}/{$cb->id}/{$filename}";
                     
-                    \Illuminate\Support\Facades\Storage::disk('private')->put($path, file_get_contents($image->getRealPath()));
+                    if (!\Illuminate\Support\Facades\Storage::disk('private')->put($path, file_get_contents($image->getRealPath()))) {
+                        throw new \RuntimeException('Não foi possível salvar o anexo. Tente novamente.');
+                    }
                     
                     $evidence['images'][] = [
                         'path' => $path,
                         'filename' => $image->getClientOriginalName(),
                         'size' => $image->getSize(),
+                        'mime_type' => $image->getMimeType(),
                         'uploaded_at' => now()->toIso8601String(),
                     ];
                 }
@@ -257,6 +268,24 @@ class ChargebackController extends Controller
                 'message' => $e->getMessage(),
             ], 422);
         }
+    }
+
+    public function downloadEvidence(Request $request, string $chargebackId, int $index)
+    {
+        $query = Chargeback::query();
+        if (!$request->is('api/v1/admin/chargebacks/*')) {
+            $query->where('account_id', $request->user()->account_id);
+        }
+        $cb = $query->findOrFail($chargebackId);
+        $file = ($cb->evidence['images'] ?? [])[$index] ?? null;
+        abort_unless(is_array($file) && isset($file['path']), 404);
+        abort_unless(str_starts_with($file['path'], "chargebacks/{$cb->account_id}/{$cb->id}/"), 404);
+        $disk = \Illuminate\Support\Facades\Storage::disk('private');
+        abort_unless($disk->exists($file['path']), 404);
+        return $disk->download($file['path'], $file['filename'] ?? basename($file['path']), [
+            'Cache-Control' => 'private, no-store',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     /**

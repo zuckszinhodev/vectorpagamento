@@ -31,14 +31,14 @@ class PublicMemberAreaController extends Controller
             // Try custom domain first
             $memberArea = MemberArea::where('custom_domain', $host)
                 ->where('domain_verified', true)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->first();
 
             if (!$memberArea) {
                 // Try subdomain
                 $subdomain = explode('.', $host)[0];
                 $memberArea = MemberArea::where('subdomain', $subdomain)
-                    ->whereRaw('"is_active" = true')
+                    ->where('is_active', true)
                     ->first();
             }
 
@@ -119,7 +119,7 @@ class PublicMemberAreaController extends Controller
                 // Try custom domain first
                 $memberArea = MemberArea::where('custom_domain', $host)
                     ->where('domain_verified', true)
-                    ->whereRaw('"is_active" = true')
+                    ->where('is_active', true)
                     ->first();
                 
                 \Illuminate\Support\Facades\Log::info('Custom domain lookup', [
@@ -131,7 +131,7 @@ class PublicMemberAreaController extends Controller
                     // Try by subdomain
                     $subdomain = explode('.', $host)[0];
                     $memberArea = MemberArea::where('subdomain', $subdomain)
-                        ->whereRaw('"is_active" = true')
+                        ->where('is_active', true)
                         ->first();
                         
                     \Illuminate\Support\Facades\Log::info('Subdomain lookup', [

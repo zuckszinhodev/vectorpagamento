@@ -27,6 +27,7 @@ interface LiveMapEvent {
   lat: number;
   lng: number;
   at: string;
+  checkoutId?: string;
 }
 
 interface LiveMapSummary {
@@ -89,6 +90,7 @@ function normalizeEvent(data: any): LiveMapEvent | null {
     lat,
     lng,
     at: String(data?.at || data?.created_at || new Date().toISOString()),
+    checkoutId: data?.checkout_id ? String(data.checkout_id) : undefined,
   };
 }
 
@@ -501,6 +503,8 @@ function GlobeCanvas({
 
 export default function LiveGlobeMap({ accountId }: LiveGlobeMapProps) {
   const [isOpen, setIsOpen] = useState(false);
+  /** Quando definido, o mapa mostra só os acessos deste checkout. */
+  const [focusCheckout, setFocusCheckout] = useState<{ id: string; label?: string } | null>(null);
   const [events, setEvents] = useState<LiveMapEvent[]>(() => [
     createEvent({ location: 'Sao Paulo, BR', lat: -23.55, lng: -46.63 }),
     createEvent({ kind: 'api', location: 'Rio de Janeiro, BR', lat: -22.9, lng: -43.2 }),
@@ -587,17 +591,36 @@ export default function LiveGlobeMap({ accountId }: LiveGlobeMapProps) {
     return () => window.clearInterval(interval);
   }, [isOpen, realtimeAvailable]);
 
-  const latestEvents = events.slice(0, 6);
+  /**
+   * Com um checkout em foco, tudo abaixo passa a olhar só os acessos dele —
+   * globo, contadores e lista. Sem foco, o comportamento é o de sempre.
+   */
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent).detail || {};
+      setFocusCheckout(detail.checkoutId ? { id: String(detail.checkoutId), label: detail.label } : null);
+      setIsOpen(true);
+    };
+    window.addEventListener('live-map:open', handler);
+    return () => window.removeEventListener('live-map:open', handler);
+  }, []);
+
+  const visibleEvents = useMemo(
+    () => (focusCheckout ? events.filter((event) => event.checkoutId === focusCheckout.id) : events),
+    [events, focusCheckout],
+  );
+
+  const latestEvents = visibleEvents.slice(0, 6);
 
   const totals = useMemo(() => {
-    const checkoutCount = events.filter((event) => event.kind === 'checkout').length;
-    const apiCount = events.filter((event) => event.kind === 'api').length;
+    const checkoutCount = visibleEvents.filter((event) => event.kind === 'checkout').length;
+    const apiCount = visibleEvents.filter((event) => event.kind === 'api').length;
     return {
       checkoutCount,
       apiCount,
-      visitsNow: summary.visitsNow || events.length,
+      visitsNow: focusCheckout ? visibleEvents.length : summary.visitsNow || events.length,
     };
-  }, [events, summary.visitsNow]);
+  }, [events, visibleEvents, focusCheckout, summary.visitsNow]);
 
   return (
     <>
@@ -638,7 +661,7 @@ export default function LiveGlobeMap({ accountId }: LiveGlobeMapProps) {
           <div className="pointer-events-none absolute left-1/2 top-1/2 h-[78vmin] w-[78vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400/10 blur-3xl" />
           <div className="pointer-events-none absolute left-[42%] top-[45%] h-[56vmin] w-[56vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-500/16 blur-3xl" />
           <div className="pointer-events-none absolute bottom-[-18%] left-[18%] h-[44vmin] w-[44vmin] rounded-full bg-teal-400/12 blur-3xl" />
-          <GlobeCanvas events={events} active={isOpen} worldGeoJson={worldGeoJson} />
+          <GlobeCanvas events={visibleEvents} active={isOpen} worldGeoJson={worldGeoJson} />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(3,6,17,0.12)_38%,rgba(3,6,17,0.92)_100%)]" />
 
           {/* Coming Soon Overlay — blurred background */}

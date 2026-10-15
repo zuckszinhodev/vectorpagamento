@@ -92,7 +92,7 @@ export const authService = {
     return response.data;
   },
 
-  async enableMfa(): Promise<{ success: boolean; data: { secret: string; qr_code_url: string; message: string } }> {
+  async enableMfa(): Promise<{ success: boolean; data: { secret: string; qr_code_url: string; issuer?: string; message: string } }> {
     const response = await api.post('/auth/mfa/enable');
     return response.data;
   },

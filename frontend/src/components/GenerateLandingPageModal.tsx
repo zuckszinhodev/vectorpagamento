@@ -23,7 +23,7 @@ import {
   ServerIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { landingPagesService, type LandingPage, type GenerateLandingPageData } from '@/services/api';
+import { landingPagesService, type LandingPage, type GenerateLandingPageData } from '@/services/api/landingPages.service';
 import { domainsService, type CustomDomain } from '@/services/api/domains.service';
 
 const templates = [

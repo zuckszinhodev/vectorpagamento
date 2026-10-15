@@ -43,7 +43,15 @@ class SecurityHeaders
 
         // Isolate browsing context for authenticated/API responses
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
-        $response->headers->set('Cross-Origin-Resource-Policy', 'same-site');
+
+        // Arquivos publicos (imagem de produto, capa de curso) precisam ser
+        // exibiveis fora do dominio da API: o checkout roda no dominio proprio
+        // do lojista, que e outro site. Com 'same-site' o navegador recusa a
+        // imagem. Nao ha o que proteger aqui, o conteudo e publico por natureza.
+        $response->headers->set(
+            'Cross-Origin-Resource-Policy',
+            $this->isPublicAsset($request) ? 'cross-origin' : 'same-site',
+        );
 
         // Enforce HTTPS with HSTS (1 year + preload ready)
         if ($isSecureRequest) {
@@ -79,6 +87,18 @@ class SecurityHeaders
         return $response;
     }
     
+    /**
+     * Arquivo publico servido pelo disco `public` (imagens de produto, etc).
+     *
+     * Restrito ao prefixo `storage/`: arquivos privados como os documentos de
+     * KYC ficam em `storage/app/private` e nao passam por aqui, entao seguem
+     * com a politica restrita.
+     */
+    protected function isPublicAsset(Request $request): bool
+    {
+        return str_starts_with(ltrim($request->path(), '/'), 'storage/');
+    }
+
     /**
      * Check if the endpoint contains sensitive data that shouldn't be cached.
      */

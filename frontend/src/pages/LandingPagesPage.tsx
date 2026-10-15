@@ -18,7 +18,7 @@ import {
 import { Dialog, Transition, Menu } from '@headlessui/react';
 import { Fragment } from 'react';
 import toast from 'react-hot-toast';
-import { landingPagesService, type LandingPage } from '@/services/api';
+import { landingPagesService, type LandingPage } from '@/services/api/landingPages.service';
 import { api } from '@/lib/api';
 import GenerateLandingPageModal from '@/components/GenerateLandingPageModal';
 
@@ -44,7 +44,7 @@ function PreviewModal({
  landingPagesService
  .preview(landingPage.id)
  .then((response) => {
- const htmlContent = response.data?.html || response?.html;
+ const htmlContent = response.data?.html;
  if (htmlContent) {
  setHtml(htmlContent);
  } else {

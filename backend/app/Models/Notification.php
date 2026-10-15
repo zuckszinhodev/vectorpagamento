@@ -51,6 +51,14 @@ class Notification extends Model
         }
     }
 
+    public function scopeVisibleInInbox($query)
+    {
+        return $query->where(function ($query) {
+            $query->whereNull('data->event')
+                ->orWhere('data->event', '!=', 'withdrawal.failed');
+        });
+    }
+
     public function scopeUnread($query)
     {
         return $query->where('read', false);

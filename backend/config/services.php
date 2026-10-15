@@ -89,6 +89,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Melhor Envio (cotacao de frete)
+    |--------------------------------------------------------------------------
+    |
+    | Token pessoal ou access token OAuth gerado no painel do Melhor Envio.
+    | `from_postal_code` e o CEP de origem das entregas (de onde sai a
+    | mercadoria) e `user_agent` deve conter um contato: a API recusa
+    | requisicoes sem identificacao.
+    |
+    */
+    'melhorenvio' => [
+        'token' => env('MELHORENVIO_TOKEN'),
+        'from_postal_code' => env('MELHORENVIO_FROM_POSTAL_CODE'),
+        'sandbox' => env('MELHORENVIO_SANDBOX', false),
+        'user_agent' => env('MELHORENVIO_USER_AGENT', 'VectorPagamentos (suporte@vectorpagamentos.com.br)'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | UTMify Configuration
     |--------------------------------------------------------------------------
     |

@@ -31,6 +31,12 @@ class CheckoutController extends Controller
                 $query->where('type', $request->query('type'));
             }
 
+            // Sem este filtro, buscar "o checkout do produto X" devolvia a lista
+            // inteira da conta e o chamador acabava pegando sempre o primeiro.
+            if ($request->query('product_id')) {
+                $query->where('product_id', $request->query('product_id'));
+            }
+
             $perPage = min((int) $request->query('per_page', 20), 100);
             $checkouts = $query->orderBy('created_at', 'desc')->paginate($perPage);
 

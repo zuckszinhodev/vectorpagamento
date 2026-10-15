@@ -98,6 +98,10 @@ it('rejects unauthenticated charge listing', function () {
 it('creates a charge with valid data', function () {
     ['account' => $account, 'token' => $token] = createAuthenticatedUser();
 
+    $payments = Mockery::mock(\App\Services\PaymentService::class);
+    $payments->shouldReceive('processPayment')->once()->andReturn(['success' => true, 'status' => 'pending']);
+    app()->instance(\App\Services\PaymentService::class, $payments);
+
     $response = test()->withHeader('Authorization', "Bearer {$token}")
         ->postJson('/api/v1/charges', [
             'amount'         => 10000,

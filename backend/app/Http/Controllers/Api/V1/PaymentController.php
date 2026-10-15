@@ -7,17 +7,15 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Charge;
 use App\Models\Transaction;
-use App\Models\AccountWallet;
-use App\Models\AcquirerConfig;
-use App\Models\AccountCustomFee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use App\Services\PaymentService;
+use Illuminate\Support\Facades\Cache;
 
 class PaymentController extends Controller
 {
+    public function __construct(private readonly PaymentService $paymentService) {}
+
     /**
      * Process payment for an existing charge
      */
@@ -49,9 +47,11 @@ class PaymentController extends Controller
             ], 422);
         }
 
+        $paymentMethod = $request->input('payment_method', $charge->payment_method);
+        $request->merge(['payment_method' => $paymentMethod]);
         $request->validate([
-            'payment_method' => ['sometimes', 'in:credit_card,debit_card,pix,boleto'],
-            'card' => ['required_if:payment_method,credit_card,debit_card', 'array'],
+            'payment_method' => ['required', 'in:credit_card,pix,boleto'],
+            'card' => ['required_if:payment_method,credit_card', 'array'],
             'card.number' => ['required_with:card', 'string'],
             'card.holder_name' => ['required_with:card', 'string'],
             'card.expiration_month' => ['required_with:card', 'string'],
@@ -60,48 +60,60 @@ class PaymentController extends Controller
             'installments' => ['nullable', 'integer', 'min:1', 'max:12'],
         ]);
 
-        $paymentMethod = $request->input('payment_method', $charge->payment_method);
-        $result = $this->processPaymentMethod($charge, $paymentMethod, $request);
-
-        $transaction = Transaction::create([
-            'id' => Str::uuid()->toString(),
-            'charge_id' => $chargeId,
-            'type' => 'capture',
-            'status' => $result['status'],
-            'amount' => $charge->amount,
-            'provider' => 'internal',
-            'provider_transaction_id' => $result['transaction_id'],
-            'metadata' => [
-                'payment_method' => $paymentMethod,
-                'installments' => $request->input('installments', 1),
-            ],
-        ]);
-
-        $chargeUpdate = ['status' => $result['status']];
-        if ($result['status'] === 'paid') {
-            $chargeUpdate['paid_at'] = now();
-            $this->creditToWallet($charge);
+        $lock = Cache::lock('payment:process:' . $chargeId, 180);
+        if (!$lock->get()) {
+            return response()->json(['success' => false, 'error' => [
+                'code' => 'payment_in_progress', 'message' => 'Pagamento já está em processamento.',
+            ]], 409);
         }
-        $charge->update(array_merge($chargeUpdate, $result['payment_data'] ?? []));
 
-        $statusCode = match ($result['status']) {
-            'paid' => 200,
-            'pending', 'processing' => 202,
-            default => 200,
-        };
+        try {
+            // Claim this charge in the database as well as in the cache. A
+            // second request must not send another payment after lock expiry.
+            $claimed = Charge::whereKey($chargeId)->where('status', 'pending')
+                ->whereNull('acquirer_transaction_id')
+                ->whereNull('metadata->external_processing_started_at')
+                ->update(['status' => 'processing']);
+            if (!$claimed) {
+                return response()->json(['success' => false, 'error' => [
+                    'code' => 'payment_already_processed', 'message' => 'Esta cobrança já foi enviada para processamento.',
+                ]], 409);
+            }
+            $charge->refresh();
+            $charge->update([
+                'payment_method' => $paymentMethod,
+                'installments' => $request->input('installments', $charge->installments ?? 1),
+                'metadata' => array_merge($charge->metadata ?? [], ['external_processing_started_at' => now()->toIso8601String()]),
+            ]);
+            $result = $this->paymentService->processPayment($charge, $request->input('card', []));
+            $charge->refresh();
+            if (!($result['success'] ?? false)) {
+                Charge::whereKey($chargeId)->whereIn('status', ['pending', 'processing'])
+                    ->update(['status' => 'failed']);
+                return response()->json(['success' => false, 'error' => [
+                    'code' => 'payment_failed', 'message' => 'Não foi possível processar o pagamento.',
+                ]], 400);
+            }
+            // Status, transactions and wallet credit belong to the payment
+            // service/webhook. Do not manufacture a local capture here.
+        } finally {
+            $lock->release();
+        }
+
+        $statusCode = in_array($charge->status, ['paid', 'approved'], true) ? 200 : 202;
 
         return response()->json([
-            'success' => in_array($result['status'], ['paid', 'pending', 'processing', 'waiting_payment']),
+            'success' => true,
             'data' => [
                 'charge_id' => $chargeId,
-                'transaction_id' => $transaction->id,
-                'status' => $result['status'],
+                'transaction_id' => $result['transaction_id'] ?? $charge->acquirer_transaction_id,
+                'status' => $charge->status,
                 'authorization_code' => $result['authorization_code'] ?? null,
                 'payment_method' => $paymentMethod,
-                'pix_qr_code' => $charge->pix_qr_code,
-                'pix_copy_paste' => $charge->pix_copy_paste,
-                'boleto_url' => $charge->boleto_url,
-                'boleto_barcode' => $charge->boleto_barcode,
+                'pix_qr_code' => $result['pix_qr_code'] ?? $charge->pix_qr_code,
+                'pix_copy_paste' => $result['pix_copy_paste'] ?? $charge->pix_copy_paste,
+                'boleto_url' => $result['boleto_url'] ?? $charge->boleto_url,
+                'boleto_barcode' => $result['boleto_barcode'] ?? $charge->boleto_barcode,
                 'processed_at' => now()->toIso8601String(),
             ],
         ], $statusCode);
@@ -221,104 +233,14 @@ class PaymentController extends Controller
             'amount' => ['nullable', 'integer', 'min:100', 'max:' . $transaction->amount],
         ]);
 
-        $captureAmount = $request->input('amount', $transaction->amount);
-
-        $captureTransaction = Transaction::create([
-            'id' => Str::uuid()->toString(),
-            'charge_id' => $transaction->charge_id,
-            'type' => 'capture',
-            'status' => 'approved',
-            'amount' => $captureAmount,
-            'provider' => $transaction->provider,
-            'provider_transaction_id' => 'cap_' . Str::random(16),
-        ]);
-
-        $transaction->charge->update([
-            'status' => 'paid',
-            'paid_at' => now(),
-        ]);
-
+        // Current acquirer adapters do not expose a capture contract. Never
+        // report a successful capture without confirmation from the provider.
         return response()->json([
-            'success' => true,
-            'data' => [
-                'transaction_id' => $captureTransaction->id,
-                'charge_id' => $transaction->charge_id,
-                'amount' => $captureAmount,
-                'status' => 'captured',
-                'captured_at' => now()->toIso8601String(),
+            'success' => false,
+            'error' => [
+                'code' => 'capture_not_supported',
+                'message' => 'Captura de pre-autorizacao indisponivel para esta integracao.',
             ],
-        ]);
-    }
-
-    /**
-     * Process payment based on method.
-     * 
-     * NOTE: This controller handles external API key-authenticated payments.
-     * Real payment processing (PIX, Card, Boleto) goes through PaymentService
-     * which delegates to the configured acquirer (Babylon, PayFort, Stripe, etc).
-     * This fallback method should NOT be reached in normal flow.
-     */
-    private function processPaymentMethod(Charge $charge, string $method, Request $request): array
-    {
-        $transactionId = 'txn_' . Str::random(16);
-
-        // All real payment processing should go through PaymentService.
-        // This is a safety fallback that rejects unhandled methods.
-        Log::warning('PaymentController::processPaymentMethod called directly — should use PaymentService', [
-            'charge_id' => $charge->id,
-            'method' => $method,
-        ]);
-
-        return [
-            'status' => 'failed',
-            'transaction_id' => $transactionId,
-            'payment_data' => [],
-        ];
-    }
-
-    private function creditToWallet(Charge $charge): void
-    {
-        DB::transaction(function () use ($charge) {
-            $freshCharge = Charge::lockForUpdate()->find($charge->id);
-
-            if (!$freshCharge || $freshCharge->net_amount > 0) {
-                return;
-            }
-
-            $wallet = AccountWallet::lockForUpdate()->firstOrCreate(
-                ['account_id' => $freshCharge->account_id],
-                [
-                    'currency' => 'BRL',
-                    'available_balance' => 0,
-                    'pending_balance' => 0,
-                    'blocked_balance' => 0,
-                ]
-            );
-
-            $acquirerConfig = AcquirerConfig::findByKey($freshCharge->acquirer);
-
-            $feeAmount = 0;
-            $netAmount = $freshCharge->amount;
-
-            if ($acquirerConfig) {
-                $customFee = AccountCustomFee::where('account_id', $freshCharge->account_id)->first();
-                $customGatewayFee = $customFee?->calculateGatewayFee($freshCharge->amount, $freshCharge->payment_method);
-
-                if (!is_null($customGatewayFee)) {
-                    $feeAmount = $customGatewayFee;
-                } else {
-                    $feeAmount = $acquirerConfig->calculateGatewayFee($freshCharge->amount);
-                }
-
-                $netAmount = $freshCharge->amount - $feeAmount;
-            }
-
-            $freshCharge->update([
-                'fee_amount' => $feeAmount,
-                'net_amount' => $netAmount,
-            ]);
-
-            $wallet->increment('available_balance', $netAmount);
-        });
+        ], 422);
     }
 }

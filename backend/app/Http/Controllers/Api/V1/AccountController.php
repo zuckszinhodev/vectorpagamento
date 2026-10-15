@@ -78,15 +78,16 @@ class AccountController extends Controller
                 ->get();
 
             foreach ($activeConfigs as $config) {
-                AcquirerEntity::updateOrCreate(
-                    ['slug' => $config->acquirer_key],
-                    [
-                        'name' => $config->display_name ?? ucfirst($config->acquirer_key),
-                        'is_active' => true,
-                        'supported_methods' => $config->supported_methods ?? [],
-                        'settings' => [],
-                    ]
-                );
+                // Preserve the admin-controlled is_active flag on existing entities;
+                // only default it to true when creating a brand new entity.
+                $entity = AcquirerEntity::firstOrNew(['slug' => $config->acquirer_key]);
+                $entity->name = $config->display_name ?? ucfirst($config->acquirer_key);
+                $entity->supported_methods = $config->supported_methods ?? [];
+                if (!$entity->exists) {
+                    $entity->is_active = true;
+                    $entity->settings = [];
+                }
+                $entity->save();
             }
 
             if ($accountAssignments->isNotEmpty()) {
@@ -115,7 +116,7 @@ class AccountController extends Controller
 
             $items = $slugs->map(function (string $slug) use ($entities, $configs, $accountAssignments, $chargeMetrics) {
                 $entity = $entities->get($slug);
-                if (!$entity) {
+                if (!$entity || !$entity->is_active) {
                     return null;
                 }
 
@@ -134,7 +135,7 @@ class AccountController extends Controller
                     'name' => $config?->display_name ?? $entity->name,
                     'nominal_name' => $config?->nominal_name,
                     'priority' => $assignment?->priority ?? $config?->priority ?? 99,
-                    'is_active' => $assignment?->is_active ?? true,
+                    'is_active' => (bool) $entity->is_active,
                     'routing_weight' => (int) ($settings['routing_weight'] ?? 1),
                     'supported_methods' => $supportedMethods,
                     'supports_pix' => in_array('pix', $supportedMethods, true),

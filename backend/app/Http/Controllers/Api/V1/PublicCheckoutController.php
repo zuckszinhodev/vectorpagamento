@@ -28,6 +28,13 @@ use Illuminate\Support\Str;
 
 class PublicCheckoutController extends Controller
 {
+    public function validateCoupon(Request $request, string $slug): JsonResponse
+    {
+        $request->validate(['code' => ['required', 'string', 'max:50']]);
+        $checkout = Checkout::where('slug', $slug)->where('status', 'active')->with('product')->firstOrFail();
+        return response()->json(['success' => true, 'data' => app(\App\Services\CheckoutCouponService::class)->calculate($checkout, $request->string('code')->toString())]);
+    }
+
     private PaymentService $paymentService;
     private MemberEnrollmentService $memberEnrollmentService;
     private LiveMapService $liveMapService;
@@ -202,10 +209,22 @@ class PublicCheckoutController extends Controller
         // Load product
         $checkout->load('product');
 
+        // Produto em rascunho/inativo nao pode ser vendido, mesmo com o
+        // checkout ativo: o link continua existindo, mas a pagina avisa.
+        if ($checkout->product && !$checkout->product->is_active) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'product_inactive',
+                    'message' => 'Este produto está indisponível no momento.',
+                ],
+            ], 404);
+        }
+
         // Load active order bumps (table may not exist if migrations pending)
         try {
             $orderBumps = OrderBump::where('checkout_id', $checkout->id)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->with('product:id,name,price,image_url,images')
                 ->orderBy('sort_order')
                 ->get();
@@ -217,7 +236,7 @@ class PublicCheckoutController extends Controller
         // Check if checkout has upsells configured
         try {
             $hasUpsells = Upsell::where('checkout_id', $checkout->id)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->exists();
         } catch (\Throwable $e) {
             $hasUpsells = false;
@@ -249,6 +268,14 @@ class PublicCheckoutController extends Controller
                     'currency' => $checkout->product->currency ?? 'BRL',
                     'image_url' => $this->sanitizeImageUrl($checkout->product->image_url ?? ($checkout->product->images[0] ?? null), $checkout->product->name),
                     'type' => $checkout->product->type,
+                    // Sem isto o checkout nao sabia que precisava de endereco:
+                    // produto fisico era vendido sem para onde entregar.
+                    'shipping_required' => (bool) (
+                        data_get($checkout->product->metadata, 'shipping.required', false)
+                        || $checkout->product->type === 'physical'
+                    ),
+                    'free_shipping' => (bool) data_get($checkout->product->metadata, 'shipping.free_shipping', false),
+                    'shipping_price' => (int) data_get($checkout->product->metadata, 'shipping.shipping_price', 0),
                 ] : null,
                 'order_bumps' => $orderBumps->map(fn ($b) => [
                     'id' => $b->id,
@@ -378,6 +405,18 @@ class PublicCheckoutController extends Controller
                 $productsData[] = ['id' => $product->id, 'quantity' => $quantity];
             }
         } elseif ($checkout->product) {
+            // Barreira real de venda: sem isto, um POST direto compraria um
+            // produto que o dono deixou como rascunho.
+            if (!$checkout->product->is_active) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'product_inactive',
+                        'message' => 'Este produto está indisponível no momento.',
+                    ],
+                ], 422);
+            }
+
             // Use the checkout's linked product
             $totalAmount = $checkout->product->price;
             $productsData[] = ['id' => $checkout->product->id, 'quantity' => 1];
@@ -389,6 +428,21 @@ class PublicCheckoutController extends Controller
                     'message' => 'Checkout não possui produto associado',
                 ],
             ], 400);
+        }
+
+        $couponData = null;
+        if ($request->filled('coupon_code')) {
+            $couponValidator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+                'coupon_code' => ['required', 'string', 'max:50'],
+                'products' => ['prohibited'],
+            ]);
+            try {
+                $couponValidator->validate();
+                $couponData = app(\App\Services\CheckoutCouponService::class)->calculate($checkout, (string) $request->input('coupon_code'));
+                $totalAmount -= $couponData['discount_amount'];
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                return response()->json(['success' => false, 'error' => ['code' => 'invalid_coupon', 'message' => collect($e->errors())->flatten()->first()]], 422);
+            }
         }
 
         // Check affiliate
@@ -410,7 +464,7 @@ class PublicCheckoutController extends Controller
                 $bumpIds = $request->input('order_bumps');
                 $bumps = OrderBump::whereIn('id', $bumpIds)
                     ->where('checkout_id', $checkout->id)
-                    ->whereRaw('"is_active" = true')
+                    ->where('is_active', true)
                     ->get();
 
                 foreach ($bumps as $bump) {
@@ -424,6 +478,16 @@ class PublicCheckoutController extends Controller
         }
 
         $totalAmount += $orderBumpTotal;
+
+        $request->validate([
+            'address' => ['nullable', 'array'],
+            'address.zipcode' => ['nullable', 'string', 'max:20'],
+            'shipping_service_id' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $shipping = app(\App\Services\Shipping\CheckoutShippingService::class)->calculate(
+            $checkout, $request->input('address') ?? [], $request->input('shipping_service_id'),
+        );
+        $totalAmount += $shipping['amount'];
 
         // Inject customer IP for UTMify tracking (required field)
         if (is_array($customerData) && empty($customerData['ip'])) {
@@ -463,12 +527,14 @@ class PublicCheckoutController extends Controller
                 'payment_method' => $request->input('payment_method'),
                 'installments' => $request->input('installments', $request->input('card.installments', 1)),
                 'customer' => $customerData,
-                'billing' => $request->input('billing'),
+                'billing' => $request->input('billing', $request->input('address')),
                 'metadata' => [
                     'checkout_slug' => $slug,
+                    'coupon' => $couponData,
                     'products' => $productsData,
                     'order_bumps' => collect($acceptedBumps)->map(fn ($b) => ['id' => $b->id, 'price' => $b->price, 'product_id' => $b->product_id])->values()->all(),
                     'order_bump_total' => $orderBumpTotal,
+                    'shipping' => $shipping,
                     'ip' => $this->getClientIp($request),
                     'customer_ip' => $this->getClientIp($request),
                     'user_agent' => $request->userAgent(),
@@ -536,7 +602,7 @@ class PublicCheckoutController extends Controller
         // Check if there are upsells to show after payment
         try {
             $hasUpsells = Upsell::where('checkout_id', $checkout->id)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->exists();
         } catch (\Throwable $e) {
             $hasUpsells = false;
@@ -591,8 +657,11 @@ class PublicCheckoutController extends Controller
                 'has_upsells' => $hasUpsells,
                 'order_bumps_accepted' => count($acceptedBumps),
                 'order_bump_total' => $orderBumpTotal,
+                'shipping_amount' => $shipping['amount'],
             ],
         ], 201);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('PublicCheckoutController::process error', [
                 'message' => $e->getMessage(),
@@ -695,7 +764,7 @@ class PublicCheckoutController extends Controller
         // Find the next upsell in sequence that hasn't been shown yet
         try {
             $upsell = Upsell::where('checkout_id', $charge->checkout_id)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->whereNotIn('id', $processedUpsellIds)
                 ->with('product:id,name,price,description,image_url,images')
                 ->orderBy('sort_order')
@@ -770,7 +839,7 @@ class PublicCheckoutController extends Controller
         try {
             $upsell = Upsell::where('id', $upsellId)
                 ->where('checkout_id', $charge->checkout_id)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->first();
         } catch (\Throwable $e) {
             return response()->json([
@@ -880,7 +949,7 @@ class PublicCheckoutController extends Controller
         $hasNext = false;
         try {
             $nextUpsellId = $upsell->next_upsell_id;
-            $hasNext = $nextUpsellId ? Upsell::where('id', $nextUpsellId)->whereRaw('"is_active" = true')->exists() : false;
+            $hasNext = $nextUpsellId ? Upsell::where('id', $nextUpsellId)->where('is_active', true)->exists() : false;
 
             if (!$hasNext) {
                 // Check if there are more upsells in sequence
@@ -889,7 +958,7 @@ class PublicCheckoutController extends Controller
                     ->pluck('offer_id')
                     ->toArray();
                 $hasNext = Upsell::where('checkout_id', $charge->checkout_id)
-                    ->whereRaw('"is_active" = true')
+                    ->where('is_active', true)
                     ->whereNotIn('id', $processedIds)
                     ->exists();
             }
@@ -966,7 +1035,7 @@ class PublicCheckoutController extends Controller
         try {
             if ($upsell->downsell_id) {
                 $downsell = Upsell::where('id', $upsell->downsell_id)
-                    ->whereRaw('"is_active" = true')
+                    ->where('is_active', true)
                     ->with('product:id,name,price,description,image_url,images')
                     ->first();
             }
@@ -978,7 +1047,7 @@ class PublicCheckoutController extends Controller
                     ->pluck('offer_id')
                     ->toArray();
                 $hasNext = Upsell::where('checkout_id', $charge->checkout_id)
-                    ->whereRaw('"is_active" = true')
+                    ->where('is_active', true)
                     ->whereNotIn('id', $processedIds)
                     ->exists();
             }

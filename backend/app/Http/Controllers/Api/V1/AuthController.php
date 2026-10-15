@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -156,13 +157,10 @@ class AuthController extends Controller
             $idToken = $request->input('credential');
 
             // Verify the Google ID token via Google's tokeninfo endpoint.
-            $client = new \GuzzleHttp\Client();
-            $response = $client->get('https://oauth2.googleapis.com/tokeninfo', [
-                'query' => ['id_token' => $idToken],
-                'timeout' => 10,
+            $response = Http::timeout(10)->get('https://oauth2.googleapis.com/tokeninfo', [
+                'id_token' => $idToken,
             ]);
-
-            $payload = json_decode((string) $response->getBody(), true);
+            $payload = $response->successful() ? $response->json() : null;
 
             if (!$payload || !isset($payload['sub'])) {
                 return response()->json([
@@ -172,7 +170,8 @@ class AuthController extends Controller
             }
 
             $expectedClientId = (string) config('services.google.client_id');
-            if ($expectedClientId !== '' && ($payload['aud'] ?? null) !== $expectedClientId) {
+            if ($expectedClientId === '' || ($payload['aud'] ?? null) !== $expectedClientId
+                || !filter_var($payload['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN)) {
                 return response()->json([
                     'success' => false,
                     'error' => ['code' => 'invalid_token', 'message' => 'Token Google não pertence a este aplicativo.'],
@@ -238,7 +237,11 @@ class AuthController extends Controller
                 }
             }
 
-            // Generate JWT token (Google OAuth skips MFA — Google itself is the trusted identity provider)
+            if ($user->mfa_enabled) {
+                return $this->issueMfaChallenge($user, $request);
+            }
+
+            // OAuth verifies the first factor; local MFA must complete before issuing access.
             $token = JWTAuth::fromUser($user);
             $account = $user->account;
 
@@ -342,20 +345,7 @@ class AuthController extends Controller
         }
 
         if ($user->mfa_enabled && !$this->hasTrustedDevice($user, $request, (string) $request->input('trusted_device_token', ''))) {
-            $mfaToken = Str::random(64);
-            Cache::put('mfa_token:' . $mfaToken, [
-                'user_id' => $user->id,
-                'ip' => $this->getClientIp($request),
-                'ua_hash' => $this->buildUserAgentHash($request),
-            ], 300);
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'requires_mfa' => true,
-                    'mfa_token' => $mfaToken,
-                ],
-            ]);
+            return $this->issueMfaChallenge($user, $request);
         }
 
         // Update last login
@@ -410,6 +400,30 @@ class AuthController extends Controller
      * Verify MFA code
      */
     public function verifyMfa(Request $request): JsonResponse
+    {
+        $request->validate([
+            'mfa_token' => ['required', 'string', 'size:64'],
+            'code' => ['required', 'string', 'regex:/^[0-9]{6}$/'],
+            'remember_device' => ['sometimes', 'boolean'],
+        ]);
+
+        // Serialize attempts and consumption of the same challenge across workers.
+        $lock = Cache::lock('mfa_verify:' . hash('sha256', $request->input('mfa_token')), 30);
+        if (!$lock->get()) {
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'mfa_verification_busy', 'message' => 'Verificação em andamento. Tente novamente.'],
+            ], 429);
+        }
+
+        try {
+            return DB::transaction(fn () => $this->verifyMfaChallenge($request));
+        } finally {
+            $lock->release();
+        }
+    }
+
+    protected function verifyMfaChallenge(Request $request): JsonResponse
     {
         try {
         $mfaToken = (string) $request->input('mfa_token');
@@ -481,7 +495,16 @@ class AuthController extends Controller
             ], 429);
         }
 
-        $user = User::find($userId);
+        $user = User::whereKey($userId)->lockForUpdate()->first();
+
+        // Recheck after the database lock in case another request consumed the
+        // challenge while this worker was waiting (including cache lock expiry).
+        if (Cache::get('mfa_token:' . $mfaToken) !== $mfaData) {
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'invalid_mfa_token', 'message' => 'Token MFA inválido ou expirado'],
+            ], 401);
+        }
 
         if (!$user) {
             return response()->json([
@@ -491,6 +514,24 @@ class AuthController extends Controller
                     'message' => 'Usuário não encontrado',
                 ],
             ], 404);
+        }
+
+        if (in_array($user->status, ['blocked', 'suspended'], true)) {
+            Cache::forget('mfa_token:' . $mfaToken);
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'account_blocked', 'message' => 'Sua conta está bloqueada.'],
+            ], 403);
+        }
+
+        // Revoke pending challenges after password/MFA changes, including legacy challenges.
+        if (!$user->mfa_enabled || !is_array($mfaData)
+            || !hash_equals($this->authenticationState($user), (string) ($mfaData['auth_state'] ?? ''))) {
+            Cache::forget('mfa_token:' . $mfaToken);
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'invalid_mfa_token', 'message' => 'Sessão MFA inválida. Faça login novamente.'],
+            ], 401);
         }
 
         // Validate MFA code format
@@ -515,8 +556,7 @@ class AuthController extends Controller
             ], 500);
         }
 
-        $google2fa = new \PragmaRX\Google2FA\Google2FA();
-        $valid = $google2fa->verifyKey($user->mfa_secret, $code, 1);
+        $valid = $this->consumeMfaCode($user, $code);
         if (!$valid) {
             cache()->put($attemptKey, $attempts + 1, 300);
             return response()->json([
@@ -653,9 +693,7 @@ class AuthController extends Controller
             ]);
 
             $code = $request->input('code');
-            $google2fa = new \PragmaRX\Google2FA\Google2FA();
-
-            if (!$google2fa->verifyKey($user->mfa_secret, $code, 1)) {
+            if (!$this->consumeMfaCode($user, (string) $code)) {
                 return response()->json([
                     'success' => false,
                     'error' => ['code' => 'invalid_mfa_code', 'message' => 'Código MFA incorreto.'],
@@ -1098,8 +1136,12 @@ class AuthController extends Controller
         // Store temporarily until user confirms with a valid code
         cache()->put("mfa_setup:{$user->id}", $secret, 600);
 
+        // O emissor é o nome que aparece no app autenticador: vem do branding
+        // salvo no banco, não do APP_NAME fixo do .env.
+        $issuer = $this->platformName();
+
         $qrCodeUrl = $google2fa->getQRCodeUrl(
-            config('app.name', 'Vector Pagamentos'),
+            $issuer,
             $user->email,
             $secret,
         );
@@ -1109,6 +1151,7 @@ class AuthController extends Controller
             'data' => [
                 'secret' => $secret,
                 'qr_code_url' => $qrCodeUrl,
+                'issuer' => $issuer,
                 'message' => 'Escaneie o QR code e confirme com o código gerado',
             ],
         ]);
@@ -1194,8 +1237,7 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $google2fa = new \PragmaRX\Google2FA\Google2FA();
-        $valid = $google2fa->verifyKey($user->mfa_secret, $request->input('code'), 1);
+        $valid = $this->consumeMfaCode($user, (string) $request->input('code'));
 
         if (!$valid) {
             return response()->json([
@@ -1226,6 +1268,21 @@ class AuthController extends Controller
 
     // ── Helpers ─────────────────────────────────────────────────
 
+    /**
+     * Nome da plataforma configurado no branding (system_settings).
+     * Cai no APP_NAME apenas quando o banco não tem valor.
+     */
+    protected function platformName(): string
+    {
+        try {
+            $name = trim((string) \App\Models\SystemSetting::get('platform_name', ''));
+        } catch (\Throwable) {
+            $name = '';
+        }
+
+        return $name !== '' ? $name : (string) config('app.name', 'Vector Pagamentos');
+    }
+
     protected function getClientIp(Request $request): string
     {
         // Use Laravel's request->ip() which respects TrustProxies middleware
@@ -1235,6 +1292,43 @@ class AuthController extends Controller
     protected function buildUserAgentHash(Request $request): string
     {
         return hash('sha256', (string) ($request->userAgent() ?? ''));
+    }
+
+    protected function issueMfaChallenge(User $user, Request $request): JsonResponse
+    {
+        $token = Str::random(64);
+        Cache::put('mfa_token:' . $token, [
+            'user_id' => $user->id,
+            'ip' => $this->getClientIp($request),
+            'ua_hash' => $this->buildUserAgentHash($request),
+            'auth_state' => $this->authenticationState($user),
+        ], 300);
+
+        return response()->json([
+            'success' => true,
+            'data' => ['requires_mfa' => true, 'mfa_token' => $token],
+        ]);
+    }
+
+    protected function authenticationState(User $user): string
+    {
+        // HMAC avoids exposing password hashes or MFA secrets in signed device payloads.
+        return hash_hmac('sha256', json_encode([
+            $user->id, $user->password, $user->mfa_secret, (bool) $user->mfa_enabled,
+        ]), (string) config('app.key'));
+    }
+
+    protected function consumeMfaCode(User $user, string $code): bool
+    {
+        $google2fa = new \PragmaRX\Google2FA\Google2FA();
+        if (!$google2fa->verifyKey($user->mfa_secret, $code, 1)) {
+            return false;
+        }
+
+        // Atomic add prevents two challenges/workers from accepting the same OTP.
+        // 120 seconds exceeds the full accepted interval for a 30s TOTP with window 1.
+        $key = 'mfa_used:' . hash_hmac('sha256', $user->id . ':' . $user->mfa_secret . ':' . $code, (string) config('app.key'));
+        return Cache::add($key, true, 120);
     }
 
     protected function hasTrustedDevice(User $user, Request $request, string $trustedDeviceToken): bool
@@ -1252,6 +1346,10 @@ class AuthController extends Controller
             return false;
         }
 
+        if (!hash_equals($this->authenticationState($user), (string) ($payload['auth_state'] ?? ''))) {
+            return false;
+        }
+
         if (($payload['ua_hash'] ?? null) !== $this->buildUserAgentHash($request)) {
             return false;
         }
@@ -1265,6 +1363,7 @@ class AuthController extends Controller
     {
         $payload = [
             'user_id' => $user->id,
+            'auth_state' => $this->authenticationState($user),
             'device_id' => (string) Str::uuid(),
             'ua_hash' => $this->buildUserAgentHash($request),
             'issued_at' => now()->timestamp,

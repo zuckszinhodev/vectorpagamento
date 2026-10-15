@@ -19,6 +19,7 @@ import {
   BanknotesIcon,
 } from '@heroicons/react/24/outline';
 import PixIcon from '@/components/icons/PixIcon';
+import { SectionSpinner } from '@/components/ui/Spinner';
 
 /**
  * Rótulo visual do método de pagamento: ícone + nome.
@@ -1207,8 +1208,8 @@ export default function ChargesPage() {
       {/* Mobile Card View */}
       <div className="lg:hidden space-y-3">
         {isLoading ? (
-          <div className="card p-8 flex items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-primary border-t-transparent" />
+          <div className="card">
+            <SectionSpinner text="Carregando cobranças..." />
           </div>
         ) : charges.length === 0 ? (
           <div className="card p-8 text-center text-tx-muted">
@@ -1289,10 +1290,8 @@ export default function ChargesPage() {
             <tbody className="divide-y divide-border-DEFAULT bg-surface-card" style={{ overflow: 'visible' }}>
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-tx-muted">
-                    <div className="flex items-center justify-center">
-                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-primary border-t-transparent" />
-                    </div>
+                  <td colSpan={7}>
+                    <SectionSpinner text="Carregando cobranças..." />
                   </td>
                 </tr>
               ) : charges.length === 0 ? (
@@ -1331,15 +1330,15 @@ export default function ChargesPage() {
                               SPLIT
                             </span>
                           )}
-                          {charge.has_split && charge.split_amount > 0 && (
+                          {charge.has_split && (charge.split_amount ?? 0) > 0 && (
                             <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
                               SPLIT
                             </span>
                           )}
                         </div>
-                        {charge.has_split && charge.split_amount > 0 && (
+                        {charge.has_split && (charge.split_amount ?? 0) > 0 && (
                           <p className="text-[11px] text-orange-600 dark:text-orange-400 mt-0.5">
-                            Split: -{formatCurrency(charge.split_amount)} → Líquido: {formatCurrency(charge.amount - charge.split_amount)}
+                            Split: -{formatCurrency(charge.split_amount ?? 0)} → Líquido: {formatCurrency(charge.amount - (charge.split_amount ?? 0))}
                           </p>
                         )}
                       </div>

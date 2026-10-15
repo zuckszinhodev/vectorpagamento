@@ -8,9 +8,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Checkout;
 use App\Models\Course;
 use App\Models\CustomDomain;
+use App\Models\OrderBump;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -19,6 +21,80 @@ class ProductController extends Controller
     /**
      * Fix image URL to use the current request's host
      */
+    /**
+     * Espelha o order bump configurado no formulario do produto para a tabela
+     * `order_bumps`, que e de onde o checkout publico le.
+     *
+     * Sem isso a configuracao ficava so em `metadata` e nunca aparecia na
+     * pagina de pagamento. Mantem no maximo um bump gerado por aqui, marcado
+     * em `settings.source`, para nao conflitar com os criados no Checkout
+     * Builder nem duplicar a cada salvamento.
+     */
+    private function syncOrderBumpFromMetadata(Product $product, Checkout $checkout, string $accountId): void
+    {
+        try {
+            $metadata = is_array($product->metadata) ? $product->metadata : [];
+
+            $existing = OrderBump::where('checkout_id', $checkout->id)
+                ->where('settings->source', 'product_form')
+                ->first();
+
+            $enabled = (bool) ($metadata['order_bump_enabled'] ?? false);
+            $bumpProductId = $metadata['order_bump_product_id'] ?? null;
+
+            // Um produto nao pode ser order bump de si mesmo.
+            if ($bumpProductId === $product->id) {
+                $bumpProductId = null;
+            }
+
+            if (!$enabled || !$bumpProductId) {
+                $existing?->delete();
+
+                return;
+            }
+
+            $bumpProduct = Product::where('id', $bumpProductId)
+                ->where('account_id', $accountId)
+                ->first();
+
+            if (!$bumpProduct) {
+                $existing?->delete();
+
+                return;
+            }
+
+            $discount = (int) ($metadata['order_bump_discount_percent'] ?? 0);
+            $discount = max(0, min(99, $discount));
+            $price = (int) round($bumpProduct->price * (1 - $discount / 100));
+
+            $payload = [
+                'account_id' => $accountId,
+                'checkout_id' => $checkout->id,
+                'product_id' => $bumpProduct->id,
+                'title' => $metadata['order_bump_title'] ?? $bumpProduct->name,
+                'description' => $metadata['order_bump_description'] ?? null,
+                'image_url' => $bumpProduct->image_url,
+                'price' => $price,
+                'original_price' => $discount > 0 ? (int) $bumpProduct->price : null,
+                'discount_percent' => $discount > 0 ? $discount : null,
+                'is_active' => true,
+                'settings' => ['source' => 'product_form'],
+            ];
+
+            if ($existing) {
+                $existing->update($payload);
+            } else {
+                OrderBump::create($payload);
+            }
+        } catch (\Throwable $e) {
+            // Nunca derrubar o salvamento do produto por causa do bump.
+            Log::warning('Falha ao sincronizar order bump do produto', [
+                'product_id' => $product->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
     private function fixImageUrl(?string $imageUrl, Request $request): ?string
     {
         if ($imageUrl && str_contains($imageUrl, '/storage/')) {
@@ -84,9 +160,9 @@ class ProductController extends Controller
             $query = Product::where('account_id', $accountId);
 
             if ($request->query('status') === 'active') {
-                $query->whereRaw('"is_active" = true');
+                $query->where('is_active', true);
             } elseif ($request->query('status') === 'inactive') {
-                $query->whereRaw('"is_active" = false');
+                $query->where('is_active', false);
             }
 
             if ($request->query('category_id')) {
@@ -175,6 +251,7 @@ class ProductController extends Controller
             'description' => ['nullable', 'string'],
             'type' => ['required', 'in:digital,physical,service'],
             'price' => ['required', 'integer', 'min:100'],
+            'original_price' => ['nullable', 'integer', 'min:0'],
             'category' => ['nullable', 'string', 'max:100'],
             'category_id' => ['nullable', 'uuid', 'exists:categories,id'],
             'checkout_id' => ['nullable', 'uuid', 'exists:checkouts,id'],
@@ -185,6 +262,8 @@ class ProductController extends Controller
             'stock_quantity' => ['nullable', 'integer', 'min:0'],
             'images' => ['nullable', 'array'],
             'image_url' => ['nullable', 'string'],
+            // Permite criar como rascunho; sem o campo, publica como antes.
+            'is_active' => ['sometimes', 'boolean'],
         ];
 
         // Category is required when affiliate is enabled
@@ -231,6 +310,7 @@ class ProductController extends Controller
             'description' => $request->input('description'),
             'type' => $request->input('type'),
             'price' => $request->input('price'),
+            'original_price' => $request->input('original_price'),
             'currency' => 'BRL',
             'category' => $request->input('category'),
             'category_id' => $request->input('category_id'),
@@ -243,7 +323,7 @@ class ProductController extends Controller
             'images' => $images,
             'image_url' => $imageUrl,
             'metadata' => $metadata,
-            'is_active' => true,
+            'is_active' => $request->boolean('is_active', true),
         ]);
 
         // Auto-create checkout for the product if not provided
@@ -307,6 +387,10 @@ class ProductController extends Controller
             $product->update(['checkout_id' => $checkout->id]);
         } else {
             $checkout = Checkout::find($request->input('checkout_id'));
+        }
+
+        if ($checkout) {
+            $this->syncOrderBumpFromMetadata($product, $checkout, $accountId);
         }
 
         // Link course if member_area_enabled is true
@@ -506,7 +590,8 @@ class ProductController extends Controller
             $updateData['slug'] = $updSlug;
         }
 
-        $product->update(array_filter($updateData, fn($v) => $v !== null));
+        $updateData = array_filter($updateData, fn($v, $key) => $v !== null || $key === 'original_price', ARRAY_FILTER_USE_BOTH);
+        $product->update($updateData);
 
         $freshProduct = $product->fresh();
         $productData = $freshProduct->toArray();
@@ -523,6 +608,8 @@ class ProductController extends Controller
                 );
                 $checkout->update(['settings' => $settings]);
             }
+
+            $this->syncOrderBumpFromMetadata($freshProduct, $checkout, $accountId);
 
             $checkoutBaseUrl = $this->getCheckoutBaseUrl($accountId, $request);
             $productData['checkout_slug'] = $checkout->slug;

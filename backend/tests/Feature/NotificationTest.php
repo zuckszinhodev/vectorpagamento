@@ -165,3 +165,79 @@ it('counts unread notifications', function () {
     $response->assertStatus(200)
         ->assertJson(['success' => true, 'data' => ['unread_count' => 2]]);
 });
+
+
+it('suppresses withdrawal failure notifications and hides existing ones from the inbox', function () {
+    $withdrawal = new \App\Models\Withdrawal([
+        'account_id' => $this->account->id,
+        'user_id' => $this->user->id,
+        'amount' => 4000,
+    ]);
+    app(\App\Services\AccountNotificationService::class)->withdrawalFailed($withdrawal, 'Gateway unavailable');
+    expect(Notification::count())->toBe(0);
+
+    foreach ([$this->user->id, null] as $userId) {
+        Notification::create([
+            'account_id' => $this->account->id,
+            'user_id' => $userId,
+            'type' => 'warning',
+            'title' => 'Withdrawal failed',
+            'message' => 'Gateway unavailable',
+            'data' => ['event' => 'withdrawal.failed'],
+            'read' => false,
+        ]);
+    }
+    Notification::create([
+        'account_id' => $this->account->id,
+        'user_id' => $this->user->id,
+        'type' => 'info',
+        'title' => 'Other notification',
+        'message' => 'Still visible',
+        'read' => false,
+    ]);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/v1/notifications')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('meta.total', 1)
+        ->assertJsonPath('meta.unread_count', 1);
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/v1/notifications/unread-count')
+        ->assertOk()
+        ->assertJsonPath('data.unread_count', 1);
+});
+
+
+it('clears all personal and account notifications only for the requesting user', function () {
+    foreach (range(1, 25) as $index) {
+        Notification::create([
+            'account_id' => $this->account->id,
+            'user_id' => $index % 2 ? $this->user->id : null,
+            'type' => 'info',
+            'title' => 'Notification',
+            'message' => 'Test',
+            'read' => false,
+        ]);
+    }
+
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->deleteJson('/api/v1/notifications/clear-all')->assertOk();
+    $this->withHeader('Authorization', "Bearer {$this->token}")
+        ->getJson('/api/v1/notifications')->assertOk()
+        ->assertJsonCount(0, 'data')->assertJsonPath('meta.unread_count', 0);
+    expect(Notification::count())->toBe(25);
+    expect(\App\Models\NotificationRead::where('user_id', $this->user->id)->whereNotNull('deleted_at')->count())->toBe(25);
+
+    $other = User::create([
+        'account_id' => $this->account->id,
+        'name' => 'Other user',
+        'email' => 'other-notifications@test.com',
+        'password' => bcrypt('password'),
+        'status' => 'active',
+    ]);
+    $otherToken = auth()->login($other);
+    $this->withHeader('Authorization', "Bearer {$otherToken}")->getJson('/api/v1/notifications')
+        ->assertOk()->assertJsonCount(12, 'data')->assertJsonPath('meta.unread_count', 12);
+});

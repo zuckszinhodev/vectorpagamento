@@ -23,6 +23,7 @@ beforeEach(function () {
         'slug' => 'admin',
         'permissions' => ['admin.withdrawals.manage'],
     ]);
+    $this->adminRole = $adminRole;
 
     $this->account = Account::create([
         'id'            => Str::uuid()->toString(),
@@ -54,7 +55,7 @@ beforeEach(function () {
 
     // These fields are guarded, set them directly
     $this->user->forceFill([
-        'role_id' => $adminRole->id,
+        'role_id' => null,
         'mfa_enabled' => true,
         'mfa_secret' => 'JBSWY3DPEHPK3PXP',
         'kyc_status' => 'approved',
@@ -67,7 +68,10 @@ beforeEach(function () {
     $this->mfaCode = $google2fa->getCurrentOtp('JBSWY3DPEHPK3PXP');
 });
 
-it('creates a withdrawal request', function () {
+it('keeps a withdrawal pending for admin review without contacting the gateway', function () {
+    \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response(['error' => 'Gateway unavailable'], 503));
+    $this->mock(\App\Services\WithdrawalService::class)->shouldNotReceive('processWithdrawal');
+
     $response = $this->withHeader('Authorization', "Bearer {$this->token}")
         ->postJson('/api/v1/withdrawals', [
             'amount'      => 10000,
@@ -81,7 +85,14 @@ it('creates a withdrawal request', function () {
         ]);
 
     $response->assertStatus(201)
-        ->assertJsonStructure(['success', 'data' => ['id', 'amount', 'status']]);
+        ->assertJsonStructure(['success', 'data' => ['id', 'amount', 'status']])
+        ->assertJsonPath('data.status', 'pending')
+        ->assertJsonPath('data.auto_process', false)
+        ->assertJsonPath('data.is_instant', false);
+
+    expect((int) $this->wallet->fresh()->available_balance)->toBe(40000);
+    expect((int) $this->wallet->fresh()->pending_balance)->toBe(20000);
+    \Illuminate\Support\Facades\Http::assertNothingSent();
 
     $this->assertDatabaseHas('withdrawals', [
         'account_id' => $this->account->id,
@@ -194,7 +205,7 @@ it('validates minimum withdrawal amount', function () {
         ]);
 
     $response->assertStatus(422)
-        ->assertJsonValidationErrors(['amount']);
+        ->assertJsonPath('error.code', 'withdrawal_below_minimum');
 });
 
 it('requires KYC approval for withdrawals', function () {
@@ -305,6 +316,8 @@ it('cannot cancel completed withdrawal', function () {
 });
 
 it('allows admin to cancel a pending withdrawal with mandatory reason', function () {
+    $this->user->forceFill(['role_id' => $this->adminRole->id])->save();
+    $this->token = auth()->login($this->user);
     $withdrawal = Withdrawal::create([
         'id'          => Str::uuid()->toString(),
         'account_id'  => $this->account->id,
@@ -343,6 +356,8 @@ it('allows admin to cancel a pending withdrawal with mandatory reason', function
 });
 
 it('blocks admin cancellation for a processing withdrawal already sent to the gateway', function () {
+    $this->user->forceFill(['role_id' => $this->adminRole->id])->save();
+    $this->token = auth()->login($this->user);
     $withdrawal = Withdrawal::create([
         'id' => Str::uuid()->toString(),
         'account_id' => $this->account->id,
@@ -374,6 +389,8 @@ it('blocks admin cancellation for a processing withdrawal already sent to the ga
 });
 
 it('returns detailed timeline logs for an admin withdrawal investigation', function () {
+    $this->user->forceFill(['role_id' => $this->adminRole->id])->save();
+    $this->token = auth()->login($this->user);
     $withdrawal = Withdrawal::create([
         'id'          => Str::uuid()->toString(),
         'account_id'  => $this->account->id,

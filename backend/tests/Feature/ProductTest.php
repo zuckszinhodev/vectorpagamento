@@ -52,6 +52,18 @@ it('lists products for authenticated user', function () {
         ->assertJsonStructure(['success', 'data' => [['id', 'name', 'price', 'type']]]);
 });
 
+it('persists a direct discount and restores the price when removed', function () {
+    $response = $this->withHeader('Authorization', "Bearer {$this->token}")->postJson('/api/v1/products', [
+        'name' => 'Discounted product', 'type' => 'digital', 'price' => 8000, 'original_price' => 10000,
+        'metadata' => ['direct_discount' => ['enabled' => true, 'type' => 'percentage', 'value' => 20]],
+    ])->assertCreated()->assertJsonPath('data.price', 8000)->assertJsonPath('data.original_price', 10000);
+    $id = $response->json('data.id');
+    $this->withHeader('Authorization', "Bearer {$this->token}")->putJson("/api/v1/products/{$id}", [
+        'price' => 10000, 'original_price' => null, 'metadata' => ['direct_discount' => ['enabled' => false]],
+    ])->assertOk();
+    $this->assertDatabaseHas('products', ['id' => $id, 'price' => 10000, 'original_price' => null]);
+});
+
 it('creates a new product', function () {
     $response = $this->withHeader('Authorization', "Bearer {$this->token}")
         ->postJson('/api/v1/products', [

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { checkoutsService, type Checkout, type CreateCheckoutData, type UpdateCheckoutData } from '@/services/api';
+import { checkoutsService, type Checkout, type CreateCheckoutData, type UpdateCheckoutData } from '@/services/api/checkouts.service';
 import toast from 'react-hot-toast';
 
 interface CheckoutsState {

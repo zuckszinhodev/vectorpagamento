@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import clsx from 'clsx';
 import {
   Bars3Icon,
   XMarkIcon,
@@ -13,7 +14,6 @@ import {
   BanknotesIcon,
   DocumentTextIcon,
   ComputerDesktopIcon,
-  BellIcon,
   ArrowRightOnRectangleIcon,
   UserCircleIcon,
   ChevronDownIcon,
@@ -23,6 +23,11 @@ import {
   ExclamationTriangleIcon,
   CpuChipIcon,
   LifebuoyIcon,
+  SunIcon,
+  MoonIcon,
+  ArrowLeftIcon,
+  MagnifyingGlassIcon,
+  ChevronLeftIcon,
 } from '@heroicons/react/24/outline';
 
 interface NavItem {
@@ -66,7 +71,7 @@ interface AdminPulse {
 
 const navigationGroups: NavGroup[] = [
   {
-    title: 'Visao Geral',
+    title: 'Visão Geral',
     items: [
       { name: 'Dashboard', href: '/admin', icon: ChartBarIcon, permission: 'admin.dashboard.read' },
       { name: 'Control Tower', href: '/admin/control-tower', icon: CpuChipIcon, permission: 'admin.dashboard.read' },
@@ -74,14 +79,14 @@ const navigationGroups: NavGroup[] = [
     ],
   },
   {
-    title: 'Operacao',
+    title: 'Operação',
     items: [
       { name: 'Sellers', href: '/admin/sellers', icon: BuildingStorefrontIcon, permission: 'admin.customers.manage' },
       { name: 'Transações', href: '/admin/transactions', icon: DocumentTextIcon, permission: 'admin.withdrawals.manage' },
       { name: 'Saques', href: '/admin/withdrawals', icon: BanknotesIcon, permission: 'admin.withdrawals.manage' },
       { name: 'KYC', href: '/admin/kyc', icon: DocumentCheckIcon, permission: 'admin.kyc.review' },
       { name: 'Disputas', href: '/admin/chargebacks', icon: ExclamationTriangleIcon, permission: 'admin.chargebacks.manage' },
-      { name: 'Aprovacoes', href: '/admin/approvals', icon: DocumentTextIcon, permission: 'admin.approvals.review' },
+      { name: 'Aprovações', href: '/admin/approvals', icon: DocumentTextIcon, permission: 'admin.approvals.review' },
       { name: 'Suporte', href: '/admin/support', icon: LifebuoyIcon, permission: 'admin.customers.manage' },
     ],
   },
@@ -99,20 +104,11 @@ const flatNavigation = navigationGroups.flatMap((group) => group.items);
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout: authLogout } = useAuthStore();
-
-  const { data: notificationsData } = useQuery({
-    queryKey: ['notifications'],
-    queryFn: async () => {
-      const response = await api.get('/notifications?unread_only=true&per_page=5');
-      return response.data;
-    },
-    refetchInterval: 30000,
-  });
-
-  const unreadCount = notificationsData?.meta?.total || 0;
+  const { theme, toggleTheme, platformName } = useThemeStore();
 
   const { data: pulseData } = useQuery<AdminPulse>({
     queryKey: ['admin-pulse'],
@@ -143,40 +139,50 @@ export default function AdminLayout() {
     flatNavigation.find((item) => item.href !== '/admin' && location.pathname.startsWith(item.href))?.name ||
     'Admin';
 
+  const sidebarWidth = sidebarCollapsed ? 'w-[72px]' : 'w-[260px]';
+  const sidebarPl = sidebarCollapsed ? 'lg:pl-[72px]' : 'lg:pl-[260px]';
+
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Mobile sidebar */}
+    <div className="flex h-screen overflow-hidden bg-surface-page">
+      {/* Mobile sidebar overlay */}
       <Transition.Root show={sidebarOpen} as={Fragment}>
         <div className="relative z-50 lg:hidden">
           <Transition.Child
             as={Fragment}
-            enter="transition-opacity ease-linear duration-200"
+            enter="transition-opacity ease-out duration-300"
             enterFrom="opacity-0"
             enterTo="opacity-100"
-            leave="transition-opacity ease-linear duration-200"
+            leave="transition-opacity ease-in duration-200"
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 bg-black/30" onClick={() => setSidebarOpen(false)} />
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
           </Transition.Child>
 
           <div className="fixed inset-0 flex">
             <Transition.Child
               as={Fragment}
-              enter="transition ease-in-out duration-200 transform"
+              enter="transition ease-out duration-300 transform"
               enterFrom="-translate-x-full"
               enterTo="translate-x-0"
-              leave="transition ease-in-out duration-200 transform"
+              leave="transition ease-in duration-200 transform"
               leaveFrom="translate-x-0"
               leaveTo="-translate-x-full"
             >
-              <div className="relative mr-16 flex w-full max-w-[272px] flex-1">
-                <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
-                  <button type="button" className="-m-2.5 p-2.5" onClick={() => setSidebarOpen(false)}>
-                    <XMarkIcon className="h-6 w-6 text-gray-600" />
-                  </button>
-                </div>
-                <SidebarContent isActiveRoute={isActiveRoute} pulseData={pulseData} />
+              <div className="relative flex w-full max-w-[260px] flex-1">
+                <button
+                  type="button"
+                  className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+                <SidebarContent
+                  isActiveRoute={isActiveRoute}
+                  pulseData={pulseData}
+                  collapsed={false}
+                  onToggleCollapse={() => {}}
+                />
               </div>
             </Transition.Child>
           </div>
@@ -184,82 +190,134 @@ export default function AdminLayout() {
       </Transition.Root>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-[272px] lg:flex-col">
-        <SidebarContent isActiveRoute={isActiveRoute} pulseData={pulseData} />
+      <div className={clsx('hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300 ease-in-out', sidebarWidth)}>
+        <SidebarContent
+          isActiveRoute={isActiveRoute}
+          pulseData={pulseData}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
       </div>
 
-      {/* Main content */}
-      <div className="flex min-w-0 flex-1 flex-col lg:pl-[272px]">
+      {/* Main content area */}
+      <div className={clsx('flex min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out', sidebarPl)}>
         {/* Top bar */}
-        <header className="sticky top-0 z-40 flex h-14 items-center gap-x-4 border-b border-gray-200 bg-white px-4 sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center gap-x-4 border-b border-border-DEFAULT bg-surface-page/80 backdrop-blur-xl px-4 sm:px-6">
+          {/* Mobile menu toggle */}
           <button
             type="button"
-            className="-m-2.5 p-2.5 text-gray-500 lg:hidden"
+            className="rounded-lg p-2 text-tx-muted hover:text-tx-primary hover:bg-surface-hover transition-colors lg:hidden"
             onClick={() => setSidebarOpen(true)}
           >
             <Bars3Icon className="h-5 w-5" />
           </button>
 
-          <div className="h-5 w-px bg-gray-200 lg:hidden" />
+          <div className="h-5 w-px bg-border-DEFAULT lg:hidden" />
 
-          <h1 className="min-w-0 truncate text-sm font-semibold text-gray-900">{currentPageTitle}</h1>
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 min-w-0">
+            <Link to="/admin" className="text-xs text-tx-muted hover:text-tx-secondary transition-colors">
+              Admin
+            </Link>
+            {currentPageTitle !== 'Dashboard' && (
+              <>
+                <span className="text-tx-muted">/</span>
+                <span className="text-sm font-semibold text-tx-primary truncate">{currentPageTitle}</span>
+              </>
+            )}
+            {currentPageTitle === 'Dashboard' && (
+              <span className="text-sm font-semibold text-tx-primary">Dashboard</span>
+            )}
+          </div>
 
-          <div className="ml-auto flex items-center gap-x-3">
-            {/* Notifications */}
+          <div className="ml-auto flex items-center gap-x-2">
+            {/* Back to seller dashboard */}
             <button
-              type="button"
-              className="relative rounded-md p-1.5 text-gray-400 hover:text-gray-600"
+              onClick={() => navigate('/dashboard')}
+              className="hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-tx-muted hover:text-tx-primary hover:bg-surface-hover transition-colors"
             >
-              <BellIcon className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
+              <ArrowLeftIcon className="h-3.5 w-3.5" />
+              Seller View
+            </button>
+
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              className="rounded-lg p-2 text-tx-muted hover:text-tx-primary hover:bg-surface-hover transition-colors"
+            >
+              {theme === 'dark' ? <SunIcon className="h-4.5 w-4.5" /> : <MoonIcon className="h-4.5 w-4.5" />}
             </button>
 
             {/* Profile */}
             <Menu as="div" className="relative">
-              <Menu.Button className="flex items-center gap-2 rounded-md p-1.5 hover:bg-gray-50">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-900 text-xs font-medium text-white">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+              <Menu.Button className="flex items-center gap-2 rounded-xl p-1.5 hover:bg-surface-hover transition-colors">
+                <div className="flex flex-col items-start">
+                  <span className="text-xs font-semibold text-tx-primary">{user?.name || 'Admin'}</span>
+                  <span className="text-[10px] text-tx-muted">{user?.role || 'owner'}</span>
                 </div>
-                <span className="hidden text-sm font-medium text-gray-700 lg:block">{user?.name || 'Admin'}</span>
-                <ChevronDownIcon className="hidden h-4 w-4 text-gray-400 lg:block" />
+                <ChevronDownIcon className="hidden lg:block h-3.5 w-3.5 text-tx-muted" />
               </Menu.Button>
 
               <Transition
                 as={Fragment}
-                enter="transition ease-out duration-100"
-                enterFrom="transform opacity-0 scale-95"
-                enterTo="transform opacity-100 scale-100"
-                leave="transition ease-in duration-75"
-                leaveFrom="transform opacity-100 scale-100"
-                leaveTo="transform opacity-0 scale-95"
+                enter="transition ease-out duration-150"
+                enterFrom="opacity-0 scale-95 translate-y-1"
+                enterTo="opacity-100 scale-100 translate-y-0"
+                leave="transition ease-in duration-100"
+                leaveFrom="opacity-100 scale-100 translate-y-0"
+                leaveTo="opacity-0 scale-95 translate-y-1"
               >
-                <Menu.Items className="absolute right-0 z-10 mt-2 w-44 origin-top-right rounded-lg bg-white py-1 shadow-lg ring-1 ring-gray-200 focus:outline-none">
-                  <Menu.Item>
-                    {({ active }) => (
-                      <Link
-                        to="/dashboard"
-                        className={`${active ? 'bg-gray-50' : ''} flex items-center gap-2 px-3 py-2 text-sm text-gray-700`}
-                      >
-                        <UserCircleIcon className="h-4 w-4 text-gray-400" />
-                        Meu Dashboard
-                      </Link>
-                    )}
-                  </Menu.Item>
-                  <Menu.Item>
-                    {({ active }) => (
-                      <button
-                        onClick={handleLogout}
-                        className={`${active ? 'bg-gray-50' : ''} flex w-full items-center gap-2 px-3 py-2 text-sm text-red-600`}
-                      >
-                        <ArrowRightOnRectangleIcon className="h-4 w-4" />
-                        Sair
-                      </button>
-                    )}
-                  </Menu.Item>
+                <Menu.Items className="absolute right-0 z-10 mt-2 w-52 origin-top-right rounded-xl bg-surface-elevated border border-border-DEFAULT py-1 shadow-float focus:outline-none">
+                  <div className="px-3 py-2.5 border-b border-border-DEFAULT">
+                    <p className="text-sm font-semibold text-tx-primary truncate">{user?.name}</p>
+                    <p className="text-xs text-tx-muted truncate">{user?.email}</p>
+                  </div>
+                  <div className="p-1">
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
+                          to="/dashboard"
+                          className={clsx(
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
+                            active ? 'bg-surface-hover text-tx-primary' : 'text-tx-secondary'
+                          )}
+                        >
+                          <UserCircleIcon className="h-4 w-4" />
+                          Meu Dashboard
+                        </Link>
+                      )}
+                    </Menu.Item>
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
+                          to="/settings"
+                          className={clsx(
+                            'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
+                            active ? 'bg-surface-hover text-tx-primary' : 'text-tx-secondary'
+                          )}
+                        >
+                          <Cog6ToothIcon className="h-4 w-4" />
+                          Configurações
+                        </Link>
+                      )}
+                    </Menu.Item>
+                  </div>
+                  <div className="border-t border-border-DEFAULT p-1">
+                    <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          onClick={handleLogout}
+                          className={clsx(
+                            'flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors',
+                            active ? 'bg-status-error-subtle text-status-error' : 'text-red-500'
+                          )}
+                        >
+                          <ArrowRightOnRectangleIcon className="h-4 w-4" />
+                          Sair
+                        </button>
+                      )}
+                    </Menu.Item>
+                  </div>
                 </Menu.Items>
               </Transition>
             </Menu>
@@ -268,7 +326,7 @@ export default function AdminLayout() {
 
         {/* Page content */}
         <main className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="mx-auto w-full max-w-[1400px] min-w-0 p-3 sm:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-[1440px] min-w-0 p-4 sm:p-6 lg:p-8">
             <Outlet />
           </div>
         </main>
@@ -277,14 +335,21 @@ export default function AdminLayout() {
   );
 }
 
+// ── Sidebar ────────────────────────────────────────────
+
 function SidebarContent({
   isActiveRoute,
   pulseData,
+  collapsed,
+  onToggleCollapse,
 }: {
   isActiveRoute: (href: string) => boolean;
   pulseData?: AdminPulse;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }) {
   const { user } = useAuthStore();
+  const { platformName } = useThemeStore();
 
   const hasPermission = (permission?: string): boolean => {
     if (!permission) return true;
@@ -309,84 +374,78 @@ function SidebarContent({
     }))
     .filter((group) => group.items.length > 0);
 
-  const pulseColor =
-    pulseData?.state === 'critical' ? 'bg-red-500' :
-    pulseData?.state === 'attention' ? 'bg-amber-500' : 'bg-emerald-500';
-
-  const { platformName } = useThemeStore();
-
   return (
-    <div className="flex grow flex-col overflow-y-auto border-r border-gray-200 bg-white px-4 pb-4">
-      {/* Logo */}
-      <div className="flex h-14 shrink-0 items-center px-2">
-        <Link to="/admin" className="flex items-center gap-2">
-          <span className="text-base font-semibold text-gray-900">{platformName}</span>
-          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-500">
-            Admin
-          </span>
-        </Link>
+    <div className="flex h-full grow flex-col overflow-hidden bg-[#0c0f14] text-white">
+      {/* Logo area */}
+      <div className="flex h-14 shrink-0 items-center justify-between px-4">
+        {!collapsed && (
+          <Link to="/admin" className="flex items-center min-w-0">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white truncate">{platformName}</p>
+              <p className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Admin Panel</p>
+            </div>
+          </Link>
+        )}
+        <button
+          onClick={onToggleCollapse}
+          className="hidden lg:flex h-6 w-6 items-center justify-center rounded-md text-white/30 hover:text-white/70 hover:bg-white/5 transition-colors"
+        >
+          <ChevronLeftIcon className={clsx('h-3.5 w-3.5 transition-transform duration-300', collapsed && 'rotate-180')} />
+        </button>
       </div>
 
-      {/* Pulse indicator */}
-      {pulseData && (
-        <div className="mb-4 rounded-xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-3 shadow-sm">
-          <div className="flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full ${pulseColor}`} />
-            <span className="text-xs font-semibold text-gray-700">
-              {pulseData.state === 'healthy' ? 'Sistema online' : pulseData.state === 'attention' ? 'Atenção operacional' : 'Operação crítica'}
-            </span>
-            <span className="ml-auto text-xs font-semibold text-gray-500">{pulseData.health_score}%</span>
-          </div>
-        </div>
-      )}
-
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col">
+      <nav className="flex flex-1 flex-col overflow-y-auto px-2 pb-4 scrollbar-thin scrollbar-thumb-white/10">
         <ul role="list" className="flex flex-1 flex-col gap-y-5">
           {visibleNavigationGroups.map((group) => (
             <li key={group.title}>
-              <p className="mb-1.5 px-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                {group.title}
-              </p>
+              {!collapsed && (
+                <p className="mb-1.5 px-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/25">
+                  {group.title}
+                </p>
+              )}
+              {collapsed && <div className="mx-auto mb-1.5 h-px w-6 bg-white/10" />}
               <ul className="space-y-0.5">
                 {group.items.map((item) => {
                   const active = isActiveRoute(item.href);
                   const dynamicBadge =
-                    item.href === '/admin/transactions'
-                      ? pulseData?.queues?.paid_orders_24h
-                      : item.href === '/admin/withdrawals'
-                        ? pulseData?.queues?.pending_withdrawals
-                      : item.href === '/admin/approvals'
-                        ? pulseData?.queues?.pending_approvals
-                        : item.href === '/admin/kyc'
-                          ? pulseData?.queues?.pending_kyc
-                          : item.href === '/admin/chargebacks'
-                            ? pulseData?.queues?.pending_chargebacks
-                            : item.href === '/admin/monitoring'
-                              ? pulseData?.critical_alerts?.length
-                          : item.badge;
+                    item.href === '/admin/transactions' ? pulseData?.queues?.paid_orders_24h :
+                    item.href === '/admin/withdrawals' ? pulseData?.queues?.pending_withdrawals :
+                    item.href === '/admin/approvals' ? pulseData?.queues?.pending_approvals :
+                    item.href === '/admin/kyc' ? pulseData?.queues?.pending_kyc :
+                    item.href === '/admin/chargebacks' ? pulseData?.queues?.pending_chargebacks :
+                    item.href === '/admin/monitoring' ? pulseData?.critical_alerts?.length :
+                    item.badge;
                   const badgeCount = Number(dynamicBadge ?? 0);
 
                   return (
                     <li key={item.name}>
                       <Link
                         to={item.href}
-                        className={`group flex items-center gap-x-2.5 rounded-md px-2.5 py-2 text-[13px] font-medium transition-colors ${
+                        title={collapsed ? item.name : undefined}
+                        className={clsx(
+                          'group relative flex items-center gap-x-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-all duration-200',
+                          collapsed && 'justify-center px-0',
                           active
-                            ? 'bg-gray-100 text-gray-900'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
+                            ? 'bg-white/[0.1] text-white shadow-sm'
+                            : 'text-white/50 hover:bg-white/[0.05] hover:text-white/80'
+                        )}
                       >
-                        <item.icon
-                          className={`h-[18px] w-[18px] shrink-0 ${
-                            active ? 'text-gray-900' : 'text-gray-400 group-hover:text-gray-600'
-                          }`}
-                        />
-                        <span className="min-w-0 flex-1 truncate">{item.name}</span>
-                        {badgeCount > 0 && (
-                          <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gray-900 px-1.5 text-[10px] font-medium text-white">
+                        {active && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-accent-primary" />
+                        )}
+                        <item.icon className={clsx('h-[18px] w-[18px] shrink-0 transition-colors', active ? 'text-accent-primary' : 'text-white/40 group-hover:text-white/60')} />
+                        {!collapsed && <span className="min-w-0 flex-1 truncate">{item.name}</span>}
+                        {!collapsed && badgeCount > 0 && (
+                          <span className={clsx(
+                            'ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold',
+                            active ? 'bg-accent-primary text-white' : 'bg-white/10 text-white/70'
+                          )}>
                             {badgeCount > 99 ? '99+' : badgeCount}
                           </span>
+                        )}
+                        {collapsed && badgeCount > 0 && (
+                          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-accent-primary ring-2 ring-[#0c0f14]" />
                         )}
                       </Link>
                     </li>
@@ -397,6 +456,19 @@ function SidebarContent({
           ))}
         </ul>
       </nav>
+
+      {/* Bottom section */}
+      {!collapsed && (
+        <div className="shrink-0 border-t border-white/[0.06] p-3">
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium text-white/40 hover:bg-white/[0.05] hover:text-white/70 transition-colors"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
+            Voltar ao Dashboard
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

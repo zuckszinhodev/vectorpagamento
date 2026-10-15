@@ -30,7 +30,7 @@ class NotificationController extends Controller
             // Base: notificações do próprio usuário OU notificações de conta
             // (user_id null) da mesma account. Exclui as que este usuário ocultou.
             $baseFilter = function ($q) use ($userId, $accountId) {
-                $q->where(function ($inner) use ($userId, $accountId) {
+                $q->visibleInInbox()->where(function ($inner) use ($userId, $accountId) {
                     $inner->where('user_id', $userId)
                           ->orWhere(function ($qq) use ($accountId) {
                               $qq->whereNull('user_id')->where('account_id', $accountId);
@@ -171,13 +171,13 @@ class NotificationController extends Controller
             });
         };
 
-        $personal = Notification::where('user_id', $userId)
+        $personal = Notification::visibleInInbox()->where('user_id', $userId)
             ->where('read', false)
             ->where($notValidExpiry)
             ->where($notHidden)
             ->count();
 
-        $account = Notification::whereNull('user_id')
+        $account = Notification::visibleInInbox()->whereNull('user_id')
             ->where('account_id', $accountId)
             ->where($notValidExpiry)
             ->where($notHidden)
@@ -357,6 +357,28 @@ class NotificationController extends Controller
                 'error' => ['code' => 'server_error', 'message' => 'Erro interno do servidor.'],
             ], 500);
         }
+    }
+
+    /** Hide all notifications for the current user only. */
+    public function clearAll(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+        $accountId = $request->user()->account_id;
+
+        DB::transaction(function () use ($userId, $accountId) {
+            $ids = Notification::where(function ($query) use ($userId, $accountId) {
+                $query->where('user_id', $userId)
+                    ->orWhere(function ($query) use ($accountId) {
+                        $query->whereNull('user_id')->where('account_id', $accountId);
+                    });
+            })->pluck('id');
+
+            foreach ($ids as $id) {
+                $this->hideAccountNotification($id, $userId);
+            }
+        });
+
+        return response()->json(['success' => true]);
     }
 
     /**

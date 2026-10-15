@@ -71,7 +71,7 @@ interface AffiliateForm {
 }
 
 // Função para carregar produtos do localStorage ou mock
-const getProducts = () => {
+const getProducts = (): Array<{ id: string; name: string; price: number }> => {
  try {
  const devProducts = localStorage.getItem('dev_products');
  if (devProducts) {
@@ -976,7 +976,7 @@ export default function AffiliatesPage() {
  <div className="h-1.5 w-full rounded-full bg-surface-hover ">
  <div
  className="h-1.5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600"
- style={{ width: `${Math.min(parseFloat(conversionRate(affiliate)), 100)}%` }}
+ style={{ width: `${Math.min(Number(conversionRate(affiliate)), 100)}%` }}
  />
  </div>
  </div>

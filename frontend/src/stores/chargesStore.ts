@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { chargesService, type Charge, type CreateChargeData } from '@/services/api';
+import { chargesService, type Charge, type CreateChargeData } from '@/services/api/charges.service';
 import toast from 'react-hot-toast';
 
 interface ChargesState {

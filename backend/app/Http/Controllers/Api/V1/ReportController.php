@@ -229,6 +229,34 @@ private function buildDashboardData(string $accountId, string $period, Carbon $d
         $memberAreaRevenue = (float) ($memberAreaStats->revenue ?? 0);
         $memberAreaCount = (int) ($memberAreaStats->count ?? 0);
 
+        // Order bump revenue — bumps are charged together with the main charge,
+        // so realize them when the parent charge is approved within the period.
+        $orderBumpStats = DB::table('charge_offers as co')
+            ->join('charges as c', 'c.id', '=', 'co.charge_id')
+            ->where('co.account_id', $accountId)
+            ->where('co.offer_type', 'order_bump')
+            ->where('c.status', 'approved')
+            ->whereBetween('c.paid_at', [$dateFromRaw, $dateToRaw])
+            ->selectRaw('COALESCE(SUM(co.amount), 0) as revenue, COUNT(*) as count')
+            ->first();
+
+        $orderBumpRevenue = (float) ($orderBumpStats->revenue ?? 0);
+        $orderBumpCount = (int) ($orderBumpStats->count ?? 0);
+
+        // Upsell revenue — upsells are separate post-purchase charges; realize
+        // them when the dedicated upsell charge is approved within the period.
+        $upsellStats = DB::table('charge_offers as co')
+            ->join('charges as c', 'c.id', '=', 'co.upsell_charge_id')
+            ->where('co.account_id', $accountId)
+            ->where('co.offer_type', 'upsell')
+            ->where('c.status', 'approved')
+            ->whereBetween('c.paid_at', [$dateFromRaw, $dateToRaw])
+            ->selectRaw('COALESCE(SUM(co.amount), 0) as revenue, COUNT(*) as count')
+            ->first();
+
+        $upsellRevenue = (float) ($upsellStats->revenue ?? 0);
+        $upsellCount = (int) ($upsellStats->count ?? 0);
+
         // Revenue for chart - group by hour for detailed view
         $hourlyRevenue = Charge::where('account_id', $accountId)
             ->where('status', 'approved')
@@ -293,6 +321,10 @@ private function buildDashboardData(string $accountId, string $period, Carbon $d
                 'checkout_count' => $checkoutCount,
                 'member_area_revenue' => $memberAreaRevenue,
                 'member_area_count' => $memberAreaCount,
+                'order_bump_revenue' => $orderBumpRevenue,
+                'order_bump_count' => $orderBumpCount,
+                'upsell_revenue' => $upsellRevenue,
+                'upsell_count' => $upsellCount,
                 'top_products' => $topProducts,
                 'payment_methods' => $paymentMethods,
                 'daily_revenue' => $dailyRevenue,

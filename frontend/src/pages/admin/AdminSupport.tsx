@@ -172,9 +172,8 @@ function AdminTicketDetail({ ticketId, onClose }: { ticketId: string | null; onC
                                     : 'text-tx-muted'
                                 )}
                               >
-                                {msg.is_internal_note && <LockClosedIcon className="h-3 w-3" />}
                                 {msg.is_internal_note
-                                  ? 'Nota interna'
+                                  ? 'Chat Interno'
                                   : isAdmin
                                   ? `Suporte • ${msg.author?.name || ''}`
                                   : `${ticket.user?.name || 'Vendedor'}`}

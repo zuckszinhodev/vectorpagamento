@@ -115,7 +115,7 @@ export default function ReportsPage() {
                   >
                     {report.status}
                   </span>
-                  {report.status === 'completed' && (
+                  {report.status === 'completed' && report.file_url && (
                     <a
                       href={safeHref(report.file_url)}
                       download

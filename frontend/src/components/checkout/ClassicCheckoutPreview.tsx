@@ -84,7 +84,8 @@ export function ClassicCheckoutPreview({ theme, product, blocks }: ClassicChecko
               <div key={block.id} className="flex items-center justify-between gap-2 p-4 border-b" style={{ borderColor: `${theme.primaryColor || '#10b981'}20` }}>
                 <div>
                   <h1 className="text-xl font-bold" style={{ color: theme.primaryColor || '#10b981' }}>
-                    {settings.title || product?.name || platformName}
+                    {/* Cabecalho e a faixa de marca: nome da plataforma, nao do produto. */}
+                    {settings.title || platformName}
                   </h1>
                   {settings.showSecureBadge && (
                     <span className="text-xs font-semibold text-status-success">Compra Segura</span>
@@ -107,9 +108,11 @@ export function ClassicCheckoutPreview({ theme, product, blocks }: ClassicChecko
                   {product.name}
                 </h2>
                 {settings.showDescription && product.description && (
-                  <p className="mt-2 text-sm" style={{ color: theme.mutedColor || '#64748b' }}>
-                    {product.description}
-                  </p>
+                  <div
+                    className="checkout-description mt-2 text-sm"
+                    style={{ color: theme.mutedColor || '#64748b' }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description) }}
+                  />
                 )}
                 <div className="mt-3 flex items-end gap-3">
                   <span className="text-2xl font-bold" style={{ color: theme.primaryColor || '#10b981' }}>

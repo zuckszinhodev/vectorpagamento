@@ -19,6 +19,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     AcquirerFactory::reset();
+    config(['acquirer_routing.engine_enabled' => false, 'acquirers.sharkhubsub.enabled' => false]);
+    AcquirerConfig::where('acquirer_key', 'like', 'sharkhubsub%')->update(['enabled' => false]);
 
     $this->account = Account::create([
         'id' => Str::uuid()->toString(),

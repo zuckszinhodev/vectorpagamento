@@ -22,7 +22,7 @@ class HealthCheckAcquirersJob implements ShouldQueue
         Log::info("Running acquirer health checks");
 
         $acquirers = \DB::table('acquirers')
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->get();
 
         foreach ($acquirers as $acquirer) {

@@ -8,8 +8,10 @@ use App\Models\Charge;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Member;
+use App\Models\MemberArea;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -21,38 +23,47 @@ class MemberEnrollmentService
      */
     public function createAutomaticEnrollment(Charge $charge): ?Enrollment
     {
+        if (!in_array($charge->status, ['approved', 'paid'], true)) {
+            return null;
+        }
+        $transactionStarted = false;
         try {
             $product = $charge->product;
             if (!$product) {
                 return null;
             }
 
-            $course = Course::where('product_id', $product->id)->first();
+            $course = Course::where('product_id', $product->id)
+                ->where('account_id', $charge->account_id)->first();
             if (!$course) {
                 return null;
             }
 
-            $customerEmail = $charge->customer_email;
-            $customerName = $charge->customer_name ?? explode('@', $customerEmail)[0];
+            $customerEmail = data_get($charge->customer, 'email');
             $accountId = $charge->account_id;
 
             if (!$customerEmail) {
                 Log::warning('Cannot create enrollment: no customer email', ['charge_id' => $charge->id]);
                 return null;
             }
+            $customerName = data_get($charge->customer, 'name') ?: explode('@', $customerEmail)[0];
+            $tempPassword = null;
+
+            DB::beginTransaction();
+            $transactionStarted = true;
+            Charge::whereKey($charge->id)->lockForUpdate()->firstOrFail();
 
             // Find or create user
             $user = User::where('email', $customerEmail)->first();
-            $isNewUser = false;
             
             if (!$user) {
+                $tempPassword = Str::random(24);
                 $user = User::create([
                     'name' => $customerName,
                     'email' => $customerEmail,
-                    'password' => Hash::make(Str::random(32)),
+                    'password' => Hash::make($tempPassword),
                     'account_id' => $accountId,
                 ]);
-                $isNewUser = true;
 
                 Log::info('Created user for auto-enrollment', ['user_id' => $user->id, 'email' => $customerEmail]);
             }
@@ -71,11 +82,10 @@ class MemberEnrollmentService
                     ]);
                     Log::info('Reactivated existing enrollment', ['enrollment_id' => $existingEnrollment->id]);
                 }
-                return $existingEnrollment;
             }
 
             // Create enrollment
-            $enrollment = Enrollment::create([
+            $enrollment = $existingEnrollment ?? Enrollment::create([
                 'user_id' => $user->id,
                 'course_id' => $course->id,
                 'status' => 'active',
@@ -89,6 +99,9 @@ class MemberEnrollmentService
                 ->first();
 
             if (!$member) {
+                // An existing dashboard user also needs credentials for their
+                // separate member account. Do not change the dashboard password.
+                $tempPassword ??= Str::random(24);
                 $memberData = [
                     'account_id' => $accountId,
                     'user_id' => $user->id,
@@ -112,13 +125,19 @@ class MemberEnrollmentService
                 'enrollment_id' => $enrollment->id,
             ]);
 
-            // Send credentials email if new user
+            DB::commit();
+            $transactionStarted = false;
+
+            // Send credentials only for a newly created member.
             if ($tempPassword) {
-                $this->sendCredentialsEmail($customerEmail, $customerName, $tempPassword, $course->name ?? 'Curso');
+                $this->sendCredentialsEmail($customerEmail, $customerName, $tempPassword, $course->name ?? 'Curso', $accountId);
             }
 
             return $enrollment;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            if ($transactionStarted) {
+                DB::rollBack();
+            }
             Log::error('Error creating auto-enrollment', [
                 'charge_id' => $charge->id,
                 'error' => $e->getMessage(),
@@ -130,10 +149,11 @@ class MemberEnrollmentService
     /**
      * Send credentials email to new member
      */
-    private function sendCredentialsEmail(string $email, string $name, string $password, string $courseName): void
+    private function sendCredentialsEmail(string $email, string $name, string $password, string $courseName, string $accountId): void
     {
         try {
-            $memberAreaUrl = config('app.frontend_url', 'https://app.vectorpagamentos.com') . '/members/login';
+            $area = MemberArea::where('account_id', $accountId)->first();
+            $memberAreaUrl = rtrim($area?->full_domain ?: config('app.frontend_url', 'https://app.vectorpagamentos.com'), '/') . '/members/login';
             
             Mail::to($email)->queue(new \App\Mail\MemberCredentialsMail(
                 $name,

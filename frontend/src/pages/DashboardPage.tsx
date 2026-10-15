@@ -48,7 +48,7 @@ function getGreeting(): string {
   if (hour >= 12 && hour < 18) return 'Boa tarde';
   return 'Boa noite';
 }
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, formatCurrency } from '@/lib/api';
 import {
@@ -553,6 +553,10 @@ export default function DashboardPage() {
   const checkoutCount = dashboardResponse?.checkout_count || 0;
   const memberAreaRevenue = dashboardResponse?.member_area_revenue || 0;
   const memberAreaCount = dashboardResponse?.member_area_count || 0;
+  const orderBumpRevenue = dashboardResponse?.order_bump_revenue || 0;
+  const orderBumpCount = dashboardResponse?.order_bump_count || 0;
+  const upsellRevenue = dashboardResponse?.upsell_revenue || 0;
+  const upsellCount = dashboardResponse?.upsell_count || 0;
 
   // Buscar saldo de retirada
   const {
@@ -560,11 +564,17 @@ export default function DashboardPage() {
     isLoading: isWalletLoading,
     isFetching: isWalletFetching,
   } = useQuery({
-    queryKey: ['withdrawals-summary'],
+    queryKey: ['withdrawals-summary', user?.account_id],
     queryFn: async () => {
       const response = await api.get('/withdrawals/summary');
-      return response.data?.data || { available_balance: 0, pending_balance: 0 };
+      const summary = response.data?.data;
+      if (!summary) {
+        throw new Error('Resumo da carteira indisponível');
+      }
+      return summary;
     },
+    enabled: Boolean(user?.account_id),
+    refetchOnMount: 'always',
     refetchInterval: 30000,
     staleTime: 15000,
   });
@@ -738,6 +748,239 @@ export default function DashboardPage() {
     // Fallback para datas vazias
     return getDailyData(startDate, endDate);
   }, [startDate, endDate, dailyRevenue, hourlyRevenue]);
+  const themeVariant = useThemeStore((s) => s.themeVariant);
+
+  // ═══ MODERN THEME LAYOUT ═══
+  if (themeVariant === 'modern') {
+    const approvalRate = summary.approval_rate || 0;
+    const pendingRate = Math.max(0, 100 - approvalRate - (summary.chargeback_rate || 2.2));
+    const rejectedRate = Math.max(0, 100 - approvalRate - pendingRate);
+    const totalSales = summary.total_sales || 0;
+
+    const donutSegments = [
+      { label: 'Aprovadas', pct: approvalRate, color: '#ef4444' },
+      { label: 'Pendentes', pct: pendingRate > 0 ? pendingRate : 4.1, color: '#b91c1c' },
+      { label: 'Recusadas', pct: rejectedRate > 0 ? rejectedRate : 2.2, color: '#7f1d1d' },
+    ];
+
+    const donutRadius = 90;
+    const donutStroke = 28;
+    const donutCircumference = 2 * Math.PI * donutRadius;
+    let donutOffset = 0;
+
+    return (
+      <div className="space-y-4 pb-6">
+        {/* Top Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {showDashboardSkeleton ? (
+            Array.from({ length: 4 }).map((_, i) => <DashboardMetricCardSkeleton key={i} />)
+          ) : (
+            <>
+              <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-red-600/15 flex items-center justify-center flex-shrink-0">
+                  <CurrencyDollarIcon className="h-6 w-6 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Volume Processado</p>
+                  <p className="text-xl font-bold text-white mt-0.5">{formatCurrency(summary.total_revenue || 0)}</p>
+                </div>
+              </div>
+              <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                  <ShoppingCartIcon className="h-6 w-6 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Transações</p>
+                  <p className="text-xl font-bold text-white mt-0.5">{(totalSales).toLocaleString('pt-BR')}</p>
+                </div>
+              </div>
+              <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                  <svg className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Aprovação</p>
+                  <p className="text-xl font-bold text-white mt-0.5">{approvalRate.toFixed(1)}%</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/chargebacks')}
+                className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4 flex items-center gap-4 text-left transition-colors hover:border-red-500/40"
+              >
+                <div className="h-12 w-12 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">MED</p>
+                  <p className="text-xl font-bold text-white mt-0.5">{dashboardResponse?.chargeback_alerts || 0}</p>
+                </div>
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Chart + Donut */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          {/* Line Chart */}
+          <div className="lg:col-span-2 rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Movimentação</h3>
+              <div className="flex items-center gap-1">
+                {periodOptions.map((option) => (
+                  <button
+                    key={option.key}
+                    onClick={() => applyPeriod(option.key)}
+                    className={`px-2.5 py-1 text-[10px] rounded-md border transition-all ${
+                      selectedPeriod === option.key
+                        ? 'bg-red-500/20 text-red-400 border-red-500/40'
+                        : 'bg-transparent text-gray-500 border-gray-700 hover:border-gray-600'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {showDashboardSkeleton ? (
+              <DashboardChartSkeleton />
+            ) : (
+              <div className="h-[260px]">
+                <GlowLineChart
+                  labels={chartData.labels}
+                  data={chartData.data}
+                  color="red"
+                  height="h-full"
+                  clean
+                  tension={0.4}
+                  formatYTick={(v) => (v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v))}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Donut Chart */}
+          <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-5">
+            <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Status das Transações</h3>
+            {showDashboardSkeleton ? (
+              <div className="flex items-center justify-center h-[260px]">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-500 border-t-transparent" />
+              </div>
+            ) : (
+              <div className="flex flex-col items-center">
+                <div className="relative w-[210px] h-[210px]">
+                  <svg viewBox="0 0 220 220" className="w-full h-full -rotate-90">
+                    <defs>
+                      {donutSegments.map((seg, i) => (
+                        <linearGradient key={i} id={`donutGrad${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor={seg.color} stopOpacity="0.65" />
+                          <stop offset="100%" stopColor={seg.color} stopOpacity="1" />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    {/* Track */}
+                    <circle cx="110" cy="110" r={donutRadius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={donutStroke} />
+                    {donutSegments.map((seg, i) => {
+                      const full = (seg.pct / 100) * donutCircumference;
+                      const gapPx = seg.pct > 3 ? 7 : 0; // gap between visible segments
+                      const dash = Math.max(0, full - gapPx);
+                      const gap = donutCircumference - dash;
+                      const offset = donutOffset;
+                      donutOffset += full;
+                      return (
+                        <circle
+                          key={i}
+                          cx="110" cy="110" r={donutRadius}
+                          fill="none"
+                          stroke={`url(#donutGrad${i})`}
+                          strokeWidth={donutStroke}
+                          strokeDasharray={`${dash} ${gap}`}
+                          strokeDashoffset={-offset}
+                          strokeLinecap="round"
+                        />
+                      );
+                    })}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[11px] uppercase tracking-wider text-gray-500">Total</span>
+                    <span className="text-3xl font-bold text-white">{totalSales.toLocaleString('pt-BR')}</span>
+                    <span className="text-[10px] text-gray-500 mt-0.5">transações</span>
+                  </div>
+                </div>
+                <div className="mt-4 w-full space-y-2">
+                  {donutSegments.map((seg) => (
+                    <div key={seg.label} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: seg.color }} />
+                        <span className="text-xs text-gray-400">{seg.label}</span>
+                      </div>
+                      <span className="text-xs font-semibold text-white">{seg.pct.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Wallet */}
+        {showWalletSkeleton ? (
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { label: 'Disponível', Icon: WalletIcon },
+              { label: 'Pendente', Icon: ChartBarIcon },
+              { label: 'Sacado', Icon: CurrencyDollarIcon },
+            ].map(({ label, Icon }) => (
+              <div key={label} className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon className="h-4 w-4 text-red-500/60" />
+                  <span className="text-[11px] text-gray-500 uppercase tracking-wider">{label}</span>
+                </div>
+                <div className="h-6 w-24 rounded-md bg-white/[0.06] animate-pulse" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <WalletIcon className="h-4 w-4 text-red-500" />
+                <span className="text-[11px] text-gray-400 uppercase tracking-wider">Disponível</span>
+              </div>
+              <p className="text-lg font-bold text-red-400">{showBalance ? formatCurrency(walletSummary?.available_balance || 0) : '••••••'}</p>
+            </div>
+            <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <ChartBarIcon className="h-4 w-4 text-red-500" />
+                <span className="text-[11px] text-gray-400 uppercase tracking-wider">Pendente</span>
+              </div>
+              <p className="text-lg font-bold text-red-400">{showBalance ? formatCurrency(walletSummary?.pending_balance || 0) : '••••••'}</p>
+            </div>
+            <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4">
+              <div className="flex items-center gap-2 mb-1">
+                <CurrencyDollarIcon className="h-4 w-4 text-red-500" />
+                <span className="text-[11px] text-gray-400 uppercase tracking-wider">Sacado</span>
+              </div>
+              <p className="text-lg font-bold text-red-400">{showBalance ? formatCurrency(walletSummary?.total_withdrawn || 0) : '••••••'}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <footer className="border-t border-gray-800 mt-4 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+            <p>{platformName} Intermediadora de Pagamentos</p>
+            <div className="flex items-center gap-4">
+              <Link to="/docs" className="transition-colors hover:text-red-400">Documentação</Link>
+              <span>{platformName} © 2026</span>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // ═══ CLASSIC THEME LAYOUT ═══
   return (
     <div className="space-y-2 sm:space-y-3 pb-4">
       {/* Impersonation Banner */}
@@ -1037,17 +1280,17 @@ export default function DashboardPage() {
             <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
                 <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
-                <circle 
-                  cx="50%" cy="50%" r="45%" fill="none" stroke="#ec4899" strokeWidth="3" 
-                  strokeDasharray="0 283"
+                <circle
+                  cx="50%" cy="50%" r="45%" fill="none" stroke="#ec4899" strokeWidth="3"
+                  strokeDasharray={`${Math.min((orderBumpRevenue / 100) / 10000 * 100, 100) * 2.83} 283`}
                   strokeLinecap="round"
                 />
               </svg>
             </div>
             <div className="min-w-0 text-center sm:text-left">
               <p className="text-[8px] sm:text-xs font-semibold text-pink-400 uppercase tracking-wide truncate">Bump</p>
-              <p className="text-[10px] sm:text-lg font-bold text-tx-primary">R$ 0</p>
-              <p className="text-[8px] text-tx-muted hidden sm:block">0 vendas</p>
+              <p className="text-[10px] sm:text-lg font-bold text-tx-primary">{formatCurrency(orderBumpRevenue)}</p>
+              <p className="text-[8px] text-tx-muted hidden sm:block">{orderBumpCount || 0} vendas</p>
             </div>
           </div>
 
@@ -1056,17 +1299,17 @@ export default function DashboardPage() {
             <div className="relative w-8 h-8 sm:w-12 sm:h-12 flex-shrink-0">
               <svg className="w-full h-full transform -rotate-90">
                 <circle cx="50%" cy="50%" r="45%" fill="none" stroke="currentColor" strokeWidth="3" className="text-emerald-200 dark:text-gray-700" />
-                <circle 
-                  cx="50%" cy="50%" r="45%" fill="none" stroke="#06b6d4" strokeWidth="3" 
-                  strokeDasharray="0 283"
+                <circle
+                  cx="50%" cy="50%" r="45%" fill="none" stroke="#06b6d4" strokeWidth="3"
+                  strokeDasharray={`${Math.min((upsellRevenue / 100) / 10000 * 100, 100) * 2.83} 283`}
                   strokeLinecap="round"
                 />
               </svg>
             </div>
             <div className="min-w-0 text-center sm:text-left">
               <p className="text-[8px] sm:text-xs font-semibold text-cyan-400 uppercase tracking-wide truncate">Upsell</p>
-              <p className="text-[10px] sm:text-lg font-bold text-tx-primary">R$ 0</p>
-              <p className="text-[8px] text-tx-muted hidden sm:block">0 vendas</p>
+              <p className="text-[10px] sm:text-lg font-bold text-tx-primary">{formatCurrency(upsellRevenue)}</p>
+              <p className="text-[8px] text-tx-muted hidden sm:block">{upsellCount || 0} vendas</p>
             </div>
           </div>
 
@@ -1127,6 +1370,9 @@ export default function DashboardPage() {
             </a>
           </div>
           <div className="flex items-center gap-4 text-xs text-tx-muted">
+            <Link to="/docs" className="hover:text-tx-primary transition-colors">
+              Documentação
+            </Link>
             <a href="/privacy" className="hover:text-tx-primary transition-colors">
               Política de Privacidade
             </a>

@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Fragment, useState, useEffect, ReactNode, lazy, Suspense } from 'react';
 import { Menu, Transition } from '@headlessui/react';
@@ -115,7 +116,7 @@ interface AiSearchMessage extends WazerAIChatMessage {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, logout, isImpersonating, stopImpersonation } = useAuthStore();
-  const { theme, toggleTheme, platformName, logoUrl } = useThemeStore();
+  const { theme, toggleTheme, platformName, logoUrl, themeVariant } = useThemeStore();
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -173,7 +174,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       '/chargebacks': 'Chargebacks',
       '/acquirers': 'Nominais',
       '/products': 'Produtos',
-      '/checkouts': 'Checkouts',
       '/member-area': 'Área de Membros',
       '/domains': 'Domínios',
       '/withdrawals': 'Saques',
@@ -245,6 +245,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
+  });
+
+  const clearNotificationsMutation = useMutation({
+    mutationFn: () => notificationsService.clearAll(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      toast.success('Notificações limpas!');
+    },
+    onError: () => toast.error('Não foi possível limpar as notificações. Tente novamente.'),
   });
 
   const markAsRead = (id: string) => {
@@ -606,7 +615,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-surface-page relative overflow-x-hidden">
+    <div className={`min-h-screen relative overflow-x-hidden ${themeVariant === 'modern' ? 'bg-[#050506] text-white' : 'bg-surface-page'}`}>
       {/* Impersonation top bar */}
       {isImpersonationSession && (
         <div className="sticky top-0 z-[60] flex items-center justify-center gap-3 bg-emerald-600 px-4 py-1.5 text-white text-xs font-medium">
@@ -620,20 +629,31 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
       )}
       {/* Cosmic Background - theme-aware */}
-      <Suspense fallback={null}>
-        <CosmicBackground isDark={theme === 'dark'} />
-      </Suspense>
-      <Suspense fallback={null}>
-        <LiveGlobeMap accountId={user?.account_id} />
-      </Suspense>
+      {themeVariant === 'modern' ? (
+        <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+          {/* Subtle glow — top right */}
+          <div className="modern-glow absolute -top-32 -right-24 h-[440px] w-[440px] rounded-full bg-red-600/25 blur-[130px]" />
+          {/* Subtle glow — bottom left */}
+          <div className="modern-glow modern-glow--delayed absolute -bottom-28 -left-24 h-[440px] w-[440px] rounded-full bg-red-700/25 blur-[130px]" />
+        </div>
+      ) : (
+        <>
+          <Suspense fallback={null}>
+            <CosmicBackground isDark={theme === 'dark'} />
+          </Suspense>
+          <Suspense fallback={null}>
+            <LiveGlobeMap accountId={user?.account_id} />
+          </Suspense>
+        </>
+      )}
 
       {/* Top Navigation */}
-      <header className="sticky top-0 z-50 glass-nav border-b border-border-DEFAULT/60 bg-surface-page/95 backdrop-blur-xl">
+      <header className={`sticky top-0 z-50 border-b backdrop-blur-xl ${themeVariant === 'modern' ? 'border-white/[0.06] bg-[#050506]/95' : 'glass-nav border-border-DEFAULT/60 bg-surface-page/95'}`}>
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between gap-3">
             {/* Logo */}
             <div className="flex items-center gap-6">
-              <NavLink to="/dashboard" className="flex items-center gap-2 group">
+              <NavLink to="/dashboard" className="flex shrink-0 items-center gap-2 group">
                 {logoUrl ? (
                   <img
                     src={logoUrl}
@@ -642,7 +662,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                   />
                 ) : (
-                  <span className="text-base font-bold text-gray-900 dark:text-white">{platformName}</span>
+                  <img
+                    src="/img/gorillapay-wordmark.png"
+                    alt="GorillaPay"
+                    width={144}
+                    height={32}
+                    className="h-8 w-36 object-cover"
+                  />
                 )}
               </NavLink>
 
@@ -747,10 +773,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   value={globalSearch}
                   onChange={(event) => setGlobalSearch(event.target.value)}
                   className={clsx(
-                    'h-10 w-full rounded-full pl-10 pr-12 text-sm shadow-sm outline-none transition-all focus:border-accent-primary focus:ring-4 focus:ring-accent-primary/10',
-                    theme === 'dark'
-                      ? 'border-white/10 bg-[#0b100d] text-white placeholder:text-white/70'
-                      : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-600'
+                    'h-10 w-full rounded-full border pl-10 pr-12 text-sm shadow-sm outline-none transition-all focus:ring-4',
+                    themeVariant === 'modern'
+                      ? 'border-red-500/20 bg-red-950/30 text-white placeholder:text-white/60 focus:border-red-500 focus:ring-red-500/20'
+                      : theme === 'dark'
+                      ? 'border-white/10 bg-[#0b100d] text-white placeholder:text-white/70 focus:border-accent-primary focus:ring-accent-primary/20'
+                      : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-600 focus:border-accent-primary focus:ring-accent-primary/20'
                   )}
                   placeholder={typedSearchPlaceholder}
                   aria-label="Pesquise ou pergunte para a IA"
@@ -780,17 +808,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <MagnifyingGlassIcon className="h-[18px] w-[18px]" />
               </button>
 
-              {/* Theme Toggle */}
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-lg text-tx-muted hover:text-tx-primary hover:bg-surface-hover transition-all duration-fast"
-              >
-                {theme === 'dark' ? (
-                  <SunIcon className="h-[18px] w-[18px]" />
-                ) : (
-                  <MoonIcon className="h-[18px] w-[18px]" />
-                )}
-              </button>
+              {/* Theme Toggle — hidden in the modern theme (always dark) */}
+              {themeVariant !== 'modern' && (
+                <button
+                  onClick={toggleTheme}
+                  className="p-2 rounded-lg text-tx-muted hover:text-tx-primary hover:bg-surface-hover transition-all duration-fast"
+                >
+                  {theme === 'dark' ? (
+                    <SunIcon className="h-[18px] w-[18px]" />
+                  ) : (
+                    <MoonIcon className="h-[18px] w-[18px]" />
+                  )}
+                </button>
+              )}
 
               {/* Notifications */}
               <Menu as="div" className="relative">
@@ -819,6 +849,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         <p className="text-sm font-semibold text-tx-primary">
                           Notificações
                         </p>
+                        <div className="flex flex-col items-end gap-2">
                         {unreadCount > 0 && (
                           <button
                             onClick={markAllAsRead}
@@ -827,6 +858,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                             Marcar todas como lidas
                           </button>
                         )}
+                          {(notificationsData?.meta?.total || 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => clearNotificationsMutation.mutate()}
+                              disabled={clearNotificationsMutation.isPending}
+                              className="text-xs text-tx-muted hover:text-tx-primary hover:underline disabled:opacity-50 disabled:cursor-wait"
+                            >
+                              {clearNotificationsMutation.isPending ? 'Limpando...' : 'Limpar todas'}
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {/* Notifications List */}
@@ -1443,7 +1485,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </Transition>
 
       {/* Main Content */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* KYC Banner — informativo, não bloqueia uso */}
         {shouldShowKycBanner && shouldPromptKycCompletion && (
           <div className="mb-6 flex items-center gap-3 rounded-card border border-status-warning/30 bg-status-warning-subtle px-4 py-3">

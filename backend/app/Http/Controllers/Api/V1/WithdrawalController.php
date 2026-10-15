@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessWithdrawalJob;
 use App\Models\Account;
 use App\Models\AcquirerConfig;
 use App\Models\Charge;
@@ -532,7 +531,8 @@ class WithdrawalController extends Controller
                     'net_amount' => $netAmount,
                     'status' => $requiresAdminApproval ? 'pending_approval' : 'pending',
                     'method' => $validated['method'],
-                    'is_instant' => $isInstant,
+                    'is_instant' => false,
+                    'auto_process' => false,
                     'destination' => $validated['destination'],
                     'notes' => $validated['notes'] ?? null,
                     'idempotency_key' => $idempotencyKey !== '' ? $idempotencyKey : null,
@@ -637,70 +637,11 @@ class WithdrawalController extends Controller
                 ], 201));
             }
 
-            // Operational policy: process every non-approved withdrawal immediately.
-            // This prevents withdrawals from remaining in pending due to stale toggles.
-            $shouldProcess = true;
-
-            if ($shouldProcess) {
-                $withdrawal->update([
-                    'auto_process' => true,
-                    'is_instant' => true,
-                ]);
-
-                // Process instantly (sync) for fastest UX
-                try {
-                    $withdrawalService = app(WithdrawalService::class);
-                    $result = $withdrawalService->processWithdrawal($withdrawal);
-
-                    Log::info('Withdrawal auto processing result', [
-                        'withdrawal_id' => $withdrawal->id,
-                        'method'        => $validated['method'],
-                        'success'       => $result['success'],
-                        'transfer_id'   => $result['transfer_id'] ?? null,
-                    ]);
-
-                    $withdrawal->refresh();
-
-                    return $withIdempotencyHeaders(response()->json([
-                        'success' => true,
-                        'data'    => $withdrawal,
-                        'processing' => $result,
-                        'message' => $result['success']
-                            ? 'Saque enviado via PIX com sucesso'
-                            : 'Saque criado, mas o processamento falhou: ' . ($result['error'] ?? ''),
-                    ], 201));
-                } catch (\Exception $processEx) {
-                    Log::error('Withdrawal auto processing exception', [
-                        'withdrawal_id' => $withdrawal->id,
-                        'error'         => $processEx->getMessage(),
-                    ]);
-
-                    // Fallback: queue a recovery processing job so withdrawals do not remain stuck in pending.
-                    try {
-                        ProcessWithdrawalJob::dispatch($withdrawal->fresh() ?? $withdrawal);
-
-                        Log::warning('Withdrawal queued for recovery processing after auto exception', [
-                            'withdrawal_id' => $withdrawal->id,
-                        ]);
-
-                        return $withIdempotencyHeaders(response()->json([
-                            'success' => true,
-                            'data' => $withdrawal->fresh(),
-                            'message' => 'Saque criado. O processamento imediato falhou e foi encaminhado para reprocessamento automático.',
-                        ], 201));
-                    } catch (\Throwable $queueEx) {
-                        Log::error('Failed to queue withdrawal recovery job', [
-                            'withdrawal_id' => $withdrawal->id,
-                            'error' => $queueEx->getMessage(),
-                        ]);
-                    }
-                }
-            }
-
+            // Keep funds reserved until an administrator processes or cancels the request.
             return $withIdempotencyHeaders(response()->json([
                 'success' => true,
                 'data' => $withdrawal,
-                'message' => 'Solicitação de saque criada com sucesso',
+                'message' => 'Saque solicitado e pendente de análise da administração.',
             ], 201));
         } catch (\Exception $e) {
             DB::rollBack();
@@ -845,6 +786,11 @@ class WithdrawalController extends Controller
 
             $totalNet = 0;
             foreach ($approvedCharges as $charge) {
+                if (app()->environment(['local', 'testing']) && data_get($charge->metadata, 'source') === 'refund_test') {
+                    $totalNet += (int) ($charge->net_amount ?: $charge->amount);
+                    continue;
+                }
+
                 // Split charges already have net_amount set — no additional fee calculation
                 if ($charge->payment_method === 'split') {
                     $totalNet += $charge->net_amount ?? $charge->amount;
@@ -1602,8 +1548,8 @@ class WithdrawalController extends Controller
 
     private function isAdminWithdrawalUser(mixed $user, ?string $accountId = null, mixed $ownerUser = null): bool
     {
-        if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
-            return true;
+        if ($user && method_exists($user, 'getRoleName')) {
+            return in_array($user->getRoleName(), ['admin', 'support', 'financial', 'antifraud'], true);
         }
 
         if (($user?->type ?? null) !== 'api_key') {
@@ -1615,7 +1561,9 @@ class WithdrawalController extends Controller
             $resolvedOwner = \App\Models\User::where('account_id', $accountId)->first();
         }
 
-        return (bool) ($resolvedOwner && method_exists($resolvedOwner, 'isAdmin') && $resolvedOwner->isAdmin());
+        return (bool) ($resolvedOwner
+            && method_exists($resolvedOwner, 'getRoleName')
+            && in_array($resolvedOwner->getRoleName(), ['admin', 'support', 'financial', 'antifraud'], true));
     }
 
     private function calculateAdminGatewayAvailableBalance(string $accountId): int

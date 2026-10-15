@@ -589,12 +589,13 @@ export default function KYCPage() {
  }
  }
 
+ }
+
  // Validate facial step
  if (currentStep === 'facial') {
  if (!documents.selfie) {
  toast.error('Faca a verificacao facial pelo celular');
  return;
- }
  }
  }
  
@@ -681,7 +682,7 @@ export default function KYCPage() {
  }
 
  // 2. Submit personal data
- const submitPayload = {
+ const submitPayload: import('@/services/api/kyc.service').KycSubmitData = {
  full_name: personalData.fullName,
  birth_date: personalData.birthDate,
  document_number: personalData.cpf.replace(/\D/g, ''),

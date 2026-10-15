@@ -15,7 +15,7 @@ import {
  CursorArrowRaysIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-import { landingPagesService } from '@/services/api';
+import { landingPagesService } from '@/services/api/landingPages.service';
 import { domainsService } from '@/services/api/domains.service';
 
 interface ChatMessage {

@@ -38,6 +38,7 @@ class SystemConfigAdminController extends Controller
                     'platform_name' => $name,
                     'platform_description' => $appearance['platform_description'] ?? 'Gateway de pagamentos',
                     'primary_color' => $appearance['primary_color'] ?? '#9333ea',
+                    'theme_variant' => $appearance['theme_variant'] ?? 'classic',
                     'logo_url' => $appearance['logo_url'] ?? '',
                     'support_email' => $appearance['support_email'] ?? '',
                     'seo_title' => $appearance['seo_title'] ?? $name,
@@ -67,6 +68,7 @@ class SystemConfigAdminController extends Controller
                         'platform_name' => $this->normalizePlatformName($appearance['platform_name'] ?? config('app.name', 'Vector Pagamentos')),
                         'platform_description' => $appearance['platform_description'] ?? 'Gateway de pagamentos',
                         'primary_color' => $appearance['primary_color'] ?? '#9333ea',
+                        'theme_variant' => $appearance['theme_variant'] ?? 'classic',
                         'logo_url' => $appearance['logo_url'] ?? '',
                         'support_email' => $appearance['support_email'] ?? '',
                         'seo_title' => $appearance['seo_title'] ?? '',
@@ -96,6 +98,7 @@ class SystemConfigAdminController extends Controller
                 'platform_name' => ['sometimes', 'string', 'max:100'],
                 'platform_description' => ['sometimes', 'nullable', 'string', 'max:255'],
                 'primary_color' => ['sometimes', 'string', 'max:7'],
+                'theme_variant' => ['sometimes', 'string', 'in:classic,modern'],
                 'logo_url' => ['sometimes', 'nullable', 'string'],
                 'support_email' => ['sometimes', 'nullable', 'string', 'max:120'],
                 'seo_title' => ['sometimes', 'nullable', 'string', 'max:120'],
@@ -109,7 +112,7 @@ class SystemConfigAdminController extends Controller
             // key => group mapping so getByGroup() reads them back correctly.
             $groups = [
                 'platform_name' => 'appearance', 'platform_description' => 'appearance',
-                'primary_color' => 'appearance', 'logo_url' => 'appearance',
+                'primary_color' => 'appearance', 'theme_variant' => 'appearance', 'logo_url' => 'appearance',
                 'support_email' => 'appearance', 'seo_title' => 'appearance',
                 'seo_description' => 'appearance', 'seo_keywords' => 'appearance',
                 'rate_limit_per_minute' => 'api', 'webhook_timeout' => 'api', 'cors_enabled' => 'api',

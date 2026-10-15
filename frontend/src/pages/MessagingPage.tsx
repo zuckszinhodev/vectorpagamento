@@ -36,7 +36,13 @@ import {
   ChevronRightIcon,
   TagIcon,
   QueueListIcon,
+  ChevronDownIcon,
+  NoSymbolIcon,
+  VariableIcon,
+  ArrowLongDownIcon,
+  CpuChipIcon,
 } from '@heroicons/react/24/outline';
+import BotTab from '@/components/messaging/BotTab';
 import toast from 'react-hot-toast';
 import clsx from 'clsx';
 import {
@@ -52,7 +58,8 @@ import {
 } from '@/services/api/messaging.service';
 
 // ====== Types ======
-type Tab = 'dashboard' | 'send' | 'campaigns' | 'contacts' | 'templates' | 'automations' | 'logs' | 'settings';
+type Tab = 'dashboard' | 'send' | 'campaigns' | 'contacts' | 'templates' | 'automations' | 'bot' | 'logs' | 'settings';
+type FlowKind = 'event' | 'process' | 'decision' | 'success' | 'stop';
 
 // ====== Helper: format phone ======
 function formatPhone(phone: string): string {
@@ -159,6 +166,7 @@ export default function MessagingPage() {
     { key: 'contacts', label: 'Contatos', icon: UserGroupIcon },
     { key: 'templates', label: 'Templates', icon: DocumentTextIcon },
     { key: 'automations', label: 'Automações', icon: BoltIcon },
+    { key: 'bot', label: 'Bot de atendimento', icon: CpuChipIcon },
     { key: 'logs', label: 'Relatórios', icon: QueueListIcon },
     { key: 'settings', label: 'Configuração', icon: Cog6ToothIcon, adminOnly: true },
   ];
@@ -187,6 +195,15 @@ export default function MessagingPage() {
             {isConnected ? 'Conectado' : 'Desconectado'}
             {whatsappStatus?.phone && <span className="text-xs opacity-70">({whatsappStatus.phone})</span>}
           </div>
+          {!isConnected && isAdmin && (
+            <button
+              onClick={() => setActiveTab('settings')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 text-green-500 text-sm font-medium hover:bg-green-500/20 transition-all"
+            >
+              <SignalIcon className="h-4 w-4" />
+              Conectar
+            </button>
+          )}
         </div>
       </div>
 
@@ -216,6 +233,7 @@ export default function MessagingPage() {
       {activeTab === 'contacts' && <ContactsTab />}
       {activeTab === 'templates' && <TemplatesTab templates={templates} triggers={triggers} variables={variables} />}
       {activeTab === 'automations' && <AutomationsTab templates={templates} triggers={triggers} variables={variables} />}
+      {activeTab === 'bot' && <BotTab />}
       {activeTab === 'logs' && <LogsTab />}
       {activeTab === 'settings' && isAdmin && <SettingsTab whatsappStatus={whatsappStatus} providers={providers} />}
     </div>
@@ -1036,8 +1054,84 @@ function TemplatesTab({ templates, triggers, variables }: { templates: MessageTe
 // ============================================================
 // AUTOMATIONS TAB
 // ============================================================
+const flowNodeStyles: Record<FlowKind, { box: string; iconBg: string; iconColor: string }> = {
+  event: { box: 'border-yellow-500/30 bg-yellow-500/5', iconBg: 'bg-yellow-500/10', iconColor: 'text-yellow-500' },
+  process: { box: 'border-border-DEFAULT/50 bg-surface-card', iconBg: 'bg-blue-500/10', iconColor: 'text-blue-500' },
+  decision: { box: 'border-amber-500/40 border-dashed bg-amber-500/5', iconBg: 'bg-amber-500/10', iconColor: 'text-amber-500' },
+  success: { box: 'border-green-500/30 bg-green-500/5', iconBg: 'bg-green-500/10', iconColor: 'text-green-500' },
+  stop: { box: 'border-red-500/20 bg-red-500/5', iconBg: 'bg-red-500/10', iconColor: 'text-red-400' },
+};
+
+function FlowNode({ kind, icon: Icon, title, subtitle }: {
+  kind: FlowKind;
+  icon: any;
+  title: string;
+  subtitle?: string;
+}) {
+  const s = flowNodeStyles[kind];
+  return (
+    <div className={clsx('w-full rounded-2xl border p-3.5 flex items-start gap-3', s.box)}>
+      <div className={clsx('p-2 rounded-lg shrink-0', s.iconBg)}>
+        <Icon className={clsx('h-5 w-5', s.iconColor)} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-tx-primary leading-snug">{title}</p>
+        {subtitle && <p className="text-xs text-tx-muted mt-0.5 leading-snug">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** Vertical connector between two steps of the flow. */
+function FlowArrow({ label }: { label?: string }) {
+  return (
+    <div className="flex flex-col items-center py-1">
+      <div className="w-px h-4 bg-border-DEFAULT" />
+      <ArrowLongDownIcon className="h-4 w-4 -my-1 text-tx-muted" />
+      {label && <span className="mt-1 text-[10px] uppercase tracking-wide text-tx-muted">{label}</span>}
+    </div>
+  );
+}
+
+/**
+ * One step of the pipeline. `branch` renders the "no" path beside the node on
+ * large screens and stacked underneath on mobile.
+ */
+function FlowStep({ node, branch, last }: { node: React.ReactNode; branch?: React.ReactNode; last?: boolean }) {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,20rem)_1fr] gap-2 lg:gap-0 items-start">
+      <div className="hidden lg:block" />
+      <div className="flex flex-col items-center">
+        {node}
+        {!last && <FlowArrow />}
+      </div>
+      {branch ? (
+        <div className="flex items-center gap-2 lg:pt-4 lg:pl-2 pb-2 lg:pb-0">
+          <div className="hidden lg:block w-6 border-t border-dashed border-border-DEFAULT shrink-0" />
+          <div className="min-w-0 flex-1">{branch}</div>
+        </div>
+      ) : (
+        <div className="hidden lg:block" />
+      )}
+    </div>
+  );
+}
+
+function FlowBranchStop({ label, reason }: { label: string; reason: string }) {
+  return (
+    <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-2.5">
+      <div className="flex items-center gap-2">
+        <NoSymbolIcon className="h-4 w-4 text-red-400 shrink-0" />
+        <p className="text-xs font-medium text-red-400">{label}</p>
+      </div>
+      <p className="text-[11px] text-tx-muted mt-1 leading-snug">{reason}</p>
+    </div>
+  );
+}
+
 function AutomationsTab({ templates, triggers, variables }: { templates: MessageTemplate[]; triggers: TriggerOption[]; variables: Record<string, string> }) {
   const automations = templates.filter(t => t.channel === 'whatsapp' && t.trigger_event);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -1046,28 +1140,34 @@ function AutomationsTab({ templates, triggers, variables }: { templates: Message
         <p className="text-sm text-tx-muted mt-1">Mensagens automáticas disparadas por eventos do sistema</p>
       </div>
 
-      {/* How it works */}
+      {/* Flowchart: the real dispatch pipeline, including the gates that silently stop it */}
       <div className="rounded-2xl bg-surface-card p-4 sm:p-6 border border-border-DEFAULT/50">
-        <h3 className="font-medium text-tx-primary mb-3 flex items-center gap-2">
+        <h3 className="font-medium text-tx-primary mb-1 flex items-center gap-2">
           <InformationCircleIcon className="h-5 w-5 text-green-500" />
-          Como funciona
+          Fluxo do disparo automático
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="text-center p-4 rounded-xl bg-surface-page">
-            <BoltIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-            <p className="text-sm font-medium text-tx-primary">1. Evento dispara</p>
-            <p className="text-xs text-tx-muted mt-1">Pagamento aprovado, PIX gerado, etc.</p>
-          </div>
-          <div className="text-center p-4 rounded-xl bg-surface-page">
-            <DocumentTextIcon className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-            <p className="text-sm font-medium text-tx-primary">2. Template é selecionado</p>
-            <p className="text-xs text-tx-muted mt-1">Variáveis são preenchidas com dados reais</p>
-          </div>
-          <div className="text-center p-4 rounded-xl bg-surface-page">
-            <PaperAirplaneIcon className="h-8 w-8 text-green-500 mx-auto mb-2" />
-            <p className="text-sm font-medium text-tx-primary">3. Mensagem enviada</p>
-            <p className="text-xs text-tx-muted mt-1">WhatsApp enviado automaticamente ao cliente</p>
-          </div>
+        <p className="text-xs text-tx-muted mb-5">
+          Caminho percorrido a cada evento. Os pontos em âmbar são condições — se falharem, nada é enviado.
+        </p>
+
+        <div className="space-y-0">
+          <FlowStep node={<FlowNode kind="event" icon={BoltIcon} title="Evento do sistema" subtitle="Pagamento aprovado, PIX gerado, checkout abandonado…" />} />
+          <FlowStep node={<FlowNode kind="process" icon={QueueListIcon} title="Entra na fila de notificações" subtitle="Processado em segundo plano, sem travar o checkout" />} />
+          <FlowStep
+            node={<FlowNode kind="decision" icon={PhoneIcon} title="O cliente tem telefone?" subtitle="Lido do cadastro da cobrança" />}
+            branch={<FlowBranchStop label="Não envia" reason="Cobrança sem telefone do cliente — o disparo é ignorado." />}
+          />
+          <FlowStep
+            node={<FlowNode kind="decision" icon={DocumentTextIcon} title="Existe template ativo para o evento?" subtitle="Busca os templates da sua conta com esse gatilho" />}
+            branch={<FlowBranchStop label="Não envia" reason="Nenhum template ativo com esse gatilho. Crie um na aba Templates." />}
+          />
+          <FlowStep
+            node={<FlowNode kind="decision" icon={SignalIcon} title="Há provedor conectado?" subtitle="Usa o provedor do template ou o ativo do canal" />}
+            branch={<FlowBranchStop label="Não envia" reason="WhatsApp desconectado. Conecte em Configuração." />}
+          />
+          <FlowStep node={<FlowNode kind="process" icon={VariableIcon} title="Preenche as variáveis" subtitle="{{customer_name}}, {{amount}}, {{pix_code}}… viram dados reais" />} />
+          <FlowStep node={<FlowNode kind="success" icon={PaperAirplaneIcon} title="Mensagem enviada ao cliente" subtitle="Entrega feita pelo provedor de WhatsApp" />} />
+          <FlowStep last node={<FlowNode kind="process" icon={ChartBarIcon} title="Registrado em Relatórios" subtitle="Status: enviado → entregue → lido, ou falhou" />} />
         </div>
       </div>
 
@@ -1081,29 +1181,89 @@ function AutomationsTab({ templates, triggers, variables }: { templates: Message
           </div>
         ) : (
           <div className="space-y-3">
-            {automations.map(auto => (
-              <div key={auto.id} className="rounded-2xl bg-surface-card p-5 border border-border-DEFAULT/50 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-2.5 rounded-xl bg-yellow-500/10">
-                    <BoltIcon className="h-5 w-5 text-yellow-500" />
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-tx-primary">{auto.name}</h4>
-                    <p className="text-xs text-tx-muted mt-0.5">
-                      Quando: {triggers.find(t => t.value === auto.trigger_event)?.label || auto.trigger_event}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-tx-muted">{auto.times_sent} envios</span>
-                  {auto.is_active ? (
-                    <span className="px-2.5 py-1 rounded-full bg-green-500/10 text-green-500 text-xs font-medium">Ativo</span>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-full bg-gray-500/10 text-gray-400 text-xs font-medium">Inativo</span>
+            {automations.map(auto => {
+              const isOpen = expanded === auto.id;
+              const triggerLabel = triggers.find(t => t.value === auto.trigger_event)?.label || auto.trigger_event;
+              return (
+                <div key={auto.id} className="rounded-2xl bg-surface-card border border-border-DEFAULT/50 overflow-hidden">
+                  <button
+                    onClick={() => setExpanded(isOpen ? null : auto.id)}
+                    className="w-full p-5 flex items-center justify-between gap-3 text-left hover:bg-surface-hover/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="p-2.5 rounded-xl bg-yellow-500/10 shrink-0">
+                        <BoltIcon className="h-5 w-5 text-yellow-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-medium text-tx-primary truncate">{auto.name}</h4>
+                        <p className="text-xs text-tx-muted mt-0.5 truncate">Quando: {triggerLabel}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="hidden sm:inline text-xs text-tx-muted">{auto.times_sent} envios</span>
+                      {auto.is_active ? (
+                        <span className="px-2.5 py-1 rounded-full bg-green-500/10 text-green-500 text-xs font-medium">Ativo</span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full bg-gray-500/10 text-gray-400 text-xs font-medium">Inativo</span>
+                      )}
+                      <ChevronDownIcon className={clsx('h-4 w-4 text-tx-muted transition-transform', isOpen && 'rotate-180')} />
+                    </div>
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-border-DEFAULT/50 p-5 bg-surface-page/40">
+                      <p className="text-xs text-tx-muted mb-4">Fluxo desta automação</p>
+                      <div className="flex flex-col lg:flex-row lg:items-stretch gap-2">
+                        <div className="flex-1 rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <BoltIcon className="h-4 w-4 text-yellow-500" />
+                            <span className="text-[10px] uppercase tracking-wide text-tx-muted">Gatilho</span>
+                          </div>
+                          <p className="text-sm font-medium text-tx-primary">{triggerLabel}</p>
+                        </div>
+
+                        <div className="flex items-center justify-center text-tx-muted">
+                          <ChevronRightIcon className="hidden lg:block h-5 w-5" />
+                          <ArrowLongDownIcon className="lg:hidden h-5 w-5" />
+                        </div>
+
+                        <div className="flex-1 rounded-xl border border-border-DEFAULT/50 bg-surface-card p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <DocumentTextIcon className="h-4 w-4 text-blue-500" />
+                            <span className="text-[10px] uppercase tracking-wide text-tx-muted">Template</span>
+                          </div>
+                          <p className="text-sm font-medium text-tx-primary truncate">{auto.name}</p>
+                          <p className="text-[11px] text-tx-muted mt-1 line-clamp-2 leading-snug">{auto.message_body}</p>
+                        </div>
+
+                        <div className="flex items-center justify-center text-tx-muted">
+                          <ChevronRightIcon className="hidden lg:block h-5 w-5" />
+                          <ArrowLongDownIcon className="lg:hidden h-5 w-5" />
+                        </div>
+
+                        <div className="flex-1 rounded-xl border border-green-500/30 bg-green-500/5 p-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <PaperAirplaneIcon className="h-4 w-4 text-green-500" />
+                            <span className="text-[10px] uppercase tracking-wide text-tx-muted">Envio</span>
+                          </div>
+                          <p className="text-sm font-medium text-tx-primary">
+                            {auto.provider?.name || 'Provedor ativo do canal'}
+                          </p>
+                          <p className="text-[11px] text-tx-muted mt-1">{auto.times_sent} mensagens enviadas</p>
+                        </div>
+                      </div>
+
+                      {!auto.is_active && (
+                        <div className="mt-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                          <ExclamationTriangleIcon className="h-4 w-4 text-amber-500 shrink-0" />
+                          <p className="text-xs text-amber-500">Automação inativa — este fluxo não roda até ser reativado na aba Templates.</p>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -339,7 +339,7 @@ export default function WithdrawalsPage() {
  };
  });
 
- toast.success('Saque solicitado com sucesso!');
+ toast.success('Saque solicitado! Aguardando análise da administração.');
  queryClient.invalidateQueries({ queryKey: ['withdrawals'] });
  queryClient.invalidateQueries({ queryKey: ['withdrawals-summary'] });
  setIsWithdrawModalOpen(false);

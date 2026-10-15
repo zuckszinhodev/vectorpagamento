@@ -35,6 +35,7 @@ beforeEach(function () {
         'id'   => Str::uuid()->toString(),
         'name' => 'Admin',
         'slug' => 'admin',
+        'permissions' => ['admin.kyc.review'],
     ]);
 
     $this->token = auth()->login($this->user);

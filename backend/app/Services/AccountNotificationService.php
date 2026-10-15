@@ -107,21 +107,10 @@ class AccountNotificationService
         ]);
     }
 
-    /** Saque falhou. */
+    /** Withdrawal failures are handled by administrators without a user notification. */
     public function withdrawalFailed(Withdrawal $withdrawal, string $reason): void
     {
-        $amount = $this->formatMoneyMinor((int) ($withdrawal->amount * 100));
-
-        $this->push($withdrawal->account_id, $withdrawal->user_id, [
-            'type'    => 'warning',
-            'title'   => 'Saque falhou',
-            'message' => "Saque de {$amount} não foi concluído: {$reason}",
-            'data'    => [
-                'event'         => 'withdrawal.failed',
-                'withdrawal_id' => $withdrawal->id,
-                'reason'        => $reason,
-            ],
-        ]);
+        // Keep this entry point silent for all callers, including notification previews.
     }
 
     /** KYC pendente logo após o cadastro. */

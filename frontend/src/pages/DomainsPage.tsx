@@ -3,959 +3,534 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useThemeStore } from '@/stores/themeStore';
 import { toast } from 'react-hot-toast';
 import {
- GlobeAltIcon,
- PlusIcon,
- TrashIcon,
- CheckCircleIcon,
- ExclamationTriangleIcon,
- ClockIcon,
- ArrowPathIcon,
- StarIcon,
- ClipboardDocumentIcon,
- ShieldCheckIcon,
- XMarkIcon,
- ShoppingCartIcon,
- AcademicCapIcon,
- QuestionMarkCircleIcon,
- BookOpenIcon,
- ChevronDownIcon,
- ChevronUpIcon,
+  GlobeAltIcon,
+  PlusIcon,
+  TrashIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  ClockIcon,
+  ArrowPathIcon,
+  StarIcon,
+  ClipboardDocumentIcon,
+  ShieldCheckIcon,
+  BookOpenIcon,
+  ChevronDownIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
-import { domainsService, CustomDomain, DomainPurpose, DomainType } from '@/services/api/domains.service';
+import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
+import clsx from 'clsx';
+import { Modal, ModalHeader, ModalContent } from '@/components/ui/Modal';
+import DomainSetupGuide from '@/components/domains/DomainSetupGuide';
+import { domainsService, CustomDomain } from '@/services/api/domains.service';
 
-const PLATFORM_BASE_DOMAIN = 'vectorpagamentos.com.br';
+const STATUS_META: Record<string, { label: string; icon: any; chip: string; dot: string }> = {
+  verified: { label: 'Verificado', icon: CheckCircleIcon, chip: 'bg-status-success-subtle text-status-success', dot: 'bg-status-success' },
+  pending: { label: 'Pendente', icon: ClockIcon, chip: 'bg-status-warning-subtle text-status-warning', dot: 'bg-status-warning' },
+  failed: { label: 'Falhou', icon: ExclamationTriangleIcon, chip: 'bg-status-error-subtle text-status-error', dot: 'bg-status-error' },
+  expired: { label: 'Expirado', icon: ExclamationTriangleIcon, chip: 'bg-status-error-subtle text-status-error', dot: 'bg-status-error' },
+};
 
 export default function DomainsPage() {
-  const platformName = useThemeStore((s) => s.platformName);
- const queryClient = useQueryClient();
- const [showAddModal, setShowAddModal] = useState(false);
- const [newDomain, setNewDomain] = useState('');
- const [newSubdomain, setNewSubdomain] = useState('');
- const [newDomainType, setNewDomainType] = useState<DomainType>('wazerpay');
- const [newUseFor, setNewUseFor] = useState<DomainPurpose[]>(['checkout', 'members']);
- const [selectedDomain, setSelectedDomain] = useState<CustomDomain | null>(null);
- const [showTutorial, setShowTutorial] = useState(false);
+  const platformName = useThemeStore(s => s.platformName);
+  const queryClient = useQueryClient();
 
- // Fetch domains
- const { data, isLoading } = useQuery({
- queryKey: ['domains'],
- queryFn: () => domainsService.list(),
- });
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
- const domains = data?.data || [];
+  const [newDomain, setNewDomain] = useState('');
 
- // Create domain
- const createMutation = useMutation({
- mutationFn: ({ domain, useFor }: { domain: string; useFor: DomainPurpose[] }) => domainsService.create(domain, useFor),
- onSuccess: (result) => {
- toast.success(result.message || 'Domínio adicionado');
- queryClient.invalidateQueries({ queryKey: ['domains'] });
- closeAddModal();
- if (result.data) {
- setSelectedDomain(result.data);
- }
- },
- onError: (err: any) => {
- toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Erro ao adicionar domínio');
- },
- });
+  const { data, isLoading } = useQuery({
+    queryKey: ['domains'],
+    queryFn: () => domainsService.list(),
+  });
 
- // Create {platformName} subdomain
- const createSubdomainMutation = useMutation({
- mutationFn: ({ subdomain, useFor }: { subdomain: string; useFor: DomainPurpose[] }) => domainsService.createSubdomain(subdomain, useFor),
- onSuccess: (result) => {
- toast.success(result.message || `Subdomínio ${platformName} criado!`);
- queryClient.invalidateQueries({ queryKey: ['domains'] });
- closeAddModal();
- },
- onError: (err: any) => {
- toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Erro ao criar subdomínio');
- },
- });
+  const domains = data?.data ?? [];
 
- const closeAddModal = () => {
- setShowAddModal(false);
- setNewDomain('');
- setNewSubdomain('');
- setNewDomainType('wazerpay');
- setNewUseFor(['checkout', 'members']);
- };
+  const closeAddForm = () => {
+    setShowAddForm(false);
+    setNewDomain('');
+  };
 
- const handleCreate = () => {
- if (newDomainType === 'wazerpay') {
- if (newSubdomain && newUseFor.length > 0) {
- createSubdomainMutation.mutate({ subdomain: newSubdomain, useFor: newUseFor });
- }
- } else {
- if (newDomain && newUseFor.length > 0) {
- createMutation.mutate({ domain: newDomain, useFor: newUseFor });
- }
- }
- };
+  const apiError = (err: any, fallback: string) =>
+    err?.response?.data?.error?.message || err?.response?.data?.message || fallback;
 
- const isCreateDisabled = newDomainType === 'wazerpay'
- ? !newSubdomain || newUseFor.length === 0 || createSubdomainMutation.isPending
- : !newDomain || newUseFor.length === 0 || createMutation.isPending;
+  const createMutation = useMutation({
+    mutationFn: (domain: string) => domainsService.create(domain),
+    onSuccess: result => {
+      toast.success(result.message || 'Domínio adicionado');
+      queryClient.invalidateQueries({ queryKey: ['domains'] });
+      closeAddForm();
+      // Abre direto os registros DNS: é o próximo passo obrigatório.
+      if (result.data) setExpandedId(result.data.id);
+    },
+    onError: err => toast.error(apiError(err, 'Erro ao adicionar domínio')),
+  });
 
- const isCreating = createMutation.isPending || createSubdomainMutation.isPending;
+  const verifyMutation = useMutation({
+    mutationFn: (id: string) => domainsService.verify(id),
+    onSuccess: result => {
+      if (result.success) toast.success(result.message || 'Domínio verificado!');
+      else toast.error(result.error?.details?.join(', ') || 'Verificação falhou');
+      queryClient.invalidateQueries({ queryKey: ['domains'] });
+    },
+    onError: (err: any) => {
+      const details = err?.response?.data?.error?.details;
+      toast.error(Array.isArray(details) ? details.join('\n') : apiError(err, 'Erro na verificação'));
+      // O backend grava o motivo em last_check_error; sem recarregar, o card
+      // continuaria mostrando o estado anterior à tentativa.
+      queryClient.invalidateQueries({ queryKey: ['domains'] });
+    },
+  });
 
- // Verify domain
- const verifyMutation = useMutation({
- mutationFn: (id: string) => domainsService.verify(id),
- onSuccess: (result) => {
- if (result.success) {
- toast.success(result.message || 'Domínio verificado!');
- } else {
- toast.error(result.error?.details?.join(', ') || 'Verificação falhou');
- }
- queryClient.invalidateQueries({ queryKey: ['domains'] });
- },
- onError: (err: any) => {
- const details = err.response?.data?.error?.details;
- if (details && Array.isArray(details)) {
- toast.error(details.join('\n'));
- } else {
- toast.error(err.response?.data?.error?.message || 'Erro na verificação');
- }
- },
- });
+  const setPrimaryMutation = useMutation({
+    mutationFn: (id: string) => domainsService.setPrimary(id),
+    onSuccess: () => {
+      toast.success('Domínio definido como principal');
+      queryClient.invalidateQueries({ queryKey: ['domains'] });
+    },
+    onError: err => toast.error(apiError(err, 'Erro ao definir como principal')),
+  });
 
- // Set primary
- const setPrimaryMutation = useMutation({
- mutationFn: (id: string) => domainsService.setPrimary(id),
- onSuccess: () => {
- toast.success('Domínio definido como principal');
- queryClient.invalidateQueries({ queryKey: ['domains'] });
- },
- onError: (err: any) => {
- toast.error(err.response?.data?.error?.message || 'Erro ao definir como principal');
- },
- });
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => domainsService.remove(id),
+    onSuccess: () => {
+      toast.success('Domínio removido');
+      queryClient.invalidateQueries({ queryKey: ['domains'] });
+      setExpandedId(null);
+    },
+    onError: (err: any) => {
+      const error = err?.response?.data?.error;
+      if (error?.code === 'domain_has_linked_pages') toast.error(error.message, { duration: 6000 });
+      else toast.error(apiError(err, 'Erro ao remover domínio'));
+    },
+  });
 
- // Delete domain
- const deleteMutation = useMutation({
- mutationFn: (id: string) => domainsService.remove(id),
- onSuccess: () => {
- toast.success('Domínio removido');
- queryClient.invalidateQueries({ queryKey: ['domains'] });
- setSelectedDomain(null);
- },
- onError: (err: any) => {
- const errorData = err.response?.data?.error;
- if (errorData?.code === 'domain_has_linked_pages') {
- toast.error(errorData.message, { duration: 6000 });
- } else {
- toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Erro ao remover domínio');
- }
- },
- });
+  const handleCreate = () => {
+    if (isCreateDisabled) return;
+    createMutation.mutate(newDomain);
+  };
 
- // Update use_for
- const updateUseForMutation = useMutation({
- mutationFn: ({ id, useFor }: { id: string; useFor: DomainPurpose[] }) => domainsService.updateUseFor(id, useFor),
- onSuccess: (result) => {
- toast.success(result.message || 'Uso do domínio atualizado');
- queryClient.invalidateQueries({ queryKey: ['domains'] });
- if (selectedDomain && result.data) {
- setSelectedDomain(result.data);
- }
- },
- onError: (err: any) => {
- toast.error(err.response?.data?.error?.message || 'Erro ao atualizar uso do domínio');
- },
- });
+  const isCreating = createMutation.isPending;
+  const isCreateDisabled = isCreating || !newDomain.includes('.');
 
- const copyToClipboard = (text: string) => {
- navigator.clipboard.writeText(text);
- toast.success('Copiado!');
- };
+  const stats = {
+    total: domains.length,
+    verified: domains.filter(d => d.status === 'verified').length,
+    pending: domains.filter(d => d.status !== 'verified').length,
+    primary: domains.find(d => d.is_primary)?.domain ?? null,
+  };
 
- const statusBadge = (status: string) => {
- switch (status) {
- case 'verified':
- return (
- <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-status-success-subtle text-status-success">
- <CheckCircleIcon className="h-3.5 w-3.5" />
- Verificado
- </span>
- );
- case 'pending':
- return (
- <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-status-warning-subtle text-status-warning">
- <ClockIcon className="h-3.5 w-3.5" />
- Pendente
- </span>
- );
- case 'failed':
- return (
- <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-status-error-subtle text-status-error">
- <ExclamationTriangleIcon className="h-3.5 w-3.5" />
- Falhou
- </span>
- );
- default:
- return (
- <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-surface-hover text-tx-secondary /30">
- {status}
- </span>
- );
- }
- };
+  return (
+    <div className="space-y-6">
+      {/* ── Cabeçalho ─────────────────────────────── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-tx-primary">Domínios</h1>
+          <p className="text-sm text-tx-muted mt-1">
+            Use seus próprios endereços no checkout, nas páginas de venda e na área de membros.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowGuide(true)}
+            className="inline-flex items-center gap-2 rounded-element border border-border-DEFAULT bg-surface-card px-3.5 py-2.5 text-sm font-medium text-tx-secondary hover:bg-surface-hover transition-colors"
+          >
+            <BookOpenIcon className="h-4 w-4" />
+            Como configurar
+          </button>
+          <button
+            onClick={() => (showAddForm ? closeAddForm() : setShowAddForm(true))}
+            className="inline-flex items-center gap-2 rounded-element bg-accent-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover transition-colors"
+          >
+            {showAddForm ? <XMarkIcon className="h-4 w-4" /> : <PlusIcon className="h-4 w-4" />}
+            {showAddForm ? 'Fechar' : 'Adicionar domínio'}
+          </button>
+        </div>
+      </div>
 
- return (
- <div className="space-y-6">
- {/* Header */}
- <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
- <div>
- <h1 className="text-2xl font-bold text-tx-primary">Domínios Personalizados</h1>
- <p className="text-sm text-tx-muted mt-1">
- Configure seus próprios domínios para checkouts, páginas de vendas e área de membros.
- </p>
- </div>
- <button
- onClick={() => setShowAddModal(true)}
- className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:from-emerald-700 hover:to-indigo-700 transition-all"
- >
- <PlusIcon className="h-5 w-5" />
- Adicionar Domínio
- </button>
- </div>
+      {/* ── Adicionar (inline, sem modal) ─────────── */}
+      {showAddForm && (
+        <div className="rounded-card border border-accent-primary/40 bg-surface-card p-4 sm:p-5 space-y-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-tx-primary">Adicionar domínio</h2>
+              <p className="text-xs text-tx-muted mt-0.5">Aponte o seu próprio endereço para a plataforma.</p>
+            </div>
+            <button
+              onClick={closeAddForm}
+              title="Fechar"
+              className="shrink-0 p-1.5 rounded-element text-tx-muted hover:text-tx-primary hover:bg-surface-hover transition-colors"
+            >
+              <XMarkIcon className="h-4 w-4" />
+            </button>
+          </div>
 
- {/* Tutorial Section */}
- <div className="rounded-card border border-border-DEFAULT bg-surface-card overflow-hidden">
- <button
- onClick={() => setShowTutorial(!showTutorial)}
- className="w-full flex items-center justify-between p-4 hover:bg-surface-hover transition-colors"
- >
- <div className="flex items-center gap-3">
- <div className="rounded-lg bg-emerald-50 p-2">
- <BookOpenIcon className="h-5 w-5 text-emerald-600" />
- </div>
- <div className="text-left">
- <p className="text-sm font-semibold text-tx-primary">Tutorial: Como configurar seu domínio personalizado</p>
- <p className="text-xs text-tx-muted">Guia passo a passo com exemplos para Cloudflare, Hostinger, GoDaddy e outros</p>
- </div>
- </div>
- {showTutorial ? (
- <ChevronUpIcon className="h-5 w-5 text-tx-muted flex-shrink-0" />
- ) : (
- <ChevronDownIcon className="h-5 w-5 text-tx-muted flex-shrink-0" />
- )}
- </button>
+          <div>
+            <label className="block text-sm font-medium text-tx-secondary mb-1.5">Domínio ou subdomínio</label>
+            <input
+              autoFocus
+              value={newDomain}
+              onChange={e => setNewDomain(e.target.value.toLowerCase().trim())}
+              onKeyDown={e => e.key === 'Enter' && handleCreate()}
+              placeholder="vendas.meusite.com"
+              className="w-full rounded-element border border-border-DEFAULT bg-surface-input px-3.5 py-2.5 text-sm text-tx-primary placeholder:text-tx-muted focus:border-border-focus focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
+            />
+            <p className="mt-1.5 text-xs text-tx-muted">Ex.: vendas.meusite.com, lp.meusite.com, meusite.com.br</p>
+            <div className="mt-2.5 flex items-start gap-2 rounded-element bg-status-warning-subtle border border-status-warning/25 p-2.5">
+              <ExclamationTriangleIcon className="h-4 w-4 text-status-warning shrink-0 mt-0.5" />
+              <p className="text-xs text-status-warning leading-relaxed">
+                Você vai precisar de acesso ao painel de DNS para criar os registros CNAME e TXT.
+              </p>
+            </div>
+          </div>
 
- {showTutorial && (
- <div className="border-t border-border-DEFAULT p-4 sm:p-6 space-y-8">
- {/* Passo 1 */}
- <div className="space-y-3">
- <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">1</span>
- <h3 className="text-base font-semibold text-tx-primary">Escolha seu domínio ou subdomínio</h3>
- </div>
- <p className="text-sm text-tx-secondary ml-0 sm:ml-9">
- Você pode usar um <strong>domínio raiz</strong> (ex: <code className="px-1.5 py-0.5 bg-surface-hover rounded text-xs font-mono">meusite.com.br</code>) ou um <strong>subdomínio</strong> (ex: <code className="px-1.5 py-0.5 bg-surface-hover rounded text-xs font-mono">pay.meusite.com.br</code>).
- </p>
- <div className="ml-0 sm:ml-9 rounded-lg bg-surface-page border border-border-DEFAULT p-4">
- <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider mb-2">Exemplos comuns</p>
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
- <div className="flex items-center gap-2">
- <ShoppingCartIcon className="h-4 w-4 text-emerald-500" />
- <code className="text-tx-primary font-mono text-xs">pay.meusite.com.br</code>
- <span className="text-tx-muted text-xs">— Checkout</span>
- </div>
- <div className="flex items-center gap-2">
- <ShoppingCartIcon className="h-4 w-4 text-emerald-500" />
- <code className="text-tx-primary font-mono text-xs">comprar.meusite.com.br</code>
- <span className="text-tx-muted text-xs">— Checkout</span>
- </div>
- <div className="flex items-center gap-2">
- <AcademicCapIcon className="h-4 w-4 text-indigo-500" />
- <code className="text-tx-primary font-mono text-xs">alunos.meusite.com.br</code>
- <span className="text-tx-muted text-xs">— Membros</span>
- </div>
- <div className="flex items-center gap-2">
- <AcademicCapIcon className="h-4 w-4 text-indigo-500" />
- <code className="text-tx-primary font-mono text-xs">cursos.meusite.com.br</code>
- <span className="text-tx-muted text-xs">— Membros</span>
- </div>
- </div>
- </div>
- </div>
+          <div className="flex gap-3">
+            <button
+              onClick={closeAddForm}
+              className="flex-1 sm:flex-none sm:min-w-[140px] rounded-element border border-border-DEFAULT px-4 py-2.5 text-sm font-medium text-tx-secondary hover:bg-surface-hover transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleCreate}
+              disabled={isCreateDisabled}
+              className="flex-1 sm:flex-none sm:min-w-[180px] rounded-element bg-accent-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isCreating ? 'Adicionando...' : 'Adicionar domínio'}
+            </button>
+          </div>
+        </div>
+      )}
 
- {/* Passo 2 */}
- <div className="space-y-3">
- <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">2</span>
- <h3 className="text-base font-semibold text-tx-primary">Adicione o domínio na {platformName}</h3>
- </div>
- <p className="text-sm text-tx-secondary ml-0 sm:ml-9">
- Clique em <strong>"Adicionar Domínio"</strong> acima, digite seu domínio e escolha se quer usar no Checkout, Área de Membros ou ambos. Após adicionar, o sistema vai gerar os registros DNS que você precisa configurar.
- </p>
- </div>
+      {/* ── Resumo ────────────────────────────────── */}
+      {domains.length > 0 && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatTile label="Domínios" value={String(stats.total)} icon={GlobeAltIcon} tone="text-tx-primary" />
+          <StatTile label="Verificados" value={String(stats.verified)} icon={CheckCircleIcon} tone="text-status-success" />
+          <StatTile label="Aguardando DNS" value={String(stats.pending)} icon={ClockIcon} tone="text-status-warning" />
+          <StatTile
+            label="Principal"
+            value={stats.primary ?? '—'}
+            icon={StarIcon}
+            tone="text-accent-primary"
+            truncate
+          />
+        </div>
+      )}
 
- {/* Passo 3 */}
- <div className="space-y-3">
- <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">3</span>
- <h3 className="text-base font-semibold text-tx-primary">Configure os registros DNS</h3>
- </div>
- <p className="text-sm text-tx-secondary ml-0 sm:ml-9">
- Acesse o painel de DNS do seu provedor e adicione <strong>2 registros</strong>:
- </p>
+      {/* ── Lista ─────────────────────────────────── */}
+      {isLoading ? (
+        <div className="rounded-card border border-border-DEFAULT bg-surface-card py-16 flex justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-primary border-t-transparent" />
+        </div>
+      ) : domains.length === 0 ? (
+        <div className="rounded-card border border-dashed border-border-DEFAULT bg-surface-card py-16 px-6 text-center">
+          <div className="mx-auto w-fit rounded-full bg-accent-subtle p-4">
+            <GlobeAltIcon className="h-8 w-8 text-accent-primary" />
+          </div>
+          <h3 className="mt-4 text-base font-semibold text-tx-primary">Nenhum domínio ainda</h3>
+          <p className="mt-1.5 text-sm text-tx-muted max-w-md mx-auto">
+            Aponte o seu próprio domínio para usar no checkout, nas páginas de venda e na área de membros. É rápido: dois
+            registros no painel de DNS.
+          </p>
+          <div className="mt-5 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="inline-flex items-center gap-2 rounded-element bg-accent-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover transition-colors"
+            >
+              <PlusIcon className="h-4 w-4" />
+              Adicionar domínio
+            </button>
+            <button
+              onClick={() => setShowGuide(true)}
+              className="inline-flex items-center gap-2 rounded-element border border-border-DEFAULT px-4 py-2.5 text-sm font-medium text-tx-secondary hover:bg-surface-hover transition-colors"
+            >
+              Ver o guia
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {domains.map(domain => (
+            <DomainCard
+              key={domain.id}
+              domain={domain}
+              platformName={platformName}
+              expanded={expandedId === domain.id}
+              onToggle={() => setExpandedId(expandedId === domain.id ? null : domain.id)}
+              onVerify={() => verifyMutation.mutate(domain.id)}
+              verifying={verifyMutation.isPending && verifyMutation.variables === domain.id}
+              onSetPrimary={() => setPrimaryMutation.mutate(domain.id)}
+              onDelete={() => {
+                if (confirm(`Remover ${domain.domain}?`)) deleteMutation.mutate(domain.id);
+              }}
+            />
+          ))}
+        </div>
+      )}
 
- {/* DNS Records Table */}
- <div className="ml-0 sm:ml-9 overflow-x-auto rounded-lg border border-border-DEFAULT">
- <table className="w-full text-sm min-w-[400px]">
- <thead>
- <tr className="bg-surface-hover">
- <th className="px-3 sm:px-4 py-2.5 text-left text-xs font-semibold text-tx-muted uppercase tracking-wider">Tipo</th>
- <th className="px-3 sm:px-4 py-2.5 text-left text-xs font-semibold text-tx-muted uppercase tracking-wider">Nome / Host</th>
- <th className="px-3 sm:px-4 py-2.5 text-left text-xs font-semibold text-tx-muted uppercase tracking-wider">Valor / Destino</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-border-DEFAULT">
- <tr className="bg-surface-card">
- <td className="px-3 sm:px-4 py-3">
- <span className="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700">CNAME</span>
- </td>
- <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary">seu-subdominio</td>
- <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary">checkout.vectorpagamentos.com.br</td>
- </tr>
- <tr className="bg-surface-card">
- <td className="px-3 sm:px-4 py-3">
- <span className="inline-flex px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700">TXT</span>
- </td>
- <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary break-all">_vectorpagamentos-verification.seudominio.com</td>
- <td className="px-3 sm:px-4 py-3 font-mono text-xs text-tx-primary break-all">vectorpagamentos-verify=SEU_TOKEN</td>
- </tr>
- </tbody>
- </table>
- </div>
+      {/* ── Guia ──────────────────────────────────── */}
+      <Modal isOpen={showGuide} onClose={() => setShowGuide(false)} size="full">
+        <ModalHeader onClose={() => setShowGuide(false)}>
+          <span className="flex items-center gap-2">
+            <BookOpenIcon className="h-5 w-5 text-accent-primary" />
+            Como configurar seu domínio
+          </span>
+        </ModalHeader>
+        <ModalContent className="max-h-[72vh] overflow-y-auto">
+          <DomainSetupGuide platformName={platformName} />
+        </ModalContent>
+      </Modal>
 
- <div className="ml-0 sm:ml-9 rounded-lg bg-amber-50 border border-amber-200 p-3">
- <p className="text-xs text-amber-800">
- <strong>Importante:</strong> Os valores exatos (host e token) serão mostrados após adicionar o domínio. A tabela acima é apenas um exemplo.
- </p>
- </div>
+    </div>
+  );
+}
 
- {/* Provider-specific guides */}
- <div className="ml-0 sm:ml-9 space-y-3">
- <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider">Guia por provedor</p>
+// ============================================================
+//  PEÇAS
+// ============================================================
+function StatTile({
+  label,
+  value,
+  icon: Icon,
+  tone,
+  truncate,
+}: {
+  label: string;
+  value: string;
+  icon: any;
+  tone: string;
+  truncate?: boolean;
+}) {
+  return (
+    <div className="rounded-card border border-border-DEFAULT bg-surface-card p-4">
+      <div className="flex items-center gap-2 text-tx-muted">
+        <Icon className="h-4 w-4" />
+        <span className="text-xs font-medium">{label}</span>
+      </div>
+      <p className={clsx('mt-1.5 text-xl font-bold', tone, truncate && 'text-sm truncate')} title={truncate ? value : undefined}>
+        {value}
+      </p>
+    </div>
+  );
+}
 
- {/* Cloudflare */}
- <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
- <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors">
- <img src="https://cdn.simpleicons.org/cloudflare/F38020" alt="Cloudflare" className="h-5 w-5" />
- <span className="text-sm font-medium text-tx-primary">Cloudflare</span>
- <ChevronDownIcon className="h-4 w-4 text-tx-muted ml-auto group-open:rotate-180 transition-transform" />
- </summary>
- <div className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-sm text-tx-secondary space-y-2">
- <ol className="list-decimal list-inside space-y-1.5 text-xs">
- <li>Acesse <strong>dash.cloudflare.com</strong> e selecione seu domínio</li>
- <li>Vá em <strong>DNS → Records → Add Record</strong></li>
- <li>Adicione o registro <strong>CNAME</strong>: Nome = seu subdomínio, Destino = <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.vectorpagamentos.com.br</code></li>
- <li><strong>Ative o proxy (nuvem laranja)</strong> — isso garante SSL automático</li>
- <li>Adicione o registro <strong>TXT</strong>: Nome = <code className="px-1 py-0.5 bg-surface-hover rounded">_vectorpagamentos-verification.seudominio.com</code>, Conteúdo = seu token</li>
- <li>Aguarde 1-5 minutos e clique em <strong>"Verificar"</strong> na {platformName}</li>
- </ol>
- <div className="mt-2 p-2 rounded bg-green-50 border border-green-200">
- <p className="text-xs text-green-700"><strong>Recomendado:</strong> Cloudflare é o provedor ideal pois fornece SSL gratuito e CDN automaticamente. O proxy (nuvem laranja) DEVE estar ativo.</p>
- </div>
- </div>
- </details>
+function DnsRecord({
+  label,
+  type,
+  host,
+  value,
+}: {
+  label: string;
+  type: string;
+  host: string;
+  value: string;
+}) {
+  const copy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copiado!');
+  };
 
- {/* Hostinger */}
- <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
- <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors">
- <span className="flex items-center justify-center h-5 w-5 rounded bg-emerald-600 text-white text-xs font-bold">H</span>
- <span className="text-sm font-medium text-tx-primary">Hostinger</span>
- <ChevronDownIcon className="h-4 w-4 text-tx-muted ml-auto group-open:rotate-180 transition-transform" />
- </summary>
- <div className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-sm text-tx-secondary space-y-2">
- <ol className="list-decimal list-inside space-y-1.5 text-xs">
- <li>Acesse o <strong>hPanel</strong> e vá em <strong>Domínios → Zona DNS</strong></li>
- <li>Em <strong>"Gerenciar registros DNS"</strong>, clique em <strong>"Adicionar registro"</strong></li>
- <li>Selecione tipo <strong>CNAME</strong>, preencha o nome e destino</li>
- <li>Adicione outro registro tipo <strong>TXT</strong> com o token de verificação</li>
- <li>Salve e aguarde até 15 minutos para propagação</li>
- <li>Volte na {platformName} e clique em <strong>"Verificar"</strong></li>
- </ol>
- </div>
- </details>
+  return (
+    <div className="rounded-element border border-border-DEFAULT bg-surface-page overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 bg-surface-hover">
+        <span className="text-[10px] font-semibold text-tx-muted uppercase tracking-wider">{label}</span>
+        <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400">{type}</span>
+      </div>
+      <div className="divide-y divide-border-DEFAULT">
+        {[
+          { field: 'Host / Nome', text: host },
+          { field: 'Valor / Destino', text: value },
+        ].map(row => (
+          <div key={row.field} className="flex items-start gap-3 px-3 py-2.5">
+            <span className="w-28 shrink-0 text-[11px] text-tx-muted pt-0.5">{row.field}</span>
+            <code className="flex-1 min-w-0 font-mono text-[11px] text-tx-primary break-all">{row.text}</code>
+            <button
+              onClick={() => copy(row.text)}
+              title="Copiar"
+              className="shrink-0 p-1 rounded text-tx-muted hover:text-accent-primary hover:bg-surface-hover transition-colors"
+            >
+              <ClipboardDocumentIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
- {/* GoDaddy */}
- <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
- <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors">
- <span className="flex items-center justify-center h-5 w-5 rounded bg-black text-white text-xs font-bold">G</span>
- <span className="text-sm font-medium text-tx-primary">GoDaddy</span>
- <ChevronDownIcon className="h-4 w-4 text-tx-muted ml-auto group-open:rotate-180 transition-transform" />
- </summary>
- <div className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-sm text-tx-secondary space-y-2">
- <ol className="list-decimal list-inside space-y-1.5 text-xs">
- <li>Acesse <strong>dcc.godaddy.com</strong> e selecione seu domínio</li>
- <li>Vá em <strong>DNS → DNS Records</strong></li>
- <li>Clique em <strong>"Add New Record"</strong></li>
- <li>Tipo: <strong>CNAME</strong>, Nome: seu subdomínio, Valor: <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.vectorpagamentos.com.br</code></li>
- <li>Adicione outro: Tipo: <strong>TXT</strong>, Nome e Valor conforme exibido na {platformName}</li>
- <li>Salve e aguarde entre 15-60 minutos para propagação</li>
- </ol>
- </div>
- </details>
+function DomainCard({
+  domain,
+  platformName,
+  expanded,
+  onToggle,
+  onVerify,
+  verifying,
+  onSetPrimary,
+  onDelete,
+}: {
+  domain: CustomDomain;
+  platformName: string;
+  expanded: boolean;
+  onToggle: () => void;
+  onVerify: () => void;
+  verifying: boolean;
+  onSetPrimary: () => void;
+  onDelete: () => void;
+}) {
+  const status = STATUS_META[domain.status] ?? {
+    label: domain.status,
+    icon: ClockIcon,
+    chip: 'bg-surface-hover text-tx-secondary',
+    dot: 'bg-tx-muted',
+  };
+  const isManaged = domain.type === 'wazerpay';
+  const isVerified = domain.status === 'verified';
 
- {/* Registro.br */}
- <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
- <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors">
- <span className="flex items-center justify-center h-5 w-5 rounded bg-green-600 text-white text-xs font-bold">R</span>
- <span className="text-sm font-medium text-tx-primary">Registro.br</span>
- <ChevronDownIcon className="h-4 w-4 text-tx-muted ml-auto group-open:rotate-180 transition-transform" />
- </summary>
- <div className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-sm text-tx-secondary space-y-2">
- <ol className="list-decimal list-inside space-y-1.5 text-xs">
- <li>Acesse <strong>registro.br</strong> e vá em <strong>seus domínios</strong></li>
- <li>Clique no domínio e vá em <strong>"DNS" → "Editar zona"</strong></li>
- <li>Clique em <strong>"Nova entrada"</strong> e adicione o CNAME e TXT</li>
- <li>Salve a zona e aguarde a propagação (pode levar até 24h)</li>
- </ol>
- <div className="mt-2 p-2 rounded bg-blue-50 border border-blue-200">
- <p className="text-xs text-blue-700"><strong>Dica:</strong> Se seu domínio .com.br está no Registro.br mas o DNS está em outro lugar (ex: Cloudflare), configure lá e não no Registro.br.</p>
- </div>
- </div>
- </details>
+  return (
+    <div
+      className={clsx(
+        'rounded-card border bg-surface-card overflow-hidden transition-colors',
+        expanded ? 'border-accent-primary/40' : 'border-border-DEFAULT',
+      )}
+    >
+      <div className="p-4 sm:p-5">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          {/* Identidade */}
+          <button onClick={onToggle} className="flex items-start gap-3 min-w-0 flex-1 text-left">
+            <span className={clsx('rounded-element p-2 shrink-0', isVerified ? 'bg-status-success-subtle' : 'bg-surface-hover')}>
+              <GlobeAltIcon className={clsx('h-5 w-5', isVerified ? 'text-status-success' : 'text-tx-muted')} />
+            </span>
+            <span className="min-w-0">
+              <span className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-tx-primary break-all">{domain.domain}</span>
+                {domain.is_primary && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold rounded-pill bg-accent-subtle text-accent-primary">
+                    <StarSolidIcon className="h-3 w-3" />
+                    PRINCIPAL
+                  </span>
+                )}
+                {isManaged && (
+                  <span className="px-2 py-0.5 text-[10px] font-semibold rounded-pill bg-surface-hover text-tx-secondary">
+                    {platformName.toUpperCase()}
+                  </span>
+                )}
+              </span>
+              <span className="mt-1 flex items-center gap-1.5 text-xs text-tx-muted">
+                <ChevronDownIcon className={clsx('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')} />
+                {isManaged
+                  ? 'Verificado automaticamente'
+                  : domain.verified_at
+                    ? `Verificado em ${new Date(domain.verified_at).toLocaleDateString('pt-BR')}`
+                    : 'Aguardando configuração de DNS'}
+              </span>
+            </span>
+          </button>
 
- {/* Outros */}
- <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
- <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors">
- <QuestionMarkCircleIcon className="h-5 w-5 text-tx-muted" />
- <span className="text-sm font-medium text-tx-primary">Outro provedor</span>
- <ChevronDownIcon className="h-4 w-4 text-tx-muted ml-auto group-open:rotate-180 transition-transform" />
- </summary>
- <div className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-sm text-tx-secondary space-y-2">
- <p className="text-xs">O processo é semelhante em qualquer provedor de DNS:</p>
- <ol className="list-decimal list-inside space-y-1.5 text-xs">
- <li>Acesse o painel de controle do DNS do seu provedor</li>
- <li>Encontre a seção de <strong>Registros DNS</strong> ou <strong>Zona DNS</strong></li>
- <li>Adicione um registro <strong>CNAME</strong> apontando para <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.vectorpagamentos.com.br</code></li>
- <li>Adicione um registro <strong>TXT</strong> com o token de verificação</li>
- <li>Salve e aguarde a propagação DNS (pode variar de minutos a 48h)</li>
- </ol>
- </div>
- </details>
- </div>
- </div>
+          {/* Etiquetas e ações */}
+          <div className="flex items-center gap-2 flex-wrap lg:justify-end shrink-0">
+            <span className={clsx('inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-pill', status.chip)}>
+              <span className={clsx('h-1.5 w-1.5 rounded-full', status.dot)} />
+              {status.label}
+            </span>
 
- {/* Passo 4 */}
- <div className="space-y-3">
- <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold">4</span>
- <h3 className="text-base font-semibold text-tx-primary">Verifique o domínio</h3>
- </div>
- <p className="text-sm text-tx-secondary ml-9">
- Após configurar os DNS, volte aqui e clique no botão <strong>"Verificar"</strong> ao lado do domínio. O sistema vai consultar seus registros DNS em tempo real.
- </p>
- <div className="ml-9 grid grid-cols-1 sm:grid-cols-2 gap-3">
- <div className="flex items-start gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
- <CheckCircleIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
- <div>
- <p className="text-xs font-semibold text-green-800">CNAME válido</p>
- <p className="text-xs text-green-700">Seu domínio aponta corretamente para a {platformName}</p>
- </div>
- </div>
- <div className="flex items-start gap-2 p-3 rounded-lg bg-green-50 border border-green-200">
- <CheckCircleIcon className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
- <div>
- <p className="text-xs font-semibold text-green-800">TXT verificado</p>
- <p className="text-xs text-green-700">O token de propriedade foi confirmado</p>
- </div>
- </div>
- </div>
- </div>
+            {!isVerified && !isManaged && (
+              <button
+                onClick={onVerify}
+                disabled={verifying}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-element bg-accent-primary text-white hover:bg-accent-hover transition-colors disabled:opacity-50"
+              >
+                <ArrowPathIcon className={clsx('h-3.5 w-3.5', verifying && 'animate-spin')} />
+                {verifying ? 'Verificando' : 'Verificar'}
+              </button>
+            )}
 
- {/* Passo 5 */}
- <div className="space-y-3">
- <div className="flex items-center gap-2">
- <span className="flex items-center justify-center h-7 w-7 rounded-full bg-green-100 text-green-700 text-sm font-bold">5</span>
- <h3 className="text-base font-semibold text-tx-primary">Pronto! Domínio ativo</h3>
- </div>
- <p className="text-sm text-tx-secondary ml-9">
- Após a verificação, seu domínio ficará com status <strong>"Verificado"</strong> e estará automaticamente disponível nos serviços selecionados (Checkout e/ou Área de Membros).
- </p>
- <div className="ml-9 rounded-lg bg-surface-page border border-border-DEFAULT p-4 space-y-2">
- <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider">Onde seu domínio aparecerá</p>
- <div className="flex flex-col sm:flex-row gap-3">
- <div className="flex items-center gap-2 p-2 rounded bg-emerald-50">
- <ShoppingCartIcon className="h-4 w-4 text-emerald-600" />
- <span className="text-xs text-emerald-800"><strong>Checkout:</strong> Seus clientes pagam via seu domínio</span>
- </div>
- <div className="flex items-center gap-2 p-2 rounded bg-indigo-50">
- <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
- <span className="text-xs text-indigo-800"><strong>Membros:</strong> Selecione na configuração da Área de Membros</span>
- </div>
- </div>
- </div>
- </div>
+            {isVerified && !domain.is_primary && (
+              <button
+                onClick={onSetPrimary}
+                title="Definir como domínio principal"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-element border border-border-DEFAULT text-tx-secondary hover:bg-surface-hover transition-colors"
+              >
+                <StarIcon className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Tornar principal</span>
+              </button>
+            )}
 
- {/* FAQ */}
- <div className="border-t border-border-DEFAULT pt-6 space-y-3">
- <h3 className="text-base font-semibold text-tx-primary">Perguntas Frequentes</h3>
- <div className="space-y-2">
- <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
- <summary className="px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors text-sm font-medium text-tx-primary">
- Quanto tempo leva a propagação DNS?
- </summary>
- <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
- Com <strong>Cloudflare</strong>: 1-5 minutos. Com outros provedores: entre 15 minutos e 48 horas. Na maioria dos casos, funciona em menos de 1 hora.
- </p>
- </details>
- <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
- <summary className="px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors text-sm font-medium text-tx-primary">
- Preciso de SSL (HTTPS)?
- </summary>
- <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
- Sim, e o SSL é fornecido automaticamente pelo <strong>Cloudflare</strong>. Se seu domínio passa pelo Cloudflare com o proxy ativado (nuvem laranja), o HTTPS funciona sem configuração extra.
- </p>
- </details>
- <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
- <summary className="px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors text-sm font-medium text-tx-primary">
- Posso usar o mesmo domínio no Checkout e na Área de Membros?
- </summary>
- <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
- Sim! Ao adicionar o domínio, marque ambas as opções. Recomendamos usar subdomínios diferentes para cada serviço (ex: <code className="px-1 py-0.5 bg-surface-hover rounded">pay.meusite.com</code> para checkout e <code className="px-1 py-0.5 bg-surface-hover rounded">alunos.meusite.com</code> para membros).
- </p>
- </details>
- <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
- <summary className="px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors text-sm font-medium text-tx-primary">
- A verificação falhou. O que fazer?
- </summary>
- <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
- Verifique: 1) Se o registro CNAME aponta para <code className="px-1 py-0.5 bg-surface-hover rounded">checkout.vectorpagamentos.com.br</code> corretamente. 2) Se o registro TXT foi criado com o nome e valor exatos mostrados aqui. 3) Aguarde a propagação e tente novamente. Use <a href="https://dnschecker.org" target="_blank" rel="noopener noreferrer" className="text-accent-primary underline">dnschecker.org</a> para verificar se os registros já propagaram.
- </p>
- </details>
- <details className="group rounded-lg border border-border-DEFAULT overflow-hidden">
- <summary className="px-4 py-3 cursor-pointer bg-surface-card hover:bg-surface-hover transition-colors text-sm font-medium text-tx-primary">
- Posso usar um domínio raiz (sem subdomínio)?
- </summary>
- <p className="px-4 py-3 border-t border-border-DEFAULT bg-surface-page text-xs text-tx-secondary">
- Tecnicamente sim, mas <strong>não recomendamos</strong>. Domínios raiz (ex: <code className="px-1 py-0.5 bg-surface-hover rounded">meusite.com.br</code>) não suportam CNAME em todos os provedores. Use subdomínios como <code className="px-1 py-0.5 bg-surface-hover rounded">pay.meusite.com.br</code> para melhor compatibilidade. Se usar Cloudflare, domínios raiz funcionam normalmente com CNAME flattening.
- </p>
- </details>
- </div>
- </div>
- </div>
- )}
- </div>
+            <button
+              onClick={onDelete}
+              title="Remover domínio"
+              className="p-1.5 rounded-element text-tx-muted hover:text-status-error hover:bg-status-error-subtle transition-colors"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
 
- {/* Domains List */}
- <div className="rounded-card border border-border-DEFAULT bg-surface-card ">
- {isLoading ? (
- <div className="flex items-center justify-center py-12">
- <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-primary border-t-transparent" />
- </div>
- ) : domains.length === 0 ? (
- <div className="py-12 text-center">
- <GlobeAltIcon className="mx-auto h-12 w-12 text-tx-muted" />
- <p className="mt-4 text-tx-muted">Nenhum domínio configurado</p>
- <p className="mt-1 text-sm text-tx-muted">
- Adicione seu primeiro domínio personalizado para começar
- </p>
- </div>
- ) : (
- <div className="divide-y divide-border-DEFAULT">
- {domains.map((domain) => (
- <div
- key={domain.id}
- className="p-5 hover:bg-surface-page transition-colors cursor-pointer"
- onClick={() => setSelectedDomain(selectedDomain?.id === domain.id ? null : domain)}
- >
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
- <div className="flex items-center gap-3">
- <div className={`rounded-lg p-2 shrink-0 ${domain.status === 'verified' ? 'bg-status-success-subtle' : 'bg-surface-hover '}`}>
- <GlobeAltIcon className={`h-5 w-5 ${domain.status === 'verified' ? 'text-status-success' : 'text-tx-muted'}`} />
- </div>
- <div className="min-w-0">
- <div className="flex items-center gap-2 flex-wrap">
- <span className="font-semibold text-tx-primary break-all">{domain.domain}</span>
- {domain.type === 'wazerpay' && (
- <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">
- {platformName}
- </span>
- )}
- {domain.is_primary && (
- <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-accent-subtle text-accent-primary">
- <StarIcon className="h-3 w-3" />
- Principal
- </span>
- )}
- </div>
- <p className="text-sm text-tx-muted">
- {domain.type === 'wazerpay'
- ? `Subdomínio ${platformName} • Verificado automaticamente`
- : domain.verified_at
- ? `Verificado em ${new Date(domain.verified_at).toLocaleDateString('pt-BR')}`
- : 'Aguardando verificação DNS'}
- </p>
- </div>
- </div>
- <div className="flex items-center gap-2 flex-wrap mt-3 sm:mt-0">
- {/* Use_for badges */}
- {domain.use_for?.includes('checkout') && (
- <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">
- <ShoppingCartIcon className="h-3 w-3" />
- Checkout
- </span>
- )}
- {domain.use_for?.includes('members') && (
- <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-50 text-indigo-700">
- <AcademicCapIcon className="h-3 w-3" />
- Membros
- </span>
- )}
- {statusBadge(domain.status)}
- {domain.status !== 'verified' && domain.type !== 'wazerpay' && (
- <button
- onClick={(e) => {
- e.stopPropagation();
- verifyMutation.mutate(domain.id);
- }}
- disabled={verifyMutation.isPending}
- className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-subtle text-accent-primary hover:bg-blue-200 transition-colors disabled:opacity-50"
- >
- <ArrowPathIcon className={`h-3.5 w-3.5 ${verifyMutation.isPending ? 'animate-spin' : ''}`} />
- Verificar
- </button>
- )}
- {domain.status === 'verified' && !domain.is_primary && (
- <button
- onClick={(e) => {
- e.stopPropagation();
- setPrimaryMutation.mutate(domain.id);
- }}
- className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-accent-subtle text-accent-primary hover:bg-accent-subtle transition-colors"
- >
- <StarIcon className="h-3.5 w-3.5" />
- <span className="hidden sm:inline">Definir Principal</span>
- <span className="sm:hidden">Principal</span>
- </button>
- )}
- <button
- onClick={(e) => {
- e.stopPropagation();
- if (confirm('Tem certeza que deseja remover este domínio?')) {
- deleteMutation.mutate(domain.id);
- }
- }}
- className="p-1.5 text-tx-muted hover:text-status-error transition-colors rounded-element hover:bg-status-error-subtle"
- >
- <TrashIcon className="h-4 w-4" />
- </button>
- </div>
- </div>
+      {/* Detalhes */}
+      {expanded && (
+        <div className="border-t border-border-DEFAULT bg-surface-page/50 p-4 sm:p-5 space-y-4">
+          {!isVerified && !isManaged && (
+            <>
+              <div>
+                <h4 className="text-sm font-semibold text-tx-primary">Registros DNS a criar</h4>
+                <p className="text-xs text-tx-muted mt-0.5">
+                  Adicione os dois no painel do seu provedor e clique em Verificar.
+                </p>
+              </div>
+              {domain.dns_config ? (
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                  <DnsRecord
+                    label="Apontamento"
+                    type="CNAME"
+                    host={domain.dns_config.cname.host}
+                    value={domain.dns_config.cname.value}
+                  />
+                  <DnsRecord
+                    label="Verificação de propriedade"
+                    type="TXT"
+                    host={domain.dns_config.txt.host}
+                    value={domain.dns_config.txt.value}
+                  />
+                </div>
+              ) : (
+                // Nunca deixar a área vazia: sem isso a ausência dos registros
+                // passa despercebida e o usuário fica sem saber o que apontar.
+                <div className="flex items-start gap-2 rounded-element bg-status-warning-subtle border border-status-warning/25 p-3">
+                  <ExclamationTriangleIcon className="h-4 w-4 text-status-warning shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-status-warning">Registros indisponíveis no momento</p>
+                    <p className="text-[11px] text-tx-secondary mt-0.5">
+                      Recarregue a página. Se continuar assim, remova e adicione o domínio novamente.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {domain.last_check_error && (
+                <div className="flex items-start gap-2 rounded-element bg-status-error-subtle border border-status-error/25 p-3">
+                  <ExclamationTriangleIcon className="h-4 w-4 text-status-error shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-status-error">Última verificação falhou</p>
+                    <p className="text-[11px] text-tx-secondary mt-0.5 break-words">{domain.last_check_error}</p>
+                  </div>
+                </div>
+              )}
+              <p className="text-[11px] text-tx-muted">
+                A propagação de DNS costuma levar minutos, mas pode chegar a 48 horas.
+              </p>
+            </>
+          )}
 
- {/* DNS Config (expandable) - only for custom domains */}
- {selectedDomain?.id === domain.id && domain.dns_config && domain.type !== 'wazerpay' && (
- <div className="mt-4 space-y-3 border-t border-border-DEFAULT pt-4">
- <p className="text-sm font-medium text-tx-secondary">
- Configuração DNS necessária:
- </p>
-
- {/* CNAME Record */}
- <div className="rounded-element border border-border-DEFAULT p-3 bg-surface-page /50">
- <div className="flex items-center justify-between mb-2">
- <span className="text-xs font-semibold text-tx-muted uppercase tracking-wider">
- Registro CNAME
- </span>
- <button
- onClick={(e) => {
- e.stopPropagation();
- copyToClipboard(domain.dns_config!.cname.value);
- }}
- className="text-xs text-accent-primary hover:text-accent-primary flex items-center gap-1"
- >
- <ClipboardDocumentIcon className="h-3.5 w-3.5" />
- Copiar
- </button>
- </div>
- <div className="grid grid-cols-3 gap-2 text-sm">
- <div>
- <span className="text-xs text-tx-muted">Tipo</span>
- <p className="font-mono text-tx-primary">CNAME</p>
- </div>
- <div>
- <span className="text-xs text-tx-muted">Host</span>
- <p className="font-mono text-tx-primary break-all">{domain.dns_config.cname.host}</p>
- </div>
- <div>
- <span className="text-xs text-tx-muted">Valor</span>
- <p className="font-mono text-tx-primary break-all">{domain.dns_config.cname.value}</p>
- </div>
- </div>
- </div>
-
- {/* TXT Record */}
- <div className="rounded-element border border-border-DEFAULT p-3 bg-surface-page /50">
- <div className="flex items-center justify-between mb-2">
- <span className="text-xs font-semibold text-tx-muted uppercase tracking-wider">
- Registro TXT (Verificação)
- </span>
- <button
- onClick={(e) => {
- e.stopPropagation();
- copyToClipboard(domain.dns_config!.txt.value);
- }}
- className="text-xs text-accent-primary hover:text-accent-primary flex items-center gap-1"
- >
- <ClipboardDocumentIcon className="h-3.5 w-3.5" />
- Copiar
- </button>
- </div>
- <div className="grid grid-cols-3 gap-2 text-sm">
- <div>
- <span className="text-xs text-tx-muted">Tipo</span>
- <p className="font-mono text-tx-primary">TXT</p>
- </div>
- <div>
- <span className="text-xs text-tx-muted">Host</span>
- <p className="font-mono text-tx-primary break-all">{domain.dns_config.txt.host}</p>
- </div>
- <div>
- <span className="text-xs text-tx-muted">Valor</span>
- <p className="font-mono text-tx-primary break-all">{domain.dns_config.txt.value}</p>
- </div>
- </div>
- </div>
-
- <p className="text-xs text-tx-muted italic">
- A propagação DNS pode levar até 48 horas. Aguarde e tente verificar novamente.
- </p>
- </div>
- )}
-
- {/* Verified domain info */}
- {selectedDomain?.id === domain.id && domain.status === 'verified' && (
- <div className="mt-4 border-t border-border-DEFAULT pt-4">
- <div className="flex items-center gap-2 text-sm text-status-success">
- <ShieldCheckIcon className="h-5 w-5" />
- <span>Domínio verificado e pronto para uso no {domain.use_for?.join(' e ').replace('checkout', 'Checkout').replace('members', 'Área de Membros') || 'Checkout e Área de Membros'}.</span>
- </div>
-
- {/* Use_for toggles */}
- <div className="mt-3 space-y-2">
- <p className="text-xs font-semibold text-tx-muted uppercase tracking-wider">Usar em:</p>
- <div className="flex gap-4">
- <label className="flex items-center gap-2 cursor-pointer" onClick={(e) => e.stopPropagation()}>
- <input
- type="checkbox"
- checked={domain.use_for?.includes('checkout') ?? true}
- onChange={(e) => {
- const current = domain.use_for || ['checkout', 'members'];
- const updated = e.target.checked
- ? [...current, 'checkout' as DomainPurpose]
- : current.filter(u => u !== 'checkout');
- if (updated.length > 0) updateUseForMutation.mutate({ id: domain.id, useFor: updated });
- else toast.error('O domínio deve ter pelo menos um uso');
- }}
- className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
- />
- <ShoppingCartIcon className="h-4 w-4 text-emerald-600" />
- <span className="text-sm text-tx-secondary">Checkout</span>
- </label>
- <label className="flex items-center gap-2 cursor-pointer" onClick={(e) => e.stopPropagation()}>
- <input
- type="checkbox"
- checked={domain.use_for?.includes('members') ?? true}
- onChange={(e) => {
- const current = domain.use_for || ['checkout', 'members'];
- const updated = e.target.checked
- ? [...current, 'members' as DomainPurpose]
- : current.filter(u => u !== 'members');
- if (updated.length > 0) updateUseForMutation.mutate({ id: domain.id, useFor: updated });
- else toast.error('O domínio deve ter pelo menos um uso');
- }}
- className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
- />
- <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
- <span className="text-sm text-tx-secondary">Área de Membros</span>
- </label>
- </div>
- </div>
- {domain.ssl_enabled && (
- <p className="mt-2 text-xs text-tx-muted flex items-center gap-1">
- <ShieldCheckIcon className="h-3.5 w-3.5 text-status-success" />
- SSL ativo
- </p>
- )}
- </div>
- )}
- </div>
- ))}
- </div>
- )}
- </div>
-
- {/* Add Domain Modal */}
- {showAddModal && (
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
- <div className="bg-surface-card rounded-2xl shadow-2xl w-full max-w-md p-6">
- <div className="flex items-center justify-between mb-6">
- <h2 className="text-lg font-bold text-tx-primary">Adicionar Domínio</h2>
- <button
- onClick={closeAddModal}
- className="text-tx-muted hover:text-tx-secondary"
- >
- <XMarkIcon className="h-5 w-5" />
- </button>
- </div>
-
- <div className="space-y-4">
- {/* Domain Type Tabs */}
- <div className="flex rounded-lg border border-border-DEFAULT overflow-hidden">
- <button
- onClick={() => setNewDomainType('wazerpay')}
- className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
- newDomainType === 'wazerpay'
- ? 'bg-emerald-50 text-emerald-700 border-r border-border-DEFAULT'
- : 'bg-surface-page text-tx-muted hover:bg-surface-hover border-r border-border-DEFAULT'
- }`}
- >
- Subdomínio {platformName}
- </button>
- <button
- onClick={() => setNewDomainType('custom')}
- className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
- newDomainType === 'custom'
- ? 'bg-accent-subtle text-accent-primary'
- : 'bg-surface-page text-tx-muted hover:bg-surface-hover'
- }`}
- >
- Domínio Próprio
- </button>
- </div>
-
- {/* {platformName} Subdomain Input */}
- {newDomainType === 'wazerpay' && (
- <div>
- <label className="block text-sm font-medium text-tx-secondary mb-1">
- Escolha seu subdomínio
- </label>
- <div className="flex items-center gap-0">
- <input
- type="text"
- value={newSubdomain}
- onChange={(e) => setNewSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
- placeholder="meusite"
- className="flex-1 rounded-l-element border border-r-0 border-border-DEFAULT bg-surface-card px-4 py-2.5 text-tx-primary placeholder:text-tx-muted focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
- />
- <span className="inline-flex items-center px-3 py-2.5 border border-border-DEFAULT bg-surface-page rounded-r-element text-sm text-tx-muted">
- .{PLATFORM_BASE_DOMAIN}
- </span>
- </div>
- {newSubdomain && (
- <p className="mt-1.5 text-xs text-emerald-600 font-medium">
- Seu endereço será: <strong>{newSubdomain}.{PLATFORM_BASE_DOMAIN}</strong>
- </p>
- )}
- <p className="mt-1 text-xs text-tx-muted">
- Mínimo 3 caracteres. Apenas letras, números e hífens.
- </p>
- <div className="mt-2 rounded-lg bg-emerald-50 border border-emerald-200 p-3">
- <p className="text-xs text-emerald-700">
- <strong>Gratuito e instantâneo!</strong> Subdomínios {platformName} são verificados automaticamente, sem necessidade de configuração DNS.
- </p>
- </div>
- </div>
- )}
-
- {/* Custom Domain Input */}
- {newDomainType === 'custom' && (
- <div>
- <label className="block text-sm font-medium text-tx-secondary mb-1">
- Domínio ou subdomínio
- </label>
- <input
- type="text"
- value={newDomain}
- onChange={(e) => setNewDomain(e.target.value.toLowerCase())}
- placeholder="vendas.meusite.com"
- className="w-full rounded-element border border-border-DEFAULT bg-surface-card px-4 py-2.5 text-tx-primary placeholder:text-tx-muted focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none"
- />
- <p className="mt-1.5 text-xs text-tx-muted">
- Exemplo: vendas.meusite.com, lp.meusite.com, meusite.com.br
- </p>
- </div>
- )}
-
- <div>
- <label className="block text-sm font-medium text-tx-secondary mb-2">
- Usar em
- </label>
- <div className="flex gap-4">
- <label className="flex items-center gap-2 cursor-pointer">
- <input
- type="checkbox"
- checked={newUseFor.includes('checkout')}
- onChange={(e) => {
- setNewUseFor(prev =>
- e.target.checked
- ? [...prev, 'checkout' as DomainPurpose]
- : prev.filter(u => u !== 'checkout')
- );
- }}
- className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
- />
- <ShoppingCartIcon className="h-4 w-4 text-emerald-600" />
- <span className="text-sm text-tx-secondary">Checkout</span>
- </label>
- <label className="flex items-center gap-2 cursor-pointer">
- <input
- type="checkbox"
- checked={newUseFor.includes('members')}
- onChange={(e) => {
- setNewUseFor(prev =>
- e.target.checked
- ? [...prev, 'members' as DomainPurpose]
- : prev.filter(u => u !== 'members')
- );
- }}
- className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
- />
- <AcademicCapIcon className="h-4 w-4 text-indigo-600" />
- <span className="text-sm text-tx-secondary">Área de Membros</span>
- </label>
- </div>
- <p className="mt-1.5 text-xs text-tx-muted">
- Por padrão, o domínio fica disponível para ambos os serviços.
- </p>
- </div>
-
- {newDomainType === 'custom' && (
- <div className="rounded-lg bg-status-warning-subtle border border-amber-200 p-3">
- <p className="text-xs text-status-warning">
- <strong>Importante:</strong> Você precisará ter acesso ao painel DNS do seu domínio para configurar os registros CNAME e TXT.
- </p>
- </div>
- )}
-
- <div className="flex gap-3 pt-2">
- <button
- onClick={closeAddModal}
- className="flex-1 px-4 py-2.5 text-sm font-medium text-tx-secondary bg-surface-hover rounded-element hover:bg-surface-hover transition-colors"
- >
- Cancelar
- </button>
- <button
- onClick={handleCreate}
- disabled={isCreateDisabled}
- className={`flex-1 px-4 py-2.5 text-sm font-semibold text-white rounded-element transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
- newDomainType === 'wazerpay'
- ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700'
- : 'bg-gradient-to-r from-emerald-600 to-indigo-600 hover:from-emerald-700 hover:to-indigo-700'
- }`}
- >
- {isCreating ? 'Criando...' : newDomainType === 'wazerpay' ? 'Criar Subdomínio' : 'Adicionar Domínio'}
- </button>
- </div>
- </div>
- </div>
- </div>
- )}
- </div>
- );
+          {(isVerified || isManaged) && (
+            <div className="flex items-center gap-2 text-sm text-status-success">
+              <ShieldCheckIcon className="h-5 w-5 shrink-0" />
+              <span>Domínio ativo e pronto para uso.</span>
+              {domain.ssl_enabled && <span className="text-xs text-tx-muted">• SSL ativo</span>}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

@@ -13,7 +13,7 @@ class WebhookDispatcherService
     {
         $webhooks = DB::table('webhooks')
             ->where('account_id', $accountId)
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->whereNull('deleted_at')
             ->get();
 

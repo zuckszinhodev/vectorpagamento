@@ -33,14 +33,32 @@ function Spinner() {
   );
 }
 
-const inputClass =
-  'h-12 w-full rounded-xl border border-neutral-200 bg-white px-11 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 hover:border-neutral-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
-
-const primaryButtonClass =
-  'group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-neutral-800 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-neutral-900/15 disabled:cursor-not-allowed disabled:opacity-60';
+const inputBaseClass =
+  'h-12 w-full rounded-xl border px-11 text-sm outline-none transition-all duration-200 focus:ring-4';
 
 export default function LoginPage() {
-  const { platformName } = useThemeStore();
+  const { platformName, themeVariant, theme } = useThemeStore();
+  const isModern = themeVariant === 'modern';
+  const isDark = isModern || theme === 'dark';
+  const focusCls = isModern
+    ? 'focus:border-red-500 focus:ring-red-500/10'
+    : 'focus:border-emerald-500 focus:ring-emerald-500/10';
+  const accentLink = isModern ? 'text-red-600 hover:text-red-700' : 'text-emerald-600 hover:text-emerald-700';
+  const accentLabel = isModern ? 'text-red-600' : 'text-emerald-600';
+  const accentHover = isModern ? 'hover:text-red-700' : 'hover:text-emerald-700';
+  const headingClass = isDark ? 'text-white' : 'text-neutral-900';
+  const bodyClass = isDark ? 'text-neutral-400' : 'text-neutral-600';
+  const labelClass = isDark ? 'text-neutral-200' : 'text-neutral-800';
+  const inputClass = `${inputBaseClass} ${
+    isDark
+      ? 'border-white/10 bg-white/[0.045] text-white placeholder:text-neutral-600 hover:border-red-500/35 hover:bg-white/[0.065]'
+      : 'border-neutral-200 bg-white text-neutral-900 placeholder:text-neutral-400 hover:border-neutral-300'
+  }`;
+  const primaryButtonClass = `group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 text-sm font-semibold text-white transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:-translate-x-[120%] before:skew-x-[-20deg] before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:transition-transform before:duration-700 hover:-translate-y-0.5 hover:before:translate-x-[120%] active:translate-y-0 active:scale-[0.985] focus:outline-none focus:ring-4 disabled:cursor-not-allowed disabled:transform-none disabled:opacity-60 ${
+    isModern
+      ? 'bg-gradient-to-r from-red-600 to-red-500 shadow-[0_12px_35px_rgba(239,68,68,0.25)] hover:shadow-[0_16px_42px_rgba(239,68,68,0.38)] focus:ring-red-500/20'
+      : 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-[0_12px_35px_rgba(16,185,129,0.22)] hover:shadow-[0_16px_42px_rgba(16,185,129,0.34)] focus:ring-emerald-500/20'
+  }`;
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mfaCode, setMfaCode] = useState(['', '', '', '', '', '']);
@@ -166,10 +184,10 @@ export default function LoginPage() {
 
 
           <div className="mb-8">
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900">
+            <h1 className={`mt-3 text-3xl font-semibold tracking-tight ${headingClass}`}>
               Confirme seu acesso
             </h1>
-            <p className="mt-3 text-sm leading-6 text-neutral-600">
+            <p className={`mt-3 text-sm leading-6 ${bodyClass}`}>
               Digite o codigo de 6 digitos gerado pelo Google Authenticator.
             </p>
           </div>
@@ -189,12 +207,12 @@ export default function LoginPage() {
                   onChange={(e) => handleMfaChange(i, e.target.value)}
                   onKeyDown={(e) => handleMfaKeyDown(i, e)}
                   autoFocus={i === 0}
-                  className="h-14 w-full rounded-xl border border-neutral-200 bg-white text-center text-xl font-semibold text-neutral-900 outline-none transition-all hover:border-neutral-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
+                  className={`h-14 w-full rounded-xl border text-center text-xl font-semibold outline-none transition-all focus:ring-4 ${isDark ? 'border-white/10 bg-white/[0.045] text-white hover:border-white/25' : 'border-neutral-200 bg-white text-neutral-900 hover:border-neutral-300'} ${focusCls}`}
                 />
               ))}
             </div>
 
-            <label className="flex cursor-pointer items-center gap-3 text-sm text-neutral-600">
+            <label className={`flex cursor-pointer items-center gap-3 text-sm ${bodyClass}`}>
               <input
                 type="checkbox"
                 checked={rememberDevice}
@@ -212,18 +230,18 @@ export default function LoginPage() {
               {mfaLoading ? (
                 <>
                   <Spinner />
-                  Verificando
+                  <span className="relative z-10">Verificando</span>
                 </>
               ) : (
-                'Verificar acesso'
+                <span className="relative z-10">Verificar acesso</span>
               )}
             </button>
 
-            <p className="text-sm leading-6 text-neutral-500">
+            <p className={`text-sm leading-6 ${bodyClass}`}>
               Em caso de problemas, contate o suporte pelo WhatsApp{' '}
               <a
                 href="https://wa.me/5511940968290?text=Ola%2C%20preciso%20de%20ajuda%20com%20a%20autenticacao%20de%202%20fatores"
-                className="font-medium text-emerald-600 transition-colors hover:text-emerald-700"
+                className={`font-medium transition-colors ${accentLink}`}
               >
                 11 94096-8290
               </a>
@@ -234,20 +252,20 @@ export default function LoginPage() {
       ) : (
         <section className="w-full">
           <div className="mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">
+            <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${accentLabel}`}>
               Bem-vindo de volta
             </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+            <h1 className={`mt-3 text-3xl font-semibold tracking-tight sm:text-4xl ${headingClass}`}>
               Acesse sua conta
             </h1>
-            <p className="mt-3 text-sm leading-6 text-neutral-600">
+            <p className={`mt-3 text-sm leading-6 ${bodyClass}`}>
               Entre para acompanhar suas vendas e movimentacoes.
             </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-neutral-800">E-mail</label>
+              <label className={`text-sm font-medium ${labelClass}`}>E-mail</label>
               <div className="relative">
                 <EnvelopeIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" />
                 <input
@@ -260,7 +278,7 @@ export default function LoginPage() {
                   })}
                   type="email"
                   autoComplete="email"
-                  className={inputClass}
+                  className={`${inputClass} ${focusCls}`}
                   placeholder="seu@email.com"
                 />
               </div>
@@ -269,10 +287,10 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-4">
-                <label className="text-sm font-medium text-neutral-800">Senha</label>
+                <label className={`text-sm font-medium ${labelClass}`}>Senha</label>
                 <Link
                   to="/forgot-password"
-                  className="text-sm font-medium text-emerald-600 transition-colors hover:text-emerald-700"
+                  className={`text-sm font-medium transition-colors ${accentLink}`}
                 >
                   Esqueci minha senha
                 </Link>
@@ -289,13 +307,13 @@ export default function LoginPage() {
                   })}
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  className={`${inputClass} pr-12`}
+                  className={`${inputClass} ${focusCls} pr-12`}
                   placeholder="Sua senha"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors hover:text-neutral-700"
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors ${isDark ? 'hover:text-white' : 'hover:text-neutral-700'}`}
                   aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
@@ -308,23 +326,23 @@ export default function LoginPage() {
               {isLoading ? (
                 <>
                   <Spinner />
-                  Entrando
+                  <span className="relative z-10">Entrando</span>
                 </>
               ) : (
                 <>
-                  Entrar na plataforma
-                  <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  <span className="relative z-10">Entrar na plataforma</span>
+                  <ArrowRightIcon className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-8 border-t border-neutral-200 pt-6">
-            <p className="text-sm text-neutral-600">
+          <div className={`mt-8 border-t pt-6 ${isDark ? 'border-white/10' : 'border-neutral-200'}`}>
+            <p className={`text-sm ${bodyClass}`}>
               Nao tem uma conta?{' '}
               <Link
                 to="/register"
-                className="font-semibold text-neutral-900 transition-colors hover:text-emerald-700"
+                className={`font-semibold transition-colors ${isDark ? 'text-white' : 'text-neutral-900'} ${accentHover}`}
               >
                 Cadastre-se
               </Link>

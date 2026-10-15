@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, formatDate } from '@/lib/api';
 import { SectionSpinner } from '@/components/ui/Spinner';
-import { adminService } from '@/services/api';
+import { adminService } from '@/services/api/admin.service';
 import { Dialog, Transition, Menu } from '@headlessui/react';
 import { useAuthStore } from '@/stores/authStore';
 import { Fragment } from 'react';
@@ -39,11 +39,15 @@ import {
  ClockIcon,
  ExclamationCircleIcon,
  ShieldExclamationIcon,
+ SwatchIcon,
+ PaintBrushIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import SplitManagement from './SplitManagement';
 import { kycService, KycDocumentStatus } from '@/services/api/kyc.service';
 import { authService } from '@/services/api/auth.service';
+import { useThemeStore } from '@/stores/themeStore';
+import { themeList, rgbToHex } from '@/config/themes';
 
 interface UserWebhook {
  id: string;
@@ -447,25 +451,21 @@ function MfaCodeModal({
  leaveFrom="opacity-100 translate-y-0 sm:scale-100"
  leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
  >
- <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-sm">
- <div className="px-4 sm:px-6 py-5">
- <div className="flex items-center gap-3 mb-4">
- <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-subtle">
- <LockClosedIcon className="h-5 w-5 text-accent-primary" />
+ <Dialog.Panel className="relative transform overflow-hidden rounded-2xl bg-surface-card text-center shadow-2xl ring-1 ring-border-DEFAULT transition-all sm:my-8 sm:w-full sm:max-w-md">
+ <div className="px-6 pt-8 pb-6 sm:px-8">
+ <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-subtle">
+ <LockClosedIcon className="h-7 w-7 text-accent-primary" />
  </div>
- <div>
- <Dialog.Title className="text-lg font-semibold text-tx-primary">
+ <Dialog.Title className="text-xl font-bold text-tx-primary">
  {title}
  </Dialog.Title>
- <p className="text-xs text-tx-muted">{description}</p>
- </div>
- </div>
+ <p className="mx-auto mt-1.5 max-w-xs text-sm text-tx-muted">{description}</p>
 
- <p className="text-sm text-tx-secondary mb-3">
- Digite o código do Google Authenticator:
+ <p className="mt-6 mb-4 text-sm font-medium text-tx-secondary">
+ Digite o código do Google Authenticator
  </p>
 
- <div className="flex justify-center gap-2 mb-3" onPaste={handlePaste}>
+ <div className="flex justify-center gap-2 sm:gap-2.5" onPaste={handlePaste}>
  {digits.map((digit, i) => (
  <input
  key={i}
@@ -476,24 +476,33 @@ function MfaCodeModal({
  value={digit}
  onChange={(e) => handleChange(i, e.target.value)}
  onKeyDown={(e) => handleKeyDown(i, e)}
- className="w-10 h-12 text-center text-lg font-bold rounded-lg border border-border-DEFAULT bg-surface-page text-tx-primary focus:border-accent-primary focus:ring-1 focus:ring-accent-primary"
+ className={`h-14 w-11 rounded-xl border-2 bg-surface-page text-center text-2xl font-bold text-tx-primary outline-none transition-all sm:w-12 ${
+ digit ? 'border-accent-primary' : 'border-border-DEFAULT'
+ } focus:border-accent-primary focus:ring-4 focus:ring-accent-primary/15`}
  />
  ))}
  </div>
 
- {error && (
- <p className="text-xs text-status-error text-center mb-3">{error}</p>
+ {error ? (
+ <p className="mt-4 text-sm font-medium text-status-error">{error}</p>
+ ) : (
+ <p className="mt-4 text-xs text-tx-muted">Abra o app autenticador e insira os 6 dígitos.</p>
  )}
  </div>
 
- <div className="flex justify-end gap-3 border-t border-border-DEFAULT px-4 sm:px-6 py-4">
- <button type="button" onClick={onClose} className="btn-secondary" disabled={isLoading}>
+ <div className="flex gap-3 border-t border-border-DEFAULT px-6 py-4 sm:px-8">
+ <button
+ type="button"
+ onClick={onClose}
+ disabled={isLoading}
+ className="flex-1 rounded-xl border border-border-DEFAULT bg-transparent px-4 py-2.5 text-sm font-semibold text-tx-primary transition-colors hover:bg-surface-hover disabled:opacity-50"
+ >
  Cancelar
  </button>
  <button
  onClick={handleSubmit}
  disabled={isLoading || digits.join('').length !== 6}
- className="btn-primary"
+ className="flex-1 rounded-xl bg-accent-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
  >
  {isLoading ? 'Verificando...' : 'Confirmar'}
  </button>
@@ -719,7 +728,7 @@ export default function SettingsPage() {
  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
  const [isShowKeyModalOpen, setIsShowKeyModalOpen] = useState(false);
  const [createdKey, setCreatedKey] = useState<string | null>(null);
- const validTabs = ['personal', 'security', 'api', 'webhooks', 'splits'] as const;
+ const validTabs = ['personal', 'security', 'appearance', 'api', 'webhooks', 'splits'] as const;
  type TabType = typeof validTabs[number];
  const tabFromUrl = searchParams.get('tab') as TabType;
  const initialTab = validTabs.includes(tabFromUrl) ? tabFromUrl : 'personal';
@@ -1118,6 +1127,17 @@ export default function SettingsPage() {
  Segurança
  </button>
  <button
+ onClick={() => setActiveTab('appearance')}
+ className={`${
+ activeTab === 'appearance'
+ ? 'border-accent-primary text-accent-primary'
+ : 'border-transparent text-tx-muted hover:border-border-DEFAULT hover:text-tx-secondary'
+ } flex items-center gap-2 whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium transition-colors`}
+ >
+ <PaintBrushIcon className="h-5 w-5" />
+ Aparência
+ </button>
+ <button
  onClick={() => setActiveTab('api')}
  className={`${
  activeTab === 'api'
@@ -1338,8 +1358,8 @@ export default function SettingsPage() {
  <h2 className="text-base sm:text-lg font-semibold text-tx-primary">Chaves API</h2>
  </div>
  <div className="flex items-center gap-2 sm:gap-3">
- <a
- href="https://vectorpagamentos.readme.io/"
+ <Link
+ to="/docs"
  target="_blank"
  rel="noopener noreferrer"
  className="btn-secondary inline-flex items-center text-xs sm:text-sm"
@@ -1348,7 +1368,7 @@ export default function SettingsPage() {
  <span className="hidden sm:inline">Documentação API</span>
  <span className="sm:hidden">Docs</span>
  <ArrowTopRightOnSquareIcon className="ml-1 h-3.5 w-3.5 sm:h-4 sm:w-4" />
- </a>
+ </Link>
  <button
  onClick={handleNewKeyClick}
  className="btn-primary inline-flex items-center text-xs sm:text-sm"
@@ -1874,6 +1894,11 @@ export default function SettingsPage() {
  </div>
  )}
 
+ {/* Appearance Tab */}
+ {activeTab === 'appearance' && (
+ <AppearanceSection />
+ )}
+
  {/* Splits Tab */}
  {activeTab === 'splits' && (
  <SplitManagement />
@@ -1930,10 +1955,14 @@ function SecuritySection({ onMfaEnabled }: { onMfaEnabled?: () => void }) {
  const [mfaStep, setMfaStep] = useState<'idle' | 'setup' | 'confirm_disable'>('idle');
  const [mfaSecret, setMfaSecret] = useState('');
  const [mfaQrUrl, setMfaQrUrl] = useState('');
+ const [mfaIssuer, setMfaIssuer] = useState('');
  const [mfaCode, setMfaCode] = useState('');
  const [disableCode, setDisableCode] = useState('');
 
+ const platformName = useThemeStore((s) => s.platformName);
  const mfaEnabled = user?.mfa_enabled ?? false;
+ // O emissor vem do backend (branding salvo no banco); o nome do tema é só o fallback.
+ const issuerLabel = mfaIssuer || platformName;
 
  // Change password mutation
  const changePasswordMutation = useMutation({
@@ -1957,6 +1986,7 @@ function SecuritySection({ onMfaEnabled }: { onMfaEnabled?: () => void }) {
    onSuccess: (result) => {
      setMfaSecret(result.data.secret);
      setMfaQrUrl(result.data.qr_code_url);
+     setMfaIssuer(result.data.issuer || '');
      setMfaStep('setup');
    },
    onError: (err: any) => {
@@ -2156,6 +2186,9 @@ function SecuritySection({ onMfaEnabled }: { onMfaEnabled?: () => void }) {
                    height={200}
                  />
                </div>
+               <p className="text-xs text-tx-muted text-center mb-3">
+                 No app, a conta aparece como <strong className="text-tx-secondary">{issuerLabel}</strong>.
+               </p>
                <p className="text-sm text-tx-muted mb-2">
                  2. Ou insira manualmente a chave secreta:
                </p>
@@ -2566,4 +2599,103 @@ function DocumentsSection() {
      </div>
    </div>
  );
+}
+
+// ── Appearance Section ────────────────────────────────────────
+
+function AppearanceSection() {
+  const { themeVariant, setThemeVariant, theme } = useThemeStore();
+
+  return (
+    <div className="space-y-6">
+      {/* Theme Variant */}
+      <div className="card">
+        <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4">
+          <div className="flex items-center gap-3">
+            <PaintBrushIcon className="h-5 w-5 text-tx-muted" />
+            <div>
+              <h2 className="text-lg font-semibold text-tx-primary">Tema do Gateway</h2>
+              <p className="text-sm text-tx-muted">Selecione o design visual do painel administrativo</p>
+            </div>
+          </div>
+        </div>
+        <div className="px-4 sm:px-6 py-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {themeList.map((t) => {
+              const isSelected = themeVariant === t.id;
+              const primaryHex = t.preview.primary;
+              const accentHex = t.preview.accent;
+              const bgHex = t.preview.bg;
+
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setThemeVariant(t.id)}
+                  className={`relative rounded-2xl border-2 overflow-hidden text-left transition-all ${
+                    isSelected
+                      ? 'border-accent-primary ring-2 ring-accent-primary/20 shadow-lg'
+                      : 'border-border-DEFAULT hover:border-border-hover hover:shadow-md'
+                  }`}
+                >
+                  {isSelected && (
+                    <div className="absolute top-3 right-3 z-10">
+                      <CheckCircleIcon className="h-6 w-6 text-accent-primary" />
+                    </div>
+                  )}
+
+                  {/* Preview mockup */}
+                  <div className="p-4" style={{ backgroundColor: bgHex }}>
+                    <div className="flex gap-2 h-28">
+                      <div className="w-12 rounded-lg flex flex-col items-center gap-2 py-3" style={{ backgroundColor: theme === 'dark' ? '#1a1a2e' : '#ffffff', border: '1px solid #e5e7eb' }}>
+                        <div className="h-3 w-3 rounded" style={{ backgroundColor: primaryHex }} />
+                        <div className="h-2 w-6 rounded" style={{ backgroundColor: primaryHex, opacity: 0.3 }} />
+                        <div className="h-2 w-6 rounded bg-gray-300" />
+                        <div className="h-2 w-6 rounded bg-gray-300" />
+                      </div>
+                      <div className="flex-1 flex flex-col gap-2">
+                        <div className="h-6 rounded-lg flex items-center px-2" style={{ backgroundColor: theme === 'dark' ? '#1a1a2e' : '#ffffff', border: '1px solid #e5e7eb' }}>
+                          <div className="h-2 w-16 rounded" style={{ backgroundColor: primaryHex }} />
+                        </div>
+                        <div className="flex gap-2 flex-1">
+                          <div className="flex-1 rounded-lg p-2 flex flex-col justify-between" style={{ backgroundColor: theme === 'dark' ? '#1a1a2e' : '#ffffff', border: '1px solid #e5e7eb' }}>
+                            <div className="h-2 w-8 rounded bg-gray-300" />
+                            <div className="h-4 w-12 rounded font-bold text-xs flex items-center" style={{ color: primaryHex }}>
+                              R$ 1.2k
+                            </div>
+                          </div>
+                          <div className="flex-1 rounded-lg p-2 flex flex-col justify-between" style={{ backgroundColor: theme === 'dark' ? '#1a1a2e' : '#ffffff', border: '1px solid #e5e7eb' }}>
+                            <div className="h-2 w-8 rounded bg-gray-300" />
+                            <div className="h-4 w-10 rounded font-bold text-xs flex items-center" style={{ color: accentHex }}>
+                              42
+                            </div>
+                          </div>
+                        </div>
+                        <div className="h-5 rounded-lg flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${primaryHex}, ${accentHex})` }}>
+                          <div className="h-2 w-12 rounded bg-white/60" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Label */}
+                  <div className="px-4 py-3 bg-surface-primary border-t border-border-DEFAULT">
+                    <div className="flex items-center gap-3">
+                      <div className="flex -space-x-1">
+                        <div className="h-4 w-4 rounded-full border-2 border-white" style={{ backgroundColor: primaryHex }} />
+                        <div className="h-4 w-4 rounded-full border-2 border-white" style={{ backgroundColor: accentHex }} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-tx-primary">{t.name}</p>
+                        <p className="text-xs text-tx-muted">{t.description}</p>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

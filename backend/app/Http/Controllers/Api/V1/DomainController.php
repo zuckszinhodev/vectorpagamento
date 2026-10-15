@@ -25,7 +25,11 @@ class DomainController extends Controller
                 ->orderByDesc('created_at')
                 ->get()
                 ->map(function ($domain) {
-                    return $this->formatDomain($domain);
+                    // Precisa vir com os registros DNS: a tela lista os dominios
+                    // por aqui, e sem isso quem acabou de criar um dominio proprio
+                    // nao ve o que apontar. O formatDomain so anexa para dominio
+                    // proprio ainda nao verificado.
+                    return $this->formatDomain($domain, true);
                 });
 
             return response()->json([

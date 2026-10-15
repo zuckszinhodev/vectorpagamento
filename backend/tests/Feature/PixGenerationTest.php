@@ -38,7 +38,7 @@ function setupPixTestData(): array
     $account = Account::create([
         'id'            => Str::uuid()->toString(),
         'name'          => 'PIX Test Account',
-        'document'      => '12345678901',
+        'document'      => '52998224725',
         'document_type' => 'cpf',
         'email'         => 'pix-test@vectorpagamentos.com',
         'status'        => 'active',
@@ -156,7 +156,7 @@ describe('API Charges PIX', function () {
                 'customer'       => [
                     'name'     => 'João da Silva',
                     'email'    => 'joao@example.com',
-                    'document' => '12345678901',
+                    'document' => '52998224725',
                 ],
             ]);
 
@@ -222,7 +222,7 @@ describe('API Charges PIX', function () {
                 'customer'       => [
                     'name'     => 'Test',
                     'email'    => 'test@test.com',
-                    'document' => '12345678901',
+                    'document' => '52998224725',
                 ],
             ]);
 
@@ -259,7 +259,7 @@ describe('API Charges PIX', function () {
                 'customer'       => [
                     'name'     => 'Test',
                     'email'    => 'test@test.com',
-                    'document' => '12345678901',
+                    'document' => '52998224725',
                 ],
             ]);
 
@@ -273,7 +273,7 @@ describe('API Charges PIX', function () {
             'customer'       => [
                 'name'     => 'Test',
                 'email'    => 'test@example.com',
-                'document' => '12345678901',
+                'document' => '52998224725',
             ],
         ]);
 
@@ -298,7 +298,7 @@ describe('Checkout PIX', function () {
             'customer' => [
                 'name'     => 'Comprador PIX',
                 'email'    => 'comprador@example.com',
-                'document' => '12345678901',
+                'document' => '52998224725',
             ],
         ]);
 
@@ -343,7 +343,7 @@ describe('Checkout PIX', function () {
             'customer' => [
                 'name'     => 'Price Test',
                 'email'    => 'price@test.com',
-                'document' => '12345678901',
+                'document' => '52998224725',
             ],
         ]);
 
@@ -357,7 +357,7 @@ describe('Checkout PIX', function () {
             'customer' => [
                 'name'     => 'Test',
                 'email'    => 'test@test.com',
-                'document' => '12345678901',
+                'document' => '52998224725',
             ],
         ]);
 
@@ -371,7 +371,7 @@ describe('Checkout PIX', function () {
             'customer' => [
                 'name'     => 'Test',
                 'email'    => 'test@test.com',
-                'document' => '12345678901',
+                'document' => '52998224725',
             ],
         ]);
 
@@ -385,7 +385,7 @@ describe('Checkout PIX', function () {
             'payment_method' => 'pix',
             'customer' => [
                 'email'    => 'test@test.com',
-                'document' => '12345678901',
+                'document' => '52998224725',
             ],
         ]);
 
@@ -399,7 +399,7 @@ describe('Checkout PIX', function () {
             'payment_method' => 'pix',
             'customer' => [
                 'name'     => 'Test',
-                'document' => '12345678901',
+                'document' => '52998224725',
             ],
         ]);
 
@@ -429,7 +429,7 @@ describe('Checkout PIX', function () {
             'customer' => [
                 'name'     => 'Failure Test',
                 'email'    => 'fail@test.com',
-                'document' => '12345678901',
+                'document' => '52998224725',
             ],
         ]);
 
@@ -452,7 +452,7 @@ describe('Checkout PIX', function () {
             'customer' => [
                 'name'     => 'Affiliate Test',
                 'email'    => 'affiliate@test.com',
-                'document' => '12345678901',
+                'document' => '52998224725',
             ],
         ]);
 
@@ -483,7 +483,7 @@ describe('PIX Status Check', function () {
             'pix_qr_code'     => '00020126580014br.gov.bcb.pix',
             'pix_copy_paste'  => '00020126580014br.gov.bcb.pix',
             'idempotency_key' => Str::random(32),
-            'customer'        => ['name' => 'Test', 'email' => 'test@test.com', 'document' => '12345678901'],
+            'customer'        => ['name' => 'Test', 'email' => 'test@test.com', 'document' => '52998224725'],
         ]);
 
         $response = test()->getJson("/api/v1/checkout/charge/{$charge->id}/status");
@@ -513,7 +513,7 @@ describe('PIX Status Check', function () {
             'paid_at'         => now(),
             'pix_qr_code'     => '00020126580014br.gov.bcb.pix',
             'idempotency_key' => Str::random(32),
-            'customer'        => ['name' => 'Test', 'email' => 'test@test.com', 'document' => '12345678901'],
+            'customer'        => ['name' => 'Test', 'email' => 'test@test.com', 'document' => '52998224725'],
         ]);
 
         $response = test()->getJson("/api/v1/checkout/charge/{$charge->id}/status");
@@ -556,7 +556,7 @@ describe('PIX Data Integrity', function () {
             'pix_qr_code'     => $pixCode,
             'pix_copy_paste'  => $pixCode,
             'idempotency_key' => Str::random(32),
-            'customer'        => ['name' => 'Test', 'email' => 'test@test.com', 'document' => '12345678901'],
+            'customer'        => ['name' => 'Test', 'email' => 'test@test.com', 'document' => '52998224725'],
         ]);
 
         $fresh = Charge::find($charge->id);
@@ -580,7 +580,7 @@ describe('PIX Data Integrity', function () {
             'acquirer'                 => 'turbos',
             'acquirer_transaction_id'  => $txnId,
             'idempotency_key'          => Str::random(32),
-            'customer'                 => ['name' => 'Test', 'email' => 'test@test.com', 'document' => '12345678901'],
+            'customer'                 => ['name' => 'Test', 'email' => 'test@test.com', 'document' => '52998224725'],
         ]);
 
         $fresh = Charge::find($charge->id);
@@ -597,7 +597,7 @@ describe('PIX Data Integrity', function () {
             'customer' => [
                 'name'     => 'Integrity Test',
                 'email'    => 'integrity@test.com',
-                'document' => '12345678901',
+                'document' => '52998224725',
             ],
         ]);
 

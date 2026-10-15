@@ -54,7 +54,7 @@ const integrationApps: IntegrationApp[] = [
  longDescription:
  'Configure seu Facebook Pixel e Access Token da Conversions API para enviar eventos de conversão (Purchase, InitiateCheckout, AddPaymentInfo) diretamente para o Facebook. Isso permite rastreamento server-side preciso, imune a bloqueadores de anúncios, e otimiza suas campanhas de Facebook/Instagram Ads automaticamente.',
  category: 'Traqueamento',
- logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/1200px-Facebook_Logo_%282019%29.png',
+ logo: '/img/facebook.svg',
  color: 'bg-accent-primary',
  connected: false,
  popular: true,
@@ -161,7 +161,7 @@ const integrationApps: IntegrationApp[] = [
  longDescription:
  'Configure seu TikTok Pixel ID e Access Token (opcional) para enviar eventos de conversão (CompletePayment, InitiateCheckout, PageView) para o TikTok. Isso permite rastreamento preciso e otimização de campanhas do TikTok Ads.',
  category: 'Traqueamento',
- logo: 'https://sf16-scmcdn-sg.ibytedtos.com/goofy/tiktok/web/node/_next/static/images/logo-whole-c555aa707602e714ec956ac96e9db366.svg',
+ logo: '/img/tiktok.svg',
  color: 'bg-black',
  connected: false,
  popular: true,
@@ -758,8 +758,8 @@ export default function IntegrationsPage() {
  <div
  className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden"
  >
- {app.logo.startsWith('http') ? (
- <img src={app.logo} alt={app.name} className="w-12 h-12 object-contain rounded-2xl" />
+ {app.logo.startsWith('http') || app.logo.startsWith('/') ? (
+ <img src={app.logo} alt={app.name} className={`w-12 h-12 object-contain rounded-2xl ${app.id === 'tiktok-pixel' ? 'bg-[#161823] p-2.5' : ''}`} />
  ) : (
  app.logo
  )}
@@ -865,8 +865,8 @@ export default function IntegrationsPage() {
  <div
  className="w-14 h-14 rounded-2xl flex items-center justify-center overflow-hidden"
  >
- {selectedApp.logo.startsWith('http') ? (
- <img src={selectedApp.logo} alt={selectedApp.name} className="w-14 h-14 object-contain rounded-2xl" />
+ {selectedApp.logo.startsWith('http') || selectedApp.logo.startsWith('/') ? (
+ <img src={selectedApp.logo} alt={selectedApp.name} className={`w-14 h-14 object-contain rounded-2xl ${selectedApp.id === 'tiktok-pixel' ? 'bg-[#161823] p-3' : ''}`} />
  ) : (
  selectedApp.logo
  )}

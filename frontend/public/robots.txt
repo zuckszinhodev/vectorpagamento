@@ -1,15 +1,53 @@
-# robots.txt for Vector Pagamentos
+# robots.txt — Vector Pagamentos
+
 User-agent: *
 Allow: /
 
-# Disallow admin and private areas
-Disallow: /admin
+# Páginas de pagamento não devem ser indexadas: são transacionais, expõem
+# preço e produto de terceiros, e um link de checkout no Google leva o cliente
+# a uma cobrança fora do contexto em que ela foi enviada.
+Disallow: /checkout/
+Disallow: /pay/
+Disallow: /checkout-preview
+Disallow: /checkout-builder
+
+# Painel do vendedor
 Disallow: /dashboard
+Disallow: /products
+Disallow: /charges
+Disallow: /chargebacks
+Disallow: /acquirers
+Disallow: /withdrawals
+Disallow: /affiliates
+Disallow: /coupons
+Disallow: /reports
+Disallow: /analytics
+Disallow: /splits
+Disallow: /integrations
+Disallow: /messaging
+Disallow: /domains
+Disallow: /landing-pages
+Disallow: /member-area
+Disallow: /webhook-logs
 Disallow: /settings
+Disallow: /support
+Disallow: /kyc
+Disallow: /vitrine
+Disallow: /vector-ia
+Disallow: /wazer-ia
+
+# Área administrativa
+Disallow: /admin
+
+# Área de membros do comprador
+Disallow: /members/
+
+# Fluxos de conta
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /account-blocked
+
+# API
 Disallow: /api/
 
-# Sitemap
-Sitemap: https://app.Vector Pagamentos.com.br/sitemap.xml
-
-# Crawl-delay
-Crawl-delay: 1
+Sitemap: https://app.vectorpagamentos.com.br/sitemap.xml

@@ -248,6 +248,18 @@ const PALETTE = {
     grid: { dark: 'rgba(225, 29, 72, 0.08)', light: 'rgba(225, 29, 72, 0.06)' },
     tick: { dark: 'rgba(168, 162, 186, 0.6)', light: 'rgba(100, 100, 130, 0.6)' },
   },
+  red: {
+    line: 'rgb(239, 68, 68)',
+    lineHover: 'rgb(248, 113, 113)',
+    gradientTop: { dark: 'rgba(239, 68, 68, 0.55)', light: 'rgba(239, 68, 68, 0.28)' },
+    gradientMid: { dark: 'rgba(239, 68, 68, 0.18)', light: 'rgba(239, 68, 68, 0.10)' },
+    gradientBot: { dark: 'rgba(239, 68, 68, 0)', light: 'rgba(239, 68, 68, 0)' },
+    point: 'rgb(248, 113, 113)',
+    pointBorder: { dark: 'rgb(13, 13, 13)', light: '#ffffff' },
+    tooltip: { bg: '#1a0a0a', border: 'rgba(239, 68, 68, 0.4)' },
+    grid: { dark: 'rgba(239, 68, 68, 0.08)', light: 'rgba(239, 68, 68, 0.06)' },
+    tick: { dark: 'rgba(180, 180, 190, 0.6)', light: 'rgba(100, 100, 130, 0.6)' },
+  },
 };
 
 type PaletteKey = keyof typeof PALETTE;
@@ -265,6 +277,8 @@ interface GlowLineChartProps {
   suggestedMax?: number;
   tension?: number;
   className?: string;
+  /** Clean, modern look: no neon glow / scan lines, subtle grid, filled area. */
+  clean?: boolean;
 }
 
 export function GlowLineChart({
@@ -279,6 +293,7 @@ export function GlowLineChart({
   suggestedMax,
   tension = 0.45,
   className = '',
+  clean = false,
 }: GlowLineChartProps) {
   const chartRef = useRef<ChartJS<'line'> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -323,7 +338,9 @@ export function GlowLineChart({
             return createGradient(ctx, chartArea);
           },
           tension,
-          pointRadius: 0,
+          pointRadius: clean
+            ? (context: any) => (context.dataIndex === data.length - 1 ? 4.5 : 0)
+            : 0,
           pointHoverRadius: 6,
           pointBackgroundColor: palette.point,
           pointBorderColor: isDark ? palette.pointBorder.dark : palette.pointBorder.light,
@@ -331,14 +348,14 @@ export function GlowLineChart({
           pointHoverBackgroundColor: palette.lineHover,
           pointHoverBorderColor: isDark ? palette.pointBorder.dark : palette.pointBorder.light,
           pointHoverBorderWidth: 3,
-          borderWidth: 2.5,
+          borderWidth: clean ? 3 : 2.5,
           borderCapStyle: 'round' as const,
           borderJoinStyle: 'round' as const,
           spanGaps: true,
         },
       ],
     }),
-    [labels, data, label, palette, tension, showPoints, isDark, createGradient]
+    [labels, data, label, palette, tension, showPoints, isDark, createGradient, clean]
   );
 
   const computedMax = useMemo(() => {
@@ -400,7 +417,7 @@ export function GlowLineChart({
             font: { size: 11, weight: 500 },
             maxRotation: 0,
             autoSkip: true,
-            maxTicksLimit: 10,
+            maxTicksLimit: clean ? 7 : 10,
             padding: 8,
           },
         },
@@ -411,13 +428,14 @@ export function GlowLineChart({
           suggestedMax: computedMax,
           border: { display: false },
           grid: {
-            color: dark ? palette.grid.dark : palette.grid.light,
+            color: clean ? (dark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)') : (dark ? palette.grid.dark : palette.grid.light),
             lineWidth: 1,
           },
           ticks: {
             color: dark ? palette.tick.dark : palette.tick.light,
             font: { size: 11, weight: 500 },
             padding: 12,
+            maxTicksLimit: clean ? 5 : undefined,
             callback: (value: any) => {
               if (formatYTick) return formatYTick(value as number);
               return value;
@@ -434,7 +452,7 @@ export function GlowLineChart({
         intersect: false,
       },
     };
-  }, [palette, computedMax, formatTooltip, formatYTick]);
+  }, [palette, computedMax, formatTooltip, formatYTick, clean]);
 
   // Check if there's no data - AFTER all hooks are called
   const hasNoData = !data || data.length === 0 || data.every(val => val === 0);
@@ -478,7 +496,7 @@ export function GlowLineChart({
         ref={chartRef}
         data={chartData}
         options={chartOptions}
-        plugins={[glowLinePlugin, gridPulsePlugin]}
+        plugins={clean ? [glowLinePlugin] : [glowLinePlugin, gridPulsePlugin]}
       />
     </div>
   );

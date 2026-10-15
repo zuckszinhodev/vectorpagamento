@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { MedEvidenceFields, MedEvidenceSummary, type MedEvidence } from '@/components/MedEvidenceFields';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, formatCurrency, formatDate } from '@/lib/api';
 import { Dialog, Transition } from '@headlessui/react';
@@ -92,21 +93,40 @@ function DisputeModal({
   isOpen,
   onClose,
   onSubmit,
+  isSubmitting,
 }: {
   chargeback: Chargeback | null;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
+  isSubmitting: boolean;
 }) {
+  const isMed = chargeback?.charge?.payment_method?.toLowerCase() === 'pix';
+  const [med, setMed] = useState<MedEvidence>({});
+  const [confirmed, setConfirmed] = useState(false);
   const [formData, setFormData] = useState({
     description: '',
     tracking_number: '',
     delivery_proof: '',
     images: [] as File[],
   });
+  const [previews, setPreviews] = useState<string[]>([]);
+  useEffect(() => {
+    const urls = formData.images.map(file => file.type.startsWith('image/') ? URL.createObjectURL(file) : '');
+    setPreviews(urls);
+    return () => urls.forEach(url => { if (url) URL.revokeObjectURL(url); });
+  }, [formData.images]);
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({ description: '', tracking_number: '', delivery_proof: '', images: [] });
+      setMed({});
+      setConfirmed(false);
+    }
+  }, [isOpen, chargeback?.id]);
 
   // Reset form when modal closes
   const handleClose = () => {
+    if (isSubmitting) return;
     setFormData({
       description: '',
       tracking_number: '',
@@ -116,10 +136,22 @@ function DisputeModal({
     onClose();
   };
 
+  const addFiles = (files: File[]) => {
+    if (files.some(file => !['image/png', 'image/jpeg', 'application/pdf'].includes(file.type) || file.size > 5 * 1024 * 1024)) {
+      toast.error('Use arquivos PNG, JPG ou PDF de até 5 MB cada.');
+      return;
+    }
+    if (formData.images.length + files.length > 10 || [...formData.images, ...files].reduce((sum, file) => sum + file.size, 0) > 20 * 1024 * 1024) {
+      toast.error('Envie até 10 arquivos, com no máximo 20 MB no total.');
+      return;
+    }
+    setFormData(current => ({ ...current, images: [...current.images, ...files] }));
+  };
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      setFormData({ ...formData, images: [...formData.images, ...newFiles] });
+      addFiles(newFiles);
+      e.target.value = '';
     }
   };
 
@@ -130,12 +162,14 @@ function DisputeModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    if (isSubmitting) return;
+    if (!formData.description.trim()) { toast.error('Descreva os fatos que sustentam sua defesa.'); return; }
+    onSubmit({ ...formData, ...(isMed ? { med: { ...med, confirmed: confirmed ? '1' : '0' } } : {}) });
   };
 
   return (
     <Transition.Root show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={onClose}>
+      <Dialog as="div" className="relative z-50" onClose={handleClose}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -145,11 +179,11 @@ function DisputeModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/50 transition-opacity" />
+          <div className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <div className="flex min-h-full items-end justify-center p-0 text-center sm:items-center sm:p-6">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -159,70 +193,89 @@ function DisputeModal({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl">
-                <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4">
+              <Dialog.Panel className="relative flex max-h-[94dvh] w-full transform flex-col overflow-hidden rounded-t-2xl border border-border-DEFAULT bg-surface-card text-left shadow-2xl transition-all sm:max-h-[90dvh] sm:max-w-6xl sm:rounded-2xl">
+                <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border-DEFAULT px-5 py-5 sm:px-8">
+                  <div>
                   <Dialog.Title className="text-lg font-semibold text-tx-primary">
-                    Abrir Disputa
+                    {isMed ? 'Preparar defesa MED • Pix' : 'Abrir Disputa'}
                   </Dialog.Title>
+                  <Dialog.Description className="mt-1 text-sm text-tx-secondary">
+                    Conte o que aconteceu e adicione os comprovantes da venda.
+                  </Dialog.Description>
+                  </div>
                   <button
                     onClick={handleClose}
-                    className="text-tx-muted hover:text-tx-secondary"
+                    aria-label="Fechar disputa"
+                    className="shrink-0 rounded-lg p-2 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
                   >
                     <XMarkIcon className="h-6 w-6" />
                   </button>
                 </div>
 
-                <form onSubmit={handleSubmit}>
-                  <div className="px-4 sm:px-6 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                  <div className="min-h-0 space-y-6 overflow-y-auto overscroll-contain px-5 py-6 sm:px-8">
+                    <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
                       <div className="flex gap-3">
                         <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-amber-900">
+                          <p className="text-sm font-medium text-tx-primary">
                             Importante
                           </p>
-                          <p className="text-sm text-amber-700 mt-1">
-                            Forneça evidências claras e detalhadas para aumentar suas chances de ganhar a disputa.
+                          <p className="mt-1 text-sm leading-relaxed text-tx-secondary">
+                            {isMed ? 'Organize os fatos e comprovantes que demonstram a origem e a legitimidade do Pix. O envio registra a defesa neste sistema; acompanhe o protocolo junto à instituição responsável.' : 'Forneça evidências claras e detalhadas para a análise da disputa.'}
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-tx-primary mb-2">
-                        Descrição da Evidência *
+                    {isMed && <div className="grid gap-4 rounded-xl border border-border-DEFAULT bg-surface-page p-4 sm:grid-cols-3">
+                      <div><p className="text-xs text-tx-muted">Valor contestado</p><p className="mt-1 font-semibold text-tx-primary">{formatCurrency(chargeback?.amount || 0)}</p></div>
+                      <div><p className="text-xs text-tx-muted">Prazo cadastrado no caso</p><p className="mt-1 text-sm text-tx-primary">{chargeback?.deadline_at ? formatDate(chargeback.deadline_at) : 'Confirme com a instituição'}</p></div>
+                      <div><p className="text-xs text-tx-muted">Motivo informado</p><p className="mt-1 break-words text-sm text-tx-primary">{chargeback?.reason || 'Não informado'}</p></div>
+                      <p className="break-all text-xs text-tx-muted sm:col-span-3">Cobrança: {chargeback?.charge_id} • Cliente: {chargeback?.charge?.customer?.name || 'Não informado'}</p>
+                    </div>}
+                    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-8">
+                    <div className="min-w-0">
+                      <label htmlFor="dispute-description" className="block text-sm font-medium text-tx-primary mb-2">
+                        {isMed ? 'Relato dos fatos e fundamento da defesa *' : 'Descrição da Evidência *'}
                       </label>
                       <textarea
+                        id="dispute-description"
+                        aria-describedby="dispute-description-hint"
                         required
-                        rows={16}
-                        className="input w-full resize-none"
-                        placeholder="Descreva detalhadamente o que aconteceu, incluindo informações sobre a entrega, comunicação com o cliente, etc."
+                        maxLength={20000}
+                        rows={14}
+                        className="input block h-auto min-h-[300px] w-full resize-y rounded-xl px-4 py-4 text-base leading-relaxed sm:min-h-[380px]"
+                        placeholder={isMed ? 'Explique a origem do Pix, apresente a sequência dos fatos com datas e responda ao motivo da contestação. Indique quais comprovantes sustentam cada ponto da sua defesa.' : 'Descreva detalhadamente o que aconteceu, incluindo informações sobre a entrega e comunicação com o cliente.'}
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       />
-                      <p className="text-xs text-tx-muted mt-1">
-                        {formData.description.length} caracteres
-                      </p>
+                      <div className="mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-xs text-tx-muted">
+                        <p id="dispute-description-hint">Inclua datas, detalhes da entrega e conversas com o cliente.</p>
+                        <p className="shrink-0 tabular-nums">{formData.description.length} caracteres</p>
+                      </div>
                     </div>
 
+                    <div className="min-w-0 space-y-6 rounded-xl border border-border-DEFAULT bg-surface-page p-4 sm:p-5">
                     <div>
                       <label className="block text-sm font-medium text-tx-primary mb-2">
-                        Comprovantes e Evidências (Imagens)
+                        Comprovantes e evidências
                       </label>
                       <div className="space-y-3">
                         <div className="flex items-center justify-center w-full">
-                          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-border-DEFAULT border-dashed rounded-lg cursor-pointer bg-surface-page hover:bg-surface-hover transition-colors">
+                          <label onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); addFiles(Array.from(e.dataTransfer.files)); }} className="flex min-h-[152px] w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border-DEFAULT bg-surface-page px-4 text-center transition-colors hover:border-accent-primary hover:bg-surface-hover focus-within:ring-2 focus-within:ring-accent-primary">
                             <div className="flex flex-col items-center justify-center pt-5 pb-6">
                               <PhotoIcon className="w-10 h-10 mb-2 text-tx-muted" />
                               <p className="mb-2 text-sm text-tx-secondary">
                                 <span className="font-semibold">Clique para enviar</span> ou arraste e solte
                               </p>
-                              <p className="text-xs text-tx-muted">PNG, JPG, JPEG até 5MB cada</p>
+                              <p className="text-xs text-tx-muted">PNG, JPG ou PDF • até 5 MB por arquivo</p>
+                              <p className="mt-1 text-xs text-tx-muted">{formData.images.length}/10 arquivos • até 20 MB no total</p>
                             </div>
                             <input
                               type="file"
-                              className="hidden"
-                              accept="image/png,image/jpeg,image/jpg"
+                              className="sr-only"
+                              accept="image/png,image/jpeg,application/pdf"
                               multiple
                               onChange={handleImageChange}
                             />
@@ -234,16 +287,17 @@ function DisputeModal({
                             {formData.images.map((file, index) => (
                               <div key={index} className="relative group">
                                 <div className="aspect-video rounded-lg border border-border-DEFAULT overflow-hidden bg-surface-page">
-                                  <img
-                                    src={URL.createObjectURL(file)}
+                                  {file.type === 'application/pdf' ? <div className="flex h-full flex-col items-center justify-center gap-2 text-tx-secondary"><DocumentTextIcon className="h-8 w-8" /><span className="text-xs">PDF</span></div> : <img
+                                    src={previews[index]}
                                     alt={`Evidência ${index + 1}`}
                                     className="w-full h-full object-cover"
-                                  />
+                                  />}
                                 </div>
                                 <button
                                   type="button"
                                   onClick={() => removeImage(index)}
-                                  className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                  aria-label={`Remover ${file.name}`}
+                                  className="absolute top-2 right-2 rounded-full bg-red-500 p-2 text-white transition-colors hover:bg-red-600"
                                 >
                                   <XMarkIcon className="h-4 w-4" />
                                 </button>
@@ -255,13 +309,16 @@ function DisputeModal({
                       </div>
                     </div>
 
+                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
                     <div>
-                      <label className="block text-sm font-medium text-tx-primary mb-2">
+                      <label htmlFor="dispute-tracking" className="block text-sm font-medium text-tx-primary mb-2">
                         Código de Rastreamento
+                        <span className="ml-2 text-xs font-normal text-tx-muted">Opcional</span>
                       </label>
                       <input
+                        id="dispute-tracking"
                         type="text"
-                        className="input w-full"
+                        className="input h-12 w-full text-base sm:text-sm"
                         placeholder="Ex: BR123456789BR"
                         value={formData.tracking_number}
                         onChange={(e) => setFormData({ ...formData, tracking_number: e.target.value })}
@@ -269,25 +326,44 @@ function DisputeModal({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-tx-primary mb-2">
+                      <label htmlFor="dispute-delivery" className="block text-sm font-medium text-tx-primary mb-2">
                         Comprovante de Entrega (URL)
+                        <span className="ml-2 text-xs font-normal text-tx-muted">Opcional</span>
                       </label>
                       <input
+                        id="dispute-delivery"
                         type="text"
-                        className="input w-full"
-                        placeholder="URL do comprovante ou número do protocolo"
+                        className="input h-12 w-full text-base sm:text-sm"
+                        placeholder="Cole o link ou informe o protocolo"
                         value={formData.delivery_proof}
                         onChange={(e) => setFormData({ ...formData, delivery_proof: e.target.value })}
                       />
                     </div>
+                    </div>
+                    </div>
+                    </div>
+                    {isMed && <>
+                      <MedEvidenceFields value={med} onChange={setMed} />
+                      <section className="rounded-xl border border-border-DEFAULT bg-surface-page p-5">
+                        <h3 className="font-semibold text-tx-primary">Antes de enviar</h3>
+                        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-tx-secondary">
+                          <li>Comprovante Pix com identificação da transação e do pagador.</li>
+                          <li>Pedido, nota fiscal ou contrato que explique a origem do recebimento.</li>
+                          <li>Comprovante de entrega, execução do serviço ou registros de acesso digital.</li>
+                          <li>Conversas completas relevantes ao caso e comprovantes de eventual devolução.</li>
+                        </ul>
+                        <p className="mt-3 text-xs text-tx-muted">Anexe somente documentos pertinentes. O conjunto necessário depende do caso e da solicitação da instituição.</p>
+                        <label className="mt-5 flex items-start gap-3 text-sm text-tx-primary"><input type="checkbox" required checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0" />Revisei as informações e confirmo que os documentos apresentados correspondem a esta transação.</label>
+                      </section>
+                    </>}
                   </div>
 
-                  <div className="flex justify-end gap-3 border-t border-border-DEFAULT px-4 sm:px-6 py-4">
-                    <button type="button" onClick={handleClose} className="btn-secondary">
+                  <div className="flex shrink-0 justify-end gap-3 border-t border-border-DEFAULT bg-surface-card px-5 py-4 sm:px-8">
+                    <button type="button" onClick={handleClose} disabled={isSubmitting} className="btn-secondary min-h-[44px] flex-1 sm:flex-none">
                       Cancelar
                     </button>
-                    <button type="submit" className="btn-primary">
-                      Enviar Disputa
+                    <button type="submit" disabled={isSubmitting} className="btn-primary min-h-[44px] flex-1 sm:flex-none">
+                      {isSubmitting ? 'Enviando…' : isMed ? 'Enviar defesa para análise' : 'Enviar Disputa'}
                     </button>
                   </div>
                 </form>
@@ -331,11 +407,11 @@ function ChargebackDetailModal({
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/50 transition-opacity" />
+          <div className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity" />
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+          <div className="flex min-h-full items-end justify-center p-0 text-center sm:items-center sm:p-6">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -345,30 +421,36 @@ function ChargebackDetailModal({
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative transform overflow-hidden rounded-xl bg-surface-card text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-4xl">
-                <div className="flex items-center justify-between border-b border-border-DEFAULT px-4 sm:px-6 py-4 bg-gradient-to-r from-emerald-50 to-blue-50">
-                  <div>
+              <Dialog.Panel className="relative flex max-h-[94vh] w-full transform flex-col overflow-hidden rounded-t-2xl border border-border-DEFAULT bg-surface-card text-left shadow-2xl transition-all sm:max-w-5xl sm:rounded-2xl">
+                <div className="flex items-center justify-between border-b border-border-DEFAULT bg-surface-card px-5 py-5 sm:px-7">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-500">
+                      <ShieldExclamationIcon className="h-6 w-6" />
+                    </div>
+                    <div className="min-w-0">
                     <Dialog.Title className="text-lg font-semibold text-tx-primary">
                       Gestão Completa de Disputa
                     </Dialog.Title>
-                    <p className="text-sm text-tx-muted mt-0.5">
-                      ID: {chargeback.id.slice(0, 13)}...
+                    <p className="mt-0.5 truncate font-mono text-xs text-tx-muted">
+                      ID: {chargeback.id}
                     </p>
+                    </div>
                   </div>
                   <button
                     onClick={onClose}
-                    className="text-tx-muted hover:text-tx-secondary"
+                    aria-label="Fechar detalhes"
+                    className="ml-4 rounded-lg p-2 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
                   >
                     <XMarkIcon className="h-6 w-6" />
                   </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="border-b border-border-DEFAULT px-4 sm:px-6 bg-surface-page">
-                  <nav className="flex gap-6">
+                <div className="border-b border-border-DEFAULT bg-surface-page px-5 sm:px-7">
+                  <nav className="flex gap-6 overflow-x-auto">
                     <button
                       onClick={() => setActiveTab('details')}
-                      className={`py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                      className={`flex shrink-0 items-center gap-2 border-b-2 py-3.5 text-sm font-medium transition-colors ${
                         activeTab === 'details'
                           ? 'border-accent-primary text-accent-primary'
                           : 'border-transparent text-tx-muted hover:text-tx-secondary'
@@ -379,7 +461,7 @@ function ChargebackDetailModal({
                     </button>
                     <button
                       onClick={() => setActiveTab('evidence')}
-                      className={`py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                      className={`flex shrink-0 items-center gap-2 border-b-2 py-3.5 text-sm font-medium transition-colors ${
                         activeTab === 'evidence'
                           ? 'border-accent-primary text-accent-primary'
                           : 'border-transparent text-tx-muted hover:text-tx-secondary'
@@ -395,7 +477,7 @@ function ChargebackDetailModal({
                     </button>
                     <button
                       onClick={() => setActiveTab('timeline')}
-                      className={`py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                      className={`flex shrink-0 items-center gap-2 border-b-2 py-3.5 text-sm font-medium transition-colors ${
                         activeTab === 'timeline'
                           ? 'border-accent-primary text-accent-primary'
                           : 'border-transparent text-tx-muted hover:text-tx-secondary'
@@ -407,18 +489,18 @@ function ChargebackDetailModal({
                   </nav>
                 </div>
 
-                <div className="px-4 sm:px-6 py-4 max-h-[60vh] overflow-y-auto">
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
                   {/* Details Tab */}
                   {activeTab === 'details' && (
-                    <div className="space-y-6">
+                    <div className="space-y-5">
                       {/* Status Card */}
-                      <div className={`rounded-xl p-4 border-2 ${
-                        chargeback.status === 'open' ? 'bg-amber-50 border-amber-200' :
-                        chargeback.status === 'won' ? 'bg-green-50 border-green-200' :
-                        chargeback.status === 'lost' ? 'bg-red-50 border-red-200' :
-                        'bg-blue-50 border-blue-200'
+                      <div className={`rounded-xl border p-4 sm:p-5 ${
+                        chargeback.status === 'open' ? 'border-amber-500/30 bg-amber-500/10' :
+                        chargeback.status === 'won' ? 'border-emerald-500/30 bg-emerald-500/10' :
+                        chargeback.status === 'lost' ? 'border-red-500/30 bg-red-500/10' :
+                        'border-blue-500/30 bg-blue-500/10'
                       }`}>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
                             <p className="text-sm font-medium text-tx-secondary">Status Atual</p>
                             <div className="mt-1">
@@ -426,9 +508,9 @@ function ChargebackDetailModal({
                             </div>
                           </div>
                           {chargeback.deadline_at && chargeback.status === 'open' && (
-                            <div className="text-right">
+                            <div className="sm:text-right">
                               <p className="text-sm font-medium text-tx-secondary">Prazo para Resposta</p>
-                              <p className="text-lg font-bold text-status-warning mt-1">
+                              <p className="mt-1 text-base font-bold text-amber-500 sm:text-lg">
                                 {formatDate(chargeback.deadline_at)}
                               </p>
                             </div>
@@ -439,21 +521,21 @@ function ChargebackDetailModal({
                       {/* Chargeback Info */}
                       <div>
                         <h3 className="text-sm font-semibold text-tx-primary mb-3">Informações do Chargeback</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          <div className="rounded-xl border border-border-DEFAULT bg-surface-page p-4">
                             <p className="text-xs text-tx-muted mb-1">Valor</p>
                             <p className="text-lg font-bold text-status-error">{formatCurrency(chargeback.amount)}</p>
                           </div>
-                          <div>
+                          <div className="rounded-xl border border-border-DEFAULT bg-surface-page p-4">
                             <p className="text-xs text-tx-muted mb-1">ID da Cobrança</p>
-                            <p className="font-mono text-sm text-tx-primary">{chargeback.charge_id.slice(0, 13)}...</p>
+                            <p className="break-all font-mono text-xs text-tx-primary">{chargeback.charge_id}</p>
                           </div>
-                          <div>
+                          <div className="rounded-xl border border-border-DEFAULT bg-surface-page p-4">
                             <p className="text-xs text-tx-muted mb-1">Criado em</p>
                             <p className="text-sm text-tx-primary">{formatDate(chargeback.created_at)}</p>
                           </div>
                           {chargeback.resolved_at && (
-                            <div>
+                            <div className="rounded-xl border border-border-DEFAULT bg-surface-page p-4">
                               <p className="text-xs text-tx-muted mb-1">Resolvido em</p>
                               <p className="text-sm text-tx-primary">{formatDate(chargeback.resolved_at)}</p>
                             </div>
@@ -463,12 +545,12 @@ function ChargebackDetailModal({
 
                       {/* Reason */}
                       {chargeback.reason && (
-                        <div className="rounded-lg bg-amber-50 border border-amber-200 p-4">
+                        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
                           <div className="flex gap-3">
                             <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
                             <div className="flex-1">
                               <p className="text-sm font-semibold text-amber-900 mb-1">Motivo do Chargeback</p>
-                              <p className="text-sm text-amber-800">{chargeback.reason}</p>
+                              <p className="text-sm text-tx-primary">{chargeback.reason}</p>
                               {chargeback.reason_code && (
                                 <p className="text-xs text-amber-600 mt-1">Código: {chargeback.reason_code}</p>
                               )}
@@ -483,13 +565,13 @@ function ChargebackDetailModal({
                           <div>
                             <h3 className="text-sm font-semibold text-tx-primary mb-3">Informações do Cliente</h3>
                             <div className="space-y-3 rounded-lg border border-border-DEFAULT p-4">
-                              <div className="flex items-center justify-between">
+                              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                 <span className="text-sm text-tx-muted">Nome</span>
                                 <span className="text-sm font-medium text-tx-primary">{charge.customer?.name || '-'}</span>
                               </div>
-                              <div className="flex items-center justify-between">
+                              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                 <span className="text-sm text-tx-muted">Email</span>
-                                <span className="text-sm font-medium text-tx-primary">{charge.customer?.email || '-'}</span>
+                                <span className="break-all text-sm font-medium text-tx-primary">{charge.customer?.email || '-'}</span>
                               </div>
                             </div>
                           </div>
@@ -563,6 +645,7 @@ function ChargebackDetailModal({
                           )}
 
                           {/* Tracking & Delivery */}
+                          {evidence.med && <MedEvidenceSummary value={evidence.med} />}
                           {(evidence.tracking_number || evidence.delivery_proof) && (
                             <div>
                               <h3 className="text-sm font-semibold text-tx-primary mb-3">Informações de Entrega</h3>
@@ -583,49 +666,29 @@ function ChargebackDetailModal({
                             </div>
                           )}
 
-                          {/* Images */}
-                          {evidence.images && evidence.images.length > 0 && (
-                            <div>
-                              <h3 className="text-sm font-semibold text-tx-primary mb-3">
-                                Comprovantes ({evidence.images.length})
-                              </h3>
-                              <div className="grid grid-cols-2 gap-4">
-                                {evidence.images.map((image: any, index: number) => {
-                                  const imageUrl = typeof image === 'string' ? image : image.url || image.path;
-                                  const imageName = typeof image === 'string' ? `Evidência ${index + 1}` : image.name || `Evidência ${index + 1}`;
-
-                                  return (
-                                    <div
-                                      key={index}
-                                      className="group relative aspect-video rounded-lg border-2 border-border-DEFAULT overflow-hidden bg-surface-page hover:border-accent-primary transition-colors"
-                                    >
-                                      <img
-                                        src={imageUrl}
-                                        alt={imageName}
-                                        className="w-full h-full object-cover"
-                                        onError={(e) => {
-                                          (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"%3E%3Cpath stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/%3E%3C/svg%3E';
-                                        }}
-                                      />
-                                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                        <a
-                                          href={imageUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-white text-sm font-medium flex items-center gap-2 hover:scale-110 transition-transform"
-                                        >
-                                          <EyeIcon className="h-5 w-5" />
-                                          Ver imagem
-                                        </a>
-                                      </div>
-                                      <p className="absolute bottom-1 left-1 right-1 text-xs text-white bg-black/50 px-2 py-1 rounded truncate">
-                                        {imageName}
-                                      </p>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
+                          {evidence.images?.length > 0 && (
+                            <section className="space-y-3">
+                              <h3 className="text-sm font-semibold text-tx-primary">Anexos ({evidence.images.length})</h3>
+                              {evidence.images.map((file: any, index: number) => (
+                                <button key={index} type="button" className="flex w-full items-center gap-3 rounded-xl border border-border-DEFAULT p-4 text-left text-sm text-tx-primary hover:bg-surface-hover" onClick={async () => {
+                                  try {
+                                    const response = await api.get('/chargebacks/' + chargeback.id + '/evidence/' + index, { responseType: 'blob' });
+                                    const url = URL.createObjectURL(response.data);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = file.filename || file.name || 'comprovante';
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    link.remove();
+                                    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+                                  } catch { toast.error('N?o foi poss?vel baixar o comprovante.'); }
+                                }}>
+                                  <DocumentTextIcon className="h-6 w-6 shrink-0 text-tx-muted" />
+                                  <span className="min-w-0 flex-1 break-words">{file.filename || file.name || 'Comprovante ' + (index + 1)}</span>
+                                  <span className="shrink-0 text-xs text-tx-secondary">Baixar</span>
+                                </button>
+                              ))}
+                            </section>
                           )}
 
                           {/* Submitted Info */}
@@ -719,19 +782,19 @@ function ChargebackDetailModal({
                   )}
                 </div>
 
-                <div className="flex justify-end gap-3 border-t border-border-DEFAULT px-4 sm:px-6 py-4">
+                <div className="flex flex-col-reverse gap-3 border-t border-border-DEFAULT bg-surface-card px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
                   {chargeback.status === 'open' && !hasEvidence && (
                     <button
                       onClick={() => {
                         onClose();
                         onOpenDispute();
                       }}
-                      className="btn-primary"
+                      className="btn-primary w-full sm:w-auto"
                     >
                       Enviar Evidências
                     </button>
                   )}
-                  <button onClick={onClose} className="btn-secondary">
+                  <button onClick={onClose} className="btn-secondary w-full sm:w-auto">
                     Fechar
                   </button>
                 </div>
@@ -795,6 +858,7 @@ export default function ChargebackPage() {
       // Create FormData to handle file uploads
       const formData = new FormData();
       formData.append('description', data.description);
+      if (data.med) Object.entries(data.med).forEach(([key, value]) => formData.append(`med[${key}]`, String(value)));
       
       if (data.tracking_number) {
         formData.append('tracking_number', data.tracking_number);
@@ -819,7 +883,7 @@ export default function ChargebackPage() {
       return response.data;
     },
     onSuccess: () => {
-      toast.success('Disputa aberta com sucesso!');
+      toast.success('Defesa registrada para análise.');
       setIsDisputeOpen(false);
       queryClient.invalidateQueries({ queryKey: ['chargebacks'] });
       queryClient.invalidateQueries({ queryKey: ['chargebacks-summary'] });
@@ -1179,6 +1243,7 @@ export default function ChargebackPage() {
         isOpen={isDisputeOpen}
         onClose={() => setIsDisputeOpen(false)}
         onSubmit={handleSubmitDispute}
+        isSubmitting={submitDisputeMutation.isPending}
       />
     </div>
   );

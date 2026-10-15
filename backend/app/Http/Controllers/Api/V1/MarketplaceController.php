@@ -33,7 +33,7 @@ class MarketplaceController extends Controller
     {
         try {
             $query = Product::where('affiliate_enabled', true)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->with(['account:id,name']);
 
             // Try to eager load category if table exists
@@ -178,7 +178,7 @@ class MarketplaceController extends Controller
         try {
         $product = Product::where('id', $productId)
             ->where('affiliate_enabled', true)
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->with(['account:id,name,email', 'category:id,name'])
             ->first();
 
@@ -240,7 +240,7 @@ class MarketplaceController extends Controller
 
         $product = Product::where('id', $productId)
             ->where('affiliate_enabled', true)
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->first();
 
         if (!$product) {
@@ -395,7 +395,7 @@ class MarketplaceController extends Controller
     {
         try {
         $categories = Product::where('affiliate_enabled', true)
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->whereNotNull('category')
             ->distinct()
             ->pluck('category')
@@ -426,23 +426,23 @@ class MarketplaceController extends Controller
     {
         try {
             $totalProducts = Product::where('affiliate_enabled', true)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->count();
             
             // Count unique sellers (accounts with affiliate-enabled products)
             $totalSellers = Product::where('affiliate_enabled', true)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->distinct()
                 ->count('account_id');
             
             // Average commission
             $avgCommission = Product::where('affiliate_enabled', true)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->avg('commission_percent') ?? 0;
             
             // Hot products (could be based on sales, for now just count recent ones)
             $hotProducts = Product::where('affiliate_enabled', true)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->where('created_at', '>=', now()->subDays(7))
                 ->count();
 

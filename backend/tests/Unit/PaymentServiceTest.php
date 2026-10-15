@@ -20,6 +20,8 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     AcquirerFactory::reset();
+    config(['acquirer_routing.engine_enabled' => false, 'acquirers.sharkhubsub.enabled' => false]);
+    AcquirerConfig::where('acquirer_key', 'like', 'sharkhubsub%')->update(['enabled' => false]);
 
     $this->account = Account::create([
         'id'            => Str::uuid()->toString(),
@@ -302,6 +304,7 @@ it('uses account custom fee as final fee without adding acquirer fee', function 
         'id' => Str::uuid()->toString(),
         'acquirer_key' => 'enki',
         'display_name' => 'Enki',
+        'type' => 'gateway',
         'enabled' => true,
         'supported_methods' => ['pix'],
         'gateway_fee_percentage' => 10.00,
@@ -343,7 +346,7 @@ it('uses account custom fee as final fee without adding acquirer fee', function 
     expect((int) $wallet->available_balance)->toBe(9600);
 });
 
-it('uses the global admin priority for pix even when the account links payfort', function () {
+it('honors the account pix acquirer instead of the global priority', function () {
     config([
         'acquirers.enki.enabled' => true,
         'acquirers.enki.public_key' => 'pk_test_enki',
@@ -423,24 +426,22 @@ it('uses the global admin priority for pix even when the account links payfort',
     ]);
 
     Http::fake([
-        'https://api.enki-bank.com/v1/transactions' => Http::response([
-            'id' => 'txn-global-priority-enki',
-            'status' => 'WAITING_PAYMENT',
-            'pix' => [
-                'copy_paste' => '000201010212',
-                'expires_at' => now()->addMinutes(30)->toIso8601String(),
-            ],
-        ], 201),
+        '*/api/auth' => Http::response(['success' => true, 'token' => 'test-auth-token']),
+        '*/api/v1/pix/in/qrcode' => Http::response(['data' => [
+            'id' => 'txn-account-payfort', 'status' => 'pending',
+            'pix' => ['emv' => '000201010212'],
+        ]], 201),
     ]);
 
     $result = $this->service->processPayment($charge);
 
     expect($result['success'])->toBeTrue();
-    expect($result['acquirer'])->toBe('enki');
-    expect($charge->fresh()->acquirer)->toBe('enki');
+    expect($result['acquirer'])->toBe('payfort');
+    expect($charge->fresh()->acquirer)->toBe('payfort');
+    Http::assertNotSent(fn ($request) => str_contains($request->url(), 'enki'));
 });
 
-it('uses a 24 hour expiration window for fallback pix qr codes', function () {
+it('fails without fabricating a pix qr code when no acquirer is available', function () {
     $charge = Charge::create([
         'id' => Str::uuid()->toString(),
         'account_id' => $this->account->id,
@@ -456,15 +457,12 @@ it('uses a 24 hour expiration window for fallback pix qr codes', function () {
         ],
     ]);
 
-    $reflection = new ReflectionMethod(PaymentService::class, 'generateMockPaymentData');
-    $reflection->setAccessible(true);
-
-    $result = $reflection->invoke($this->service, $charge);
-
-    $charge->refresh();
-    $expiresInHours = now()->diffInHours($charge->expires_at);
-
-    expect($result['success'])->toBeTrue();
-    expect($result['mock'])->toBeTrue();
-    expect($expiresInHours)->toBeGreaterThanOrEqual(23);
+    AcquirerConfig::query()->update(['enabled' => false]);
+    foreach (config('acquirers') as $key => $value) {
+        if (is_array($value)) config(["acquirers.{$key}.enabled" => false]);
+    }
+    AcquirerFactory::reset();
+    $result = (new PaymentService())->processPayment($charge);
+    expect($result['success'])->toBeFalse();
+    expect($charge->fresh()->pix_qr_code)->toBeNull();
 });

@@ -73,7 +73,7 @@ class AcquirerRoutingService
     {
         $records = DB::table('routing_rules')
             ->where('account_id', $accountId)
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->where(function ($query) use ($paymentMethod) {
                 $query->whereNull('payment_method')
                     ->orWhere('payment_method', $paymentMethod);
@@ -127,7 +127,7 @@ class AcquirerRoutingService
         return DB::table('account_acquirers')
             ->where('account_id', $accountId)
             ->where('acquirer_id', $acquirerId)
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->exists();
     }
 
@@ -138,7 +138,7 @@ class AcquirerRoutingService
         $accountAcquirer = DB::table('account_acquirers')
             ->where('account_id', $accountId)
             ->where('acquirer_id', $acquirerId)
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->first();
 
         if (!$accountAcquirer) {
@@ -168,7 +168,7 @@ class AcquirerRoutingService
     {
         try {
             $orderedKeys = DB::table('acquirer_configs')
-                ->whereRaw('"enabled" = true')
+                ->where('enabled', true)
                 ->where(function ($query) use ($paymentMethod) {
                     $query->whereJsonContains('supported_methods', strtoupper($paymentMethod))
                         ->orWhereJsonContains('supported_methods', strtolower($paymentMethod));
@@ -178,7 +178,7 @@ class AcquirerRoutingService
 
             if ($orderedKeys->isEmpty()) {
                 $orderedKeys = DB::table('acquirer_configs')
-                    ->whereRaw('"enabled" = true')
+                    ->where('enabled', true)
                     ->orderBy('priority')
                     ->pluck('acquirer_key');
             }

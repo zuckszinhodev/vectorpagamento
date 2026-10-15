@@ -8,6 +8,7 @@ const chunkGroups: Record<string, string[]> = {
   'vendor-charts': ['chart.js', 'react-chartjs-2'],
   'vendor-forms': ['react-hook-form', 'zod', '@tanstack/react-query', '@tanstack/react-table'],
   'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities', '@hello-pangea/dnd'],
+  'vendor-flow': ['@xyflow/react', '@xyflow/system'],
   'vendor-utils': ['axios', 'date-fns', 'clsx', 'tailwind-merge', 'class-variance-authority', 'zustand'],
 };
 
@@ -33,8 +34,11 @@ export default defineConfig({
     },
   },
   build: {
+    sourcemap: false,
     rollupOptions: {
       output: {
+        entryFileNames: 'assets/[hash].js',
+        chunkFileNames: 'assets/[hash].js',
         manualChunks,
       },
     },

@@ -37,7 +37,7 @@ class MemberDomainController extends Controller
 
             if ($customDomain) {
                 $memberArea = MemberArea::where('account_id', $customDomain->account_id)
-                    ->whereRaw('"is_active" = true')
+                    ->where('is_active', true)
                     ->first();
 
                 if ($memberArea) {
@@ -52,7 +52,7 @@ class MemberDomainController extends Controller
             $subdomain = $this->extractSubdomain($domain);
             if ($subdomain) {
                 $memberArea = MemberArea::where('subdomain', $subdomain)
-                    ->whereRaw('"is_active" = true')
+                    ->where('is_active', true)
                     ->first();
 
                 if ($memberArea) {
@@ -66,7 +66,7 @@ class MemberDomainController extends Controller
             // 3. Legacy fallback: MemberArea.custom_domain field (for old data)
             $memberArea = MemberArea::where('custom_domain', $domain)
                 ->where('domain_verified', true)
-                ->whereRaw('"is_active" = true')
+                ->where('is_active', true)
                 ->first();
 
             if ($memberArea) {

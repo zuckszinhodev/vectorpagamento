@@ -346,7 +346,7 @@ function ActionResultBadge({ actionResult }: { actionResult: WazerAIActionResult
       )}
       {checkoutSlug && (
         <a
-          href={`/checkouts`}
+          href={`/products`}
           className="inline-flex items-center gap-1 rounded-lg bg-emerald-500/20 px-2 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/30 transition-colors"
         >
           <ShoppingCartIcon className="h-3 w-3" />

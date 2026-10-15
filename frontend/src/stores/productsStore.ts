@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { productsService, type Product, type CreateProductData, type UpdateProductData } from '@/services/api';
+import { productsService, type Product, type CreateProductData, type UpdateProductData } from '@/services/api/products.service';
 import toast from 'react-hot-toast';
 
 interface ProductsState {

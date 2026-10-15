@@ -43,36 +43,6 @@ interface Acquirer {
   config?: Record<string, unknown>;
 }
 
-type RotationMethod = 'pix' | 'credit_card' | 'boleto' | 'pix_out';
-type RotationStrategy = 'priority' | 'round_robin' | 'weighted';
-
-interface RotationMethodSettings {
-  strategy: RotationStrategy;
-  weights: Record<string, number>;
-}
-
-interface RotationSettings {
-  enabled: boolean;
-  failover_enabled: boolean;
-  strict_health_check: boolean;
-  use_cooldown: boolean;
-  cooldown_seconds: number;
-  methods: Record<RotationMethod, RotationMethodSettings>;
-}
-
-interface RotationPreviewMethod {
-  strategy: RotationStrategy;
-  candidates: string[];
-  eligible: string[];
-  order: string[];
-  primary: string | null;
-}
-
-interface RotationSettingsResponse {
-  settings: RotationSettings;
-  preview: Record<RotationMethod, RotationPreviewMethod>;
-}
-
 interface PlatformSettingsResponse {
   payments?: {
     default_gateway_fee?: number;
@@ -101,16 +71,15 @@ interface RefreshAllNominalsResponse {
   };
 }
 
-const rotationMethods: RotationMethod[] = ['pix', 'credit_card', 'boleto', 'pix_out'];
 
 export default function AdminAcquirers() {
   const platformName = useThemeStore((s) => s.platformName);
   const queryClient = useQueryClient();
   const [selectedAcquirer, setSelectedAcquirer] = useState<Acquirer | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [routingForm, setRoutingForm] = useState<RotationSettings | null>(null);
   const [globalGatewayFee, setGlobalGatewayFee] = useState('0');
   const [draggedAcquirerId, setDraggedAcquirerId] = useState<string | null>(null);
+  const [showAllModal, setShowAllModal] = useState(false);
 
   // Fetch acquirers
   const { data: acquirers = [], isLoading, refetch } = useQuery<Acquirer[]>({
@@ -121,14 +90,6 @@ export default function AdminAcquirers() {
     },
   });
 
-  const { data: routingData, isLoading: isRoutingLoading } = useQuery<RotationSettingsResponse>({
-    queryKey: ['admin-acquirers-routing'],
-    queryFn: async () => {
-      const response = await api.get('/admin/acquirers/routing/settings');
-      return response.data?.data as RotationSettingsResponse;
-    },
-  });
-
   const { data: platformSettings } = useQuery<PlatformSettingsResponse>({
     queryKey: ['platform-settings-acquirer-fees'],
     queryFn: async () => {
@@ -136,12 +97,6 @@ export default function AdminAcquirers() {
       return response.data?.data || {};
     },
   });
-
-  useEffect(() => {
-    if (routingData?.settings) {
-      setRoutingForm(routingData.settings);
-    }
-  }, [routingData?.settings]);
 
   useEffect(() => {
     if (platformSettings?.payments?.default_gateway_fee !== undefined) {
@@ -160,19 +115,6 @@ export default function AdminAcquirers() {
     },
     onError: () => {
       toast.error('Erro ao salvar taxa global');
-    },
-  });
-
-  const saveRoutingSettingsMutation = useMutation({
-    mutationFn: async (payload: RotationSettings) => {
-      await api.put('/admin/acquirers/routing/settings', payload);
-    },
-    onSuccess: () => {
-      toast.success('Regras de rotação atualizadas');
-      queryClient.invalidateQueries({ queryKey: ['admin-acquirers-routing'] });
-    },
-    onError: () => {
-      toast.error('Erro ao salvar regras de rotação');
     },
   });
 
@@ -370,18 +312,6 @@ export default function AdminAcquirers() {
     }
   };
 
-    const methodLabel: Record<RotationMethod, string> = {
-      pix: 'Cashin PIX',
-      credit_card: 'Cartão de crédito',
-      boleto: 'Boleto',
-      pix_out: 'Cashout PIX OUT',
-    };
-
-    const acquirerNameBySlug = acquirers.reduce<Record<string, string>>((acc, acquirer) => {
-      acc[acquirer.slug] = acquirer.nominal_name || acquirer.display_name || acquirer.slug;
-      return acc;
-    }, {});
-
     const activeCount = acquirers.filter((acquirer) => acquirer.is_active).length;
     const cashinCount = acquirers.filter(
       (acquirer) => acquirer.is_active && (acquirer.supports_pix || acquirer.supports_credit_card || acquirer.supports_boleto)
@@ -389,6 +319,7 @@ export default function AdminAcquirers() {
     const cashoutCount = acquirers.filter((acquirer) => acquirer.is_active && acquirer.supports_pix_out).length;
     const primaryAcquirer = acquirers.find((acquirer) => acquirer.is_primary);
     const orderedAcquirers = [...acquirers].sort((a, b) => a.priority - b.priority);
+    const visibleAcquirers = orderedAcquirers.filter((acquirer) => acquirer.is_active);
 
     const formatFee = (percent?: number, fixed?: number) => {
       const parts: string[] = [];
@@ -399,67 +330,6 @@ export default function AdminAcquirers() {
         parts.push(`R$ ${Number(fixed).toFixed(2).replace('.', ',')}`);
       }
       return parts.length ? parts.join(' + ') : 'Sem taxa';
-    };
-
-    const supportsMethod = (acquirer: Acquirer, method: RotationMethod): boolean => {
-      if (method === 'pix') {
-        return acquirer.supports_pix;
-      }
-
-      if (method === 'pix_out') {
-        return acquirer.supports_pix_out;
-      }
-
-      if (method === 'credit_card') {
-        return acquirer.supports_credit_card;
-      }
-
-      return acquirer.supports_boleto;
-    };
-
-    const updateMethodStrategy = (method: RotationMethod, strategy: RotationStrategy) => {
-      setRoutingForm((prev) => {
-        if (!prev) return prev;
-
-        return {
-          ...prev,
-          methods: {
-            ...prev.methods,
-            [method]: {
-              ...prev.methods[method],
-              strategy,
-            },
-          },
-        };
-      });
-    };
-
-    const updateMethodWeight = (method: RotationMethod, acquirerKey: string, weight: number) => {
-      setRoutingForm((prev) => {
-        if (!prev) return prev;
-
-        return {
-          ...prev,
-          methods: {
-            ...prev.methods,
-            [method]: {
-              ...prev.methods[method],
-              weights: {
-                ...prev.methods[method].weights,
-                [acquirerKey]: weight,
-              },
-            },
-          },
-        };
-      });
-    };
-
-    const saveRoutingSettings = () => {
-      if (!routingForm) {
-        return;
-      }
-
-      saveRoutingSettingsMutation.mutate(routingForm);
     };
 
     const handleAcquirerDrop = (targetAcquirerId: string) => {
@@ -554,160 +424,6 @@ export default function AdminAcquirers() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-gray-200 bg-white p-5">
-        <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-gray-900">Roteamento de adquirentes</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Separe as regras de cashin e cashout, defina prioridade ou peso e confira a ordem real antes de salvar.
-            </p>
-          </div>
-          <button
-            onClick={saveRoutingSettings}
-            disabled={!routingForm || saveRoutingSettingsMutation.isPending}
-            className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saveRoutingSettingsMutation.isPending ? 'Salvando...' : 'Salvar roteamento'}
-          </button>
-        </div>
-
-        {isRoutingLoading || !routingForm ? (
-          <div className="rounded-md border border-gray-100 bg-gray-50 px-4 py-6 text-sm text-gray-500">
-            Carregando configurações de rotação...
-          </div>
-        ) : (
-          <>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              <label className="flex items-center gap-2 rounded-md border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-900">
-                <input
-                  type="checkbox"
-                  checked={routingForm.enabled}
-                  onChange={(e) => setRoutingForm({ ...routingForm, enabled: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-200 text-green-700 focus:ring-green-500"
-                />
-                Roteamento ativo
-              </label>
-
-              <label className="flex items-center gap-2 rounded-md border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-900">
-                <input
-                  type="checkbox"
-                  checked={routingForm.failover_enabled}
-                  onChange={(e) => setRoutingForm({ ...routingForm, failover_enabled: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-200 text-green-700 focus:ring-green-500"
-                />
-                Failover habilitado
-              </label>
-
-              <label className="flex items-center gap-2 rounded-md border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-900">
-                <input
-                  type="checkbox"
-                  checked={routingForm.strict_health_check}
-                  onChange={(e) => setRoutingForm({ ...routingForm, strict_health_check: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-200 text-green-700 focus:ring-green-500"
-                />
-                Health check estrito
-              </label>
-
-              <label className="flex items-center gap-2 rounded-md border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-900">
-                <input
-                  type="checkbox"
-                  checked={routingForm.use_cooldown}
-                  onChange={(e) => setRoutingForm({ ...routingForm, use_cooldown: e.target.checked })}
-                  className="h-4 w-4 rounded border-gray-200 text-green-700 focus:ring-green-500"
-                />
-                Cooldown automático
-              </label>
-
-              <label className="rounded-md border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-900">
-                Cooldown (segundos)
-                <input
-                  type="number"
-                  min={5}
-                  max={3600}
-                  value={routingForm.cooldown_seconds}
-                  onChange={(e) =>
-                    setRoutingForm({
-                      ...routingForm,
-                      cooldown_seconds: Math.min(3600, Math.max(5, Number(e.target.value) || 5)),
-                    })
-                  }
-                  className="mt-1 w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                />
-              </label>
-            </div>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              {rotationMethods.map((method) => {
-                const methodConfig = routingForm.methods[method];
-                const methodPreview = routingData?.preview?.[method];
-                const methodAcquirers = acquirers.filter((acquirer) => supportsMethod(acquirer, method));
-
-                return (
-                  <div key={method} className="rounded-md border border-gray-100 bg-gray-50 p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-semibold text-gray-900">{methodLabel[method]}</h3>
-                      <select
-                        value={methodConfig.strategy}
-                        onChange={(e) => updateMethodStrategy(method, e.target.value as RotationStrategy)}
-                        className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-900 focus:border-gray-400 focus:outline-none"
-                      >
-                        <option value="priority">Prioridade</option>
-                        <option value="round_robin">Round Robin</option>
-                        <option value="weighted">Peso (Weighted)</option>
-                      </select>
-                    </div>
-
-                    {methodConfig.strategy === 'weighted' && (
-                      <div className="mb-3 space-y-2">
-                        {methodAcquirers.length === 0 ? (
-                          <p className="text-xs text-gray-500">Nenhum adquirente ativo para este método.</p>
-                        ) : (
-                          methodAcquirers.map((acquirer) => (
-                            <div key={`${method}-${acquirer.id}`} className="flex items-center justify-between gap-3">
-                              <span className="text-xs text-gray-600">{acquirer.display_name}</span>
-                              <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={methodConfig.weights[acquirer.slug] ?? 1}
-                                onChange={(e) => updateMethodWeight(method, acquirer.slug, Math.max(0, Number(e.target.value) || 0))}
-                                className="w-20 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-900 focus:border-gray-400 focus:outline-none"
-                              />
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    )}
-
-                    <div className="rounded-lg border border-gray-200 bg-white p-3">
-                      <p className="text-xs font-medium text-gray-600">Ordem atual de roteamento</p>
-                      {methodPreview?.order?.length ? (
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {methodPreview.order.map((key, index) => (
-                            <span
-                              key={`${method}-order-${key}-${index}`}
-                              className={`rounded-md px-2 py-1 text-xs ${
-                                index === 0
-                                  ? 'bg-emerald-500/15 text-emerald-700'
-                                  : 'bg-gray-50 text-gray-500'
-                              }`}
-                            >
-                              {index + 1}. {acquirerNameBySlug[key] || key}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-xs text-gray-500">Sem adquirentes elegíveis para este método.</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </section>
-
       {/* Acquirers List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
@@ -720,19 +436,49 @@ export default function AdminAcquirers() {
         </div>
       ) : (
         <section className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900">Prioridade das adquirentes</h2>
+              <h2 className="text-sm font-semibold text-gray-900">
+                Adquirentes ativos
+                <span className="ml-2 text-xs font-normal text-gray-500">
+                  ({visibleAcquirers.length})
+                </span>
+              </h2>
               <p className="mt-0.5 text-xs text-gray-500">Arraste para mudar a ordem de fallback.</p>
             </div>
-            {reorderMutation.isPending && (
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-                Salvando ordem...
-              </span>
-            )}
+            <div className="flex items-center gap-2">
+              {reorderMutation.isPending && (
+                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                  Salvando ordem...
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowAllModal(true)}
+                className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100"
+              >
+                Todos os adquirentes ({acquirers.length})
+              </button>
+            </div>
           </div>
 
-          {orderedAcquirers.map((acquirer, index) => (
+          {visibleAcquirers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-gray-200 bg-white py-12">
+              <CreditCardIcon className="h-10 w-10 text-gray-400" />
+              <p className="mt-3 text-sm text-gray-500">Nenhum adquirente ativo no momento.</p>
+              <button
+                type="button"
+                onClick={() => setShowAllModal(true)}
+                className="mt-3 rounded-lg bg-accent-primary px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-accent-hover"
+              >
+                Ativar adquirentes ({acquirers.length})
+              </button>
+            </div>
+          ) : null}
+
+          {visibleAcquirers.map((acquirer) => {
+            const index = orderedAcquirers.findIndex((item) => item.id === acquirer.id);
+            return (
             <div
               key={acquirer.id}
               draggable
@@ -910,7 +656,8 @@ export default function AdminAcquirers() {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </section>
       )}
 
@@ -926,7 +673,111 @@ export default function AdminAcquirers() {
           isSaving={updateMutation.isPending}
         />
       )}
+
+      {/* All Acquirers Modal */}
+      {showAllModal && (
+        <AllAcquirersModal
+          acquirers={orderedAcquirers}
+          onClose={() => setShowAllModal(false)}
+          onToggle={(id, is_active) => toggleStatusMutation.mutate({ id, is_active })}
+          isToggling={toggleStatusMutation.isPending}
+        />
+      )}
     </AdminPageShell>
+  );
+}
+
+function AllAcquirersModal({
+  acquirers,
+  onClose,
+  onToggle,
+  isToggling,
+}: {
+  acquirers: Acquirer[];
+  onClose: () => void;
+  onToggle: (id: string, is_active: boolean) => void;
+  isToggling: boolean;
+}) {
+  const activeCount = acquirers.filter((a) => a.is_active).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-xl bg-white shadow-xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Todos os adquirentes</h2>
+            <p className="text-sm text-gray-500">
+              Ative um adquirente para ele aparecer na tela principal. {activeCount} de {acquirers.length} ativos.
+            </p>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-2 overflow-y-auto px-6 py-4">
+          {acquirers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <CreditCardIcon className="h-10 w-10 text-gray-400" />
+              <p className="mt-3 text-sm text-gray-500">Nenhum adquirente cadastrado.</p>
+            </div>
+          ) : (
+            acquirers.map((acquirer) => (
+              <div
+                key={acquirer.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white p-3"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  {acquirer.logo_url ? (
+                    <img src={acquirer.logo_url} alt={acquirer.name} className="h-9 w-9 rounded-md object-contain" />
+                  ) : (
+                    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gray-50">
+                      <CreditCardIcon className="h-4 w-4 text-gray-500" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-gray-900">{acquirer.display_name}</p>
+                    <p className="truncate text-xs text-gray-500">{acquirer.slug}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`text-xs font-medium ${
+                      acquirer.is_active ? 'text-emerald-600' : 'text-gray-400'
+                    }`}
+                  >
+                    {acquirer.is_active ? 'Ativo' : 'Inativo'}
+                  </span>
+                  <button
+                    onClick={() => onToggle(acquirer.id, !acquirer.is_active)}
+                    disabled={isToggling}
+                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
+                      acquirer.is_active ? 'bg-emerald-500' : 'bg-gray-300'
+                    }`}
+                    title={acquirer.is_active ? 'Desativar' : 'Ativar'}
+                  >
+                    <span
+                      className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                        acquirer.is_active ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="border-t border-gray-200 px-6 py-4">
+          <button
+            onClick={onClose}
+            className="w-full rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+          >
+            Concluído
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

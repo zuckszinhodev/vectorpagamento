@@ -60,7 +60,7 @@ export default function AcquirersPage() {
     },
   });
 
-  const acquirers = data || [];
+  const acquirers = (data || []).filter((acquirer) => acquirer.is_active);
 
   useEffect(() => {
     setItems([...acquirers].sort((a, b) => a.priority - b.priority));
@@ -167,7 +167,7 @@ export default function AcquirersPage() {
       <section className="overflow-hidden rounded-xl border border-border-DEFAULT bg-surface-card shadow-sm">
         <div className="flex flex-col gap-3 border-b border-border-DEFAULT px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-base font-semibold text-tx-primary">Fila de processamento</h2>
+            <h2 className="text-base font-semibold text-tx-primary">Fila de adquirência</h2>
             <p className="mt-1 text-sm text-tx-muted">Arraste para definir a prioridade real usada nas tentativas do checkout.</p>
           </div>
           <div className="inline-flex w-fit items-center gap-2 rounded-md border border-border-DEFAULT bg-surface-hover px-3 py-1.5 text-xs font-semibold text-tx-secondary">

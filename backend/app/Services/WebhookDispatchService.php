@@ -23,7 +23,7 @@ class WebhookDispatchService
     public function dispatchPaymentEvent(string $event, Charge $charge): void
     {
         $webhooks = Webhook::where('account_id', $charge->account_id)
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->get();
 
         if ($webhooks->isEmpty()) {
@@ -45,7 +45,7 @@ class WebhookDispatchService
     public function dispatchPaymentEventSync(string $event, Charge $charge): void
     {
         $webhooks = Webhook::where('account_id', $charge->account_id)
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->get();
 
         if ($webhooks->isEmpty()) {

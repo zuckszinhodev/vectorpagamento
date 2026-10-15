@@ -113,7 +113,7 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
   const [chargeStatusForm, setChargeStatusForm] = useState({
     status: '',
     reason: '',
-    mfa_code: '',
+    reason_code: 'customer_dispute',
   });
 
   useEffect(() => {
@@ -284,20 +284,21 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
 
   const openChargeDetail = (charge: any) => {
     setSelectedCharge(charge);
-    setChargeStatusForm({ status: charge.status || 'pending', reason: '', mfa_code: '' });
+    setChargeStatusForm({ status: charge.status || 'pending', reason: '', reason_code: 'customer_dispute' });
     setShowChargeDetailModal(true);
   };
 
   const updateChargeStatusMutation = useMutation({
-    mutationFn: async ({ chargeId, status, reason, mfa_code }: { chargeId: string; status: string; reason: string; mfa_code: string }) => {
-      const response = await api.post(`/admin/charges/${chargeId}/status`, { status, reason, mfa_code });
+    mutationFn: async ({ chargeId, status, reason, reason_code }: { chargeId: string; status: string; reason: string; reason_code?: string }) => {
+      const response = await api.post(`/admin/charges/${chargeId}/status`, { status, reason, reason_code });
       return response.data;
     },
     onSuccess: (_, variables) => {
-      toast.success('Status da transacao atualizado.');
+      toast.success(variables.status === 'chargeback' ? 'Disputa de chargeback aberta.' : 'Status da transacao atualizado.');
       queryClient.invalidateQueries({ queryKey: ['admin-charges'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-chargebacks'] });
       setSelectedCharge((current: any) => current ? { ...current, status: variables.status, updated_at: new Date().toISOString() } : current);
-      setChargeStatusForm({ status: variables.status, reason: '', mfa_code: '' });
+      setChargeStatusForm({ status: variables.status, reason: '', reason_code: 'customer_dispute' });
     },
     onError: (error: any) => {
       const message = error?.response?.data?.message || error?.response?.data?.error?.message || 'Erro ao atualizar status da transacao.';
@@ -1321,7 +1322,7 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                       chargeId: selectedCharge.id,
                       status: chargeStatusForm.status,
                       reason: chargeStatusForm.reason,
-                      mfa_code: chargeStatusForm.mfa_code,
+                      reason_code: chargeStatusForm.status === 'chargeback' ? chargeStatusForm.reason_code : undefined,
                     });
                   }}
                   className="rounded-md border border-gray-200 bg-white p-4 shadow-sm"
@@ -1342,24 +1343,37 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                       ))}
                     </select>
                   </label>
+                  {chargeStatusForm.status === 'chargeback' && (
+                    <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                      <p className="text-sm font-semibold text-red-800">Abrir disputa de chargeback</p>
+                      <p className="mt-1 text-xs leading-5 text-red-700">
+                        O valor será bloqueado no saldo do vendedor e a disputa ficará disponível para envio de evidências.
+                      </p>
+                      <label className="mt-3 block">
+                        <span className="mb-1 block text-xs font-medium text-red-800">Origem da disputa</span>
+                        <select
+                          value={chargeStatusForm.reason_code}
+                          onChange={(event) => setChargeStatusForm((current) => ({ ...current, reason_code: event.target.value }))}
+                          className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-100"
+                        >
+                          <option value="customer_dispute">Contestação do cliente</option>
+                          <option value="fraud">Compra não reconhecida</option>
+                          <option value="product_not_received">Produto não recebido</option>
+                          <option value="product_not_as_described">Produto diferente do anunciado</option>
+                          <option value="duplicate_charge">Cobrança duplicada</option>
+                          <option value="other">Outro motivo</option>
+                        </select>
+                      </label>
+                    </div>
+                  )}
                   <label className="mb-3 block">
                     <span className="mb-1 block text-xs font-medium text-gray-500">Motivo</span>
                     <textarea
                       value={chargeStatusForm.reason}
                       onChange={(event) => setChargeStatusForm((current) => ({ ...current, reason: event.target.value }))}
                       rows={3}
-                      placeholder="Descreva o motivo da alteracao"
+                      placeholder={chargeStatusForm.status === 'chargeback' ? 'Descreva a contestação do cliente' : 'Descreva o motivo da alteracao'}
                       className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
-                    />
-                  </label>
-                  <label className="mb-4 block">
-                    <span className="mb-1 block text-xs font-medium text-gray-500">Codigo 2FA</span>
-                    <input
-                      value={chargeStatusForm.mfa_code}
-                      onChange={(event) => setChargeStatusForm((current) => ({ ...current, mfa_code: event.target.value.replace(/\D/g, '').slice(0, 6) }))}
-                      inputMode="numeric"
-                      maxLength={6}
-                      className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm tracking-widest focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-100"
                     />
                   </label>
                   <button
@@ -1367,12 +1381,13 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                     disabled={
                       updateChargeStatusMutation.isPending ||
                       chargeStatusForm.status === selectedCharge.status ||
-                      chargeStatusForm.reason.trim().length < 8 ||
-                      chargeStatusForm.mfa_code.length !== 6
+                      chargeStatusForm.reason.trim().length < 8
                     }
                     className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    {updateChargeStatusMutation.isPending ? 'Atualizando...' : 'Salvar status'}
+                    {updateChargeStatusMutation.isPending
+                      ? (chargeStatusForm.status === 'chargeback' ? 'Abrindo disputa...' : 'Atualizando...')
+                      : (chargeStatusForm.status === 'chargeback' ? 'Abrir disputa' : 'Salvar status')}
                   </button>
                 </form>
 

@@ -35,10 +35,9 @@ import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import { Link, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
-import OrderBumpsPanel from '@/components/checkout-builder/OrderBumpsPanel';
-import UpsellsPanel from '@/components/checkout-builder/UpsellsPanel';
 import { ModernSplitCheckout } from '@/components/checkout/ModernSplitCheckout';
 import { ClassicCheckoutPreview } from '@/components/checkout/ClassicCheckoutPreview';
+import CheckoutSettingsPanel, { type CheckoutExtraSettings } from '@/components/checkout-builder/CheckoutSettingsPanel';
 
 // Types
 interface CheckoutBlock {
@@ -111,6 +110,8 @@ interface CheckoutSettings {
     socialProofInterval: number;
   };
   blocks: CheckoutBlock[];
+  /** Configurações da aba Config: textos, campos, pós-pagamento, SEO, mobile. */
+  extra?: CheckoutExtraSettings;
 }
 
 // Block Configuration
@@ -127,13 +128,16 @@ const blockConfig: Record<BlockType, { name: string; icon: any; description: str
     description: 'Imagem, nome e preço',
     defaultSettings: { showImage: true, showDescription: true, showOriginalPrice: true }
   },
-  timer: { 
-    name: 'Contador', 
-    icon: ClockIcon, 
+  timer: {
+    name: 'Contador',
+    icon: ClockIcon,
     description: 'Timer de urgência',
-    defaultSettings: { 
-      message: 'Oferta expira em:', 
+    defaultSettings: {
+      message: 'Oferta expira em:',
       style: 'banner',
+      // 'duration' reinicia a cada visitante; 'deadline' conta até uma data fixa.
+      mode: 'duration',
+      expiresAt: '',
       hours: 0,
       minutes: 15,
       seconds: 0
@@ -278,9 +282,119 @@ const blockConfig: Record<BlockType, { name: string; icon: any; description: str
       openInNewTab: true,
       borderRadius: 'lg',
       maxHeight: 300,
+      // Formato e enquadramento
+      aspectRatio: 'auto',
+      objectFit: 'cover',
+      objectPosition: 'center',
+      // Largura e alinhamento dentro da coluna
+      width: 'full',
+      widthPercent: 100,
+      align: 'center',
+      // Moldura
+      showCard: true,
+      padding: 8,
     }
   },
 };
+
+/** Tipos de bloco que têm painel próprio e não usam o editor genérico. */
+const HAS_DEDICATED_EDITOR = ['banner', 'timer'];
+
+/** Teto do arquivo enviado, antes do redimensionamento. */
+const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Maior dimensão guardada para a logo. No checkout ela é exibida com ~36px de
+ * altura; 2x isso já cobre telas retina, e qualquer coisa além é peso morto
+ * carregado por todo cliente que abre a página de pagamento.
+ */
+const LOGO_MAX_DIMENSION = 400;
+
+/**
+ * Reduz a logo antes do upload. SVG passa direto — é vetor, não tem pixel para
+ * redimensionar. Se algo falhar na conversão, devolve o arquivo original em vez
+ * de bloquear o envio.
+ */
+async function shrinkLogo(file: File): Promise<File> {
+  if (file.type === 'image/svg+xml') return file;
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, LOGO_MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size < 200 * 1024) return file;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+
+    const context = canvas.getContext('2d');
+    if (!context) return file;
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+    // PNG preserva transparência, essencial para logo sobre fundo claro/escuro.
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) return file;
+
+    return new File([blob], 'logo.png', { type: 'image/png' });
+  } catch {
+    return file;
+  }
+}
+
+/**
+ * Campos de texto que na verdade são enumerações. Sem isto o painel pedia que
+ * o usuário digitasse "banner" ou "bottom-left" de cabeça.
+ */
+const FIELD_OPTIONS: Record<string, { value: string; label: string }[]> = {
+  style: [
+    { value: 'banner', label: 'Faixa' },
+    { value: 'badge', label: 'Etiqueta' },
+    { value: 'inline', label: 'Em linha' },
+  ],
+  position: [
+    { value: 'bottom-left', label: 'Inferior esquerda' },
+    { value: 'bottom-right', label: 'Inferior direita' },
+    { value: 'top-left', label: 'Superior esquerda' },
+    { value: 'top-right', label: 'Superior direita' },
+  ],
+  type: [
+    { value: 'digital', label: 'Digital' },
+    { value: 'physical', label: 'Físico' },
+  ],
+};
+
+/** Números que ficam melhores como slider do que como caixa de digitação. */
+const FIELD_RANGES: Record<string, { min: number; max: number; step?: number }> = {
+  hours: { min: 0, max: 23 },
+  minutes: { min: 0, max: 59 },
+  seconds: { min: 0, max: 59 },
+  days: { min: 1, max: 90 },
+  count: { min: 1, max: 50 },
+  displayTime: { min: 2, max: 30 },
+  intervalTime: { min: 5, max: 120, step: 5 },
+  maxHeight: { min: 80, max: 800, step: 10 },
+};
+
+/** Espelha o mapa usado pelos componentes de checkout, para a prévia bater. */
+const BANNER_RADIUS: Record<string, string> = {
+  none: '0px',
+  sm: '4px',
+  md: '6px',
+  lg: '8px',
+  xl: '12px',
+  '2xl': '16px',
+};
+
+/** Proporções oferecidas ao banner; `auto` respeita a imagem original. */
+export const BANNER_ASPECT_RATIOS = [
+  { value: 'auto', label: 'Original', css: undefined },
+  { value: '21/9', label: 'Ultra-wide 21:9', css: '21 / 9' },
+  { value: '16/9', label: 'Widescreen 16:9', css: '16 / 9' },
+  { value: '4/1', label: 'Faixa 4:1', css: '4 / 1' },
+  { value: '3/1', label: 'Faixa 3:1', css: '3 / 1' },
+  { value: '4/3', label: 'Clássico 4:3', css: '4 / 3' },
+  { value: '1/1', label: 'Quadrado 1:1', css: '1 / 1' },
+] as const;
 
 // Default settings
 const defaultSettings: CheckoutSettings = {
@@ -381,7 +495,7 @@ function SortableBlock({
       onClick={onSelect}
       className={`group flex items-center justify-between rounded-card border-2 p-3 transition-all cursor-pointer ${
         isSelected
-          ? 'border-emerald-500 bg-accent-subtle0/10'
+          ? 'border-emerald-500 bg-emerald-500/10'
           : block.enabled
           ? 'border-border-DEFAULT bg-surface-card hover:border-emerald-300'
           : 'border-border-DEFAULT bg-surface-page opacity-60'
@@ -391,18 +505,18 @@ function SortableBlock({
         <button
           {...attributes}
           {...listeners}
-          className="cursor-grab text-tx-muted hover:text-tx-secondary active:cursor-grabbing"
+          className="cursor-grab text-white/55 hover:text-white/85 active:cursor-grabbing"
         >
           <Bars3Icon className="h-5 w-5" />
         </button>
-        <div className={`rounded-lg p-2 ${isSelected ? 'bg-accent-subtle0/20' : 'bg-surface-hover'}`}>
-          <Icon className={`h-4 w-4 ${isSelected ? 'text-accent-primary' : 'text-tx-muted'}`} />
+        <div className={`rounded-lg p-2 ${isSelected ? 'bg-emerald-500/20' : 'bg-surface-hover'}`}>
+          <Icon className={`h-4 w-4 ${isSelected ? 'text-accent-primary' : 'text-white/55'}`} />
         </div>
         <div>
           <span className={`font-medium ${isSelected ? 'text-accent-primary' : 'text-tx-primary'}`}>
             {config.name}
           </span>
-          <p className="text-xs text-tx-muted">{config.description}</p>
+          <p className="text-xs text-white/55">{config.description}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -427,7 +541,7 @@ function SortableBlock({
               e.stopPropagation();
               onRemove();
             }}
-            className="rounded p-1 text-tx-muted opacity-0 transition-opacity hover:bg-surface-hover hover:text-status-error group-hover:opacity-100"
+            className="rounded p-1 text-white/55 opacity-0 transition-opacity hover:bg-surface-hover hover:text-status-error group-hover:opacity-100"
           >
             <TrashIcon className="h-4 w-4" />
           </button>
@@ -448,12 +562,12 @@ function AvailableBlock({ type, onAdd }: { type: BlockType; onAdd: () => void })
       className="flex items-center gap-2 rounded-element border border-dashed border-border-DEFAULT p-2 text-left transition-all hover:border-emerald-400 hover:bg-accent-subtle"
     >
       <div className="rounded bg-surface-hover p-1.5">
-        <Icon className="h-4 w-4 text-tx-muted" />
+        <Icon className="h-4 w-4 text-white/55" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-tx-secondary truncate">{config.name}</p>
+        <p className="text-sm font-medium text-white/85 truncate">{config.name}</p>
       </div>
-      <PlusIcon className="h-4 w-4 text-tx-muted" />
+      <PlusIcon className="h-4 w-4 text-white/55" />
     </button>
   );
 }
@@ -463,12 +577,12 @@ function ClassicBuilderPlaceholder() {
   return (
     <div className="text-center py-12 px-10 bg-surface-card rounded-xl border-2 border-dashed border-border-DEFAULT max-w-[760px] w-full">
       <div className="mb-4">
-        <svg className="mx-auto h-16 w-16 text-tx-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="mx-auto h-16 w-16 text-white/55" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       </div>
       <h3 className="text-lg font-semibold text-tx-primary mb-2">Template Clássico</h3>
-      <p className="text-sm text-tx-muted max-w-md mx-auto">
+      <p className="text-sm text-white/55 max-w-md mx-auto">
         O checkout clássico será exibido na página final. Use o botão "Visualizar" no topo para ver o checkout completo em uma nova aba.
       </p>
     </div>
@@ -590,13 +704,14 @@ function BlockSettingsPanel({
   const renderField = (key: string, value: any, label: string) => {
     if (typeof value === 'boolean') {
       return (
-        <div key={key} className="flex items-center justify-between">
-          <label className="text-sm font-medium text-tx-muted">{label}</label>
+        // Interruptor é rótulo + switch na horizontal: ocupa a linha inteira.
+        <div key={key} className="col-span-2 flex items-center justify-between">
+          <label className="text-sm font-medium text-white/55">{label}</label>
           <Switch
             checked={value}
             onChange={(checked) => onUpdateBlock({ ...block.settings, [key]: checked })}
             className={`${
-              value ? 'bg-accent-primary' : 'bg-gray-600'
+              value ? 'bg-accent-primary' : 'bg-white/10'
             } relative inline-flex h-5 w-9 items-center rounded-full transition-colors`}
           >
             <span className={`${value ? 'translate-x-5' : 'translate-x-1'} inline-block h-3 w-3 transform rounded-full bg-surface-card transition-transform`} />
@@ -604,29 +719,101 @@ function BlockSettingsPanel({
         </div>
       );
     }
-    if (typeof value === 'string') {
+    // Campo de cor: amostra clicável + hex editável lado a lado.
+    if (typeof value === 'string' && /color$/i.test(key)) {
+      const hex = /^#[0-9a-f]{6}$/i.test(value) ? value : '#000000';
       return (
         <div key={key}>
-          <label className="block text-sm font-medium text-tx-muted mb-1">{label}</label>
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => onUpdateBlock({ ...block.settings, [key]: e.target.value })}
-            className="input"
-          />
+          <label className="block text-sm font-medium text-white/55 mb-1">{label}</label>
+          <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/30 p-1.5">
+            <input
+              type="color"
+              value={hex}
+              onChange={(e) => onUpdateBlock({ ...block.settings, [key]: e.target.value })}
+              className="h-7 w-7 flex-shrink-0 cursor-pointer rounded border-0 bg-transparent p-0"
+              style={{ appearance: 'none' }}
+            />
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => onUpdateBlock({ ...block.settings, [key]: e.target.value })}
+              className="min-w-0 flex-1 bg-transparent font-mono text-xs uppercase text-white outline-none"
+              placeholder="#000000"
+            />
+          </div>
         </div>
       );
     }
-    if (typeof value === 'number') {
+
+    // Campo com opções conhecidas vira seletor em vez de texto livre.
+    const options = FIELD_OPTIONS[key];
+    if (typeof value === 'string' && options) {
       return (
         <div key={key}>
-          <label className="block text-sm font-medium text-tx-muted mb-1">{label}</label>
-          <input
-            type="number"
+          <label className="block text-sm font-medium text-white/55 mb-1">{label}</label>
+          <select
             value={value}
-            onChange={(e) => onUpdateBlock({ ...block.settings, [key]: Number(e.target.value) })}
+            onChange={(e) => onUpdateBlock({ ...block.settings, [key]: e.target.value })}
             className="input"
-          />
+          >
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+
+    if (typeof value === 'string') {
+      const isLong = key === 'message' || key === 'description';
+      return (
+        <div key={key} className={isLong ? 'col-span-2' : undefined}>
+          <label className="block text-sm font-medium text-white/55 mb-1">{label}</label>
+          {isLong ? (
+            <textarea
+              rows={2}
+              value={value}
+              onChange={(e) => onUpdateBlock({ ...block.settings, [key]: e.target.value })}
+              className="input resize-y"
+            />
+          ) : (
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => onUpdateBlock({ ...block.settings, [key]: e.target.value })}
+              className="input"
+            />
+          )}
+        </div>
+      );
+    }
+
+    if (typeof value === 'number') {
+      const range = FIELD_RANGES[key];
+      return (
+        <div key={key}>
+          <label className="block text-sm font-medium text-white/55 mb-1">
+            {label}
+            {range && <span className="ml-1 font-normal text-white/45">— {value}</span>}
+          </label>
+          {range ? (
+            <input
+              type="range"
+              min={range.min}
+              max={range.max}
+              step={range.step ?? 1}
+              value={value}
+              onChange={(e) => onUpdateBlock({ ...block.settings, [key]: Number(e.target.value) })}
+              className="w-full accent-emerald-500"
+            />
+          ) : (
+            <input
+              type="number"
+              value={value}
+              onChange={(e) => onUpdateBlock({ ...block.settings, [key]: Number(e.target.value) })}
+              className="input"
+            />
+          )}
         </div>
       );
     }
@@ -635,7 +822,7 @@ function BlockSettingsPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 pb-2 border-b border-gray-700">
+      <div className="flex items-center gap-2 pb-2 border-b border-white/10">
         {(() => {
           const Icon = config.icon;
           return <Icon className="h-5 w-5 text-emerald-400" />;
@@ -643,20 +830,28 @@ function BlockSettingsPanel({
         <h3 className="font-semibold text-white">{config.name}</h3>
       </div>
       
-      {Object.entries(block.settings).map(([key, value]) => {
-        if (Array.isArray(value)) return null;
-        if (skipFields.includes(key)) return null;
-        return renderField(key, value, fieldLabels[key] || key);
-      })}
+      {/*
+        Blocos com editor próprio não passam pelo painel genérico — senão as
+        mesmas opções apareciam duas vezes, a segunda com o nome cru da chave.
+      */}
+      {!HAS_DEDICATED_EDITOR.includes(block.type) && (
+        <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+          {Object.entries(block.settings).map(([key, value]) => {
+            if (Array.isArray(value)) return null;
+            if (skipFields.includes(key)) return null;
+            return renderField(key, value, fieldLabels[key] || key);
+          })}
+        </div>
+      )}
 
       {/* Header Logo Configuration */}
       {block.type === 'header' && block.settings.showLogo && (
-        <div className="pt-4 border-t border-gray-700">
-          <label className="block text-sm font-medium text-tx-muted mb-2">Logo</label>
+        <div className="pt-4 border-t border-white/10">
+          <label className="block text-sm font-medium text-white/55 mb-2">Logo</label>
           
           {/* Logo Preview */}
           {block.settings.logoUrl && (
-            <div className="mb-3 p-2 bg-gray-800 rounded-lg">
+            <div className="mb-3 p-2 bg-black/30 rounded-lg">
               <img 
                 src={block.settings.logoUrl} 
                 alt="Logo preview" 
@@ -679,36 +874,53 @@ function BlockSettingsPanel({
             />
             
             <div className="flex items-center gap-2">
-              <div className="flex-1 border-t border-gray-700"></div>
-              <span className="text-xs text-tx-muted">ou</span>
-              <div className="flex-1 border-t border-gray-700"></div>
+              <div className="flex-1 border-t border-white/10"></div>
+              <span className="text-xs text-white/55">ou</span>
+              <div className="flex-1 border-t border-white/10"></div>
             </div>
             
             {/* File Upload */}
-            <label className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg cursor-pointer transition-colors">
+            <label className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg cursor-pointer transition-colors">
               <CloudArrowUpIcon className="h-5 w-5 text-emerald-400" />
-              <span className="text-sm text-tx-muted">Fazer upload</span>
+              <span className="text-sm text-white/55">Fazer upload</span>
               <input
                 type="file"
                 accept="image/*"
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
+                  e.target.value = ''; // permite reenviar o mesmo arquivo
                   if (!file) return;
-                  
-                  // Check file size (max 2MB)
-                  if (file.size > 2 * 1024 * 1024) {
-                    toast.error('Imagem muito grande. Máximo 2MB');
+
+                  if (!/^image\/(png|jpe?g|webp|svg\+xml)$/.test(file.type)) {
+                    toast.error('Use PNG, JPG, WEBP ou SVG.');
                     return;
                   }
-                  
-                  // Convert to base64 for preview (in production, upload to server)
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    const base64 = event.target?.result as string;
-                    onUpdateBlock({ ...block.settings, logoUrl: base64 });
-                    toast.success('Logo carregada!');
-                  };
-                  reader.readAsDataURL(file);
+                  if (file.size > LOGO_MAX_BYTES) {
+                    toast.error(`Imagem muito grande. Máximo ${LOGO_MAX_BYTES / 1024 / 1024}MB.`);
+                    return;
+                  }
+
+                  const toastId = toast.loading('Enviando logo...');
+                  try {
+                    const optimized = await shrinkLogo(file);
+                    const form = new FormData();
+                    form.append('file', optimized, optimized.name);
+                    form.append('folder', 'logos');
+
+                    const response = await api.post('/upload', form, {
+                      headers: { 'Content-Type': undefined },
+                    });
+                    const url = response.data?.data?.url || response.data?.url;
+                    if (!url) throw new Error('Upload sem URL de retorno');
+
+                    onUpdateBlock({ ...block.settings, logoUrl: url });
+                    toast.success('Logo enviada!', { id: toastId });
+                  } catch (error: any) {
+                    toast.error(
+                      error?.response?.data?.error?.message || error?.message || 'Falha ao enviar a logo',
+                      { id: toastId },
+                    );
+                  }
                 }}
                 className="hidden"
               />
@@ -724,15 +936,18 @@ function BlockSettingsPanel({
               </button>
             )}
           </div>
-          <p className="text-xs text-tx-muted mt-2">PNG ou JPG, máximo 2MB</p>
+          <p className="text-xs text-white/55 mt-2">
+            PNG, JPG, WEBP ou SVG — até 2MB. A imagem é reduzida para {LOGO_MAX_DIMENSION}px
+            automaticamente, para não pesar no carregamento do checkout.
+          </p>
         </div>
       )}
 
       {/* Bonus Items Management */}
       {block.type === 'bonus' && block.settings.items && (
-        <div className="pt-4 border-t border-gray-700">
+        <div className="pt-4 border-t border-white/10">
           <div className="flex items-center justify-between mb-3">
-            <label className="text-sm font-medium text-tx-muted">Itens do Bônus</label>
+            <label className="text-sm font-medium text-white/55">Itens do Bônus</label>
             <button
               onClick={() => {
                 const newItem = { name: 'Novo Bônus', value: 'R$ 0,00' };
@@ -749,9 +964,9 @@ function BlockSettingsPanel({
           </div>
           <div className="space-y-3">
             {block.settings.items.map((item: any, index: number) => (
-              <div key={index} className="rounded-lg bg-gray-800 p-3 space-y-2">
+              <div key={index} className="rounded-lg bg-black/30 p-3 space-y-2">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-tx-muted">Item {index + 1}</span>
+                  <span className="text-xs font-medium text-white/55">Item {index + 1}</span>
                   <button
                     onClick={() => {
                       const newItems = block.settings.items.filter((_: any, i: number) => i !== index);
@@ -792,9 +1007,9 @@ function BlockSettingsPanel({
 
       {/* Benefits Items Management */}
       {block.type === 'benefits' && block.settings.items && (
-        <div className="pt-4 border-t border-gray-700">
+        <div className="pt-4 border-t border-white/10">
           <div className="flex items-center justify-between mb-3">
-            <label className="text-sm font-medium text-tx-muted">Benefícios</label>
+            <label className="text-sm font-medium text-white/55">Benefícios</label>
             <button
               onClick={() => {
                 const newItem = { icon: 'check', text: 'Novo benefício' };
@@ -811,9 +1026,9 @@ function BlockSettingsPanel({
           </div>
           <div className="space-y-3">
             {block.settings.items.map((item: any, index: number) => (
-              <div key={index} className="rounded-lg bg-gray-800 p-3 space-y-2">
+              <div key={index} className="rounded-lg bg-black/30 p-3 space-y-2">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-tx-muted">Benefício {index + 1}</span>
+                  <span className="text-xs font-medium text-white/55">Benefício {index + 1}</span>
                   <button
                     onClick={() => {
                       const newItems = block.settings.items.filter((_: any, i: number) => i !== index);
@@ -843,9 +1058,9 @@ function BlockSettingsPanel({
 
       {/* Testimonials Items Management */}
       {block.type === 'testimonials' && block.settings.items && (
-        <div className="pt-4 border-t border-gray-700">
+        <div className="pt-4 border-t border-white/10">
           <div className="flex items-center justify-between mb-3">
-            <label className="text-sm font-medium text-tx-muted">Depoimentos</label>
+            <label className="text-sm font-medium text-white/55">Depoimentos</label>
             <button
               onClick={() => {
                 const newItem = { name: 'Cliente', avatar: '', rating: 5, text: 'Depoimento...' };
@@ -862,9 +1077,9 @@ function BlockSettingsPanel({
           </div>
           <div className="space-y-3">
             {block.settings.items.map((item: any, index: number) => (
-              <div key={index} className="rounded-lg bg-gray-800 p-3 space-y-2">
+              <div key={index} className="rounded-lg bg-black/30 p-3 space-y-2">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-tx-muted">Depoimento {index + 1}</span>
+                  <span className="text-xs font-medium text-white/55">Depoimento {index + 1}</span>
                   <button
                     onClick={() => {
                       const newItems = block.settings.items.filter((_: any, i: number) => i !== index);
@@ -876,7 +1091,7 @@ function BlockSettingsPanel({
                   </button>
                 </div>
                 <div>
-                  <label className="text-xs text-tx-muted mb-1 block">Nome</label>
+                  <label className="text-xs text-white/55 mb-1 block">Nome</label>
                   <input
                     type="text"
                     placeholder="Nome do cliente"
@@ -890,7 +1105,7 @@ function BlockSettingsPanel({
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-tx-muted mb-1 block">Depoimento</label>
+                  <label className="text-xs text-white/55 mb-1 block">Depoimento</label>
                   <textarea
                     placeholder="Texto do depoimento..."
                     value={item.text}
@@ -904,7 +1119,7 @@ function BlockSettingsPanel({
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-tx-muted mb-1 block">Estrelas (1-5)</label>
+                  <label className="text-xs text-white/55 mb-1 block">Estrelas (1-5)</label>
                   <input
                     type="number"
                     min="1"
@@ -921,7 +1136,7 @@ function BlockSettingsPanel({
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-tx-muted mb-1 block">URL da Foto de Perfil</label>
+                  <label className="text-xs text-white/55 mb-1 block">URL da Foto de Perfil</label>
                   <input
                     type="text"
                     placeholder="https://..."
@@ -942,9 +1157,9 @@ function BlockSettingsPanel({
 
       {/* FAQ Items Management */}
       {block.type === 'faq' && block.settings.items && (
-        <div className="pt-4 border-t border-gray-700">
+        <div className="pt-4 border-t border-white/10">
           <div className="flex items-center justify-between mb-3">
-            <label className="text-sm font-medium text-tx-muted">Perguntas e Respostas</label>
+            <label className="text-sm font-medium text-white/55">Perguntas e Respostas</label>
             <button
               onClick={() => {
                 const newItem = { question: 'Nova pergunta?', answer: 'Resposta aqui...' };
@@ -961,9 +1176,9 @@ function BlockSettingsPanel({
           </div>
           <div className="space-y-3">
             {block.settings.items.map((item: any, index: number) => (
-              <div key={index} className="rounded-lg bg-gray-800 p-3 space-y-2">
+              <div key={index} className="rounded-lg bg-black/30 p-3 space-y-2">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-medium text-tx-muted">Pergunta {index + 1}</span>
+                  <span className="text-xs font-medium text-white/55">Pergunta {index + 1}</span>
                   <button
                     onClick={() => {
                       const newItems = block.settings.items.filter((_: any, i: number) => i !== index);
@@ -975,7 +1190,7 @@ function BlockSettingsPanel({
                   </button>
                 </div>
                 <div>
-                  <label className="text-xs text-tx-muted mb-1 block">Pergunta</label>
+                  <label className="text-xs text-white/55 mb-1 block">Pergunta</label>
                   <input
                     type="text"
                     placeholder="Digite a pergunta..."
@@ -989,7 +1204,7 @@ function BlockSettingsPanel({
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-tx-muted mb-1 block">Resposta</label>
+                  <label className="text-xs text-white/55 mb-1 block">Resposta</label>
                   <textarea
                     placeholder="Digite a resposta..."
                     value={item.answer}
@@ -1010,9 +1225,9 @@ function BlockSettingsPanel({
 
       {/* Social Proof Configuration */}
       {block.type === 'social_proof' && (
-        <div className="pt-4 border-t border-gray-700 space-y-4">
+        <div className="pt-4 border-t border-white/10 space-y-4">
           <div>
-            <label className="text-xs text-tx-muted mb-1 block">Posição da Notificação</label>
+            <label className="text-xs text-white/55 mb-1 block">Posição da Notificação</label>
             <select
               value={block.settings.position || 'bottom-left'}
               onChange={(e) => onUpdateBlock({ ...block.settings, position: e.target.value })}
@@ -1026,7 +1241,7 @@ function BlockSettingsPanel({
           </div>
 
           <div className="flex items-center justify-between mb-3">
-            <label className="text-sm font-medium text-tx-muted">Nomes para Notificações</label>
+            <label className="text-sm font-medium text-white/55">Nomes para Notificações</label>
             <button
               onClick={() => {
                 const newNames = [...(block.settings.names || []), 'Novo Nome'];
@@ -1065,9 +1280,9 @@ function BlockSettingsPanel({
             ))}
           </div>
 
-          <div className="pt-3 border-t border-gray-700">
+          <div className="pt-3 border-t border-white/10">
             <div className="flex items-center justify-between mb-3">
-              <label className="text-sm font-medium text-tx-muted">Métodos de Pagamento</label>
+              <label className="text-sm font-medium text-white/55">Métodos de Pagamento</label>
               <button
                 onClick={() => {
                   const newMethods = [...(block.settings.paymentMethods || []), 'Novo Método'];
@@ -1107,18 +1322,18 @@ function BlockSettingsPanel({
             </div>
           </div>
 
-          <div className="pt-3 border-t border-gray-700 rounded-lg bg-gray-800 p-3">
-            <p className="text-xs text-tx-muted mb-2">Preview da notificação:</p>
+          <div className="pt-3 border-t border-white/10 rounded-lg bg-black/30 p-3">
+            <p className="text-xs text-white/55 mb-2">Preview da notificação:</p>
             <div className="bg-surface-card rounded-lg p-3">
               <p className="text-sm text-tx-primary">
                 <span className="font-semibold">{block.settings.names?.[0] || 'João Silva'}</span>
                 {' '}comprou{' '}
                 <span className="text-accent-primary font-medium">este produto</span>
                 {block.settings.showPaymentMethod && (
-                  <span className="text-tx-secondary"> com {block.settings.paymentMethods?.[0] || 'PIX'}</span>
+                  <span className="text-white/85"> com {block.settings.paymentMethods?.[0] || 'PIX'}</span>
                 )}
               </p>
-              <p className="text-xs text-tx-muted mt-1">Agora mesmo</p>
+              <p className="text-xs text-white/55 mt-1">Agora mesmo</p>
             </div>
           </div>
         </div>
@@ -1126,11 +1341,11 @@ function BlockSettingsPanel({
 
       {/* Shipping Configuration */}
       {block.type === 'shipping' && (
-        <div className="pt-4 border-t border-gray-700 space-y-4">
+        <div className="pt-4 border-t border-white/10 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-tx-muted mb-2">Tipo de Produto</label>
+            <label className="block text-sm font-medium text-white/55 mb-2">Tipo de Produto</label>
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm text-tx-muted cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-white/55 cursor-pointer">
                 <input
                   type="radio"
                   name="productType"
@@ -1143,11 +1358,11 @@ function BlockSettingsPanel({
                       message: '📧 Entrega imediata por e-mail após confirmação'
                     });
                   }}
-                  className="h-4 w-4 border-gray-600 bg-gray-700 text-accent-primary focus:ring-emerald-500"
+                  className="h-4 w-4 border-gray-600 bg-white/5 text-accent-primary focus:ring-emerald-500"
                 />
                 📧 Produto Digital
               </label>
-              <label className="flex items-center gap-2 text-sm text-tx-muted cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-white/55 cursor-pointer">
                 <input
                   type="radio"
                   name="productType"
@@ -1161,7 +1376,7 @@ function BlockSettingsPanel({
                       shippingPrice: 0
                     });
                   }}
-                  className="h-4 w-4 border-gray-600 bg-gray-700 text-accent-primary focus:ring-emerald-500"
+                  className="h-4 w-4 border-gray-600 bg-white/5 text-accent-primary focus:ring-emerald-500"
                 />
                 📦 Produto Físico
               </label>
@@ -1169,16 +1384,16 @@ function BlockSettingsPanel({
           </div>
 
           {block.settings.type === 'physical' && (
-            <div className="space-y-3 rounded-lg bg-gray-800 p-3">
+            <div className="space-y-3 rounded-lg bg-black/30 p-3">
               <h4 className="text-sm font-semibold text-white">Informações de Frete</h4>
               
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-tx-muted">Frete Grátis</label>
+                <label className="text-sm font-medium text-white/55">Frete Grátis</label>
                 <Switch
                   checked={block.settings.freeShipping || false}
                   onChange={(checked) => onUpdateBlock({ ...block.settings, freeShipping: checked })}
                   className={`${
-                    block.settings.freeShipping ? 'bg-accent-primary' : 'bg-gray-600'
+                    block.settings.freeShipping ? 'bg-accent-primary' : 'bg-white/10'
                   } relative inline-flex h-5 w-9 items-center rounded-full transition-colors`}
                 >
                   <span className={`${block.settings.freeShipping ? 'translate-x-5' : 'translate-x-1'} inline-block h-3 w-3 transform rounded-full bg-surface-card transition-transform`} />
@@ -1187,7 +1402,7 @@ function BlockSettingsPanel({
 
               {!block.settings.freeShipping && (
                 <div>
-                  <label className="block text-sm font-medium text-tx-muted mb-1">Valor do Frete (R$)</label>
+                  <label className="block text-sm font-medium text-white/55 mb-1">Valor do Frete (R$)</label>
                   <input
                     type="number"
                     min="0"
@@ -1212,68 +1427,396 @@ function BlockSettingsPanel({
 
       {/* Banner Configuration */}
       {block.type === 'banner' && (
-        <div className="pt-4 border-t border-gray-700 space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-tx-muted mb-1">URL da Imagem</label>
-            <input
-              type="text"
-              value={block.settings.imageUrl || ''}
-              onChange={(e) => onUpdateBlock({ ...block.settings, imageUrl: e.target.value })}
-              className="input"
-              placeholder="https://exemplo.com/banner.jpg"
+        <BannerEditor settings={block.settings} onUpdate={onUpdateBlock} />
+      )}
+
+      {block.type === 'timer' && (
+        <TimerEditor settings={block.settings} onUpdate={onUpdateBlock} />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+//  EDITOR DO BANNER
+// ============================================================
+function BannerEditor({
+  settings,
+  onUpdate,
+}: {
+  settings: Record<string, any>;
+  onUpdate: (next: Record<string, any>) => void;
+}) {
+  const set = (patch: Record<string, any>) => onUpdate({ ...settings, ...patch });
+
+  const ratio = BANNER_ASPECT_RATIOS.find((r) => r.value === (settings.aspectRatio || 'auto'));
+  const isContained = settings.width === 'custom';
+
+  const Group = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div>
+      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/55">{label}</label>
+      {children}
+    </div>
+  );
+
+  /** Botões segmentados — mais rápido que select para 2-4 opções. */
+  const Segmented = ({
+    value,
+    options,
+    onChange,
+  }: {
+    value: string;
+    options: { value: string; label: string }[];
+    onChange: (v: string) => void;
+  }) => (
+    <div className="flex rounded-lg border border-white/10 bg-black/30 p-0.5">
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange(opt.value)}
+          className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all ${
+            value === opt.value ? 'bg-white/10 text-white' : 'text-white/55 hover:text-white'
+          }`}
+        >
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="space-y-4 border-t border-white/10 pt-4">
+      <Group label="Imagem">
+        <input
+          type="text"
+          value={settings.imageUrl || ''}
+          onChange={(e) => set({ imageUrl: e.target.value })}
+          className="input"
+          placeholder="https://exemplo.com/banner.jpg"
+        />
+      </Group>
+
+      {/* Pré-visualização com o enquadramento real aplicado */}
+      {settings.imageUrl && (
+        <div className="rounded-lg border border-white/10 bg-black/30 p-2">
+          <div
+            style={{
+              width: isContained ? `${settings.widthPercent ?? 100}%` : '100%',
+              marginLeft: settings.align === 'center' ? 'auto' : settings.align === 'right' ? 'auto' : undefined,
+              marginRight: settings.align === 'center' ? 'auto' : settings.align === 'left' ? 'auto' : undefined,
+            }}
+          >
+            <img
+              src={settings.imageUrl}
+              alt={settings.altText || 'Banner'}
+              className="w-full"
+              style={{
+                aspectRatio: ratio?.css,
+                objectFit: settings.objectFit || 'cover',
+                objectPosition: settings.objectPosition || 'center',
+                borderRadius: BANNER_RADIUS[settings.borderRadius || 'lg'] ?? BANNER_RADIUS.lg,
+                maxHeight: ratio?.css ? undefined : `${settings.maxHeight || 300}px`,
+              }}
+              onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden'; }}
             />
           </div>
+        </div>
+      )}
 
-          {block.settings.imageUrl && (
-            <div className="rounded-lg bg-gray-800 p-2">
-              <img
-                src={block.settings.imageUrl}
-                alt={block.settings.altText || 'Banner'}
-                className="w-full object-cover rounded-md"
-                style={{ maxHeight: `${block.settings.maxHeight || 300}px` }}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-              />
-            </div>
-          )}
+      <div className="grid grid-cols-2 gap-3">
+        <Group label="Formato">
+          <select
+            value={settings.aspectRatio || 'auto'}
+            onChange={(e) => set({ aspectRatio: e.target.value })}
+            className="input"
+          >
+            {BANNER_ASPECT_RATIOS.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+        </Group>
 
-          <div>
-            <label className="block text-sm font-medium text-tx-muted mb-1">Link ao Clicar (opcional)</label>
-            <input
-              type="text"
-              value={block.settings.linkUrl || ''}
-              onChange={(e) => onUpdateBlock({ ...block.settings, linkUrl: e.target.value })}
-              className="input"
-              placeholder="https://..."
-            />
-          </div>
+        <Group label="Arredondamento">
+          <select
+            value={settings.borderRadius || 'lg'}
+            onChange={(e) => set({ borderRadius: e.target.value })}
+            className="input"
+          >
+            <option value="none">Nenhum</option>
+            <option value="sm">Pequeno</option>
+            <option value="md">Médio</option>
+            <option value="lg">Grande</option>
+            <option value="xl">Extra grande</option>
+            <option value="2xl">Máximo</option>
+          </select>
+        </Group>
+      </div>
 
-          <div>
-            <label className="block text-sm font-medium text-tx-muted mb-1">Altura Máxima (px)</label>
-            <input
-              type="number"
-              min="50"
-              max="800"
-              value={block.settings.maxHeight || 300}
-              onChange={(e) => onUpdateBlock({ ...block.settings, maxHeight: Number(e.target.value) })}
-              className="input w-24"
-            />
-          </div>
+      {/* Altura máxima só faz sentido quando não há proporção fixa */}
+      {!ratio?.css && (
+        <Group label={`Altura máxima — ${settings.maxHeight || 300}px`}>
+          <input
+            type="range"
+            min={80}
+            max={800}
+            step={10}
+            value={settings.maxHeight || 300}
+            onChange={(e) => set({ maxHeight: Number(e.target.value) })}
+            className="w-full accent-emerald-500"
+          />
+        </Group>
+      )}
 
-          <div>
-            <label className="block text-sm font-medium text-tx-muted mb-1">Arredondamento</label>
+      <div className="grid grid-cols-2 gap-3">
+        <Group label="Enquadramento">
+          <Segmented
+            value={settings.objectFit || 'cover'}
+            onChange={(v) => set({ objectFit: v })}
+            options={[
+              { value: 'cover', label: 'Preencher' },
+              { value: 'contain', label: 'Caber' },
+            ]}
+          />
+        </Group>
+
+        {settings.objectFit !== 'contain' ? (
+          <Group label="Foco do corte">
             <select
-              value={block.settings.borderRadius || 'lg'}
-              onChange={(e) => onUpdateBlock({ ...block.settings, borderRadius: e.target.value })}
+              value={settings.objectPosition || 'center'}
+              onChange={(e) => set({ objectPosition: e.target.value })}
               className="input"
             >
-              <option value="none">Nenhum</option>
-              <option value="sm">Pequeno</option>
-              <option value="md">Médio</option>
-              <option value="lg">Grande</option>
-              <option value="xl">Extra Grande</option>
-              <option value="2xl">2x Grande</option>
+              <option value="top">Topo</option>
+              <option value="center">Centro</option>
+              <option value="bottom">Base</option>
+              <option value="left">Esquerda</option>
+              <option value="right">Direita</option>
             </select>
-          </div>
+          </Group>
+        ) : (
+          <div />
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Group label="Largura">
+          <Segmented
+            value={settings.width || 'full'}
+            onChange={(v) => set({ width: v })}
+            options={[
+              { value: 'full', label: 'Total' },
+              { value: 'custom', label: 'Livre' },
+            ]}
+          />
+        </Group>
+
+        {isContained ? (
+          <Group label="Alinhamento">
+            <Segmented
+              value={settings.align || 'center'}
+              onChange={(v) => set({ align: v })}
+              options={[
+                { value: 'left', label: '◀' },
+                { value: 'center', label: '◆' },
+                { value: 'right', label: '▶' },
+              ]}
+            />
+          </Group>
+        ) : (
+          <div />
+        )}
+      </div>
+
+      {isContained && (
+        <Group label={`Largura da imagem — ${settings.widthPercent ?? 100}%`}>
+          <input
+            type="range"
+            min={30}
+            max={100}
+            step={5}
+            value={settings.widthPercent ?? 100}
+            onChange={(e) => set({ widthPercent: Number(e.target.value) })}
+            className="w-full accent-emerald-500"
+          />
+        </Group>
+      )}
+
+      <label className="flex cursor-pointer items-center gap-2">
+        <input
+          type="checkbox"
+          checked={settings.showCard !== false}
+          onChange={(e) => set({ showCard: e.target.checked })}
+          className="accent-emerald-500"
+        />
+        <span className="text-sm text-white/85">Moldura de card ao redor</span>
+      </label>
+
+      <Group label="Texto alternativo">
+        <input
+          type="text"
+          value={settings.altText || ''}
+          onChange={(e) => set({ altText: e.target.value })}
+          className="input"
+          placeholder="Descrição da imagem"
+        />
+      </Group>
+
+      <Group label="Link ao clicar (opcional)">
+        <input
+          type="text"
+          value={settings.linkUrl || ''}
+          onChange={(e) => set({ linkUrl: e.target.value })}
+          className="input"
+          placeholder="https://..."
+        />
+      </Group>
+
+      {settings.linkUrl && (
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            checked={settings.openInNewTab !== false}
+            onChange={(e) => set({ openInNewTab: e.target.checked })}
+            className="accent-emerald-500"
+          />
+          <span className="text-sm text-white/85">Abrir em nova aba</span>
+        </label>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+//  EDITOR DO CONTADOR
+// ============================================================
+function TimerEditor({
+  settings,
+  onUpdate,
+}: {
+  settings: Record<string, any>;
+  onUpdate: (next: Record<string, any>) => void;
+}) {
+  const set = (patch: Record<string, any>) => onUpdate({ ...settings, ...patch });
+  const isDeadline = settings.mode === 'deadline';
+
+  // `datetime-local` trabalha em horário local sem fuso; o valor é guardado em
+  // ISO com fuso para o checkout calcular certo em qualquer máquina.
+  const localValue = (() => {
+    if (!settings.expiresAt) return '';
+    const date = new Date(settings.expiresAt);
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  })();
+
+  const expired = isDeadline && settings.expiresAt && new Date(settings.expiresAt).getTime() <= Date.now();
+
+  return (
+    <div className="space-y-4 border-t border-white/10 pt-4">
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/55">
+          Mensagem
+        </label>
+        <input
+          type="text"
+          value={settings.message || ''}
+          onChange={(e) => set({ message: e.target.value })}
+          className="input"
+          placeholder="Oferta expira em:"
+        />
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/55">
+          Estilo
+        </label>
+        <select
+          value={settings.style || 'banner'}
+          onChange={(e) => set({ style: e.target.value })}
+          className="input"
+        >
+          <option value="banner">Faixa</option>
+          <option value="badge">Etiqueta</option>
+          <option value="inline">Em linha</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/55">
+          Tipo de contagem
+        </label>
+        <div className="flex rounded-lg border border-white/10 bg-black/30 p-0.5">
+          {[
+            { value: 'duration', label: 'Duração' },
+            { value: 'deadline', label: 'Data limite' },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => set({ mode: opt.value })}
+              className={`flex-1 rounded-md px-2 py-1.5 text-xs font-medium transition-all ${
+                (settings.mode || 'duration') === opt.value
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/55 hover:text-white'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1 text-[11px] text-white/55">
+          {isDeadline
+            ? 'Conta até uma data e hora fixas. Igual para todo mundo.'
+            : 'Reinicia para cada visitante que abre a página.'}
+        </p>
+      </div>
+
+      {isDeadline ? (
+        <div>
+          <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-white/55">
+            Expira em
+          </label>
+          <input
+            type="datetime-local"
+            value={localValue}
+            onChange={(e) => {
+              const value = e.target.value;
+              set({ expiresAt: value ? new Date(value).toISOString() : '' });
+            }}
+            className="input"
+          />
+          {expired && (
+            <p className="mt-1 text-[11px] font-medium text-amber-400">
+              Esta data já passou — o contador aparece como expirado.
+            </p>
+          )}
+          {!settings.expiresAt && (
+            <p className="mt-1 text-[11px] text-white/55">Sem data definida, o contador não aparece.</p>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { key: 'hours', label: 'Horas', max: 23 },
+            { key: 'minutes', label: 'Min', max: 59 },
+            { key: 'seconds', label: 'Seg', max: 59 },
+          ].map((field) => (
+            <div key={field.key}>
+              <label className="mb-1 block text-[11px] font-medium text-white/55">{field.label}</label>
+              <input
+                type="number"
+                min={0}
+                max={field.max}
+                value={settings[field.key] ?? 0}
+                onChange={(e) => {
+                  const n = Math.max(0, Math.min(field.max, Number(e.target.value) || 0));
+                  set({ [field.key]: n });
+                }}
+                className="input text-center"
+              />
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1358,7 +1901,14 @@ export default function CheckoutBuilderPage() {
 
     const loadCheckout = async () => {
       setIsLoading(true);
-      
+
+      // Trocar de checkout sem sair da página mantinha o componente montado, e
+      // os merges abaixo partem do estado anterior: blocos e tema do checkout
+      // antigo sobreviviam quando o novo não trazia os seus. Zera a base.
+      setSettings(defaultSettings);
+      setSelectedBlockId(null);
+      setCheckoutSlug(null);
+
       // Buscar do localStorage primeiro
       try {
         const savedCheckouts = JSON.parse(localStorage.getItem('dev_checkouts') || '[]');
@@ -1585,6 +2135,7 @@ export default function CheckoutBuilderPage() {
       theme: settings.theme,
       payment: settings.payment,
       conversion: settings.conversion,
+          extra: settings.extra,
       blocks: settings.blocks,
     };
 
@@ -1613,6 +2164,7 @@ export default function CheckoutBuilderPage() {
             theme: settings.theme,
             payment: settings.payment,
             conversion: settings.conversion,
+          extra: settings.extra,
             blocks: settings.blocks,
           },
         };
@@ -1640,6 +2192,7 @@ export default function CheckoutBuilderPage() {
           theme: settings.theme,
           payment: settings.payment,
           conversion: settings.conversion,
+          extra: settings.extra,
           blocks: settings.blocks,
         },
         theme: settings.theme,
@@ -1690,7 +2243,7 @@ export default function CheckoutBuilderPage() {
       <div className="flex h-screen items-center justify-center bg-[rgb(16,16,16)]">
         <div className="flex flex-col items-center gap-4">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
-          <p className="text-tx-muted">Carregando checkout...</p>
+          <p className="text-white/55">Carregando checkout...</p>
         </div>
       </div>
     );
@@ -1699,84 +2252,80 @@ export default function CheckoutBuilderPage() {
   return (
     <div className="flex h-screen flex-col bg-[rgb(16,16,16)] overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-800 bg-[rgb(22,22,22)] px-3 py-2 sm:px-6 sm:py-3">
-        <div className="flex items-center gap-4">
-          <Link to="/checkouts" className="text-tx-muted hover:text-white transition-colors">
-            <ArrowLeftIcon className="h-5 w-5" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-white/10 bg-[rgb(22,22,22)] px-3 py-2.5 sm:px-5 sm:py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            to="/products"
+            title="Voltar para produtos"
+            className="flex-shrink-0 rounded-lg border border-white/10 p-2 text-white/55 transition-colors hover:bg-white/5 hover:text-white"
+          >
+            <ArrowLeftIcon className="h-4 w-4" />
           </Link>
-          <div>
-            <h1 className="text-lg font-semibold text-white">Checkout Builder</h1>
-            <p className="text-xs text-tx-muted hidden sm:block">Personalize sua página de checkout</p>
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold text-white">Checkout Builder</h1>
+            <p className="hidden truncate text-xs text-white/55 sm:block">
+              {settings.product?.name || 'Personalize sua página de checkout'}
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto sm:overflow-visible">
-          <div className="flex rounded-element border border-[rgb(38,38,38)] bg-[rgb(22,22,22)] p-1 flex-shrink-0">
-            <button
-              onClick={() => setViewMode('desktop')}
-              className={`rounded-md p-2 transition-all ${
-          viewMode === 'desktop'
-            ? 'bg-accent-primary text-white'
-            : 'text-tx-muted hover:text-white'
-              }`}
-            >
-              <ComputerDesktopIcon className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('mobile')}
-              className={`rounded-md p-2 transition-all ${
-          viewMode === 'mobile'
-            ? 'bg-accent-primary text-white'
-            : 'text-tx-muted hover:text-white'
-              }`}
-            >
-              <DevicePhoneMobileIcon className="h-4 w-4" />
-            </button>
+        <div className="flex w-full flex-shrink-0 items-center gap-2 sm:w-auto">
+          {/* Alternador de dispositivo */}
+          <div className="flex flex-shrink-0 rounded-lg border border-white/10 bg-black/30 p-0.5">
+            {[
+              { mode: 'desktop' as const, icon: ComputerDesktopIcon, label: 'Desktop' },
+              { mode: 'mobile' as const, icon: DevicePhoneMobileIcon, label: 'Mobile' },
+            ].map(({ mode, icon: Icon, label }) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                title={label}
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all ${
+                  viewMode === mode ? 'bg-white/10 text-white' : 'text-white/55 hover:text-white'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden lg:inline">{label}</span>
+              </button>
+            ))}
           </div>
 
-          <button 
-            onClick={() => {
-              // Gerar ID único para o preview
-              const previewId = `preview_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-              
-              // Salvar settings no localStorage com o ID
-              localStorage.setItem(`checkout_preview_${previewId}`, JSON.stringify(settings));
-              
-              // Abrir preview em nova aba com o ID
-              const previewUrl = `/checkout-preview?id=${previewId}`;
-              window.open(previewUrl, '_blank');
-            }}
-            className="btn-secondary inline-flex items-center text-xs sm:text-sm whitespace-nowrap flex-shrink-0"
-          >
-            <SparklesIcon className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Preview
-          </button>
+          <div className="ml-auto flex items-center gap-2 sm:ml-0">
+            <button
+              onClick={() => {
+                // Preview usa um id efêmero no localStorage para abrir em outra aba
+                // com as alterações ainda não publicadas.
+                const previewId = `preview_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+                localStorage.setItem(`checkout_preview_${previewId}`, JSON.stringify(settings));
+                window.open(`/checkout-preview?id=${previewId}`, '_blank');
+              }}
+              className="inline-flex flex-shrink-0 items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-white/85 transition-colors hover:bg-white/5 hover:text-white sm:text-sm"
+            >
+              <SparklesIcon className="h-4 w-4" />
+              Preview
+            </button>
 
-          <button onClick={handleSave} className="btn-secondary text-xs sm:text-sm whitespace-nowrap flex-shrink-0">
-            Salvar Rascunho
-          </button>
-
-          <button 
-            onClick={handlePublish} 
-            className="inline-flex items-center gap-1.5 sm:gap-2 rounded-lg bg-gradient-to-r from-emerald-600 to-pink-600 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all whitespace-nowrap flex-shrink-0"
-          >
-            <CloudArrowUpIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Publicar
-          </button>
+            <button
+              onClick={handlePublish}
+              className="inline-flex flex-shrink-0 items-center gap-2 rounded-lg bg-accent-primary px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-accent-primary/25 transition-all hover:bg-accent-hover sm:text-sm"
+            >
+              <CloudArrowUpIcon className="h-4 w-4" />
+              Publicar
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {/* Left Sidebar - Blocks */}
-        <div className="w-full lg:w-80 overflow-y-auto border-b lg:border-b-0 lg:border-r border-gray-800 bg-[rgb(22,22,22)] max-h-[40vh] lg:max-h-none">
+        <div className="w-full lg:w-80 overflow-y-auto border-b lg:border-b-0 lg:border-r border-white/10 bg-[rgb(22,22,22)] max-h-[40vh] lg:max-h-none">
           <Tab.Group selectedIndex={activeTab} onChange={setActiveTab}>
-            <Tab.List className="grid grid-cols-4 border-b border-gray-800">
+            <Tab.List className="grid grid-cols-3 border-b border-white/10">
               {[
                 { icon: CubeIcon, label: 'Blocos' },
                 { icon: SwatchIcon, label: 'Tema' },
-                { icon: GiftIcon, label: 'Bumps' },
-                { icon: BoltIcon, label: 'Upsells' },
+                { icon: Cog6ToothIcon, label: 'Config' },
               ].map((tab, i) => (
                 <Tab
                   key={i}
@@ -1784,7 +2333,7 @@ export default function CheckoutBuilderPage() {
                     `flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-medium transition-all focus:outline-none ${
                       selected
                         ? 'border-b-2 border-emerald-500 text-emerald-400'
-                        : 'text-tx-muted hover:text-tx-muted'
+                        : 'text-white/55 hover:text-white'
                     }`
                   }
                 >
@@ -1799,7 +2348,7 @@ export default function CheckoutBuilderPage() {
               <Tab.Panel className="space-y-4">
                 <div>
                   <h3 className="text-sm font-semibold text-white mb-1">Blocos Ativos</h3>
-                  <p className="text-xs text-tx-muted mb-3">Arraste para reorganizar</p>
+                  <p className="text-xs text-white/55 mb-3">Arraste para reorganizar</p>
 
                   <DndContext
                     sensors={sensors}
@@ -1827,7 +2376,7 @@ export default function CheckoutBuilderPage() {
                     
                     <DragOverlay>
                       {activeBlockId ? (
-                        <div className="rounded-card border-2 border-emerald-500 bg-accent-subtle0/20 p-3 opacity-80">
+                        <div className="rounded-card border-2 border-emerald-500 bg-emerald-500/20 p-3 opacity-80">
                           <div className="flex items-center gap-2">
                             <Bars3Icon className="h-5 w-5 text-accent-primary" />
                             <span className="font-medium text-accent-primary">
@@ -1841,7 +2390,7 @@ export default function CheckoutBuilderPage() {
                 </div>
 
                 {/* Add New Blocks */}
-                <div className="pt-4 border-t border-gray-800">
+                <div className="pt-4 border-t border-white/10">
                   <h3 className="text-sm font-semibold text-white mb-3">Adicionar Bloco</h3>
                   <div className="grid grid-cols-2 gap-2">
                     {availableBlockTypes.map((type) => (
@@ -1860,7 +2409,7 @@ export default function CheckoutBuilderPage() {
                 {/* Template Selection */}
                 <div>
                   <h3 className="text-sm font-semibold text-white">Template do Checkout</h3>
-                  <p className="text-xs text-tx-muted mb-3">Escolha o layout do seu checkout</p>
+                  <p className="text-xs text-white/55 mb-3">Escolha o layout do seu checkout</p>
                   
                   <div className="grid grid-cols-2 gap-3">
                     <button
@@ -1868,13 +2417,13 @@ export default function CheckoutBuilderPage() {
                       className={`relative rounded-lg border-2 p-3 text-left transition-all ${
                         (settings.theme as any).template !== 'modern-split'
                           ? 'border-emerald-500 ring-1 ring-emerald-500/50'
-                          : 'border-gray-700 hover:border-gray-500'
+                          : 'border-white/10 hover:border-gray-500'
                       }`}
                     >
-                      <div className="rounded-md overflow-hidden h-20 mb-2 bg-gray-800">
+                      <div className="rounded-md overflow-hidden h-20 mb-2 bg-black/30">
                         <div className="p-2 space-y-1">
-                          <div className="h-2 w-full bg-gray-600 rounded" />
-                          <div className="h-2 w-3/4 bg-gray-600 rounded" />
+                          <div className="h-2 w-full bg-white/10 rounded" />
+                          <div className="h-2 w-3/4 bg-white/10 rounded" />
                           <div className="h-8 w-full bg-emerald-500 rounded mt-2" />
                         </div>
                       </div>
@@ -1894,17 +2443,17 @@ export default function CheckoutBuilderPage() {
                       className={`relative rounded-lg border-2 p-3 text-left transition-all ${
                         (settings.theme as any).template === 'modern-split'
                           ? 'border-emerald-500 ring-1 ring-emerald-500/50'
-                          : 'border-gray-700 hover:border-gray-500'
+                          : 'border-white/10 hover:border-gray-500'
                       }`}
                     >
-                      <div className="rounded-md overflow-hidden h-20 mb-2 bg-gray-800">
+                      <div className="rounded-md overflow-hidden h-20 mb-2 bg-black/30">
                         <div className="flex gap-1 p-2 h-full">
                           <div className="flex-1 space-y-1">
-                            <div className="h-1.5 w-full bg-gray-600 rounded" />
-                            <div className="h-1.5 w-3/4 bg-gray-600 rounded" />
+                            <div className="h-1.5 w-full bg-white/10 rounded" />
+                            <div className="h-1.5 w-3/4 bg-white/10 rounded" />
                             <div className="h-6 w-full bg-emerald-500 rounded mt-1" />
                           </div>
-                          <div className="w-12 bg-gray-700 rounded" />
+                          <div className="w-12 bg-white/5 rounded" />
                         </div>
                       </div>
                       <p className="text-xs font-medium text-white">Moderno Split</p>
@@ -1922,16 +2471,16 @@ export default function CheckoutBuilderPage() {
 
                 {/* Divider */}
                 <div className="flex items-center gap-2 pt-2">
-                  <div className="flex-1 border-t border-gray-700" />
+                  <div className="flex-1 border-t border-white/10" />
                   <span className="text-[10px] text-gray-500 uppercase tracking-wider">Cores</span>
-                  <div className="flex-1 border-t border-gray-700" />
+                  <div className="flex-1 border-t border-white/10" />
                 </div>
 
                 <h3 className="text-sm font-semibold text-white">Temas Prontos</h3>
-                <p className="text-xs text-tx-muted -mt-2">Selecione um tema para aplicar</p>
+                <p className="text-xs text-white/55 -mt-2">Selecione um tema para aplicar</p>
 
                 <div className="grid grid-cols-2 gap-2">
-                  {[
+                  {([
                     {
                       name: 'Roxo Moderno',
                       preview: { bg: '#f8fafc', card: '#ffffff', primary: '#10b981', secondary: '#6366f1', text: '#1e293b', muted: '#64748b' },
@@ -1972,7 +2521,7 @@ export default function CheckoutBuilderPage() {
                       preview: { bg: '#fef2f2', card: '#ffffff', primary: '#dc2626', secondary: '#ef4444', text: '#1c1917', muted: '#78716c' },
                       theme: { primaryColor: '#dc2626', secondaryColor: '#ef4444', backgroundColor: '#fef2f2', cardBackground: '#ffffff', textColor: '#1c1917', mutedColor: '#78716c', borderRadius: 'lg', fontFamily: 'Montserrat', buttonStyle: 'gradient', shadow: 'lg' },
                     },
-                  ].map((preset) => {
+                  ] as const).map((preset) => {
                     const isActive =
                       settings.theme.primaryColor === preset.theme.primaryColor &&
                       settings.theme.backgroundColor === preset.theme.backgroundColor;
@@ -1991,7 +2540,7 @@ export default function CheckoutBuilderPage() {
                         className={`relative rounded-lg border-2 p-2 text-left transition-all ${
                           isActive
                             ? 'border-emerald-500 ring-1 ring-emerald-500/50'
-                            : 'border-gray-700 hover:border-gray-500'
+                            : 'border-white/10 hover:border-gray-500'
                         }`}
                       >
                         {/* Mini preview */}
@@ -2032,20 +2581,20 @@ export default function CheckoutBuilderPage() {
 
                 {/* Divider */}
                 <div className="flex items-center gap-2 pt-2">
-                  <div className="flex-1 border-t border-gray-700" />
+                  <div className="flex-1 border-t border-white/10" />
                   <span className="text-[10px] text-gray-500 uppercase tracking-wider">Personalizar</span>
-                  <div className="flex-1 border-t border-gray-700" />
+                  <div className="flex-1 border-t border-white/10" />
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-medium text-tx-muted mb-1.5">Cor Principal</label>
+                    <label className="block text-xs font-medium text-white/55 mb-1.5">Cor Principal</label>
                     <div className="flex gap-2">
                       <input
                         type="color"
                         value={settings.theme.primaryColor}
                         onChange={(e) => updateTheme('primaryColor', e.target.value)}
-                        className="h-10 w-12 cursor-pointer rounded-element border border-gray-700 bg-transparent"
+                        className="h-10 w-12 cursor-pointer rounded-element border border-white/10 bg-transparent"
                       />
                       <input
                         type="text"
@@ -2057,13 +2606,13 @@ export default function CheckoutBuilderPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-tx-muted mb-1.5">Cor Secundária</label>
+                    <label className="block text-xs font-medium text-white/55 mb-1.5">Cor Secundária</label>
                     <div className="flex gap-2">
                       <input
                         type="color"
                         value={settings.theme.secondaryColor}
                         onChange={(e) => updateTheme('secondaryColor', e.target.value)}
-                        className="h-10 w-12 cursor-pointer rounded-element border border-gray-700 bg-transparent"
+                        className="h-10 w-12 cursor-pointer rounded-element border border-white/10 bg-transparent"
                       />
                       <input
                         type="text"
@@ -2075,13 +2624,13 @@ export default function CheckoutBuilderPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-tx-muted mb-1.5">Fundo</label>
+                    <label className="block text-xs font-medium text-white/55 mb-1.5">Fundo</label>
                     <div className="flex gap-2">
                       <input
                         type="color"
                         value={settings.theme.backgroundColor}
                         onChange={(e) => updateTheme('backgroundColor', e.target.value)}
-                        className="h-10 w-12 cursor-pointer rounded-element border border-gray-700 bg-transparent"
+                        className="h-10 w-12 cursor-pointer rounded-element border border-white/10 bg-transparent"
                       />
                       <input
                         type="text"
@@ -2093,7 +2642,7 @@ export default function CheckoutBuilderPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-tx-muted mb-1.5">Estilo do Botão</label>
+                    <label className="block text-xs font-medium text-white/55 mb-1.5">Estilo do Botão</label>
                     <select
                       value={settings.theme.buttonStyle}
                       onChange={(e) => updateTheme('buttonStyle', e.target.value)}
@@ -2106,7 +2655,7 @@ export default function CheckoutBuilderPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-tx-muted mb-1.5">Bordas</label>
+                    <label className="block text-xs font-medium text-white/55 mb-1.5">Bordas</label>
                     <select
                       value={settings.theme.borderRadius}
                       onChange={(e) => updateTheme('borderRadius', e.target.value)}
@@ -2123,7 +2672,7 @@ export default function CheckoutBuilderPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-tx-muted mb-1.5">Sombra</label>
+                    <label className="block text-xs font-medium text-white/55 mb-1.5">Sombra</label>
                     <select
                       value={settings.theme.shadow}
                       onChange={(e) => updateTheme('shadow', e.target.value)}
@@ -2138,7 +2687,7 @@ export default function CheckoutBuilderPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-tx-muted mb-1.5">Fonte</label>
+                    <label className="block text-xs font-medium text-white/55 mb-1.5">Fonte</label>
                     <select
                       value={settings.theme.fontFamily}
                       onChange={(e) => updateTheme('fontFamily', e.target.value)}
@@ -2154,26 +2703,12 @@ export default function CheckoutBuilderPage() {
                 </div>
               </Tab.Panel>
 
-              {/* Order Bumps Panel */}
+              {/* Configurações do checkout */}
               <Tab.Panel>
-                {checkoutId ? (
-                  <OrderBumpsPanel checkoutId={checkoutId} availableProducts={availableProducts} />
-                ) : (
-                  <div className="rounded-lg border border-dashed border-gray-700 p-6 text-center">
-                    <p className="text-sm text-tx-muted">Salve o checkout primeiro para gerenciar Order Bumps</p>
-                  </div>
-                )}
-              </Tab.Panel>
-
-              {/* Upsells Panel */}
-              <Tab.Panel>
-                {checkoutId ? (
-                  <UpsellsPanel checkoutId={checkoutId} availableProducts={availableProducts} />
-                ) : (
-                  <div className="rounded-lg border border-dashed border-gray-700 p-6 text-center">
-                    <p className="text-sm text-tx-muted">Salve o checkout primeiro para gerenciar Upsells</p>
-                  </div>
-                )}
+                <CheckoutSettingsPanel
+                  settings={settings}
+                  onChange={(patch) => setSettings((prev) => ({ ...prev, ...patch }))}
+                />
               </Tab.Panel>
             </Tab.Panels>
           </Tab.Group>
@@ -2183,7 +2718,7 @@ export default function CheckoutBuilderPage() {
         <div className="flex-1 overflow-hidden bg-gradient-to-br from-gray-900 via-black to-emerald-900/20">
           {checkoutSlug ? (
             <div className="h-full flex flex-col">
-              <div className="flex items-center justify-between px-4 py-2 bg-black/40 border-b border-gray-800">
+              <div className="flex items-center justify-between px-4 py-2 bg-black/40 border-b border-white/10">
                 <span className="text-xs text-gray-400">Preview ao vivo</span>
                 <button
                   onClick={() => setIframeKey(prev => prev + 1)}
@@ -2231,12 +2766,12 @@ export default function CheckoutBuilderPage() {
 
         {/* Right Sidebar - Block Settings */}
         {selectedBlock && (
-          <div className="w-full lg:w-72 overflow-y-auto border-t lg:border-t-0 lg:border-l border-gray-800 bg-[rgb(22,22,22)] p-4">
+          <div className="w-full lg:w-72 overflow-y-auto border-t lg:border-t-0 lg:border-l border-white/10 bg-[rgb(22,22,22)] p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">Configurar Bloco</h3>
               <button
                 onClick={() => setSelectedBlockId(null)}
-                className="text-tx-muted hover:text-white"
+                className="text-white/55 hover:text-white"
               >
                 <ArrowLeftIcon className="h-4 w-4" />
               </button>

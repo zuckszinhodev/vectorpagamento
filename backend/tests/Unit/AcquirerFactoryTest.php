@@ -66,6 +66,9 @@ it('returns pix acquirer order as array', function () {
 // ── Helper to disable all acquirers in config ────────────────────────────────
 function disableAllAcquirersInConfig(): void
 {
+    // Migrations also seed named aliases; disable the entire catalog before
+    // enabling the providers required by each scenario.
+    AcquirerConfig::query()->update(['enabled' => false]);
     config([
         'acquirers.payfort.enabled'   => false,
         'acquirers.blupay.enabled'    => false,
@@ -75,6 +78,7 @@ function disableAllAcquirersInConfig(): void
         'acquirers.asaas.enabled'     => false,
         'acquirers.huntersub.enabled' => false,
         'acquirers.turbos.enabled'    => false,
+        'acquirers.sharkhubsub.enabled' => false,
     ]);
 }
 

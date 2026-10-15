@@ -2105,6 +2105,20 @@ class PaymentService
      */
     public function refund(Charge $charge, ?int $amount = null): array
     {
+        // Cobranças sintéticas criadas no ambiente local para validar a tela e
+        // o fluxo de estorno nunca devem chegar a uma adquirente real.
+        if (app()->environment(['local', 'testing']) && data_get($charge->metadata, 'source') === 'refund_test') {
+            $refundAmount = $amount ?? $charge->amount;
+            $charge->update([
+                'status' => $refundAmount >= $charge->amount ? 'refunded' : 'partially_refunded',
+                'refunded_amount' => ($charge->refunded_amount ?? 0) + $refundAmount,
+                'refunded_at' => now(),
+            ]);
+            $this->updateWalletOnRefund($charge->fresh(), $refundAmount);
+
+            return ['success' => true, 'refunded_amount' => $refundAmount];
+        }
+
         if (!$this->isConfigured() || !$charge->acquirer_transaction_id) {
             return ['success' => false, 'error' => 'Transação não encontrada'];
         }

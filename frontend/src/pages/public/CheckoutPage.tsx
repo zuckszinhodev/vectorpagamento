@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useThemeStore } from '@/stores/themeStore';
 import { useForm } from 'react-hook-form';
 import { api, formatCurrency } from '@/lib/api';
 import { safeHref } from '@/lib/safeUrl';
+import { prepareCheckoutSubmission } from '@/lib/checkoutSubmission';
 import toast from 'react-hot-toast';
 import QRCode from 'qrcode';
 import DOMPurify from 'dompurify';
@@ -20,6 +21,8 @@ import {
   TruckIcon,
   CreditCardIcon,
   ClipboardDocumentIcon,
+  ExclamationTriangleIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import PixIcon from '@/components/icons/PixIcon';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
@@ -85,6 +88,7 @@ interface CheckoutProduct {
   name: string;
   description: string;
   price: number;
+  currency?: string;
   originalPrice?: number;
   image_url?: string;
 }
@@ -146,6 +150,8 @@ interface CheckoutData {
 }
 
 interface PaymentForm {
+  payment_method?: 'pix' | 'credit_card' | 'boleto';
+  display_amount?: number;
   name: string;
   email: string;
   document: string;
@@ -401,7 +407,86 @@ function SocialProofNotification({
 }
 
 // Success/Result Screens
-function ResultScreen({ result }: { result: PaymentResult }) {
+/**
+ * `embedded` remove o enquadramento de página inteira: usado quando o PIX é
+ * exibido sobre o próprio checkout, sem tirar o cliente da página.
+ */
+/**
+ * Esqueleto exibido enquanto o checkout carrega.
+ *
+ * Reproduz a estrutura do layout dividido (formulário à esquerda, resumo à
+ * direita) para que a troca pelo conteúdo real não empurre nada na tela.
+ */
+function CheckoutSkeleton({ background }: { background: string }) {
+  const Bar = ({ className = '' }: { className?: string }) => (
+    <div className={`skeleton-shimmer rounded-md ${className}`} />
+  );
+
+  const Card = ({ children }: { children: React.ReactNode }) => (
+    <div className="rounded-xl border border-black/5 bg-white p-5 shadow-sm">{children}</div>
+  );
+
+  return (
+    <div className="min-h-screen" style={{ ...LIGHT_MODE_VARS, backgroundColor: background }}>
+      {/* Cabeçalho */}
+      <div className="border-b border-black/5 bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+          <Bar className="h-5 w-40" />
+          <Bar className="h-8 w-8 rounded-full" />
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-6xl px-3 py-4 sm:px-4 sm:py-6 lg:py-10">
+        <div className="grid gap-4 sm:gap-5 lg:grid-cols-12 lg:gap-8">
+          {/* Resumo — primeiro no mobile, como no layout real */}
+          <aside className="lg:order-2 lg:col-span-5">
+            <Card>
+              <div className="flex gap-4">
+                <Bar className="h-20 w-20 flex-shrink-0" />
+                <div className="flex-1 space-y-2 pt-1">
+                  <Bar className="h-3.5 w-full" />
+                  <Bar className="h-3.5 w-2/3" />
+                  <Bar className="h-5 w-24" />
+                </div>
+              </div>
+              <div className="mt-5 space-y-3 border-t border-black/5 pt-4">
+                <Bar className="h-3 w-full" />
+                <Bar className="h-3 w-4/5" />
+                <Bar className="h-6 w-1/2" />
+              </div>
+            </Card>
+          </aside>
+
+          {/* Formulário */}
+          <main className="space-y-4 lg:order-1 lg:col-span-7">
+            <Card>
+              <Bar className="mb-4 h-4 w-32" />
+              <div className="space-y-3">
+                <Bar className="h-11 w-full" />
+                <Bar className="h-11 w-full" />
+                <div className="grid grid-cols-2 gap-3">
+                  <Bar className="h-11 w-full" />
+                  <Bar className="h-11 w-full" />
+                </div>
+              </div>
+            </Card>
+
+            <Card>
+              <Bar className="mb-4 h-4 w-28" />
+              <div className="space-y-2.5">
+                <Bar className="h-14 w-full" />
+                <Bar className="h-14 w-full" />
+              </div>
+              <Bar className="mt-5 h-12 w-full" />
+            </Card>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ResultScreen({ result, embedded = false }: { result: PaymentResult; embedded?: boolean }) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'approved' | 'rejected'>(result.status);
@@ -534,9 +619,16 @@ function ResultScreen({ result }: { result: PaymentResult }) {
 
   if (paymentStatus === 'pending' && pixCode) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4" style={LIGHT_MODE_VARS}>
+      <div
+        className={
+          embedded
+            ? 'w-full'
+            : 'flex min-h-screen flex-col items-center justify-center bg-gray-50 p-4'
+        }
+        style={embedded ? undefined : LIGHT_MODE_VARS}
+      >
         <div className="w-full max-w-md">
-          <div className="rounded-2xl bg-white p-8 shadow-sm border border-gray-200">
+          <div className="rounded-2xl bg-white p-6 sm:p-8 shadow-sm border border-gray-200">
             {/* Header */}
             <div className="text-center mb-8">
               <h1 className="text-xl font-semibold text-gray-900">Pagamento via PIX</h1>
@@ -697,7 +789,8 @@ function ResultScreen({ result }: { result: PaymentResult }) {
 
 // Default blocks if none configured - matches CheckoutBuilderPage defaults
 const defaultBlocks: CheckoutBlock[] = [
-  { id: 'header', type: 'header', enabled: true, settings: { showLogo: true, showSecureBadge: true, title: 'VectorPagamentos' } },
+  // Sem title fixo: vazio faz o checkout cair no nome da plataforma vindo da DB.
+  { id: 'header', type: 'header', enabled: true, settings: { showLogo: true, showSecureBadge: true, title: '' } },
   { id: 'product', type: 'product', enabled: true, settings: { showImage: true, showDescription: true, showOriginalPrice: true } },
   { id: 'urgency', type: 'urgency', enabled: true, settings: { 
     style: 'banner',
@@ -777,12 +870,27 @@ export default function PublicCheckoutPage() {
       return response.data.data;
     },
     enabled: !!slug,
+    // 404 é resposta definitiva (link inválido ou produto inativo): repetir só
+    // atrasa a mensagem para o cliente.
+    retry: (count, err: any) => err?.response?.status !== 404 && count < 2,
   });
 
-  // Update page title with product name
+  // Título e descrição da aba/prévia do link. O que a aba Config define vence;
+  // sem isso, cai no nome do produto.
   useEffect(() => {
-    if (checkout?.product?.name) {
-      document.title = checkout.product.name;
+    const seo = (checkout?.settings as any)?.extra?.seo;
+    const title = seo?.title || checkout?.product?.name;
+    if (title) document.title = title;
+
+    const description = seo?.description;
+    if (description) {
+      let tag = document.querySelector('meta[name="description"]');
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.setAttribute('name', 'description');
+        document.head.appendChild(tag);
+      }
+      tag.setAttribute('content', description);
     }
   }, [checkout]);
 
@@ -892,13 +1000,20 @@ export default function PublicCheckoutPage() {
 
     // Standard Facebook Pixel base code
     const f = window as any;
-    const n = (f.fbq = function (...args: any[]) {
+    type FacebookPixel = ((...args: unknown[]) => void) & {
+      callMethod?: (...args: unknown[]) => void;
+      queue: unknown[][];
+      push?: FacebookPixel;
+      loaded?: boolean;
+      version?: string;
+    };
+    const n = (f.fbq = function (...args: unknown[]) {
       if (n.callMethod) {
         n.callMethod.apply(n, args);
       } else {
         n.queue.push(args);
       }
-    });
+    } as FacebookPixel);
     if (!f._fbq) f._fbq = n;
     n.push = n;
     n.loaded = true;
@@ -955,11 +1070,18 @@ export default function PublicCheckoutPage() {
     },
   });
 
+  // Idempotency key for the current payment attempt — prevents double-click /
+  // network-retry from generating duplicate charges. A fresh key is minted per
+  // user-initiated submit (see onSubmit), so corrected retries still go through.
+  const idempotencyKeyRef = useRef<string>('');
+
   const paymentMutation = useMutation({
     mutationFn: async (data: PaymentForm) => {
-      let payload = data as any;
+      const selectedMethod = data.payment_method ?? paymentMethod;
+      const { display_amount, ...formData } = data;
+      let payload = formData as any;
 
-      if (paymentMethod === 'credit_card' && data.card) {
+      if (selectedMethod === 'credit_card' && data.card) {
         await loadWitetecShieldHelper();
 
         const moduleName = window.ShieldHelper?.getModuleName?.();
@@ -980,7 +1102,7 @@ export default function PublicCheckoutPage() {
           throw new Error('Data de validade inválida');
         }
 
-        const amountInCents = Number(totalWithBumps || 0);
+        const amountInCents = Number(display_amount ?? totalWithBumps ?? 0);
         const installments = Number(data.card.installments || 1);
         const userIP = await getPublicIp();
 
@@ -1011,7 +1133,7 @@ export default function PublicCheckoutPage() {
         });
 
         payload = {
-          ...data,
+          ...formData,
           installments,
           card: {
             number: data.card.number.replace(/\D/g, ''),
@@ -1036,17 +1158,33 @@ export default function PublicCheckoutPage() {
 
       const response = await api.post(`/checkout/${slug}/process`, {
         ...payload,
-        payment_method: paymentMethod,
+        payment_method: selectedMethod,
         affiliate_code: affiliateCode,
         order_bumps: Array.from(selectedBumps),
         fbclid,
         fbp: fbpCookie,
         fbc: fbcCookie,
+      }, {
+        headers: idempotencyKeyRef.current ? { 'X-Idempotency-Key': idempotencyKeyRef.current } : undefined,
       });
       return response.data.data;
     },
     onSuccess: (result) => {
       setPaymentResult(result);
+
+      // Redirecionamento configurado na aba Config. Só para pagamento aprovado
+      // e sem upsell pendente: PIX aguardando precisa continuar na tela com o
+      // código, e sair antes do upsell descartaria a oferta.
+      const postPayment = (checkout?.settings as any)?.extra?.postPayment;
+      if (
+        postPayment?.type === 'url' &&
+        postPayment?.url &&
+        result.status === 'approved' &&
+        !result.has_upsells
+      ) {
+        window.location.href = postPayment.url;
+        return;
+      }
 
       // Check for upsells after successful payment
       if (result.has_upsells && result.charge_id) {
@@ -1069,31 +1207,77 @@ export default function PublicCheckoutPage() {
     },
   });
 
+  /**
+   * Cotação de frete. Em preview não chama a API: o builder ainda não tem
+   * checkout publicado e a chamada só devolveria erro.
+   */
+  const quoteShipping = async (postalCode: string) => {
+    if (isPreview || !slug) return { options: [], reason: 'preview' };
+    const response = await api.post(`/checkout/${slug}/shipping/quote`, { postal_code: postalCode });
+    return {
+      options: response.data?.data?.options ?? [],
+      reason: response.data?.data?.reason ?? null,
+    };
+  };
+
   const onSubmit = (data: PaymentForm) => {
     if (isPreview) {
       toast('Modo preview — pagamento desabilitado', { icon: '👁️' });
       return;
     }
-    paymentMutation.mutate({
-      ...data,
-      card: paymentMethod === 'credit_card' ? data.card : undefined,
-    });
+    // Guard against double submits: ignore while a payment is in-flight.
+    if (paymentMutation.isPending) return;
+    // Fresh idempotency key per user-initiated attempt.
+    idempotencyKeyRef.current =
+      (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `ck_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    paymentMutation.mutate(prepareCheckoutSubmission(data, paymentMethod));
   };
 
   if (isLoading) {
-    // Sem spinner: mostra apenas o fundo do checkout, para a transição do
-    // carregamento para a página ser imperceptível (antes piscava branco).
-    // Em preview o tema chega por postMessage; no load normal usamos o mesmo
-    // default de backgroundColor aplicado ao tema mais abaixo.
+    // Esqueleto no formato real do checkout, em vez de spinner ou tela vazia:
+    // o cliente já vê onde cada coisa vai aparecer e a troca para o conteúdo
+    // real não desloca nada. Em preview o tema chega por postMessage.
     const loadingBackground = builderSettings?.theme?.backgroundColor || '#f8fafc';
-    return <div className="min-h-screen" style={{ ...LIGHT_MODE_VARS, backgroundColor: loadingBackground }} />;
+    return <CheckoutSkeleton background={loadingBackground} />;
   }
 
   if (error || !checkout) {
+    // O backend distingue produto inativo de link inexistente; sem isso o
+    // cliente via "não encontrado" para um produto que só está em rascunho.
+    const code = (error as any)?.response?.data?.error?.code;
+    const inactive = code === 'product_inactive';
+
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4">
-        <h1 className="text-2xl font-bold text-tx-primary">Checkout não encontrado</h1>
-        <p className="mt-2 text-tx-secondary">Este link pode estar expirado ou inválido.</p>
+      <div
+        className="flex min-h-screen flex-col items-center justify-center p-6 text-center"
+        // LIGHT_MODE_VARS só define as variáveis de tema; sem cor explícita o
+        // fundo escuro do app aparecia atrás do card.
+        style={{ ...LIGHT_MODE_VARS, backgroundColor: '#f8fafc' }}
+      >
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+          <div
+            className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
+              inactive ? 'bg-amber-50' : 'bg-gray-100'
+            }`}
+          >
+            {inactive ? (
+              <ExclamationTriangleIcon className="h-7 w-7 text-amber-500" />
+            ) : (
+              <XMarkIcon className="h-7 w-7 text-gray-400" />
+            )}
+          </div>
+
+          <h1 className="mt-5 text-xl font-semibold text-gray-900">
+            {inactive ? 'Produto indisponível' : 'Checkout não encontrado'}
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-gray-500">
+            {inactive
+              ? 'Este produto está inativo no momento e não pode ser comprado. Se você recebeu este link do vendedor, entre em contato com ele.'
+              : 'Este link pode estar expirado ou inválido.'}
+          </p>
+        </div>
       </div>
     );
   }
@@ -1193,7 +1377,13 @@ export default function PublicCheckoutPage() {
     );
   }
 
-  if (paymentResult) {
+  // PIX pendente não troca de página: aparece sobre o checkout, mantendo o
+  // produto e o resumo visíveis atrás. Cartão aprovado/recusado segue para a
+  // tela de resultado, porque aí a compra realmente terminou.
+  const isPendingPix =
+    paymentResult?.status === 'pending' && !!(paymentResult.pix_copy_paste || paymentResult.pix_qr_code);
+
+  if (paymentResult && !isPendingPix) {
     return <ResultScreen result={paymentResult} />;
   }
 
@@ -1210,7 +1400,9 @@ export default function PublicCheckoutPage() {
 
   // Product: merge settings.product (from builder) with checkout.product (live from backend)
   // Live backend product data takes priority for image_url (user may have updated it)
-  const rawProduct = builderSettings?.product || settings.product || checkout.product;
+  const rawProduct = isPreview
+    ? builderSettings?.product || settings.product || checkout.product
+    : checkout.product || settings.product;
   const backendProduct = checkout.product;
   const product = rawProduct ? {
     ...rawProduct,
@@ -1314,12 +1506,29 @@ export default function PublicCheckoutPage() {
     names: socialProofBlock.settings.names || ['João Silva', 'Maria Santos', 'Pedro Oliveira'],
   } : null;
 
+  // Sobreposição do PIX: fica por cima de qualquer template, sem navegar.
+  const pixOverlay = isPendingPix && paymentResult && (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 p-4 backdrop-blur-sm" style={LIGHT_MODE_VARS}>
+      <div className="flex min-h-full items-start justify-center sm:items-center">
+        <ResultScreen result={paymentResult} embedded />
+      </div>
+    </div>
+  );
+
   // Render Modern Split Layout if template is 'modern-split'
   if (template === 'modern-split' && product) {
     return (
+      <>
         <ModernSplitCheckout
           product={product}
           theme={theme}
+          onQuoteShipping={quoteShipping}
+          onApplyCoupon={async (code) => {
+            const response = await api.post(`/checkout/${slug}/coupon`, { code });
+            return response.data.data;
+          }}
+          texts={(settings as any)?.extra?.texts}
+          stickyCta={(settings as any)?.extra?.mobile?.stickyCta === true}
           onSubmit={onSubmit}
           isLoading={paymentMutation.isPending}
           orderBumps={orderBumps}
@@ -1328,12 +1537,15 @@ export default function PublicCheckoutPage() {
           blocks={blocks}
           payment={payment}
           checkoutSettings={{
-            collect_cpf: settings.collect_cpf,
-            collect_phone: settings.collect_phone,
-            collect_address: settings.collect_address,
+
+            collect_cpf: (settings as any)?.extra?.form?.collectCpf ?? settings.collect_cpf,
+            collect_phone: (settings as any)?.extra?.form?.collectPhone ?? settings.collect_phone,
+            collect_address: (settings as any)?.extra?.form?.collectAddress ?? settings.collect_address,
             payment_methods: payment.methods,
           }}
         />
+        {pixOverlay}
+      </>
     );
   }
 
@@ -1616,7 +1828,7 @@ export default function PublicCheckoutPage() {
                       {settings.collect_cpf !== false && (
                         <>
                           <input
-                            {...register('document', { required: settings.collect_cpf !== false ? 'CPF é obrigatório' : false })}
+                            {...register('document', { required: 'CPF é obrigatório' })}
                             type="text"
                             placeholder="CPF"
                             className="w-full border p-3 text-sm focus:outline-none focus:ring-2"

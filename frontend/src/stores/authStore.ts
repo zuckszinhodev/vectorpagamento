@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { authService, type User } from '@/services/api';
+import { authService, type User } from '@/services/api/auth.service';
 
 interface MfaPending {
   mfaToken: string;
@@ -180,7 +180,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (response.data.requires_mfa && response.data.mfa_token) {
             set({
-              mfaPending: { mfaToken: response.data.mfa_token },
+              mfaPending: { mfaToken: response.data.mfa_token, rememberDevice: true },
               isLoading: false,
             });
             return;
@@ -254,6 +254,9 @@ export const useAuthStore = create<AuthState>()(
         try {
           const response = await authService.register(data);
           const { user, token: tokenData } = response.data;
+          if (!user || !tokenData?.access_token) {
+            throw new Error('Resposta de cadastro inválida. Tente entrar novamente.');
+          }
           const accessToken = tokenData.access_token;
 
           // Store token in localStorage for API interceptor

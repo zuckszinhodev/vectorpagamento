@@ -141,7 +141,7 @@ class Coupon extends Model
     // Scope for active coupons
     public function scopeActive($query)
     {
-        return $query->whereRaw('"is_active" = true')
+        return $query->where('is_active', true)
             ->where(function ($q) {
                 $q->whereNull('valid_from')
                   ->orWhere('valid_from', '<=', now());

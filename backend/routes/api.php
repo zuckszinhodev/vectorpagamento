@@ -96,7 +96,11 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
     Route::prefix('checkout')->middleware('throttle:60,1')->group(function () {
         Route::get('/charge/{chargeId}/status', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'checkStatus']);
         Route::get('/{slug}', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'show']);
-        Route::post('/{slug}/process', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'process']);
+        // Cotacao de frete: peso e dimensoes saem do produto, nao do request.
+        Route::post('/{slug}/shipping/quote', [\App\Http\Controllers\Api\V1\ShippingQuoteController::class, 'quote']);
+        Route::post('/{slug}/coupon', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'validateCoupon']);
+        Route::post('/{slug}/process', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'process'])
+            ->middleware('idempotency');
         Route::post('/{slug}/saved-cards', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'lookupSavedCards']);
         // Upsell flow (post-purchase)
         Route::get('/charge/{chargeId}/upsell', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'getUpsell']);
@@ -108,7 +112,8 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
     // Acessado via: https://pay.seudominio.com/api/v1/pay/{slug?}
     Route::prefix('pay')->middleware('resolve.domain')->group(function () {
         Route::get('/{slug?}', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'showByDomain']);
-        Route::post('/{slug}/process', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'process']);
+        Route::post('/{slug}/process', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'process'])
+            ->middleware('idempotency');
     });
 
     // Affiliate validation (public)
@@ -131,6 +136,11 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
     Route::post('webhook', [\App\Http\Controllers\Api\V1\WebhookController::class, 'unified'])
         ->middleware('throttle:120,1');
 
+    // Mensagens recebidas no WhatsApp (bot de atendimento).
+    // Sem auth: o token opaco da URL identifica o provedor e a conta.
+    Route::post('messaging/inbound/{token}', [\App\Http\Controllers\Api\V1\MessagingInboundController::class, 'handle'])
+        ->middleware('throttle:300,1');
+
     // Webhooks por adquirente (legado/compatibilidade)
     Route::prefix('webhooks')->middleware('throttle:120,1')->group(function () {
 
@@ -147,6 +157,13 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
 
     // Public Branding/Appearance (no auth)
     Route::get('/branding', [\App\Http\Controllers\Api\V1\SystemConfigAdminController::class, 'getPublicBranding']);
+
+    // Central de ajuda do comprador (sem auth: quem abre nao tem conta).
+    // Limite baixo de criacao para conter robo; consulta pode ser mais folgada.
+    Route::post('/buyer-support/tickets', [\App\Http\Controllers\Api\V1\BuyerSupportController::class, 'store'])
+        ->middleware('throttle:5,10');
+    Route::post('/buyer-support/tickets/{protocol}', [\App\Http\Controllers\Api\V1\BuyerSupportController::class, 'show'])
+        ->middleware('throttle:30,1');
 
     // KYC Document View (protected via signed URL with expiration)
     Route::get('/kyc/documents/{document}/view', [\App\Http\Controllers\Api\V1\KycController::class, 'viewDocument'])->name('kyc.document.view');
@@ -374,6 +391,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::get('/', [\App\Http\Controllers\Api\V1\NotificationController::class, 'index']);
             Route::get('/unread-count', [\App\Http\Controllers\Api\V1\NotificationController::class, 'unreadCount']);
             Route::post('/read-all', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAllAsRead']);
+            Route::delete('/clear-all', [\App\Http\Controllers\Api\V1\NotificationController::class, 'clearAll']);
             Route::delete('/clear-read', [\App\Http\Controllers\Api\V1\NotificationController::class, 'clearRead']);
             Route::post('/{notificationId}/read', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAsRead']);
             Route::delete('/{notificationId}', [\App\Http\Controllers\Api\V1\NotificationController::class, 'destroy']);
@@ -565,6 +583,13 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::patch('/{id}', [\App\Http\Controllers\Api\V1\SupportTicketAdminController::class, 'update']);
         });
 
+        // Admin: chamados abertos por compradores na central de ajuda publica
+        Route::prefix('admin/buyer-support/tickets')->middleware(['role:admin,owner,support', 'admin.audit', 'admin.rate'])->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\BuyerSupportAdminController::class, 'index']);
+            Route::get('/{id}', [\App\Http\Controllers\Api\V1\BuyerSupportAdminController::class, 'show']);
+            Route::patch('/{id}', [\App\Http\Controllers\Api\V1\BuyerSupportAdminController::class, 'update']);
+        });
+
         // Admin: Fraud Management - SECURITY: Added admin audit logging
         Route::prefix('admin/fraud')->middleware(['role:admin,owner,support,financial,antifraud', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
             Route::get('/dashboard', [\App\Http\Controllers\Api\V1\FraudAdminController::class, 'dashboard']);
@@ -602,6 +627,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::get('/', [\App\Http\Controllers\Api\V1\ChargebackController::class, 'userIndex']);
             Route::get('/{chargebackId}', [\App\Http\Controllers\Api\V1\ChargebackController::class, 'userShow']);
             Route::post('/{chargebackId}/evidence', [\App\Http\Controllers\Api\V1\ChargebackController::class, 'submitEvidence']);
+            Route::get('/{chargebackId}/evidence/{index}', [\App\Http\Controllers\Api\V1\ChargebackController::class, 'downloadEvidence'])->whereNumber('index');
         });
 
         // Admin: Chargebacks - SECURITY: Added admin audit logging
@@ -612,6 +638,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::get('/{chargebackId}', [\App\Http\Controllers\Api\V1\ChargebackController::class, 'show']);
             Route::post('/{chargebackId}/evidence', [\App\Http\Controllers\Api\V1\ChargebackController::class, 'submitEvidence']);
             Route::post('/{chargebackId}/resolve', [\App\Http\Controllers\Api\V1\ChargebackController::class, 'resolve']);
+            Route::get('/{chargebackId}/evidence/{index}', [\App\Http\Controllers\Api\V1\ChargebackController::class, 'downloadEvidence'])->whereNumber('index');
         });
 
         // Admin: Reconciliation - SECURITY: Added admin audit logging
@@ -769,6 +796,18 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
 
             // Logs
             Route::get('/logs', [\App\Http\Controllers\Api\V1\MessagingController::class, 'indexLogs']);
+        });
+
+        // Bot de atendimento (fluxograma ou IA)
+        Route::prefix('bots')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\BotController::class, 'index']);
+            Route::post('/', [\App\Http\Controllers\Api\V1\BotController::class, 'store']);
+            Route::get('/conversations', [\App\Http\Controllers\Api\V1\BotController::class, 'conversations']);
+            Route::post('/inbound-token', [\App\Http\Controllers\Api\V1\BotController::class, 'regenerateInboundToken']);
+            Route::put('/{id}', [\App\Http\Controllers\Api\V1\BotController::class, 'update']);
+            Route::delete('/{id}', [\App\Http\Controllers\Api\V1\BotController::class, 'destroy']);
+            Route::post('/{id}/simulate', [\App\Http\Controllers\Api\V1\BotController::class, 'simulate'])
+                ->middleware('throttle:30,1');
         });
 
         // Marketplace (authenticated - affiliate to products)

@@ -32,7 +32,7 @@ class AuthApiKey
         $hashedKey = hash('sha256', $apiKeyHeader);
 
         $key = ApiKey::where('key_hash', $hashedKey)
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->first();
 
         if (!$key) {

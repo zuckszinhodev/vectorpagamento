@@ -13,6 +13,7 @@ import {
   ReceiptPercentIcon,
   ClockIcon,
   UserGroupIcon,
+  GlobeAltIcon,
 } from '@heroicons/react/24/outline';
 import { api, formatCurrency } from '@/lib/api';
 import { domainsService, CustomDomain } from '@/services/api/domains.service';
@@ -160,7 +161,7 @@ export default function CheckoutAnalyticsPage() {
     return (
       <div className="text-center py-12">
         <p className="text-tx-muted">Checkout não encontrado</p>
-        <Link to="/checkouts" className="mt-4 text-accent-primary hover:underline">Voltar para checkouts</Link>
+        <Link to="/products" className="mt-4 text-accent-primary hover:underline">Voltar para produtos</Link>
       </div>
     );
   }
@@ -266,7 +267,7 @@ export default function CheckoutAnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link to="/checkouts" className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover">
+          <Link to="/products" className="rounded-lg p-2 text-tx-muted hover:bg-surface-hover">
             <ArrowLeftIcon className="h-5 w-5" />
           </Link>
           <div>
@@ -280,6 +281,25 @@ export default function CheckoutAnalyticsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/*
+            O mapa ao vivo é um widget do DashboardLayout. Um evento de janela
+            evita passar props por toda a árvore só para abri-lo daqui.
+          */}
+          <button
+            onClick={() =>
+              window.dispatchEvent(
+                new CustomEvent('live-map:open', {
+                  detail: { checkoutId: id, label: checkout.name },
+                }),
+              )
+            }
+            title="Ver acessos deste checkout no mapa ao vivo"
+            className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-600 transition-colors hover:bg-emerald-500/20"
+          >
+            <GlobeAltIcon className="h-4 w-4" />
+            Mapa ao vivo
+          </button>
+
           <div className="flex rounded-lg bg-surface-card border border-border-DEFAULT overflow-hidden">
             {[{ value: '7d', label: '7D' }, { value: '15d', label: '15D' }, { value: '30d', label: '30D' }, { value: '90d', label: '90D' }, { value: '365d', label: '1A' }].map((p) => (
               <button key={p.value} onClick={() => setPeriod(p.value)}

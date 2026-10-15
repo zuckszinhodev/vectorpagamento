@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import clsx from 'clsx';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, formatCurrency } from '@/lib/api';
 import { domainsService, CustomDomain } from '@/services/api/domains.service';
@@ -9,6 +10,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 import RichTextEditor from '@/components/RichTextEditor';
 import PixIcon from '@/components/icons/PixIcon';
+import { prepareProductDiscount } from '@/lib/productDiscount';
 import {
   PlusIcon,
   MagnifyingGlassIcon,
@@ -22,6 +24,7 @@ import {
   EyeIcon,
   ClipboardDocumentIcon,
   LinkIcon,
+  GlobeAltIcon,
   FunnelIcon,
   Squares2X2Icon,
   ListBulletIcon,
@@ -50,6 +53,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
+  original_price?: number | null;
   currency: string;
   type: 'physical' | 'digital' | 'service';
   status: 'active' | 'inactive';
@@ -74,6 +78,7 @@ interface Product {
 }
 
 interface ProductForm {
+  coupon_code?: string;
   name: string;
   description: string;
   price: number;
@@ -243,6 +248,10 @@ function FormSection({
   );
 }
 
+/** Preferência de domínio para os links de checkout, lembrada entre sessões. */
+const CHECKOUT_DOMAIN_KEY = 'products:checkout-domain';
+const SYSTEM_DOMAIN_OPTION = 'system';
+
 export default function ProductsPage() {
   const [search, setSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -261,11 +270,39 @@ export default function ProductsPage() {
     queryKey: ['domains'],
     queryFn: () => domainsService.list(),
   });
-  const checkoutBaseUrl = (() => {
-    const verified = (domainsData?.data || []).filter((d: CustomDomain) => d.status === 'verified');
-    const primary = verified.find((d: CustomDomain) => d.is_primary) || verified[0];
-    return primary ? `https://${primary.domain}` : window.location.origin;
-  })();
+
+  const [checkoutDomainId, setCheckoutDomainId] = useState<string>(
+    () => localStorage.getItem(CHECKOUT_DOMAIN_KEY) || '',
+  );
+
+  // Só domínio verificado E liberado para checkout: um domínio marcado apenas
+  // para a área de membros não serve para link de venda.
+  const checkoutDomains = useMemo(
+    () =>
+      (domainsData?.data || []).filter(
+        (d: CustomDomain) => d.status === 'verified' && (d.use_for ?? ['checkout', 'members']).includes('checkout'),
+      ),
+    [domainsData],
+  );
+
+  // Escolha explícita vence; senão cai no principal, depois no primeiro, depois no sistema.
+  const activeCheckoutDomain = useMemo(() => {
+    if (checkoutDomainId === SYSTEM_DOMAIN_OPTION) return null;
+    if (checkoutDomainId) {
+      const chosen = checkoutDomains.find((d: CustomDomain) => d.id === checkoutDomainId);
+      if (chosen) return chosen;
+    }
+    return checkoutDomains.find((d: CustomDomain) => d.is_primary) ?? checkoutDomains[0] ?? null;
+  }, [checkoutDomainId, checkoutDomains]);
+
+  const checkoutBaseUrl = activeCheckoutDomain
+    ? `https://${activeCheckoutDomain.domain}`
+    : window.location.origin;
+
+  const chooseCheckoutDomain = (value: string) => {
+    setCheckoutDomainId(value);
+    localStorage.setItem(CHECKOUT_DOMAIN_KEY, value);
+  };
 
   const { data, refetch, isLoading } = useQuery({
     queryKey: ['products', search],
@@ -444,38 +481,87 @@ export default function ProductsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-border-DEFAULT bg-gradient-to-br from-surface-card via-surface-card to-emerald-50/40 dark:to-emerald-950/10 p-5 sm:p-7">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-400/15 blur-3xl"
-        />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent-primary/15 text-accent-primary shadow-inner">
-              <CubeIcon className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-tx-primary">
-                Produtos
-              </h1>
-              <p className="mt-1 text-sm text-tx-muted">
-                {stats.total > 0
-                  ? `Você tem ${stats.total} ${stats.total === 1 ? 'produto cadastrado' : 'produtos cadastrados'} — ${stats.active} ${stats.active === 1 ? 'ativo' : 'ativos'} no checkout.`
-                  : 'Cadastre seu primeiro produto para começar a vender.'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleCreate}
-            className="hidden lg:inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-accent-primary text-white text-sm font-semibold shadow-lg shadow-accent-primary/25 hover:bg-accent-primary/90 hover:shadow-accent-primary/40 transition-all hover:-translate-y-0.5 active:translate-y-0"
-          >
-            <PlusIcon className="h-5 w-5" />
-            Criar produto
-          </button>
+      {/* Cabeçalho compacto — o espaço vazio virou informação útil */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-tx-primary">Produtos</h1>
+          <p className="mt-1 text-sm text-tx-muted">
+            {stats.total > 0
+              ? 'Gerencie seus produtos, checkouts e programa de afiliados.'
+              : 'Cadastre seu primeiro produto para começar a vender.'}
+          </p>
         </div>
+        <button
+          onClick={handleCreate}
+          className="hidden lg:inline-flex items-center gap-2 rounded-xl bg-accent-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-primary/90"
+        >
+          <PlusIcon className="h-4 w-4" />
+          Criar produto
+        </button>
       </div>
 
+      {stats.total > 0 && (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[
+            { label: 'Total', value: stats.total, icon: CubeIcon, tone: 'text-tx-primary', bg: 'bg-surface-hover' },
+            { label: 'Publicados', value: stats.active, icon: CheckCircleIcon, tone: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+            { label: 'Rascunhos', value: stats.inactive, icon: PencilIcon, tone: 'text-amber-600', bg: 'bg-amber-500/10' },
+            { label: 'Com afiliação', value: stats.withAffiliates, icon: UsersIcon, tone: 'text-violet-600', bg: 'bg-violet-500/10' },
+          ].map((stat) => (
+            <div
+              key={stat.label}
+              className="flex items-center gap-3 rounded-xl border border-border-DEFAULT bg-surface-card p-3.5"
+            >
+              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${stat.bg}`}>
+                <stat.icon className={`h-4 w-4 ${stat.tone}`} />
+              </span>
+              <div className="min-w-0">
+                <p className={`text-xl font-bold leading-none ${stat.tone}`}>{stat.value}</p>
+                <p className="mt-1 truncate text-[11px] font-medium text-tx-muted">{stat.label}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+
+      {/* Domínio dos links — só faz sentido se a conta já tiver algum verificado */}
+      {checkoutDomains.length > 0 && (
+        <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-3 sm:p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 min-w-0">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-primary/10 text-accent-primary">
+                <GlobeAltIcon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-tx-primary">Domínio dos links de checkout</p>
+                <p className="mt-0.5 text-xs text-tx-muted truncate font-mono">
+                  {checkoutBaseUrl}/checkout/<span className="text-tx-secondary">seu-produto</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {!activeCheckoutDomain && (
+                <span className="hidden sm:inline text-[11px] text-tx-muted">domínio do sistema</span>
+              )}
+              <select
+                value={checkoutDomainId === SYSTEM_DOMAIN_OPTION ? SYSTEM_DOMAIN_OPTION : activeCheckoutDomain?.id ?? SYSTEM_DOMAIN_OPTION}
+                onChange={(e) => chooseCheckoutDomain(e.target.value)}
+                className="rounded-xl border border-border-DEFAULT bg-surface-input px-3 py-2 text-sm text-tx-primary focus:border-accent-primary focus:outline-none focus:ring-4 focus:ring-accent-primary/10"
+              >
+                <option value={SYSTEM_DOMAIN_OPTION}>Usar domínio do sistema</option>
+                {checkoutDomains.map((domain: CustomDomain) => (
+                  <option key={domain.id} value={domain.id}>
+                    {domain.domain}
+                    {domain.is_primary ? ' — principal' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search & Filters Bar */}
       <div className="rounded-2xl border border-border-DEFAULT bg-surface-card p-3 sm:p-4 shadow-sm">
@@ -650,10 +736,10 @@ export default function ProductsPage() {
         <div className="relative overflow-hidden rounded-2xl border border-dashed border-border-DEFAULT bg-surface-card p-10 sm:p-14 text-center">
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,0.08),transparent_60%)]"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(59,130,246,0.08),transparent_60%)]"
           />
           <div className="relative">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-accent-primary/10 text-accent-primary ring-1 ring-accent-primary/20">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20">
               <CubeIcon className="h-10 w-10" />
             </div>
             <h3 className="mt-6 text-xl font-semibold text-tx-primary">
@@ -667,7 +753,7 @@ export default function ProductsPage() {
             {products.length === 0 ? (
               <button
                 onClick={handleCreate}
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-accent-primary px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-accent-primary/25 transition-all hover:-translate-y-0.5 hover:bg-accent-primary/90"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[rgb(var(--primary))] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[rgba(var(--primary),0.25)] transition-all hover:-translate-y-0.5 hover:bg-[rgba(var(--primary),0.9)]"
               >
                 <PlusIcon className="h-5 w-5" />
                 Criar meu primeiro produto
@@ -821,10 +907,20 @@ export default function ProductsPage() {
                     {product.type === 'digital' ? 'Digital' : product.type === 'physical' ? 'Físico' : 'Serviço'}
                   </span>
                   {product.affiliate_enabled && (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-700 ring-1 ring-violet-500/20">
-                      <UsersIcon className="h-3 w-3" />
-                      {product.affiliate_commission_percent}%
-                    </span>
+                    <>
+                      <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-700 ring-1 ring-violet-500/20">
+                        <UsersIcon className="h-3 w-3" />
+                        {product.affiliate_commission_percent}%
+                      </span>
+                      {/* Categoria é obrigatória com afiliação ligada e é por ela
+                          que o produto é achado na vitrine — vale mostrar aqui. */}
+                      {product.category && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-2 py-0.5 text-[11px] font-medium text-violet-700 ring-1 ring-violet-500/20">
+                          <TagIcon className="h-3 w-3" />
+                          {product.category}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -911,10 +1007,15 @@ export default function ProductsPage() {
                     </td>
                     <td className="px-5 py-3.5 text-center hidden lg:table-cell">
                       {product.affiliate_enabled ? (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-violet-500/20">
-                          <UsersIcon className="h-3 w-3" />
-                          {product.affiliate_commission_percent}%
-                        </span>
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="inline-flex items-center gap-1 rounded-md bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-violet-500/20">
+                            <UsersIcon className="h-3 w-3" />
+                            {product.affiliate_commission_percent}%
+                          </span>
+                          {product.category && (
+                            <span className="text-[11px] text-tx-muted">{product.category}</span>
+                          )}
+                        </div>
                       ) : (
                         <span className="text-xs text-tx-muted">—</span>
                       )}
@@ -1002,6 +1103,8 @@ function ProductFormPage({
 }) {
   const queryClient = useQueryClient();
   const isEditing = !!product;
+  const [discountMode, setDiscountMode] = useState<'direct' | 'coupon'>('direct');
+  const savedProductId = useRef(product?.id);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(product?.image_url || null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -1052,22 +1155,27 @@ function ProductFormPage({
       ? {
           name: product.name,
           description: product.description,
-          price: product.price / 100,
+          price: (productMetadata.direct_discount?.enabled ? (product.original_price ?? product.price) : product.price) / 100,
           type: product.type,
           category: product.category || '',
-          discount_enabled: (product as any).discount_enabled || false,
-          discount_type: (product as any).discount_type || 'percentage',
-          discount_value: (product as any).discount_value,
+          discount_enabled: productMetadata.direct_discount?.enabled ?? (product as any).discount_enabled ?? false,
+          discount_type: productMetadata.direct_discount?.type ?? (product as any).discount_type ?? 'percentage',
+          discount_value: productMetadata.direct_discount?.value ?? (product as any).discount_value,
           affiliate_enabled: product.affiliate_enabled,
           affiliate_commission_percent: product.affiliate_commission_percent,
           visible_on_marketplace: product.visible_on_marketplace || false,
-          shipping_required: product.shipping_required || false,
-          shipping_weight: product.shipping_info?.weight || 0,
-          shipping_width: product.shipping_info?.width || 0,
-          shipping_height: product.shipping_info?.height || 0,
-          shipping_length: product.shipping_info?.length || 0,
-          free_shipping: product.shipping_info?.free_shipping || false,
-          shipping_price: product.shipping_info?.shipping_price ? product.shipping_info.shipping_price / 100 : 0,
+          // Lê de metadata.shipping (onde de fato persiste), com o formato
+          // antigo como reserva para produtos salvos antes desta correção.
+          shipping_required:
+            productMetadata.shipping?.required ?? product.shipping_required ?? false,
+          shipping_weight: productMetadata.shipping?.weight ?? product.shipping_info?.weight ?? 0,
+          shipping_width: productMetadata.shipping?.width ?? product.shipping_info?.width ?? 0,
+          shipping_height: productMetadata.shipping?.height ?? product.shipping_info?.height ?? 0,
+          shipping_length: productMetadata.shipping?.length ?? product.shipping_info?.length ?? 0,
+          free_shipping:
+            productMetadata.shipping?.free_shipping ?? product.shipping_info?.free_shipping ?? false,
+          shipping_price:
+            (productMetadata.shipping?.shipping_price ?? product.shipping_info?.shipping_price ?? 0) / 100,
           payment_methods: productMetadata.payment_methods || {
             credit_card: false,
             pix: true,
@@ -1155,12 +1263,12 @@ function ProductFormPage({
       reset({
         name: product.name,
         description: product.description,
-        price: product.price / 100,
+        price: (productMetadata.direct_discount?.enabled ? (product.original_price ?? product.price) : product.price) / 100,
         type: product.type,
         category: product.category || '',
-        discount_enabled: (product as any).discount_enabled || false,
-        discount_type: (product as any).discount_type || 'percentage',
-        discount_value: (product as any).discount_value,
+        discount_enabled: productMetadata.direct_discount?.enabled ?? (product as any).discount_enabled ?? false,
+        discount_type: productMetadata.direct_discount?.type ?? (product as any).discount_type ?? 'percentage',
+        discount_value: productMetadata.direct_discount?.value ?? (product as any).discount_value,
         affiliate_enabled: product.affiliate_enabled,
         affiliate_commission_percent: product.affiliate_commission_percent,
         visible_on_marketplace: product.visible_on_marketplace || false,
@@ -1230,17 +1338,6 @@ function ProductFormPage({
     }
   }, [product, reset]);
 
-  // Query para buscar produtos disponíveis para Order Bump e Upsell
-  const { data: availableProducts = [] } = useQuery<Product[]>({
-    queryKey: ['products-for-offers'],
-    queryFn: async () => {
-      const response = await api.get('/products');
-      // Filtrar para não mostrar o produto atual
-      const products = response.data?.data || response.data || [];
-      return products.filter((p: Product) => p.id !== product?.id);
-    },
-  });
-
   // Image upload removed - using base64/URL directly in payload
 
   const affiliateEnabled = watch('affiliate_enabled');
@@ -1248,13 +1345,11 @@ function ProductFormPage({
   const productName = watch('name');
   const isPhysicalProduct = productType === 'physical';
   const freeShipping = watch('free_shipping');
-  const orderBumpEnabled = watch('order_bump_enabled');
-  const upsellEnabled = watch('upsell_enabled');
   const thankYouPageType = watch('thank_you_page_type');
-  const facebookPixelEnabled = watch('facebook_pixel_enabled');
 
   const mutation = useMutation({
-    mutationFn: async (data: ProductForm) => {
+    mutationFn: async ({ data, publish }: { data: ProductForm; publish: boolean }) => {
+      const discount = prepareProductDiscount(data.price, data.discount_enabled, discountMode, data.discount_type, data.discount_value);
       setIsUploading(true);
       
       // Upload image if a new file was selected
@@ -1295,7 +1390,7 @@ function ProductFormPage({
       const payload: Record<string, any> = {
         name: data.name,
         description: data.description,
-        price: Math.round(data.price * 100),
+        ...discount,
         type: data.type,
         image_url: finalImageUrl,
         visible_on_marketplace: data.visible_on_marketplace,
@@ -1336,7 +1431,23 @@ function ProductFormPage({
         // Meta Pixel
         metadata: {
           ...productMetadata,
+          direct_discount: {
+            enabled: data.discount_enabled && discountMode === 'direct',
+            type: data.discount_type,
+            value: data.discount_value,
+          },
           payment_methods: data.payment_methods,
+          // Envio: sem coluna no banco, persiste aqui — igual ao order bump.
+          // Como chave de topo era descartado pelo controller.
+          shipping: {
+            required: data.shipping_required,
+            weight: data.shipping_weight,
+            width: data.shipping_width,
+            height: data.shipping_height,
+            length: data.shipping_length,
+            free_shipping: data.free_shipping,
+            shipping_price: data.shipping_price ? Math.round(data.shipping_price * 100) : 0,
+          },
           order_bump_enabled: data.order_bump_enabled,
           order_bump_product_id: data.order_bump_product_id,
           order_bump_title: data.order_bump_title,
@@ -1366,17 +1477,42 @@ function ProductFormPage({
         payload.affiliate_commission_percent = data.affiliate_commission_percent;
       }
 
+      // Rascunho = produto salvo porém fora do ar (is_active=false).
+      payload.is_active = publish;
+
       // Salvar na API
-      if (isEditing) {
-        const result = await api.put(`/products/${product!.id}`, payload);
-        return result;
+      const response = savedProductId.current
+        ? await api.put(`/products/${savedProductId.current}`, payload)
+        : await api.post('/products', payload);
+      savedProductId.current = response.data.data.id;
+      if (data.discount_enabled && discountMode === 'coupon') {
+        try {
+          await api.post('/coupons', {
+            code: data.coupon_code?.trim().toUpperCase(),
+            type: data.discount_type,
+            value: data.discount_type === 'fixed' ? Math.round(Number(data.discount_value) * 100) : Number(data.discount_value),
+            product_ids: [savedProductId.current],
+            is_active: true,
+          });
+          queryClient.invalidateQueries({ queryKey: ['coupons'] });
+          toast.success('Cupom criado para este produto! Gerencie em Cupons.');
+        } catch (error: any) {
+          queryClient.invalidateQueries({ queryKey: ['products'] });
+          const message = error.response?.data?.errors?.code?.[0] || error.response?.data?.message || 'Tente novamente.';
+          throw new Error(`Produto salvo, mas o cupom não foi criado. ${message}`);
+        }
       }
-      const response = await api.post('/products', payload);
       return response;
     },
-    onSuccess: () => {
+    onSuccess: (_result, variables) => {
       setIsUploading(false);
-      toast.success(isEditing ? 'Produto atualizado!' : 'Produto criado com link de checkout!');
+      toast.success(
+        variables.publish
+          ? isEditing
+            ? 'Produto salvo e publicado!'
+            : 'Produto publicado com link de checkout!'
+          : 'Rascunho salvo. O produto não aparece no checkout até ser publicado.',
+      );
       queryClient.invalidateQueries({ queryKey: ['products'] });
       queryClient.invalidateQueries({ queryKey: ['products-list'] });
       queryClient.invalidateQueries({ queryKey: ['checkouts'] });
@@ -1389,20 +1525,32 @@ function ProductFormPage({
     },
   });
 
-  const onSubmit = (data: ProductForm) => {
-    mutation.mutate(data);
-  };
+  // Produto novo nasce como rascunho até ser publicado; ao editar, mantém o
+  // estado atual como referência para rotular os botões.
+  const isPublished = isEditing && product?.status === 'active';
+  const busy = mutation.isPending || isUploading;
 
-  const submitLabel = isUploading
+  const save = (publish: boolean) =>
+    handleSubmit((data: ProductForm) => {
+      // Despublicar tira o produto do ar: merece confirmação explícita.
+      if (!publish && isPublished && !confirm('Salvar como rascunho vai tirar este produto do ar. Continuar?')) {
+        return;
+      }
+      mutation.mutate({ data, publish });
+    })();
+
+  const publishLabel = isUploading
     ? 'Enviando imagem...'
     : mutation.isPending
     ? 'Salvando...'
-    : isEditing
+    : isPublished
     ? 'Salvar alterações'
-    : 'Criar produto';
+    : isEditing
+    ? 'Publicar produto'
+    : 'Criar e publicar';
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+    <form onSubmit={handleSubmit((data: ProductForm) => mutation.mutate({ data, publish: true }))} className="space-y-5">
       {/* Header sticky com ações sempre visíveis */}
       <div className="sticky top-0 z-30 -mx-4 border-b border-border-DEFAULT bg-surface-page/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6">
         <div className="flex items-center gap-3">
@@ -1423,9 +1571,21 @@ function ProductFormPage({
               <span>/</span>
               <span className="text-tx-secondary">{isEditing ? 'Editar' : 'Novo'}</span>
             </div>
-            <h1 className="truncate text-lg font-bold tracking-tight text-tx-primary sm:text-xl">
-              {productName?.trim() || (isEditing ? 'Editar produto' : 'Novo produto')}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="truncate text-lg font-bold tracking-tight text-tx-primary sm:text-xl">
+                {productName?.trim() || (isEditing ? 'Editar produto' : 'Novo produto')}
+              </h1>
+              {isEditing && (
+                <span
+                  className={clsx(
+                    'flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                    isPublished ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600',
+                  )}
+                >
+                  {isPublished ? 'PUBLICADO' : 'RASCUNHO'}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-shrink-0 items-center gap-2">
@@ -1437,11 +1597,21 @@ function ProductFormPage({
               Cancelar
             </button>
             <button
-              type="submit"
-              disabled={mutation.isPending || isUploading}
-              className="inline-flex items-center gap-2 rounded-xl bg-accent-primary px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent-primary/25 transition-all hover:bg-accent-primary/90 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
+              type="button"
+              onClick={() => save(false)}
+              disabled={busy}
+              title="Salva sem colocar no ar"
+              className="inline-flex items-center gap-2 rounded-xl border border-border-DEFAULT bg-surface-card px-4 py-2.5 text-sm font-semibold text-tx-secondary transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitLabel}
+              Salvar rascunho
+            </button>
+            <button
+              type="button"
+              onClick={() => save(true)}
+              disabled={busy}
+              className="inline-flex items-center gap-2 rounded-xl bg-accent-primary px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-primary/90 disabled:cursor-not-allowed disabled:opacity-60 sm:px-5"
+            >
+              {publishLabel}
             </button>
           </div>
         </div>
@@ -1532,184 +1702,38 @@ function ProductFormPage({
               title="Métodos de pagamento"
               description="Formas de pagamento aceitas no checkout deste produto."
             >
+              {/*
+                Sem caixas de seleção: PIX é o único método ativo no sistema e não
+                pode ser desmarcado. Os inputs continuam registrados, porém ocultos,
+                para o payload enviado seguir idêntico ao de antes.
+              */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <label className="flex cursor-not-allowed items-center gap-3 rounded-xl border border-border-DEFAULT bg-surface-hover/40 p-3 opacity-50">
-                  <input
-                    {...register('payment_methods.credit_card')}
-                    type="checkbox"
-                    defaultChecked={false}
-                    disabled
-                    className="h-4 w-4 flex-shrink-0 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
-                  />
-                  <SalesIcon type="card" className="h-6 w-6 flex-shrink-0 text-emerald-600" />
+                <div className="flex items-center gap-3 rounded-xl border border-border-DEFAULT bg-surface-hover/40 p-3 opacity-60">
+                  <input {...register('payment_methods.credit_card')} type="checkbox" defaultChecked={false} disabled className="sr-only" />
+                  <SalesIcon type="card" className="h-6 w-6 flex-shrink-0 text-tx-muted" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-tx-primary">Cartão</p>
                     <p className="text-[11px] text-tx-muted">Em breve</p>
                   </div>
-                </label>
+                </div>
 
-                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 transition-all hover:border-emerald-500/50 hover:bg-emerald-500/10">
-                  <input
-                    {...register('payment_methods.pix')}
-                    type="checkbox"
-                    defaultChecked
-                    className="h-4 w-4 flex-shrink-0 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
-                  />
+                <div className="flex items-center gap-3 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3">
+                  <input {...register('payment_methods.pix')} type="checkbox" defaultChecked className="sr-only" />
                   <PixIcon className="h-6 w-6 flex-shrink-0 text-emerald-600" />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-tx-primary">PIX</p>
-                    <p className="text-[11px] text-emerald-600">Disponível</p>
+                    <p className="text-[11px] text-emerald-600">Sempre ativo</p>
                   </div>
-                </label>
+                  <CheckCircleIcon className="h-5 w-5 flex-shrink-0 text-emerald-600" />
+                </div>
 
-                <label className="flex cursor-not-allowed items-center gap-3 rounded-xl border border-border-DEFAULT bg-surface-hover/40 p-3 opacity-50">
-                  <input
-                    {...register('payment_methods.boleto')}
-                    type="checkbox"
-                    defaultChecked={false}
-                    disabled
-                    className="h-4 w-4 flex-shrink-0 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
-                  />
-                  <SalesIcon type="boleto" className="h-6 w-6 flex-shrink-0 text-emerald-600" />
+                <div className="flex items-center gap-3 rounded-xl border border-border-DEFAULT bg-surface-hover/40 p-3 opacity-60">
+                  <input {...register('payment_methods.boleto')} type="checkbox" defaultChecked={false} disabled className="sr-only" />
+                  <SalesIcon type="boleto" className="h-6 w-6 flex-shrink-0 text-tx-muted" />
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-tx-primary">Boleto</p>
                     <p className="text-[11px] text-tx-muted">Em breve</p>
                   </div>
-                </label>
-              </div>
-            </FormSection>
-
-            <FormSection
-              icon={ChartBarIcon}
-              iconTone="text-violet-600"
-              iconBg="bg-violet-500/10"
-              title="Ofertas e rastreamento"
-              description="Aumente o ticket médio e acompanhe conversões."
-            >
-              <div className="space-y-3">
-                {/* Order Bump */}
-                <div className={`rounded-xl border transition-all ${orderBumpEnabled ? 'border-accent-primary/40 bg-accent-subtle' : 'border-border-DEFAULT'}`}>
-                  <div className="flex items-center gap-3 p-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
-                      <SalesIcon type="bump" className="h-6 w-6 text-amber-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-tx-primary">Order Bump</h3>
-                      <p className="text-xs text-tx-muted">Oferta adicional exibida dentro do checkout</p>
-                    </div>
-                    <label className="relative inline-flex flex-shrink-0 cursor-pointer items-center">
-                      <input {...register('order_bump_enabled')} type="checkbox" className="peer sr-only" />
-                      <div className={TOGGLE_TRACK_CLASS} />
-                    </label>
-                  </div>
-                  {orderBumpEnabled && (
-                    <div className="grid grid-cols-1 gap-3 border-t border-border-DEFAULT p-4 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-tx-secondary">Produto ofertado</label>
-                        <select {...register('order_bump_product_id')} className="input text-sm">
-                          <option value="">Selecione...</option>
-                          {availableProducts.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-tx-secondary">Desconto (%)</label>
-                        <input {...register('order_bump_discount_percent')} type="number" min="0" max="90" className="input text-sm" placeholder="10" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Upsell */}
-                <div className={`rounded-xl border transition-all ${upsellEnabled ? 'border-accent-primary/40 bg-accent-subtle' : 'border-border-DEFAULT'}`}>
-                  <div className="flex items-center gap-3 p-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-blue-500/10">
-                      <SalesIcon type="upsell" className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-tx-primary">Upsell</h3>
-                      <p className="text-xs text-tx-muted">Oferta exibida logo após a compra</p>
-                    </div>
-                    <label className="relative inline-flex flex-shrink-0 cursor-pointer items-center">
-                      <input {...register('upsell_enabled')} type="checkbox" className="peer sr-only" />
-                      <div className={TOGGLE_TRACK_CLASS} />
-                    </label>
-                  </div>
-                  {upsellEnabled && (
-                    <div className="grid grid-cols-1 gap-3 border-t border-border-DEFAULT p-4 sm:grid-cols-2">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-tx-secondary">Produto ofertado</label>
-                        <select {...register('upsell_product_id')} className="input text-sm">
-                          <option value="">Selecione...</option>
-                          {availableProducts.map((p) => (
-                            <option key={p.id} value={p.id}>{p.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-tx-secondary">Desconto (%)</label>
-                        <input {...register('upsell_discount_percent')} type="number" min="0" max="90" className="input text-sm" placeholder="15" />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Meta Pixel */}
-                <div className={`rounded-xl border transition-all ${facebookPixelEnabled ? 'border-accent-primary/40 bg-accent-subtle' : 'border-border-DEFAULT'}`}>
-                  <div className="flex items-center gap-3 p-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-sky-500/10">
-                      <SalesIcon type="pixel" className="h-6 w-6 text-sky-600" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold text-tx-primary">Meta Pixel</h3>
-                      <p className="text-xs text-tx-muted">Rastreie visitas e compras deste checkout</p>
-                    </div>
-                    <label className="relative inline-flex flex-shrink-0 cursor-pointer items-center">
-                      <input {...register('facebook_pixel_enabled')} type="checkbox" className="peer sr-only" />
-                      <div className={TOGGLE_TRACK_CLASS} />
-                    </label>
-                  </div>
-                  {facebookPixelEnabled && (
-                    <div className="space-y-4 border-t border-border-DEFAULT p-4">
-                      <div>
-                        <label className="mb-1 block text-xs font-medium text-tx-secondary">ID do Pixel</label>
-                        <input
-                          {...register('facebook_pixel_id', {
-                            required: facebookPixelEnabled ? 'Informe o ID do Pixel' : false,
-                            pattern: {
-                              value: /^[0-9]{8,30}$/,
-                              message: 'Use apenas numeros do ID do Pixel',
-                            },
-                          })}
-                          className="input text-sm"
-                          placeholder="Ex: 123456789012345"
-                        />
-                        {errors.facebook_pixel_id && (
-                          <p className="mt-1 text-xs text-status-error">{errors.facebook_pixel_id.message}</p>
-                        )}
-                      </div>
-                      <div>
-                        <p className="mb-1.5 text-xs font-medium text-tx-secondary">Eventos rastreados</p>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                          {[
-                            ['facebook_pixel_track_page_view', 'PageView'],
-                            ['facebook_pixel_track_initiate_checkout', 'InitiateCheckout'],
-                            ['facebook_pixel_track_purchase', 'Purchase'],
-                          ].map(([field, label]) => (
-                            <label key={field} className="flex cursor-pointer items-center gap-2 rounded-lg border border-border-DEFAULT bg-surface-card px-3 py-2 text-xs font-medium text-tx-secondary transition-colors hover:bg-surface-hover">
-                              <input
-                                {...register(field as keyof ProductForm)}
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-border-DEFAULT text-emerald-500 focus:ring-emerald-500"
-                              />
-                              {label}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             </FormSection>
@@ -1973,7 +1997,7 @@ function ProductFormPage({
               iconTone="text-rose-600"
               iconBg="bg-rose-500/10"
               title="Desconto"
-              description="Preço promocional no checkout."
+              description="Aplique no preço ou crie um cupom de desconto."
               action={
                 <label className="relative inline-flex cursor-pointer items-center">
                   <input {...register('discount_enabled')} type="checkbox" className="peer sr-only" />
@@ -1983,6 +2007,28 @@ function ProductFormPage({
             >
               {watch('discount_enabled') ? (
                 <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-2" role="group" aria-label="Forma de desconto">
+                    {([{ value: 'direct', label: 'Desconto direto' }, { value: 'coupon', label: 'Criar cupom' }] as const).map((option) => (
+                      <button key={option.value} type="button" aria-pressed={discountMode === option.value}
+                        onClick={() => setDiscountMode(option.value)}
+                        className={clsx('rounded-element border-2 p-3 text-sm font-semibold transition-colors', discountMode === option.value ? 'border-accent-primary bg-accent-subtle text-accent-primary' : 'border-border-DEFAULT text-tx-secondary')}>
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-tx-muted">
+                    {discountMode === 'direct' ? 'O desconto será aplicado automaticamente no checkout.' : 'O cupom será criado ao salvar o produto e será válido somente para ele. O cliente deverá informar o código no checkout.'}
+                  </p>
+                  {discountMode === 'coupon' && (
+                    <div>
+                      <label htmlFor="product-coupon-code" className="block text-sm font-medium text-tx-secondary">Código do cupom</label>
+                      <input id="product-coupon-code" className="input mt-1 uppercase" placeholder="Ex: PROMO10" maxLength={50}
+                        {...register('coupon_code', {
+                          validate: (value) => !watch('discount_enabled') || discountMode !== 'coupon' || /^[A-Z0-9]{1,50}$/.test(value?.trim().toUpperCase() || '') || 'Informe um código com letras e números (até 50 caracteres).',
+                        })} />
+                      {errors.coupon_code && <p className="mt-1 text-xs text-status-error">{errors.coupon_code.message}</p>}
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-tx-secondary mb-2">
                       Tipo de Desconto
@@ -2022,6 +2068,7 @@ function ProductFormPage({
                     </label>
                     <input
                       {...register('discount_value', {
+                        required: watch('discount_enabled') ? 'Informe o valor do desconto' : false,
                         min: { value: 0.01, message: 'Valor mínimo é 0,01' },
                         max: watch('discount_type') === 'percentage' 
                           ? { value: 100, message: 'Máximo 100%' }
@@ -2032,10 +2079,11 @@ function ProductFormPage({
                       className="input mt-1"
                       placeholder={watch('discount_type') === 'percentage' ? '10' : '50.00'}
                     />
+                    {errors.discount_value && <p className="mt-1 text-xs text-status-error">{errors.discount_value.message}</p>}
                     {watch('discount_value') && watch('price') && (
                       <div className="mt-2 rounded-lg bg-emerald-500/5 p-2.5 ring-1 ring-emerald-500/20">
                         <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                          Preço final: {formatCurrency(
+                          {discountMode === 'coupon' ? 'Preço com cupom: ' : 'Preço final: '}{formatCurrency(
                             watch('discount_type') === 'percentage'
                               ? (watch('price') * 100) - ((watch('price') * 100) * (watch('discount_value') || 0) / 100)
                               : (watch('price') * 100) - ((watch('discount_value') || 0) * 100)
@@ -2225,11 +2273,20 @@ function ProductFormPage({
             {/* Ações (mobile — no desktop ficam no header sticky) */}
             <div className="flex flex-col gap-2 lg:hidden">
               <button
-                type="submit"
-                disabled={mutation.isPending || isUploading}
-                className="flex h-12 w-full items-center justify-center rounded-xl bg-accent-primary text-sm font-semibold text-white shadow-lg shadow-accent-primary/25 transition-all hover:bg-accent-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                onClick={() => save(true)}
+                disabled={busy}
+                className="flex h-12 w-full items-center justify-center rounded-xl bg-accent-primary text-sm font-semibold text-white transition-all hover:bg-accent-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {submitLabel}
+                {publishLabel}
+              </button>
+              <button
+                type="button"
+                onClick={() => save(false)}
+                disabled={busy}
+                className="flex h-12 w-full items-center justify-center rounded-xl border border-border-DEFAULT bg-surface-card text-sm font-semibold text-tx-secondary transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Salvar rascunho
               </button>
               <button
                 type="button"

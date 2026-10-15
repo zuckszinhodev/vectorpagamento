@@ -295,7 +295,7 @@ function TicketDetailModal({
                               )}
                             >
                               <div className={clsx('mb-1 text-[10px] font-semibold uppercase tracking-wider', isSeller ? 'text-white/70' : 'text-tx-muted')}>
-                                {isSeller ? 'Você' : 'Suporte Vector'} • {formatDateTime(msg.created_at)}
+                                {isSeller ? 'Você' : 'Suporte'} • {formatDateTime(msg.created_at)}
                               </div>
                               <p className="whitespace-pre-wrap leading-relaxed">{msg.body}</p>
                             </div>

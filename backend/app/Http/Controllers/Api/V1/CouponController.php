@@ -255,7 +255,7 @@ class CouponController extends Controller
         ]);
 
         $coupon = Coupon::where('code', strtoupper($validated['code']))
-            ->whereRaw('"is_active" = true')
+            ->where('is_active', true)
             ->first();
 
         if (!$coupon || !$coupon->isValid()) {

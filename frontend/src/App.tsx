@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation, useSearchParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useEffect, useLayoutEffect, useRef, useState, lazy, Suspense } from 'react';
@@ -6,12 +6,22 @@ import { api } from '@/lib/api';
 import { isCustomDomain } from '@/lib/domain';
 import { PageSpinner } from '@/components/ui/Spinner';
 
-// Layouts (carregados imediatamente)
-import DashboardLayout from '@/layouts/DashboardLayout';
+// Layout publico carregado imediatamente; paineis carregados sob demanda.
 import AuthLayout from '@/layouts/AuthLayout';
-import AdminLayout from '@/layouts/AdminLayout';
+
+const DashboardLayout = lazy(() => import('@/layouts/DashboardLayout'));
+
+// Carregado somente quando a rota administrativa passa pelo AdminRoute.
+const AdminLayout = lazy(() => import('@/layouts/AdminLayout'));
 
 const PageLoader = () => <PageSpinner />;
+
+/**
+ * Espera do checkout público enquanto o bundle baixa: só o fundo claro, sem
+ * marca e sem spinner. Emenda direto no esqueleto que o próprio checkout
+ * mostra depois, então o cliente percebe uma transição só.
+ */
+const CheckoutBoot = () => <div className="min-h-screen" style={{ backgroundColor: '#f8fafc' }} />;
 
 // Auth Pages (lazy)
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
@@ -27,7 +37,6 @@ const ChargesPage = lazy(() => import('@/pages/ChargesPage'));
 const ChargebackPage = lazy(() => import('@/pages/ChargebackPage'));
 const AcquirersPage = lazy(() => import('@/pages/AcquirersPage'));
 const ProductsPage = lazy(() => import('@/pages/ProductsPage'));
-const CheckoutsPage = lazy(() => import('@/pages/CheckoutsPage'));
 const CheckoutBuilderPage = lazy(() => import('@/pages/CheckoutBuilderPage'));
 const CheckoutPreviewPage = lazy(() => import('@/pages/CheckoutPreviewPage'));
 const CheckoutAnalyticsPage = lazy(() => import('@/pages/CheckoutAnalyticsPage'));
@@ -69,6 +78,7 @@ const PublicCheckoutPage = lazy(() => import('@/pages/public/CheckoutPage'));
 const DomainLandingPage = lazy(() => import('@/pages/public/DomainLandingPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
+const BuyerSupportPage = lazy(() => import('@/pages/public/BuyerSupportPage'));
 const KycPrivacyPage = lazy(() => import('@/pages/KycPrivacyPage'));
 const ApiDocsPage = lazy(() => import('@/pages/ApiDocsPage'));
 
@@ -107,7 +117,9 @@ const AdminMfaChallenge = () => {
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   const pinRefs = useRef<Array<HTMLInputElement | null>>([]);
   const lastSubmittedCode = useRef<string>('');
-  const { verifyAdminMfa } = useAuthStore();
+  const { verifyAdminMfa, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const platformName = useThemeStore((s) => s.platformName);
 
   const MAX_ATTEMPTS = 5;
   const LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -189,12 +201,16 @@ const AdminMfaChallenge = () => {
   }, [code, isLocked, loading]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-      <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-lg shadow-lg p-6">
-        <h1 className="text-2xl font-bold mb-4">Verificação de 2FA</h1>
-        <p className="text-sm mb-4">Informe o código de autenticação de dois fatores para acessar o painel administrativo.</p>
-        <div className="mb-3" onPaste={handlePaste}>
-          <div className="flex justify-center gap-2">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
+      <div className="w-full max-w-sm">
+        <p className="text-center text-sm font-semibold text-gray-900 dark:text-white mb-6">{platformName}</p>
+        <h1 className="text-center text-lg font-semibold text-gray-900 dark:text-white mb-1">Verificação de 2FA</h1>
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400 mb-8">
+          Insira o código do seu autenticador para continuar.
+        </p>
+
+        <div onPaste={handlePaste}>
+          <div className="flex justify-center gap-2.5">
             {codeDigits.map((digit, index) => (
               <input
                 key={index}
@@ -208,18 +224,29 @@ const AdminMfaChallenge = () => {
                 onChange={(event) => handleDigitChange(index, event.target.value)}
                 onKeyDown={(event) => handleDigitKeyDown(index, event)}
                 disabled={loading || isLocked}
-                className="h-12 w-12 rounded-xl border border-slate-300 bg-white text-center text-xl font-semibold tracking-wide text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-700 dark:text-white dark:focus:ring-emerald-500/30"
+                className="h-14 w-12 rounded-lg border border-gray-300 bg-white text-center text-xl font-semibold text-gray-900 outline-none transition-colors focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:focus:border-white dark:focus:ring-white"
                 aria-label={`Dígito ${index + 1} do código 2FA`}
               />
             ))}
           </div>
-          <p className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
-            Digite os 6 dígitos para validar automaticamente.
-          </p>
         </div>
-        {error && <p className="text-sm text-red-500 mb-3 text-center">{error}</p>}
-        {loading && <p className="text-sm text-slate-500 text-center">Validando código...</p>}
-        {isLocked && <p className="text-sm text-amber-600 text-center">Bloqueado temporariamente</p>}
+
+        <div className="mt-5 min-h-[20px]">
+          {error && <p className="text-center text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {loading && !error && <p className="text-center text-sm text-gray-500">Validando...</p>}
+          {isLocked && !error && <p className="text-center text-sm text-amber-600">Bloqueado temporariamente.</p>}
+          {!error && !loading && !isLocked && (
+            <p className="text-center text-xs text-gray-400">O código é validado automaticamente.</p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard')}
+          className="mt-8 w-full text-center text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+        >
+          ← Voltar para o dashboard
+        </button>
       </div>
     </div>
   );
@@ -309,7 +336,7 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
-  const { theme, themeVariant, setPrimaryColor, setPlatformName, setPlatformDescription, setLogoUrl, applyPrimaryColor, applyThemeVariant, primaryColor } = useThemeStore();
+  const { theme, themeVariant, setPrimaryColor, setPlatformName, setPlatformDescription, setLogoUrl, applyPrimaryColor, applyThemeVariant, setThemeVariant, primaryColor } = useThemeStore();
   const { checkAuth, isAuthenticated, user, resetAdminMfaVerification, startImpersonation } = useAuthStore();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -362,10 +389,19 @@ function App() {
           if (config.platform_description) {
             setPlatformDescription(config.platform_description);
           }
+          // Global default theme chosen by the admin — applies to every user.
+          if (config.theme_variant === 'modern' || config.theme_variant === 'classic') {
+            setThemeVariant(config.theme_variant);
+          }
           setLogoUrl(config.logo_url || '');
           // Apply SEO: document title + meta description
+          //
+          // O checkout público define o próprio título (nome do produto). Como
+          // esta busca é assíncrona, ela ganhava a corrida e sobrescrevia — a
+          // aba acabava mostrando a marca do gateway em vez do produto.
+          const isPublicCheckout = /^\/(checkout|pay)\//.test(window.location.pathname);
           const title = config.seo_title || config.platform_name;
-          if (title) {
+          if (title && !isPublicCheckout) {
             document.title = title;
           }
           const metaDesc = config.seo_description || config.platform_description;
@@ -384,23 +420,24 @@ function App() {
       }
     };
     fetchBranding();
-  }, [setPrimaryColor, setPlatformName, setPlatformDescription, setLogoUrl]);
+  }, [setPrimaryColor, setPlatformName, setPlatformDescription, setLogoUrl, setThemeVariant]);
 
   useLayoutEffect(() => {
     const isAdminRoute = location.pathname.startsWith('/admin');
-    const effectiveTheme = isAdminRoute ? 'light' : theme;
+    const effectiveTheme = isAdminRoute ? 'light' : (themeVariant === 'modern' ? 'dark' : theme);
 
     document.documentElement.classList.toggle('app-admin-route', isAdminRoute);
     document.documentElement.classList.toggle('app-dark-forced', false);
+    document.documentElement.classList.toggle('theme-modern', themeVariant === 'modern');
 
     if (effectiveTheme === 'dark') {
       document.documentElement.classList.add('dark');
-      document.body.style.backgroundColor = '#0a0a0a';
+      document.body.style.backgroundColor = themeVariant === 'modern' ? '#050506' : '#0a0a0a';
     } else {
       document.documentElement.classList.remove('dark');
       document.body.style.backgroundColor = '#F9FAFB';
     }
-  }, [theme, location.pathname]);
+  }, [theme, themeVariant, location.pathname]);
 
   return (
     <Suspense fallback={<PageLoader />}>
@@ -442,7 +479,6 @@ function App() {
         <Route path="/chargebacks" element={<ChargebackPage />} />
         <Route path="/acquirers" element={<AcquirersPage />} />
         <Route path="/products" element={<ProductsPage />} />
-        <Route path="/checkouts" element={<CheckoutsPage />} />
         <Route path="/affiliates" element={<AffiliatesPage />} />
         <Route path="/withdrawals" element={<WithdrawalsPage />} />
         <Route path="/landing-pages" element={<LandingPagesPage />} />
@@ -536,13 +572,20 @@ function App() {
         }
       />
 
-      {/* Public Checkout Page - Customer facing */}
-      <Route path="/pay/:slug" element={<PublicCheckoutPage />} />
-      <Route path="/checkout/:slug" element={<PublicCheckoutPage />} />
+      {/*
+        Checkout do cliente final: Suspense próprio para não herdar o splash da
+        marca do gateway. Quem está comprando é cliente do vendedor, não nosso —
+        e o splash ainda somava uma segunda tela de carregamento antes do
+        esqueleto do próprio checkout.
+      */}
+      <Route path="/pay/:slug" element={<Suspense fallback={<CheckoutBoot />}><PublicCheckoutPage /></Suspense>} />
+      <Route path="/checkout/:slug" element={<Suspense fallback={<CheckoutBoot />}><PublicCheckoutPage /></Suspense>} />
 
       {/* Legal Pages */}
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      {/* Ajuda para quem comprou — /support é o painel do vendedor, com login. */}
+      <Route path="/ajuda" element={<BuyerSupportPage />} />
       <Route path="/kyc/privacy" element={<KycPrivacyPage />} />
       <Route path="/docs" element={<ApiDocsPage />} />
       <Route path="/api-docs" element={<ApiDocsPage />} />

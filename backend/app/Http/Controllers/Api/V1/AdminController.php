@@ -16,6 +16,7 @@ use App\Models\AcquirerConfig;
 use App\Models\AuditLog;
 use App\Models\WalletAdjustment;
 use App\Models\SystemSetting;
+use App\Services\ChargebackService;
 use App\Domain\Acquirer\Entities\Acquirer as AcquirerEntity;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,7 +25,6 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
-use PragmaRX\Google2FA\Google2FA;
 
 /**
  * Admin Dashboard Controller (slim)
@@ -2033,16 +2033,12 @@ class AdminController extends Controller
         $validated = $request->validate([
             'status' => ['required', 'in:pending,processing,authorized,approved,refunded,failed,declined,cancelled,expired,chargeback,waiting_payment,blocked'],
             'reason' => ['required', 'string', 'min:8', 'max:1000'],
-            'mfa_code' => ['required', 'digits:6'],
+            'reason_code' => ['nullable', 'required_if:status,chargeback', 'string', 'max:50'],
         ]);
 
         $admin = $request->user();
-        if (!$admin || !$admin->mfa_enabled || empty($admin->mfa_secret)) {
-            return response()->json(['success' => false, 'message' => 'MFA obrigatorio para alterar status manualmente.'], 403);
-        }
-
-        if (!(new Google2FA())->verifyKey($admin->mfa_secret, $validated['mfa_code'], 1)) {
-            return response()->json(['success' => false, 'message' => 'Codigo 2FA invalido.'], 422);
+        if (!$admin) {
+            return response()->json(['success' => false, 'message' => 'Administrador nao autenticado.'], 401);
         }
 
         $charge = Charge::where('id', $chargeId)->first();
@@ -2057,11 +2053,19 @@ class AdminController extends Controller
             return response()->json(['success' => false, 'message' => 'A cobranca ja esta com este status.'], 422);
         }
 
+        if ($newStatus === 'chargeback' && !in_array($oldStatus, ['approved', 'paid'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Somente uma cobranca aprovada pode originar uma disputa de chargeback.',
+            ], 422);
+        }
+
         $paymentService = app(\App\Services\PaymentService::class);
         $previousNetAmount = (int) ($charge->net_amount ?? 0);
         $wasPreviouslyPaid = !empty($charge->paid_at);
         $becameApproved = $newStatus === 'approved' && $oldStatus !== 'approved';
-        $leftApproved = $oldStatus === 'approved' && $newStatus !== 'approved' && $previousNetAmount > 0;
+        $becameChargeback = $newStatus === 'chargeback';
+        $leftApproved = $oldStatus === 'approved' && $newStatus !== 'approved' && !$becameChargeback && $previousNetAmount > 0;
         $firstApproval = $becameApproved && !$wasPreviouslyPaid;
         $becameRefunded = $newStatus === 'refunded' && $oldStatus !== 'refunded';
         $walletBalanceAction = $becameApproved ? 'credit' : ($leftApproved ? 'debit' : null);
@@ -2078,7 +2082,6 @@ class AdminController extends Controller
             ],
             'changed_at' => now()->toIso8601String(),
             'source' => 'admin_finance',
-            'requires_2fa' => true,
         ];
 
         $statusUpdate = ['status' => $newStatus, 'metadata' => $metadata];
@@ -2113,7 +2116,17 @@ class AdminController extends Controller
             'blocked' => 'failed',
         ];
 
-        DB::transaction(function () use ($charge, $statusUpdate, $newStatus, $txStatusMap, $validated, $becameApproved, $leftApproved, $firstApproval, $paymentService): void {
+        $chargeback = null;
+        DB::transaction(function () use ($charge, $statusUpdate, $newStatus, $txStatusMap, $validated, $becameApproved, $becameChargeback, $leftApproved, $firstApproval, $paymentService, &$chargeback): void {
+            if ($becameChargeback) {
+                $chargeback = app(ChargebackService::class)->open([
+                    'charge_id' => $charge->id,
+                    'amount' => (int) $charge->amount,
+                    'reason_code' => $validated['reason_code'],
+                    'reason' => $validated['reason'],
+                ]);
+            }
+
             $charge->update($statusUpdate);
 
             Transaction::where('charge_id', $charge->id)->get()->each(function (Transaction $transaction) use ($newStatus, $txStatusMap, $validated): void {
@@ -2171,8 +2184,8 @@ class AdminController extends Controller
             'user_agent' => $request->userAgent(),
             'metadata' => [
                 'source' => 'admin_finance',
-                'requires_2fa' => true,
-                'wallet_balance_action' => $walletBalanceAction,
+                'wallet_balance_action' => $becameChargeback ? 'block' : $walletBalanceAction,
+                'chargeback_id' => $chargeback?->id,
             ],
         ]);
 
@@ -2183,17 +2196,21 @@ class AdminController extends Controller
             'account_id' => $charge->account_id,
             'from_status' => $oldStatus,
             'to_status' => $newStatus,
-            'wallet_balance_action' => $walletBalanceAction,
+            'wallet_balance_action' => $becameChargeback ? 'block' : $walletBalanceAction,
+            'chargeback_id' => $chargeback?->id,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Status da transacao atualizado com sucesso.',
+            'message' => $becameChargeback
+                ? 'Disputa de chargeback aberta com sucesso.'
+                : 'Status da transacao atualizado com sucesso.',
             'data' => [
                 'charge_id' => $charge->id,
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
-                'wallet_balance_action' => $walletBalanceAction,
+                'wallet_balance_action' => $becameChargeback ? 'block' : $walletBalanceAction,
+                'chargeback_id' => $chargeback?->id,
                 'net_amount' => $charge->net_amount,
                 'changed_at' => now()->toIso8601String(),
             ],

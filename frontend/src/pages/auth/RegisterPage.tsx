@@ -53,14 +53,21 @@ function getApiErrorMessage(error: any): string {
   );
 }
 
-const inputClass =
-  'h-12 w-full rounded-xl border border-neutral-200 bg-white px-11 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 hover:border-neutral-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
-
-const primaryButtonClass =
-  'group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-neutral-800 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-neutral-900/15 disabled:cursor-not-allowed disabled:opacity-60';
-
 export default function RegisterPage() {
-  const platformName = useThemeStore((s) => s.platformName);
+  const { platformName, themeVariant, theme } = useThemeStore();
+  const isModern = themeVariant === 'modern';
+  const isDark = isModern || theme === 'dark';
+  const headingClass = isDark ? 'text-white' : 'text-neutral-900';
+  const bodyClass = isDark ? 'text-neutral-400' : 'text-neutral-600';
+  const labelClass = isDark ? 'text-neutral-200' : 'text-neutral-800';
+  const accentClass = isModern ? 'text-red-500' : 'text-emerald-600';
+  const accentLink = isModern ? 'text-red-500 hover:text-red-400' : 'text-emerald-600 hover:text-emerald-700';
+  const inputClass = `h-12 w-full rounded-xl border px-11 text-sm outline-none transition-all duration-200 focus:ring-4 ${isDark
+    ? `border-white/10 bg-white/[0.045] text-white placeholder:text-neutral-600 ${isModern ? 'hover:border-red-500/35 focus:border-red-500 focus:ring-red-500/10' : 'hover:border-emerald-500/35 focus:border-emerald-500 focus:ring-emerald-500/10'}`
+    : 'border-neutral-200 bg-white text-neutral-900 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-emerald-500 focus:ring-emerald-500/10'}`;
+  const primaryButtonClass = `group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 text-sm font-semibold text-white transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:-translate-x-[120%] before:skew-x-[-20deg] before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:transition-transform before:duration-700 hover:-translate-y-0.5 hover:before:translate-x-[120%] active:scale-[0.985] disabled:cursor-not-allowed disabled:transform-none disabled:opacity-60 ${isModern
+    ? 'bg-gradient-to-r from-red-600 to-red-500 shadow-[0_12px_35px_rgba(239,68,68,0.25)] hover:shadow-[0_16px_42px_rgba(239,68,68,0.38)]'
+    : 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-[0_12px_35px_rgba(16,185,129,0.22)] hover:shadow-[0_16px_42px_rgba(16,185,129,0.34)]'}`;
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirmation, setShowPasswordConfirmation] = useState(false);
@@ -99,20 +106,20 @@ export default function RegisterPage() {
 
       <section className="w-full">
         <div className="mb-7">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">
+          <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${accentClass}`}>
             Comece agora
           </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+          <h1 className={`mt-3 text-3xl font-semibold tracking-tight sm:text-4xl ${headingClass}`}>
             Crie sua conta
           </h1>
-          <p className="mt-3 text-sm leading-6 text-neutral-600">
+          <p className={`mt-3 text-sm leading-6 ${bodyClass}`}>
             Configure seu acesso para operar pagamentos, acompanhar vendas e gerenciar retiradas.
           </p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-neutral-800">Nome completo</label>
+            <label className={`text-sm font-medium ${labelClass}`}>Nome completo</label>
             <div className="relative">
               <UserIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" />
               <input
@@ -133,7 +140,7 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-neutral-800">E-mail</label>
+            <label className={`text-sm font-medium ${labelClass}`}>E-mail</label>
             <div className="relative">
               <EnvelopeIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" />
               <input
@@ -155,7 +162,7 @@ export default function RegisterPage() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-neutral-800">Senha</label>
+              <label className={`text-sm font-medium ${labelClass}`}>Senha</label>
               <div className="relative">
                 <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" />
                 <input
@@ -174,7 +181,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors hover:text-neutral-700"
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors ${isDark ? 'hover:text-white' : 'hover:text-neutral-700'}`}
                   aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
@@ -184,7 +191,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-neutral-800">Confirmar</label>
+              <label className={`text-sm font-medium ${labelClass}`}>Confirmar</label>
               <div className="relative">
                 <LockClosedIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" />
                 <input
@@ -200,7 +207,7 @@ export default function RegisterPage() {
                 <button
                   type="button"
                   onClick={() => setShowPasswordConfirmation(!showPasswordConfirmation)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors hover:text-neutral-700"
+                  className={`absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors ${isDark ? 'hover:text-white' : 'hover:text-neutral-700'}`}
                   aria-label={showPasswordConfirmation ? 'Ocultar confirmacao' : 'Mostrar confirmacao'}
                 >
                   {showPasswordConfirmation ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
@@ -212,19 +219,19 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-neutral-200 bg-neutral-50/60 p-4 text-sm leading-6 text-neutral-600 transition-colors hover:border-neutral-300 hover:bg-neutral-50">
+          <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm leading-6 transition-colors ${isDark ? `border-white/10 bg-white/[0.04] text-neutral-400 hover:bg-white/[0.06] ${isModern ? 'hover:border-red-500/30' : 'hover:border-emerald-500/30'}` : 'border-neutral-200 bg-neutral-50/60 text-neutral-600 hover:border-neutral-300 hover:bg-neutral-50'}`}>
             <input
               type="checkbox"
               required
-              className="mt-1 h-4 w-4 rounded border-neutral-300 text-neutral-900 focus:ring-neutral-900"
+              className={`mt-1 h-4 w-4 rounded ${isModern ? 'border-white/20 text-red-500 focus:ring-red-500' : 'border-neutral-300 text-emerald-600 focus:ring-emerald-500'}`}
             />
             <span>
               Concordo com os{' '}
-              <a href="/terms" target="_blank" rel="noreferrer" className="font-medium text-emerald-600 hover:text-emerald-700">
+              <a href="/terms" target="_blank" rel="noreferrer" className={`font-medium ${accentLink}`}>
                 Termos de Uso
               </a>{' '}
               e a{' '}
-              <a href="/privacy" target="_blank" rel="noreferrer" className="font-medium text-emerald-600 hover:text-emerald-700">
+              <a href="/privacy" target="_blank" rel="noreferrer" className={`font-medium ${accentLink}`}>
                 Politica de Privacidade
               </a>
               .
@@ -235,23 +242,23 @@ export default function RegisterPage() {
             {isLoading ? (
               <>
                 <Spinner />
-                Criando conta
+                <span className="relative z-10">Criando conta</span>
               </>
             ) : (
               <>
-                Criar conta
-                <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                <span className="relative z-10">Criar conta</span>
+                <ArrowRightIcon className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
               </>
             )}
           </button>
         </form>
 
-        <div className="mt-7 border-t border-neutral-200 pt-6">
-          <p className="text-sm text-neutral-600">
+        <div className={`mt-7 border-t pt-6 ${isDark ? 'border-white/10' : 'border-neutral-200'}`}>
+          <p className={`text-sm ${bodyClass}`}>
             Ja tem uma conta?{' '}
             <Link
               to="/login"
-              className="font-semibold text-neutral-900 transition-colors hover:text-emerald-700"
+              className={`font-semibold transition-colors ${isDark ? 'text-white' : 'text-neutral-900'} ${accentLink}`}
             >
               Fazer login
             </Link>

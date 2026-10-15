@@ -74,6 +74,11 @@ export const notificationsService = {
   /**
    * Clear all read notifications
    */
+  async clearAll(): Promise<{ success: boolean }> {
+    const response = await api.delete('/notifications/clear-all');
+    return response.data;
+  },
+
   async clearRead(): Promise<{ success: boolean; message: string }> {
     const response = await api.delete('/notifications/clear-read');
     return response.data;

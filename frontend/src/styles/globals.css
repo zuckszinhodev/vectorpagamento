@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+@media (pointer: fine) {
+  html,
+  body {
+    cursor: url('/img/gorillapay-cursor.png') 7 1, auto;
+  }
+
+  a,
+  button,
+  summary,
+  [role='button'],
+  input[type='button'],
+  input[type='submit'],
+  input[type='reset'],
+  input[type='checkbox'],
+  input[type='radio'],
+  .cursor-pointer {
+    cursor: url('/img/gorillapay-cursor.png') 7 1, pointer;
+  }
+
+  button:disabled,
+  input:disabled,
+  select:disabled,
+  textarea:disabled,
+  .cursor-not-allowed {
+    cursor: not-allowed;
+  }
+}
+
 @layer base {
   /* ── Light Mode Tokens ─────────────────────────────────── */
   :root {
@@ -239,6 +267,14 @@
   to { transform: rotate(360deg); }
 }
 
+@font-face {
+  font-family: 'Coolvetica Loading';
+  src: url('/fonts/coolvetica-rg-it.otf') format('opentype');
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
 /* ── Brand Loader ─────────────────────────────────────────── */
 @keyframes brand-loader-float {
   0%, 100% {
@@ -354,8 +390,11 @@
   position: relative;
   display: inline-block;
   white-space: nowrap;
+  font-family: 'Coolvetica Loading', Inter, sans-serif;
+  font-style: italic;
+  font-weight: 400;
   line-height: 0.9;
-  letter-spacing: -0.065em;
+  letter-spacing: normal;
   will-change: transform, opacity, filter, background-position;
 }
 
@@ -420,6 +459,11 @@
   text-shadow:
     0 12px 30px rgba(5, 150, 105, 0.26),
     0 0 22px rgba(16, 185, 129, 0.18);
+}
+
+.brand-loader-pay {
+  display: inline-block;
+  margin-left: 0.04em;
 }
 
 .brand-loader-caption {
@@ -568,4 +612,161 @@
   width: 60%;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(5, 150, 105, 0.2), transparent);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MODERN (RED) THEME — global brand override
+   Remaps the brand green (accent / primary) to red across every
+   page. Semantic status colors (status-success, success, emerald,
+   green used for "Aprovado / Pago") are intentionally NOT touched.
+   ═══════════════════════════════════════════════════════════════ */
+.theme-modern {
+  /* Brand CSS vars → red */
+  --accent-subtle:        rgba(239, 68, 68, 0.12);
+  --accent-subtle-hover:  rgba(239, 68, 68, 0.20);
+  --border-focus:         #ef4444;
+  --primary:              239, 68, 68;
+}
+
+/* Darker near-black surfaces for the modern theme (all pages) */
+.theme-modern.dark,
+.dark.theme-modern {
+  --surface-page:       #050506;
+  --surface-card:       rgba(12, 12, 14, 0.75);
+  --surface-card-solid: #0b0b0d;
+  --surface-elevated:   #0d0d0f;
+  --surface-hover:      rgba(24, 24, 27, 0.6);
+  --surface-nav:        rgba(5, 5, 6, 0.85);
+  --surface-input:      rgba(12, 12, 14, 0.9);
+  --surface-code:       rgba(16, 16, 18, 0.8);
+}
+
+/* ── Accent (brand) utilities ─────────────────────────────────── */
+.theme-modern .text-accent-primary,
+.theme-modern .text-accent,
+.theme-modern .hover\:text-accent-primary:hover,
+.theme-modern .group:hover .group-hover\:text-accent-primary { color: #ef4444 !important; }
+
+.theme-modern .bg-accent-primary,
+.theme-modern .bg-accent,
+.theme-modern .hover\:bg-accent-primary:hover { background-color: #ef4444 !important; }
+
+.theme-modern .bg-accent-hover,
+.theme-modern .hover\:bg-accent-hover:hover { background-color: #dc2626 !important; }
+
+.theme-modern .border-accent-primary,
+.theme-modern .border-accent,
+.theme-modern .hover\:border-accent-primary:hover,
+.theme-modern .focus\:border-accent-primary:focus,
+.theme-modern .focus-within\:border-accent-primary:focus-within { border-color: #ef4444 !important; }
+
+.theme-modern .ring-accent-primary,
+.theme-modern .focus\:ring-accent-primary:focus,
+.theme-modern .focus-within\:ring-accent-primary:focus-within { --tw-ring-color: #ef4444 !important; }
+
+.theme-modern .from-accent-primary { --tw-gradient-from: #ef4444 var(--tw-gradient-from-position) !important; }
+.theme-modern .to-accent-primary   { --tw-gradient-to:   #dc2626 var(--tw-gradient-to-position) !important; }
+.theme-modern .via-accent-primary  { --tw-gradient-stops: var(--tw-gradient-from), #ef4444 var(--tw-gradient-via-position), var(--tw-gradient-to) !important; }
+
+/* ── Primary shades (legacy brand scale) → red scale ──────────── */
+.theme-modern .text-primary-400 { color: #f87171 !important; }
+.theme-modern .text-primary-500 { color: #ef4444 !important; }
+.theme-modern .text-primary-600 { color: #dc2626 !important; }
+.theme-modern .text-primary-700 { color: #b91c1c !important; }
+.theme-modern .bg-primary-400 { background-color: #f87171 !important; }
+.theme-modern .bg-primary-500 { background-color: #ef4444 !important; }
+.theme-modern .bg-primary-600 { background-color: #dc2626 !important; }
+.theme-modern .bg-primary-700 { background-color: #b91c1c !important; }
+.theme-modern .border-primary-400 { border-color: #f87171 !important; }
+.theme-modern .border-primary-500 { border-color: #ef4444 !important; }
+.theme-modern .border-primary-600 { border-color: #dc2626 !important; }
+
+/* ── Accent subtle bg / border helpers ────────────────────────── */
+.theme-modern .bg-accent-subtle { background-color: var(--accent-subtle) !important; }
+.theme-modern .border-border-focus,
+.theme-modern .focus\:border-border-focus:focus { border-color: #ef4444 !important; }
+
+/* ── Skeleton shimmer (no blinking) ───────────────────────────── */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.06);
+}
+.skeleton-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+  animation: skeleton-sweep 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-sweep {
+  100% { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after { animation: none; }
+}
+
+/* ── Brand loader (WazerPay wordmark) → red in the modern theme ─ */
+.theme-modern .brand-loader-wordmark--main .brand-loader-pay {
+  color: #ef4444 !important;
+  text-shadow:
+    0 12px 30px rgba(220, 38, 38, 0.30),
+    0 0 22px rgba(239, 68, 68, 0.22) !important;
+}
+.theme-modern .brand-loader-aura--left {
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.20) 0%, rgba(220, 38, 38, 0.08) 36%, transparent 74%) !important;
+}
+.theme-modern .brand-loader-aura--right {
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.20) 0%, rgba(248, 113, 113, 0.08) 42%, transparent 76%) !important;
+}
+.theme-modern .brand-loader-wordmark--sheen .brand-loader-pay {
+  background-image: linear-gradient(
+    112deg,
+    transparent 0%,
+    transparent 32%,
+    rgba(254, 226, 226, 0.14) 42%,
+    rgba(255, 255, 255, 0.92) 49%,
+    rgba(248, 113, 113, 0.38) 58%,
+    transparent 68%
+  ) !important;
+}
+
+/* ── Primary / secondary buttons → red in the modern theme ────── */
+.theme-modern .btn-primary {
+  background-color: #dc2626 !important;
+}
+.theme-modern .btn-primary:hover {
+  background-color: #b91c1c !important;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35) !important;
+}
+.theme-modern .btn-secondary:hover {
+  color: #ef4444 !important;
+}
+
+/* ── Loading spinner → red in the modern theme ────────────────── */
+.theme-modern .glow-spinner {
+  border-color: rgba(239, 68, 68, 0.15) !important;
+  border-top-color: #ef4444 !important;
+  box-shadow:
+    0 0 8px rgba(239, 68, 68, 0.4),
+    0 0 20px rgba(239, 68, 68, 0.2),
+    0 0 40px rgba(239, 68, 68, 0.1),
+    inset 0 0 8px rgba(239, 68, 68, 0.1) !important;
+}
+
+/* ── Animated ambient glows for the modern background ─────────── */
+.modern-glow {
+  animation: modernGlowPulse 9s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+.modern-glow--delayed {
+  animation-delay: 4.5s;
+}
+@keyframes modernGlowPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50%      { opacity: 0.9;  transform: scale(1.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modern-glow { animation: none; }
 }

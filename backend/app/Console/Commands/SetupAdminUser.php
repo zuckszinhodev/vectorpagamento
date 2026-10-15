@@ -49,8 +49,9 @@ class SetupAdminUser extends Command
             $this->warn('Add this secret to Google Authenticator or similar app.');
 
             // Generate QR code URL for convenience
+            $issuer = trim((string) \App\Models\SystemSetting::get('platform_name', ''));
             $qrUrl = $google2fa->getQRCodeUrl(
-                config('app.name', 'Vector Pagamentos'),
+                $issuer !== '' ? $issuer : (string) config('app.name', 'Vector Pagamentos'),
                 $user->email,
                 $secret
             );

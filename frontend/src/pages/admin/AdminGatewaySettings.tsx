@@ -3,11 +3,13 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { AdminPageShell, AdminPageHeader } from '@/components/admin/AdminPageShell';
 import { useThemeStore } from '@/stores/themeStore';
-import { BuildingStorefrontIcon, MagnifyingGlassIcon, SwatchIcon } from '@heroicons/react/24/outline';
+import { themeList, rgbToHex } from '@/config/themes';
+import type { ThemeVariant } from '@/config/themes';
+import { BuildingStorefrontIcon, MagnifyingGlassIcon, SwatchIcon, PaintBrushIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 
 export default function AdminGatewaySettings() {
-  const { setPlatformName, setPlatformDescription, setPrimaryColor, setLogoUrl: applyLogoUrl, platformName } = useThemeStore();
+  const { setPlatformName, setPlatformDescription, setPrimaryColor, setLogoUrl: applyLogoUrl, platformName, themeVariant, setThemeVariant } = useThemeStore();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -36,12 +38,26 @@ export default function AdminGatewaySettings() {
     setSeoKeywords(a.seo_keywords || '');
   }, [data]);
 
+  const saveTheme = useMutation({
+    mutationFn: async (variant: string) => {
+      return (await api.put('/admin/system-config', { theme_variant: variant })).data;
+    },
+    onSuccess: () => toast.success('Tema padrão do sistema atualizado para todos os usuários'),
+    onError: (e: any) => toast.error(e?.response?.data?.message || 'Erro ao salvar o tema'),
+  });
+
+  const selectTheme = (variant: 'classic' | 'modern') => {
+    setThemeVariant(variant);
+    saveTheme.mutate(variant);
+  };
+
   const save = useMutation({
     mutationFn: async () => {
       const payload = {
         platform_name: name.trim(),
         platform_description: description,
         primary_color: primaryColor,
+        theme_variant: themeVariant,
         logo_url: logoUrl,
         support_email: supportEmail,
         seo_title: seoTitle,
@@ -186,6 +202,52 @@ export default function AdminGatewaySettings() {
               <textarea className={`${input} h-20 resize-none`} value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} placeholder="Descrição exibida nos resultados de busca" />
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Theme Selector */}
+      <div className={`${card} mt-6`}>
+        <h3 className={sectionTitle}><PaintBrushIcon className="h-4 w-4 text-violet-600" /> Tema do Gateway</h3>
+        <p className="mb-4 text-xs text-gray-500">Define o tema padrão do sistema para <strong>todos os usuários</strong>. A mudança é salva e aplicada globalmente.</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {themeList.map((t) => {
+            const active = themeVariant === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => selectTheme(t.id)}
+                className={`relative rounded-xl border-2 p-4 text-left transition-all ${
+                  active
+                    ? 'border-gray-900 bg-gray-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                }`}
+              >
+                {active && (
+                  <div className="absolute right-3 top-3">
+                    <CheckCircleIcon className="h-5 w-5 text-gray-900" />
+                  </div>
+                )}
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <span className="h-5 w-5 rounded-full" style={{ backgroundColor: t.preview.primary }} />
+                    <span className="h-5 w-5 rounded-full" style={{ backgroundColor: t.preview.accent }} />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-900">{t.name}</span>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">{t.description}</p>
+                {/* Mini preview bar */}
+                <div className="mt-3 flex h-8 overflow-hidden rounded-lg border border-gray-100">
+                  <div className="w-1/4" style={{ backgroundColor: t.preview.primary }} />
+                  <div className="w-1/4" style={{ backgroundColor: t.preview.accent }} />
+                  <div className="w-1/4" style={{ backgroundColor: t.preview.bg }} />
+                  <div className="flex w-1/4 items-center justify-center bg-gray-50 text-[10px] font-medium text-gray-400">
+                    Aa
+                  </div>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { affiliatesService, type Affiliate, type CreateAffiliateData, type UpdateAffiliateData, type AffiliateStatistics } from '@/services/api';
+import { affiliatesService, type Affiliate, type CreateAffiliateData, type UpdateAffiliateData, type AffiliateStatistics } from '@/services/api/affiliates.service';
 import toast from 'react-hot-toast';
 
 interface AffiliatesState {

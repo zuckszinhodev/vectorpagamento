@@ -140,11 +140,12 @@ it('register response does not include password hash', function () {
 // 8. Blocked user cannot authenticate
 
 it('blocked user cannot login', function () {
-    makeSecurityTestUser([
+    ['user' => $user] = makeSecurityTestUser([
         'email'    => 'blocked@example.com',
         'password' => bcrypt('Password@123'),
         'status'   => 'blocked',
     ]);
+    $user->forceFill(['status' => 'blocked'])->save();
     $response = $this->postJson('/api/v1/auth/login', [
         'email'    => 'blocked@example.com',
         'password' => 'Password@123',

@@ -16,7 +16,7 @@ beforeEach(function () {
     $this->account = Account::create([
         'id'            => Str::uuid()->toString(),
         'name'          => 'Test Account',
-        'document'      => '12345678900',
+        'document'      => '52998224725',
         'document_type' => 'cpf',
         'email'         => 'account@test.com',
         'status'        => 'active',
@@ -46,6 +46,31 @@ beforeEach(function () {
             ['type' => 'price', 'price' => 10000],
         ]),
     ]);
+});
+
+it('validates a product coupon using the server price', function () {
+    Coupon::create(['account_id' => $this->account->id, 'code' => 'PRODUCT20', 'type' => 'percentage', 'value' => 20, 'product_ids' => [$this->product->id], 'is_active' => true]);
+    $this->postJson('/api/v1/checkout/test-checkout/coupon', ['code' => 'product20', 'amount' => 1])
+        ->assertOk()->assertJsonPath('data.discount_amount', 2000);
+});
+
+it('rejects a coupon for another product or account and expired coupons', function () {
+    $coupon = Coupon::create(['account_id' => $this->account->id, 'code' => 'RESTRICTED', 'type' => 'fixed', 'value' => 500, 'product_ids' => [(string) Str::uuid()], 'is_active' => true]);
+    $this->postJson('/api/v1/checkout/test-checkout/coupon', ['code' => 'RESTRICTED'])->assertStatus(422);
+    $coupon->update(['product_ids' => [$this->product->id], 'valid_until' => now()->subDay()]);
+    $this->postJson('/api/v1/checkout/test-checkout/coupon', ['code' => 'RESTRICTED'])->assertStatus(422);
+    $coupon->update(['valid_until' => null]);
+    $this->checkout->update(['account_id' => Account::create(['name' => 'Other', 'document' => '12345678000190', 'document_type' => 'cnpj', 'email' => 'other@example.com', 'status' => 'active'])->id]);
+    $this->postJson('/api/v1/checkout/test-checkout/coupon', ['code' => 'RESTRICTED'])->assertStatus(422);
+});
+
+it('charges the server calculated product price after a coupon', function () {
+    Coupon::create(['account_id' => $this->account->id, 'code' => 'PAY20', 'type' => 'percentage', 'value' => 20, 'product_ids' => [$this->product->id], 'is_active' => true]);
+    $service = \Mockery::mock(PaymentService::class);
+    $service->shouldReceive('processPayment')->once()->withArgs(fn ($charge, $card) => $charge->amount === 8000)->andReturn(['success' => true, 'acquirer' => 'mock', 'pix_code' => 'test', 'pix_qrcode' => 'test']);
+    $this->app->instance(PaymentService::class, $service);
+    $this->postJson('/api/v1/checkout/test-checkout/process', ['payment_method' => 'pix', 'name' => 'Test Buyer', 'email' => 'buyer@example.com', 'document' => '52998224725', 'coupon_code' => 'PAY20', 'discount_amount' => 9999])->assertSuccessful();
+    $this->assertDatabaseHas('charges', ['checkout_id' => $this->checkout->id, 'amount' => 8000]);
 });
 
 it('loads public checkout page', function () {
@@ -110,7 +135,7 @@ it('processes PIX payment', function () {
         'customer'       => [
             'name'     => 'John Doe',
             'email'    => 'john@test.com',
-            'document' => '12345678900',
+            'document' => '52998224725',
         ],
     ]);
 

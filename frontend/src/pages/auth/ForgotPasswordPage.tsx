@@ -28,14 +28,21 @@ function Spinner() {
   );
 }
 
-const inputClass =
-  'h-12 w-full rounded-xl border border-neutral-200 bg-white px-11 text-sm text-neutral-900 outline-none transition-all placeholder:text-neutral-400 hover:border-neutral-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
-
-const primaryButtonClass =
-  'group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-neutral-900 px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-neutral-800 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-neutral-900/15 disabled:cursor-not-allowed disabled:opacity-60';
-
 export default function ForgotPasswordPage() {
-  const platformName = useThemeStore((s) => s.platformName);
+  const { platformName, themeVariant, theme } = useThemeStore();
+  const isModern = themeVariant === 'modern';
+  const isDark = isModern || theme === 'dark';
+  const headingClass = isDark ? 'text-white' : 'text-neutral-900';
+  const bodyClass = isDark ? 'text-neutral-400' : 'text-neutral-600';
+  const labelClass = isDark ? 'text-neutral-200' : 'text-neutral-800';
+  const accentClass = isModern ? 'text-red-500' : 'text-emerald-600';
+  const accentLink = isModern ? 'text-red-500 hover:text-red-400' : 'text-emerald-600 hover:text-emerald-700';
+  const inputClass = `h-12 w-full rounded-xl border px-11 text-sm outline-none transition-all duration-200 focus:ring-4 ${isDark
+    ? `border-white/10 bg-white/[0.045] text-white placeholder:text-neutral-600 ${isModern ? 'hover:border-red-500/35 focus:border-red-500 focus:ring-red-500/10' : 'hover:border-emerald-500/35 focus:border-emerald-500 focus:ring-emerald-500/10'}`
+    : 'border-neutral-200 bg-white text-neutral-900 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-emerald-500 focus:ring-emerald-500/10'}`;
+  const primaryButtonClass = `group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl px-5 text-sm font-semibold text-white transition-all duration-300 before:pointer-events-none before:absolute before:inset-0 before:-translate-x-[120%] before:skew-x-[-20deg] before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:transition-transform before:duration-700 hover:-translate-y-0.5 hover:before:translate-x-[120%] active:scale-[0.985] disabled:cursor-not-allowed disabled:transform-none disabled:opacity-60 ${isModern
+    ? 'bg-gradient-to-r from-red-600 to-red-500 shadow-[0_12px_35px_rgba(239,68,68,0.25)] hover:shadow-[0_16px_42px_rgba(239,68,68,0.38)]'
+    : 'bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-[0_12px_35px_rgba(16,185,129,0.22)] hover:shadow-[0_16px_42px_rgba(16,185,129,0.34)]'}`;
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
@@ -73,70 +80,70 @@ export default function ForgotPasswordPage() {
         <section className="w-full">
           <Link
             to="/login"
-            className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+            className={`mb-8 inline-flex items-center gap-2 text-sm font-medium transition-colors ${bodyClass} ${isModern ? 'hover:text-red-500' : 'hover:text-emerald-600'}`}
           >
             <ArrowLeftIcon className="h-4 w-4" />
             Voltar para login
           </Link>
 
-          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600">
+          <div className={`mb-6 flex h-12 w-12 items-center justify-center rounded-xl border ${isModern ? 'border-red-500/25 bg-red-500/10 text-red-500' : 'border-emerald-200 bg-emerald-50 text-emerald-600'}`}>
             <EnvelopeIcon className="h-6 w-6" />
           </div>
 
           <div className="mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">
+            <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${accentClass}`}>
               Recuperacao enviada
             </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+            <h1 className={`mt-3 text-3xl font-semibold tracking-tight sm:text-4xl ${headingClass}`}>
               Verifique seu e-mail
             </h1>
-            <p className="mt-3 text-sm leading-6 text-neutral-600">
+            <p className={`mt-3 text-sm leading-6 ${bodyClass}`}>
               Se existir uma conta vinculada a este endereco, voce recebera um link seguro para redefinir sua senha.
             </p>
           </div>
 
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50/60 p-4">
+          <div className={`rounded-xl border p-4 ${isDark ? 'border-white/10 bg-white/[0.04]' : 'border-neutral-200 bg-neutral-50/60'}`}>
             <div className="flex items-start gap-3">
-              <div className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white text-neutral-700 shadow-sm ring-1 ring-neutral-200">
+              <div className={`mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg shadow-sm ring-1 ${isDark ? 'bg-white/[0.06] text-neutral-300 ring-white/10' : 'bg-white text-neutral-700 ring-neutral-200'}`}>
                 <EnvelopeIcon className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-neutral-900">E-mail de recuperacao</p>
-                <p className="mt-1 truncate text-sm text-neutral-600">{submittedEmail}</p>
+                <p className={`text-sm font-medium ${headingClass}`}>E-mail de recuperacao</p>
+                <p className={`mt-1 truncate text-sm ${bodyClass}`}>{submittedEmail}</p>
               </div>
             </div>
           </div>
 
           <Link to="/login" className={`${primaryButtonClass} mt-6`}>
-            Ir para login
-            <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            <span className="relative z-10">Ir para login</span>
+            <ArrowRightIcon className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
         </section>
       ) : (
         <section className="w-full">
           <Link
             to="/login"
-            className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-900"
+            className={`mb-8 inline-flex items-center gap-2 text-sm font-medium transition-colors ${bodyClass} ${isModern ? 'hover:text-red-500' : 'hover:text-emerald-600'}`}
           >
             <ArrowLeftIcon className="h-4 w-4" />
             Voltar
           </Link>
 
           <div className="mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-600">
+            <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${accentClass}`}>
               Recuperar acesso
             </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-neutral-900 sm:text-4xl">
+            <h1 className={`mt-3 text-3xl font-semibold tracking-tight sm:text-4xl ${headingClass}`}>
               Esqueceu sua senha?
             </h1>
-            <p className="mt-3 text-sm leading-6 text-neutral-600">
+            <p className={`mt-3 text-sm leading-6 ${bodyClass}`}>
               Informe seu e-mail para receber um link seguro de redefinicao.
             </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-neutral-800">E-mail</label>
+              <label className={`text-sm font-medium ${labelClass}`}>E-mail</label>
               <div className="relative">
                 <EnvelopeIcon className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-neutral-400" />
                 <input
@@ -162,19 +169,19 @@ export default function ForgotPasswordPage() {
               {isLoading ? (
                 <>
                   <Spinner />
-                  Enviando
+                  <span className="relative z-10">Enviando</span>
                 </>
               ) : (
                 <>
-                  Enviar instrucoes
-                  <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  <span className="relative z-10">Enviar instrucoes</span>
+                  <ArrowRightIcon className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </>
               )}
             </button>
 
-            <p className="text-center text-sm text-neutral-600">
+            <p className={`text-center text-sm ${bodyClass}`}>
               Lembrou a senha?{' '}
-              <Link to="/login" className="font-semibold text-neutral-900 transition-colors hover:text-emerald-700">
+              <Link to="/login" className={`font-semibold transition-colors ${isDark ? 'text-white' : 'text-neutral-900'} ${accentLink}`}>
                 Voltar para login
               </Link>
             </p>

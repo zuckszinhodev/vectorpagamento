@@ -63,8 +63,9 @@ class SplitRule extends Model
 
     public function scopeActive($query)
     {
-        // `whereRaw('"is_active" = true')` quebra no MySQL (aspas duplas viram
-        // string fora do modo ANSI). O builder resolve o dialeto sozinho.
+        // Nao usar whereRaw com aspas duplas no identificador: fora do modo ANSI
+        // o MySQL le como string literal e a condicao vira sempre falsa.
+        // O builder resolve o dialeto sozinho.
         return $query->where('is_active', true);
     }
 
