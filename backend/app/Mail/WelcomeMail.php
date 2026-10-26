@@ -22,7 +22,7 @@ class WelcomeMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Sua conta Vector Pagamentos foi criada',
+            subject: 'Sua conta GorillaPay foi criada',
         );
     }
 
@@ -32,7 +32,7 @@ class WelcomeMail extends Mailable
             view: 'emails.welcome',
             with: [
                 'userName' => $this->user->name,
-                'loginUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://app.vectorpagamentos.com')) . '/login',
+                'loginUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://gorillapay.site')) . '/login',
             ],
         );
     }

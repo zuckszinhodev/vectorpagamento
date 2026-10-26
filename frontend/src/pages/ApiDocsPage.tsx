@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useThemeStore } from '@/stores/themeStore';
 import {
+  ArrowLeftIcon,
   DocumentTextIcon,
   KeyIcon,
   CodeBracketIcon,
@@ -48,13 +50,9 @@ interface Section {
   endpoints: Endpoint[];
 }
 
-const EXTERNAL_API_BASE_URL = 'https://api.vectorpagamentos.com/api/v1/external';
-const API_PATH_PREFIX = '/api/v1/external';
-
-// Real base URL used by the interactive tester — points at the same backend
-// the app talks to (local in dev, production in prod).
-const API_ROOT = (import.meta.env.VITE_API_URL || 'https://api.vectorpagamentos.com/api/v1').replace(/\/+$/, '');
-const DEFAULT_TEST_BASE = `${API_ROOT}/external`;
+const API_PATH_PREFIX = '/v1/external';
+const EXTERNAL_API_BASE_URL = `https://api.gorillapay.site${API_PATH_PREFIX}`;
+const DEFAULT_TEST_BASE = EXTERNAL_API_BASE_URL;
 
 // Extracts ":param" segments from a path, e.g. "/charges/:id/cancel" -> ["id"]
 function pathParams(path: string): string[] {
@@ -1171,6 +1169,13 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
       {/* Hero */}
       <div className="bg-gray-900 border-b border-border-DEFAULT">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <Link
+            to="/dashboard"
+            className="mb-5 inline-flex items-center gap-2 rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:border-gray-500 hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+          >
+            <ArrowLeftIcon className="h-4 w-4" aria-hidden="true" />
+            Voltar para o dashboard
+          </Link>
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-4 sm:gap-6">
               <img

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api, formatCurrency, formatDate } from '@/lib/api';
 import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
 import {
@@ -1011,7 +1011,17 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                             </div>
                           </td>
                           <td className="px-6 py-4">
-                            <span className="text-sm text-gray-900">{charge.seller_name || charge.account_name}</span>
+                            {charge.seller_id ? (
+                              <Link
+                                to={`/admin/customers/${charge.seller_id}`}
+                                onClick={(event) => event.stopPropagation()}
+                                className="text-sm text-green-700 hover:underline focus-visible:underline"
+                              >
+                                {charge.seller_name || charge.account_name}
+                              </Link>
+                            ) : (
+                              <span className="text-sm text-gray-900">{charge.seller_name || charge.account_name}</span>
+                            )}
                           </td>
                           <td className="px-6 py-4">
                             <span className="text-sm text-gray-900 truncate max-w-[150px] block">{charge.product_name || '—'}</span>

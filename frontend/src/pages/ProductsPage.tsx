@@ -492,6 +492,7 @@ export default function ProductsPage() {
           </p>
         </div>
         <button
+          data-tour="create-product"
           onClick={handleCreate}
           className="hidden lg:inline-flex items-center gap-2 rounded-xl bg-accent-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-primary/90"
         >

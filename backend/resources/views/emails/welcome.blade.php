@@ -1,17 +1,27 @@
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.5; margin: 0; padding: 20px;">
+@extends('emails.layout')
 
-<p>Ola {{ $userName }}, Sua conta na Vector Pagamentos foi criada com sucesso.</p>
+@section('title', 'Bem-vindo - GorillaPay')
 
-<p>Para comecar a utilizar a plataforma, acesse sua conta e complete a verificacao de identidade (KYC).</p>
+@section('content')
+    <h1 style="font-size: 22px; color: #1a1a2e; margin: 0 0 16px;">Bem-vindo à GorillaPay</h1>
 
-<p><a href="{{ $loginUrl }}">{{ $loginUrl }}</a></p>
+    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">Olá, <strong>{{ $userName }}</strong>!</p>
 
-<p>Se voce nao criou esta conta, ignore este email.</p>
+    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">Sua conta na GorillaPay foi criada com sucesso.</p>
 
-<p>Atenciosamente,<br>Equipe Vector Pagamentos</p>
+    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">
+        Para começar a utilizar a plataforma, acesse sua conta e complete a verificação de identidade (KYC).
+    </p>
 
-</body>
-</html>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 20px auto;">
+        <tr>
+            <td align="center" style="background-color: #dc2626; border-radius: 8px;">
+                <a href="{{ $loginUrl }}" style="display: inline-block; color: #ffffff; text-decoration: none; padding: 14px 32px; font-size: 15px; font-weight: 600;">Acessar minha conta</a>
+            </td>
+        </tr>
+    </table>
+
+    <hr style="border: none; height: 1px; background-color: #eeeeee; margin: 24px 0;">
+
+    <p style="font-size: 13px; color: #999999; margin: 0;">Se você não criou esta conta, ignore este e-mail.</p>
+@endsection

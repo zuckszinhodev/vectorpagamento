@@ -23,7 +23,7 @@ class KycRejectedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verificação KYC - Ajustes necessários - Vector Pagamentos',
+            subject: 'Verificação KYC - Ajustes necessários - GorillaPay',
         );
     }
 
@@ -34,7 +34,7 @@ class KycRejectedMail extends Mailable
             with: [
                 'userName' => $this->user->name,
                 'reason' => $this->reason,
-                'resubmitUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://app.vectorpagamentos.com')) . '/kyc',
+                'resubmitUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://gorillapay.site')) . '/kyc',
             ],
         );
     }

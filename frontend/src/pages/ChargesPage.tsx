@@ -1142,7 +1142,8 @@ export default function ChargesPage() {
             Gerencie todas as suas cobranças e pagamentos
           </p>
         </div>
-        <button 
+        <button
+          data-tour="new-charge"
           onClick={() => setIsNewChargeOpen(true)}
           className="btn-primary inline-flex items-center gap-2 text-sm"
         >

@@ -1359,6 +1359,7 @@ export default function SettingsPage() {
  </div>
  <div className="flex items-center gap-2 sm:gap-3">
  <Link
+ data-tour="api-docs-link"
  to="/docs"
  target="_blank"
  rel="noopener noreferrer"
@@ -1370,6 +1371,7 @@ export default function SettingsPage() {
  <ArrowTopRightOnSquareIcon className="ml-1 h-3.5 w-3.5 sm:h-4 sm:w-4" />
  </Link>
  <button
+ data-tour="new-api-key"
  onClick={handleNewKeyClick}
  className="btn-primary inline-flex items-center text-xs sm:text-sm"
  >

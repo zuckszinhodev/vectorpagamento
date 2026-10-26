@@ -496,6 +496,7 @@ class CustomerAdminController extends Controller
                     'blocked_at' => $user->blocked_at instanceof \Carbon\Carbon ? $user->blocked_at->toIso8601String() : ($user->blocked_at ? (string) $user->blocked_at : null),
                     'kyc_status' => $user->kyc_status ?? 'pending',
                     'mfa_enabled' => (bool)($user->mfa_enabled ?? false),
+                    'fraud_risk' => app(\App\Domain\Fraud\Services\SellerFraudRiskService::class)->assess($user->account_id),
                     'created_at' => $user->created_at instanceof \Carbon\Carbon ? $user->created_at->toIso8601String() : ($user->created_at ? (string) $user->created_at : null),
                     'last_login_at' => $user->last_login_at instanceof \Carbon\Carbon ? $user->last_login_at->toIso8601String() : ($user->last_login_at ? (string) $user->last_login_at : null),
                     'last_login_ip' => $user->last_login_ip,

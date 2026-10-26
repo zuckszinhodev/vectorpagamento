@@ -78,7 +78,8 @@ class AccountNotificationService
     /** Saque solicitado (informativo). */
     public function withdrawalRequested(Withdrawal $withdrawal): void
     {
-        $amount = $this->formatMoneyMinor((int) ($withdrawal->amount * 100));
+        // Withdrawal amounts are already stored in cents.
+        $amount = $this->formatMoneyMinor((int) round((float) $withdrawal->amount));
 
         $this->push($withdrawal->account_id, $withdrawal->user_id, [
             'type'    => 'info',
@@ -94,7 +95,7 @@ class AccountNotificationService
     /** Saque concluído. */
     public function withdrawalCompleted(Withdrawal $withdrawal): void
     {
-        $amount = $this->formatMoneyMinor((int) ($withdrawal->net_amount * 100));
+        $amount = $this->formatMoneyMinor((int) round((float) $withdrawal->net_amount));
 
         $this->push($withdrawal->account_id, $withdrawal->user_id, [
             'type'    => 'sale',

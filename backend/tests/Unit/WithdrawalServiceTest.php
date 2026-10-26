@@ -325,3 +325,185 @@ it('splits a withdrawal across multiple nominal balances when no single acquirer
     expect($parts[1]['acquirer'])->toBe('blupay');
     expect($parts[1]['amount'])->toBe(4000);
 });
+
+it('sends a prioritized AkkadPag withdrawal once with its external withdrawal key', function () {
+    config([
+        'acquirer_routing.engine_enabled' => true,
+        'acquirers.akkadpag.enabled' => true,
+        'acquirers.akkadpag.public_key' => 'pk_test_akkad',
+        'acquirers.akkadpag.secret_key' => 'sk_test_akkad',
+        'acquirers.akkadpag.withdrawal_key' => 'wd_test_akkad',
+        'acquirers.akkadpag.base_url' => 'https://api.akkadpag.com/v1',
+    ]);
+
+    AcquirerConfig::query()->update(['enabled' => false]);
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'akkadpag'],
+        [
+            'display_name' => 'AkkadPag',
+            'type' => 'gateway',
+            'enabled' => true,
+            'supported_methods' => ['pix_out'],
+            'priority' => 0,
+            'settings' => [],
+        ]
+    );
+
+    Http::fake([
+        'https://api.akkadpag.com/v1/company/details' => Http::response([
+            'data' => ['fees' => ['withdraw_api' => ['fixed' => 25, 'percent' => 1]]],
+        ]),
+        'https://api.akkadpag.com/v1/transfers' => Http::response([
+            'data' => ['id' => (string) Str::uuid(), 'status' => 'PROCESSING'],
+        ], 201),
+    ]);
+
+    $withdrawal = Withdrawal::create([
+        'id' => Str::uuid()->toString(),
+        'account_id' => $this->account->id,
+        'user_id' => $this->user->id,
+        'amount' => 10000,
+        'fee' => 500,
+        'net_amount' => 9500,
+        'status' => 'pending',
+        'method' => 'pix',
+        'destination' => [
+            'type' => 'pix',
+            'pix_key' => '12345678900',
+            'pix_type' => 'cpf',
+        ],
+    ]);
+
+    AcquirerFactory::reset();
+    $service = new WithdrawalService();
+    $result = $service->processWithdrawal($withdrawal);
+    $withdrawal->refresh();
+
+    expect($result['success'])->toBeTrue();
+    expect($result['acquirer'])->toBe('akkadpag');
+    expect($withdrawal->status)->toBe('processing');
+    expect($withdrawal->acquirer)->toBe('akkadpag');
+    expect($withdrawal->acquirer_transfer_id)->not->toBeEmpty();
+
+    Http::assertSent(function ($request): bool {
+        return $request->url() === 'https://api.akkadpag.com/v1/transfers'
+            && $request->hasHeader('x-withdrawal-key', 'wd_test_akkad')
+            && $request->data()['amount'] === 9622
+            && $request->data()['pix_key'] === '12345678900'
+            && $request->data()['pix_key_type'] === 'CPF';
+    });
+});
+
+it('does not retry an ambiguous AkkadPag withdrawal or release its reserved funds', function () {
+    config([
+        'acquirer_routing.engine_enabled' => true,
+        'acquirers.akkadpag.enabled' => true,
+        'acquirers.akkadpag.public_key' => 'pk_test_akkad',
+        'acquirers.akkadpag.secret_key' => 'sk_test_akkad',
+        'acquirers.akkadpag.withdrawal_key' => 'wd_test_akkad',
+        'acquirers.akkadpag.base_url' => 'https://api.akkadpag.com/v1',
+    ]);
+
+    AcquirerConfig::query()->update(['enabled' => false]);
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'akkadpag'],
+        [
+            'display_name' => 'AkkadPag',
+            'type' => 'gateway',
+            'enabled' => true,
+            'supported_methods' => ['pix_out'],
+            'priority' => 0,
+            'settings' => [],
+        ]
+    );
+
+    Http::fake([
+        'https://api.akkadpag.com/v1/company/details' => Http::response([
+            'data' => ['fees' => ['withdraw_api' => ['fixed' => 25, 'percent' => 1]]],
+        ]),
+        'https://api.akkadpag.com/v1/transfers' => Http::response(['message' => 'Internal server error'], 503),
+    ]);
+
+    $withdrawal = Withdrawal::create([
+        'id' => Str::uuid()->toString(),
+        'account_id' => $this->account->id,
+        'user_id' => $this->user->id,
+        'amount' => 10000,
+        'fee' => 500,
+        'net_amount' => 9500,
+        'status' => 'pending',
+        'method' => 'pix',
+        'destination' => [
+            'type' => 'pix',
+            'pix_key' => '12345678900',
+            'pix_type' => 'cpf',
+        ],
+    ]);
+
+    AcquirerFactory::reset();
+    $service = new WithdrawalService();
+    $firstResult = $service->processWithdrawal($withdrawal);
+    $withdrawal->refresh();
+    $secondResult = $service->processWithdrawal($withdrawal);
+    $withdrawal->refresh();
+
+    expect($firstResult['ambiguous'])->toBeTrue();
+    expect($secondResult['ambiguous'])->toBeTrue();
+    expect($withdrawal->status)->toBe('processing');
+    expect($withdrawal->acquirer_transfer_id)->toBeNull();
+    expect($withdrawal->destination['_akkadpag_dispatch_started_at'])->not->toBeEmpty();
+    expect(Http::recorded())->toHaveCount(2);
+});
+
+it('reconciles an AkkadPag transfer using the status lookup endpoint', function () {
+    config([
+        'acquirer_routing.engine_enabled' => true,
+        'acquirers.akkadpag.enabled' => true,
+        'acquirers.akkadpag.public_key' => 'pk_test_akkad',
+        'acquirers.akkadpag.secret_key' => 'sk_test_akkad',
+        'acquirers.akkadpag.withdrawal_key' => 'wd_test_akkad',
+        'acquirers.akkadpag.base_url' => 'https://api.akkadpag.com/v1',
+    ]);
+
+    AcquirerConfig::query()->update(['enabled' => false]);
+    AcquirerConfig::updateOrCreate(
+        ['acquirer_key' => 'akkadpag'],
+        [
+            'display_name' => 'AkkadPag',
+            'type' => 'gateway',
+            'enabled' => true,
+            'supported_methods' => ['pix_out'],
+            'priority' => 0,
+            'settings' => [],
+        ]
+    );
+
+    $transferId = Str::uuid()->toString();
+    Http::fake([
+        "https://api.akkadpag.com/v1/transfers/{$transferId}" => Http::response([
+            'data' => ['id' => $transferId, 'status' => 'COMPLETED'],
+        ]),
+    ]);
+
+    $withdrawal = Withdrawal::create([
+        'id' => Str::uuid()->toString(),
+        'account_id' => $this->account->id,
+        'user_id' => $this->user->id,
+        'amount' => 10000,
+        'fee' => 500,
+        'net_amount' => 9500,
+        'status' => 'processing',
+        'method' => 'pix',
+        'acquirer' => 'akkadpag',
+        'acquirer_transfer_id' => $transferId,
+        'destination' => ['type' => 'pix', 'pix_key' => '12345678900', 'pix_type' => 'cpf'],
+    ]);
+
+    AcquirerFactory::reset();
+    $results = (new WithdrawalService())->syncProcessingWithdrawals();
+
+    expect($results['checked'])->toBe(1);
+    expect($results['completed'])->toBe(1);
+    expect($withdrawal->fresh()->status)->toBe('completed');
+    Http::assertSent(fn ($request) => $request->url() === "https://api.akkadpag.com/v1/transfers/{$transferId}");
+});

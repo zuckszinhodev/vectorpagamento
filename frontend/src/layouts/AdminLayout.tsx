@@ -94,7 +94,6 @@ const navigationGroups: NavGroup[] = [
     title: 'Plataforma',
     items: [
       { name: 'Adquirentes', href: '/admin/acquirers', icon: ServerIcon, permission: 'admin.acquirers.manage' },
-      { name: 'Roteamento', href: '/admin/acquirers/routing', icon: ServerIcon, permission: 'admin.acquirers.manage' },
       { name: 'Configurações', href: '/admin/settings', icon: Cog6ToothIcon, permission: 'admin.config.manage' },
     ],
   },

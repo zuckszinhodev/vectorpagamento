@@ -22,7 +22,7 @@ class PaymentApprovedCustomerMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Pagamento confirmado - Vector Pagamentos',
+            subject: 'Pagamento confirmado - GorillaPay',
         );
     }
 
@@ -37,7 +37,7 @@ class PaymentApprovedCustomerMail extends Mailable
                 'chargeId' => $this->charge->id,
                 'amount' => number_format($this->charge->amount / 100, 2, ',', '.'),
                 'paymentMethod' => $this->formatPaymentMethod($this->charge->payment_method),
-                'productDescription' => $this->charge->description ?? 'Compra na Vector Pagamentos',
+                'productDescription' => $this->charge->description ?? 'Compra via GorillaPay',
                 'paidAt' => $this->charge->paid_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i'),
             ],
         );

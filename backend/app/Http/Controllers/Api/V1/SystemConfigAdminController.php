@@ -155,7 +155,7 @@ class SystemConfigAdminController extends Controller
             $file = $request->file('logo');
             $ext = strtolower($file->getClientOriginalExtension() ?: 'png');
             $name = 'logo-' . time() . '-' . Str::random(6) . '.' . $ext;
-            $file->storeAs('public/branding', $name);
+            $file->storeAs('branding', $name, 'public');
 
             $url = '/storage/branding/' . $name;
 

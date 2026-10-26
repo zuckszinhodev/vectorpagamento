@@ -1,6 +1,6 @@
 @extends('emails.layout')
 
-@section('title', 'Pagamento confirmado - Vector Pagamentos')
+@section('title', 'Pagamento confirmado - GorillaPay')
 
 @section('content')
     <h1 style="font-size: 22px; color: #1a1a2e; margin: 0 0 16px;">Pagamento confirmado</h1>
@@ -16,7 +16,7 @@
         R$ {{ $amount }}
     </p>
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #6c5ce7; margin: 20px 0;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa; border-radius: 8px; border-left: 4px solid #dc2626; margin: 20px 0;">
         <tr>
             <td style="padding: 20px;">
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -45,6 +45,6 @@
     <hr style="border: none; height: 1px; background-color: #eeeeee; margin: 24px 0;">
 
     <p style="font-size: 13px; color: #999999; margin: 0;">
-        Este e um recibo automatico do seu pagamento processado pela Vector Pagamentos.
+        Este e um recibo automatico do seu pagamento processado pela GorillaPay.
     </p>
 @endsection

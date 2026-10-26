@@ -724,8 +724,14 @@ class AuthController extends Controller
     public function refresh(Request $request): JsonResponse
     {
         try {
-            // Get the current user BEFORE invalidating the old token
-            $user = JWTAuth::parseToken()->authenticate();
+            // Validate expired access tokens within the configured refresh window.
+            $manager = JWTAuth::manager();
+            $manager->setRefreshFlow(true);
+            try {
+                $user = JWTAuth::parseToken()->authenticate();
+            } finally {
+                $manager->setRefreshFlow(false);
+            }
 
             if (!$user) {
                 return response()->json([
@@ -743,16 +749,12 @@ class AuthController extends Controller
                 ], 403);
             }
 
-            // Invalidate the OLD token first (prevents token accumulation)
+            // Rotate the token and retain the original refresh-window deadline.
             try {
-                JWTAuth::invalidate(JWTAuth::getToken());
-            } catch (\Exception $e) {
-                // If invalidation fails, still proceed with new token
-                Log::warning('Failed to invalidate old token during refresh', ['user_id' => $user->id]);
+                $newToken = JWTAuth::claims($user->getJWTCustomClaims())->refresh();
+            } finally {
+                $manager->setRefreshFlow(false);
             }
-
-            // Issue a completely NEW token from the user (not just refresh)
-            $newToken = JWTAuth::fromUser($user);
 
             return response()->json([
                 'success' => true,

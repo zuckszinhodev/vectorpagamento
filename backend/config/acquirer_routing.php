@@ -63,6 +63,7 @@ return [
     'providers' => [
         'payfort' => \App\Infrastructure\Acquirers\PayFortAcquirer::class,
         'blupay' => \App\Infrastructure\Acquirers\BluPayAcquirer::class,
+        'akkadpag' => \App\Infrastructure\Acquirers\AkkadPagAcquirer::class,
         'enki' => \App\Infrastructure\Acquirers\EnkiAcquirer::class,
         'witetec' => \App\Infrastructure\Acquirers\WitetecAcquirer::class,
         'asaas' => \App\Infrastructure\Acquirers\AsaasAcquirer::class,

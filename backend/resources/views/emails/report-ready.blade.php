@@ -1,17 +1,25 @@
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; font-size: 14px; color: #333; line-height: 1.5; margin: 0; padding: 20px;">
+@extends('emails.layout')
 
-<p>Olá {{ $userName }},</p>
+@section('title', 'Relatório pronto - GorillaPay')
 
-<p>Seu relatório de <strong>{{ $reportType }}</strong> está pronto para download.</p>
+@section('content')
+    <h1 style="font-size: 22px; color: #1a1a2e; margin: 0 0 16px;">Seu relatório está pronto</h1>
 
-<p><a href="{{ $downloadUrl }}" style="display: inline-block; padding: 10px 20px; background-color: #3b82f6; color: #fff; text-decoration: none; border-radius: 6px;">Baixar Relatório</a></p>
+    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">Olá, <strong>{{ $userName }}</strong>!</p>
 
-<p><em>O link expira em 24 horas.</em></p>
+    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">
+        Seu relatório de <strong>{{ $reportType }}</strong> está pronto para download.
+    </p>
 
-<p>Atenciosamente,<br>Equipe Vector Pagamentos</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 20px auto;">
+        <tr>
+            <td align="center" style="background-color: #dc2626; border-radius: 8px;">
+                <a href="{{ $downloadUrl }}" style="display: inline-block; color: #ffffff; text-decoration: none; padding: 14px 32px; font-size: 15px; font-weight: 600;">Baixar relatório</a>
+            </td>
+        </tr>
+    </table>
 
-</body>
-</html>
+    <hr style="border: none; height: 1px; background-color: #eeeeee; margin: 24px 0;">
+
+    <p style="font-size: 13px; color: #999999; margin: 0;">O link expira em 24 horas.</p>
+@endsection

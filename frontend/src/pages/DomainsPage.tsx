@@ -140,6 +140,7 @@ export default function DomainsPage() {
             Como configurar
           </button>
           <button
+            data-tour="add-domain"
             onClick={() => (showAddForm ? closeAddForm() : setShowAddForm(true))}
             className="inline-flex items-center gap-2 rounded-element bg-accent-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-accent-hover transition-colors"
           >
