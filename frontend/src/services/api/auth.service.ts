@@ -5,6 +5,7 @@ export interface RegisterData {
   email: string;
   password: string;
   password_confirmation: string;
+  cf_turnstile_token?: string | null;
 }
 
 export interface LoginData {

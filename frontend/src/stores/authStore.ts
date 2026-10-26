@@ -34,6 +34,7 @@ interface RegisterData {
   email: string;
   password: string;
   password_confirmation: string;
+  cf_turnstile_token?: string | null;
 }
 
 const ADMIN_MFA_STORAGE_KEY = 'admin_mfa_verified';

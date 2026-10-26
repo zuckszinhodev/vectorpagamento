@@ -89,6 +89,7 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', \Illuminate\Validation\Rule::unique('users', 'email')->whereNull('deleted_at')],
             'password' => $passwordRules,
+            'cf_turnstile_token' => ['nullable', 'string', 'max:2048'],
         ], [
             'name.required' => 'O nome é obrigatório',
             'email.required' => 'O e-mail é obrigatório',
@@ -102,6 +103,16 @@ class AuthController extends Controller
             'password.confirmed' => 'A confirmação de senha não confere',
             'password.regex' => 'A senha deve conter letras maiúsculas, minúsculas, números e caracteres especiais',
         ]);
+
+        if (!$this->verifyTurnstile($request->input('cf_turnstile_token'), $request->ip())) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'captcha_failed',
+                    'message' => 'Verificação anti-robô falhou. Tente novamente.',
+                ],
+            ], 422);
+        }
 
         // Clean up any orphaned accounts with same email (from previously deleted users)
         $orphanedAccount = Account::withTrashed()->where('email', $request->input('email'))->first();
