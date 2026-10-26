@@ -119,6 +119,11 @@ export const authService = {
     return response.data;
   },
 
+  async appleAuth(idToken: string, name?: string | null): Promise<AuthResponse> {
+    const response = await api.post<AuthResponse>('/auth/apple', { id_token: idToken, name: name || undefined });
+    return response.data;
+  },
+
   async googleAuth(credential: string): Promise<AuthResponse> {
     const response = await api.post<AuthResponse>('/auth/google', { credential });
     return response.data;

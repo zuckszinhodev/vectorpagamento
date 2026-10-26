@@ -239,82 +239,7 @@ class AuthController extends Controller
                 ], 401);
             }
 
-            // Check if user already exists
-            $user = User::where('email', $email)->first();
-
-            if ($user) {
-                Log::info('Google OAuth: Existing user login', [
-                    'email' => $email,
-                    'user_id' => $user->id,
-                    'kyc_status' => $user->kyc_status,
-                    'has_google_id' => !empty($user->google_id),
-                ]);
-
-                // Existing user — check if blocked
-                if (in_array($user->status ?? null, ['blocked', 'suspended'])) {
-                    return response()->json([
-                        'success' => false,
-                        'error' => [
-                            'code' => 'account_blocked',
-                            'message' => 'Sua conta foi bloqueada pela administração.',
-                            'block_reason' => $user->block_reason,
-                        ],
-                    ], 403);
-                }
-
-                // Update google_id if not set
-                if (!$user->google_id) {
-                    $user->google_id = $googleId;
-                    $user->save();
-                    Log::info('Google OAuth: Updated google_id for existing user', ['user_id' => $user->id]);
-                }
-            } else {
-                // New user — register via Google
-                try {
-                    $result = $this->registrationService->createAccount([
-                        'name' => $name,
-                        'email' => $email,
-                        'password' => null,
-                        'google_id' => $googleId,
-                    ]);
-                    $user = $result['user'];
-                } catch (\RuntimeException $e) {
-                    Log::error('Google auth registration failed', ['error' => $e->getMessage(), 'email' => $email]);
-                    return response()->json([
-                        'success' => false,
-                        'error' => ['code' => 'registration_failed', 'message' => 'Falha ao criar conta. Tente novamente.'],
-                    ], 500);
-                }
-            }
-
-            if ($user->mfa_enabled) {
-                return $this->issueMfaChallenge($user, $request);
-            }
-
-            // OAuth verifies the first factor; local MFA must complete before issuing access.
-            $token = JWTAuth::fromUser($user);
-            $account = $user->account;
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'user' => [
-                        'id' => $user->id,
-                        'name' => $user->name,
-                        'email' => $user->email,
-                        'account_id' => $account->id,
-                        'role' => $user->getRoleName(),
-                        'permissions' => $user->permissions,
-                        'kyc_status' => $user->kyc_status ?? 'pending',
-                        'mfa_enabled' => (bool) $user->mfa_enabled,
-                    ],
-                    'token' => [
-                        'access_token' => $token,
-                        'token_type' => 'bearer',
-                        'expires_in' => config('jwt.ttl', 60) * 60,
-                    ],
-                ],
-            ]);
+            return $this->completeSocialLogin('google', $googleId, $email, $name, $request);
         } catch (\Throwable $e) {
             Log::error('AuthController::googleAuth error', [
                 'message' => $e->getMessage(),
@@ -326,6 +251,156 @@ class AuthController extends Controller
                 'error' => ['code' => 'server_error', 'message' => 'Erro interno do servidor.'],
             ], 500);
         }
+    }
+
+    /**
+     * Login/cadastro com Apple (Sign in with Apple JS, modo popup).
+     * O id_token é validado com as chaves públicas da Apple; o nome só vem no primeiro acesso.
+     */
+    public function appleAuth(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'id_token' => ['required', 'string', 'max:4096'],
+                'name' => ['nullable', 'string', 'max:255'],
+            ]);
+
+            $clientId = (string) config('services.apple.client_id');
+            if ($clientId === '') {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['code' => 'apple_disabled', 'message' => 'Login com Apple não está habilitado.'],
+                ], 400);
+            }
+
+            try {
+                $jwks = Cache::remember('apple_auth_jwks', 3600, function () {
+                    return Http::timeout(10)->get('https://appleid.apple.com/auth/keys')->throw()->json();
+                });
+                \Firebase\JWT\JWT::$leeway = 60;
+                $payload = (array) \Firebase\JWT\JWT::decode(
+                    $request->input('id_token'),
+                    \Firebase\JWT\JWK::parseKeySet($jwks)
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Apple auth: token inválido', ['error' => $e->getMessage()]);
+                return response()->json([
+                    'success' => false,
+                    'error' => ['code' => 'invalid_token', 'message' => 'Token Apple inválido.'],
+                ], 401);
+            }
+
+            $emailVerified = filter_var($payload['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if (($payload['iss'] ?? null) !== 'https://appleid.apple.com'
+                || ($payload['aud'] ?? null) !== $clientId
+                || empty($payload['sub']) || empty($payload['email']) || !$emailVerified) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['code' => 'invalid_token', 'message' => 'Token Apple não pertence a este aplicativo.'],
+                ], 401);
+            }
+
+            $email = strtolower((string) $payload['email']);
+            $name = trim((string) $request->input('name', '')) ?: strstr($email, '@', true);
+
+            return $this->completeSocialLogin('apple', (string) $payload['sub'], $email, $name, $request);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error('AuthController::appleAuth error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'server_error', 'message' => 'Erro interno do servidor.'],
+            ], 500);
+        }
+    }
+
+    /**
+     * Depois que o provedor (google/apple) confirmou a identidade: acha ou cria a conta,
+     * respeita bloqueio e MFA, e emite o token. O vínculo fica em users.{provider}_id.
+     */
+    private function completeSocialLogin(string $provider, string $providerId, string $email, string $name, Request $request): JsonResponse
+    {
+        $column = $provider . '_id';
+        $label = ucfirst($provider);
+
+        $user = User::where($column, $providerId)->first()
+            ?? User::where('email', $email)->first();
+
+        if ($user) {
+            Log::info("{$label} OAuth: Existing user login", [
+                'email' => $email,
+                'user_id' => $user->id,
+                'kyc_status' => $user->kyc_status,
+                "has_{$column}" => !empty($user->{$column}),
+            ]);
+
+            if (in_array($user->status ?? null, ['blocked', 'suspended'])) {
+                return response()->json([
+                    'success' => false,
+                    'error' => [
+                        'code' => 'account_blocked',
+                        'message' => 'Sua conta foi bloqueada pela administração.',
+                        'block_reason' => $user->block_reason,
+                    ],
+                ], 403);
+            }
+
+            if (!$user->{$column}) {
+                $user->{$column} = $providerId;
+                $user->save();
+                Log::info("{$label} OAuth: Updated {$column} for existing user", ['user_id' => $user->id]);
+            }
+        } else {
+            try {
+                $result = $this->registrationService->createAccount([
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => null,
+                    $column => $providerId,
+                ]);
+                $user = $result['user'];
+            } catch (\RuntimeException $e) {
+                Log::error("{$label} auth registration failed", ['error' => $e->getMessage(), 'email' => $email]);
+                return response()->json([
+                    'success' => false,
+                    'error' => ['code' => 'registration_failed', 'message' => 'Falha ao criar conta. Tente novamente.'],
+                ], 500);
+            }
+        }
+
+        if ($user->mfa_enabled) {
+            return $this->issueMfaChallenge($user, $request);
+        }
+
+        // OAuth verifies the first factor; local MFA must complete before issuing access.
+        $token = JWTAuth::fromUser($user);
+        $account = $user->account;
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'account_id' => $account->id,
+                    'role' => $user->getRoleName(),
+                    'permissions' => $user->permissions,
+                    'kyc_status' => $user->kyc_status ?? 'pending',
+                    'mfa_enabled' => (bool) $user->mfa_enabled,
+                ],
+                'token' => [
+                    'access_token' => $token,
+                    'token_type' => 'bearer',
+                    'expires_in' => config('jwt.ttl', 60) * 60,
+                ],
+            ],
+        ]);
     }
 
     /**

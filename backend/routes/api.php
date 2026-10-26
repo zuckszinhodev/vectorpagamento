@@ -85,6 +85,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         Route::post('/register', [\App\Http\Controllers\Api\V1\AuthController::class, 'register']);
         Route::post('/login', [\App\Http\Controllers\Api\V1\AuthController::class, 'login']);
         Route::post('/google', [\App\Http\Controllers\Api\V1\AuthController::class, 'googleAuth']);
+        Route::post('/apple', [\App\Http\Controllers\Api\V1\AuthController::class, 'appleAuth']);
         Route::post('/mfa/verify', [\App\Http\Controllers\Api\V1\AuthController::class, 'verifyMfa']);
         Route::post('/forgot-password', [\App\Http\Controllers\Api\V1\AuthController::class, 'forgotPassword']);
         Route::post('/reset-password', [\App\Http\Controllers\Api\V1\AuthController::class, 'resetPassword']);

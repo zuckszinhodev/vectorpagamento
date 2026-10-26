@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { authService, type User } from '@/services/api/auth.service';
+import { authService, type AuthResponse, type User } from '@/services/api/auth.service';
 
 interface MfaPending {
   mfaToken: string;
@@ -19,6 +19,8 @@ interface AuthState {
   verifyAdminMfa: (code: string) => Promise<void>;
   resetAdminMfaVerification: () => void;
   googleLogin: (credential: string) => Promise<void>;
+  appleLogin: (idToken: string, name?: string | null) => Promise<void>;
+  completeSocialLogin: (request: () => Promise<AuthResponse>) => Promise<void>;
   verifyMfa: (code: string, rememberDevice?: boolean) => Promise<void>;
   cancelMfa: () => void;
   register: (data: RegisterData) => Promise<void>;
@@ -181,8 +183,17 @@ export const useAuthStore = create<AuthState>()(
       },
 
       googleLogin: async (credential: string) => {
+        await get().completeSocialLogin(() => authService.googleAuth(credential));
+      },
+
+      appleLogin: async (idToken: string, name?: string | null) => {
+        await get().completeSocialLogin(() => authService.appleAuth(idToken, name));
+      },
+
+      // Google e Apple: o backend devolve login direto ou desafio de MFA
+      completeSocialLogin: async (request: () => Promise<AuthResponse>) => {
         try {
-          const response = await authService.googleAuth(credential);
+          const response = await request();
 
           if (response.data.requires_mfa && response.data.mfa_token) {
             set({

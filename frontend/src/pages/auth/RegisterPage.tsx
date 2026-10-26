@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/stores/authStore';
 import SEO from '@/components/SEO';
 import TurnstileWidget, { TurnstileWidgetHandle } from '@/components/TurnstileWidget';
+import SocialLoginButtons from '@/components/auth/SocialLoginButtons';
 import { useThemeStore } from '@/stores/themeStore';
 import toast from 'react-hot-toast';
 import {
@@ -277,6 +278,20 @@ export default function RegisterPage() {
             )}
           </button>
         </form>
+
+        <SocialLoginButtons
+          isDark={isDark}
+          onDone={() => {
+            // Conta que já existia e tem MFA: o código é pedido na tela de login
+            if (useAuthStore.getState().mfaPending) {
+              navigate('/login');
+              return;
+            }
+            toast.success('Conta criada com sucesso!');
+            navigate('/dashboard');
+          }}
+          onBlocked={(blockReason) => navigate('/account-blocked', { state: { blockReason } })}
+        />
 
         <div className={`mt-7 border-t pt-6 ${isDark ? 'border-white/10' : 'border-neutral-200'}`}>
           <p className={`text-sm ${bodyClass}`}>

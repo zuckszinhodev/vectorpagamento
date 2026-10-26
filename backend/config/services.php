@@ -126,6 +126,11 @@ return [
         'timeout'  => (int) env('UTMIFY_TIMEOUT', 15),
     ],
 
+    // Sign in with Apple: client_id é o Services ID criado no Apple Developer (ex.: tech.gorillapay.web)
+    'apple' => [
+        'client_id' => env('APPLE_CLIENT_ID'),
+    ],
+
     // Cloudflare Turnstile (anti-bot no login). Sem secret configurado, a verificação fica desligada.
     'turnstile' => [
         'secret_key' => env('TURNSTILE_SECRET_KEY'),

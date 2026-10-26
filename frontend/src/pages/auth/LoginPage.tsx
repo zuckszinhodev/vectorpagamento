@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import SEO from '@/components/SEO';
 import TurnstileWidget, { TurnstileWidgetHandle } from '@/components/TurnstileWidget';
+import SocialLoginButtons from '@/components/auth/SocialLoginButtons';
 import toast from 'react-hot-toast';
 import {
   ArrowLeftIcon,
@@ -115,6 +116,13 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSocialDone = () => {
+    // Com MFA ligado o store fica em mfaPending e esta página troca para o código
+    if (useAuthStore.getState().mfaPending) return;
+    toast.success('Login realizado com sucesso!');
+    navigate('/dashboard');
   };
 
   const handleMfaChange = (index: number, value: string) => {
@@ -357,6 +365,12 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          <SocialLoginButtons
+            isDark={isDark}
+            onDone={handleSocialDone}
+            onBlocked={(blockReason) => navigate('/account-blocked', { state: { blockReason } })}
+          />
 
           <div className={`mt-8 border-t pt-6 ${isDark ? 'border-white/10' : 'border-neutral-200'}`}>
             <p className={`text-sm ${bodyClass}`}>

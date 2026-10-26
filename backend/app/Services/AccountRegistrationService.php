@@ -24,7 +24,7 @@ class AccountRegistrationService
     /**
      * Create a new account with user and wallet atomically.
      *
-     * @param array{name: string, email: string, password: ?string, google_id: ?string} $data
+     * @param array{name: string, email: string, password: ?string, google_id?: ?string, apple_id?: ?string} $data
      * @return array{account: Account, user: User}
      *
      * @throws \RuntimeException
@@ -57,6 +57,10 @@ class AccountRegistrationService
 
             if (!empty($data['google_id'])) {
                 $user->google_id = $data['google_id'];
+            }
+
+            if (!empty($data['apple_id'])) {
+                $user->apple_id = $data['apple_id'];
             }
 
             $user->save();
