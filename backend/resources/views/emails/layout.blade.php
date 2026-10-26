@@ -18,7 +18,7 @@
                     <tr>
                         <td align="center" bgcolor="#0a0a0a" style="background-color: #0a0a0a; border-radius: 12px 12px 0 0; border-top: 4px solid #dc2626; padding: 24px 20px;">
                             <a href="{{ $frontendUrl }}" style="text-decoration: none;">
-                                <img src="{{ $frontendUrl }}/img/gorillapay-email-logo.png" width="210" alt="GorillaPay" style="display: block; width: 210px; max-width: 100%; height: auto; border: 0; color: #ffffff; font-size: 26px; font-weight: 800;">
+                                <img src="{{ $frontendUrl }}/img/gorillapay-email-logo.png?v=2" width="210" alt="GorillaPay" style="display: block; width: 210px; max-width: 100%; height: auto; border: 0; color: #ffffff; font-size: 26px; font-weight: 800;">
                             </a>
                         </td>
                     </tr>

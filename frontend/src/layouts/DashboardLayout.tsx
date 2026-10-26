@@ -53,6 +53,26 @@ interface DashboardLayoutProps {
 // Id da notificação local de lembrete de 2FA (não existe na API).
 const MFA_REMINDER_NOTIFICATION_ID = 'local:mfa-reminder';
 
+// Destino ao clicar numa notificação: data.url do backend ou, sem ele, pelo tipo de evento
+const NOTIFICATION_EVENT_ROUTES: Record<string, string> = {
+  'kyc.pending': '/kyc',
+  'kyc.rejected': '/kyc',
+  'charge.paid': '/charges',
+  'charge.refunded': '/charges',
+  'charge.chargeback': '/chargebacks',
+  'withdrawal.requested': '/withdrawals',
+  'withdrawal.completed': '/withdrawals',
+  'support.replied': '/support',
+};
+
+function getNotificationTarget(notification: Notification): string | null {
+  const url = notification.data?.url;
+  // Só caminhos internos: a notificação não pode mandar o usuário para outro site
+  if (typeof url === 'string' && url.startsWith('/') && !url.startsWith('//')) return url;
+  const event = notification.data?.event;
+  return typeof event === 'string' ? NOTIFICATION_EVENT_ROUTES[event] ?? null : null;
+}
+
 interface NavChild {
   name: string;
   href: string;
@@ -280,6 +300,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }
 
     markAsRead(notification.id);
+
+    const target = getNotificationTarget(notification);
+    if (target) navigate(target);
   };
 
   const markAllAsRead = () => {
