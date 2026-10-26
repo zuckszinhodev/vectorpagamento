@@ -32,7 +32,7 @@ class KycApprovedMail extends Mailable
             view: 'emails.kyc-approved',
             with: [
                 'userName' => $this->user->name,
-                'dashboardUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://gorillapay.site')) . '/dashboard',
+                'dashboardUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://gorillapay.tech')) . '/dashboard',
             ],
         );
     }

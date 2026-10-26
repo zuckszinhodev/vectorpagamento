@@ -51,7 +51,7 @@ interface Section {
 }
 
 const API_PATH_PREFIX = '/v1/external';
-const EXTERNAL_API_BASE_URL = `https://api.gorillapay.site${API_PATH_PREFIX}`;
+const EXTERNAL_API_BASE_URL = `https://api.gorillapay.tech${API_PATH_PREFIX}`;
 const DEFAULT_TEST_BASE = EXTERNAL_API_BASE_URL;
 
 // Extracts ":param" segments from a path, e.g. "/charges/:id/cancel" -> ["id"]

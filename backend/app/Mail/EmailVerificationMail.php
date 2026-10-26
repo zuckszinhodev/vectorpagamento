@@ -21,7 +21,7 @@ class EmailVerificationMail extends Mailable
         public User $user,
         string $token,
     ) {
-        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'https://gorillapay.site'));
+        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'https://gorillapay.tech'));
         $this->verificationUrl = "{$frontendUrl}/verify-email?token={$token}";
     }
 

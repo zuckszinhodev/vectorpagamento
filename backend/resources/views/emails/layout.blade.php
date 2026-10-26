@@ -1,4 +1,4 @@
-@php($frontendUrl = rtrim(config('app.frontend_url', 'https://gorillapay.site'), '/'))
+@php($frontendUrl = rtrim(config('app.frontend_url', 'https://gorillapay.tech'), '/'))
 <!DOCTYPE html>
 <html lang="pt-BR" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -36,7 +36,7 @@
                                 Esta é uma mensagem automática, por favor não responda.
                             </p>
                             <p style="margin: 8px 0 0;">
-                                <a href="{{ $frontendUrl }}" style="color: #dc2626; text-decoration: none;">gorillapay.site</a>
+                                <a href="{{ $frontendUrl }}" style="color: #dc2626; text-decoration: none;">gorillapay.tech</a>
                             </p>
                         </td>
                     </tr>

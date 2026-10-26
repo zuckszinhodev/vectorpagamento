@@ -34,7 +34,7 @@ class KycRejectedMail extends Mailable
             with: [
                 'userName' => $this->user->name,
                 'reason' => $this->reason,
-                'resubmitUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://gorillapay.site')) . '/kyc',
+                'resubmitUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://gorillapay.tech')) . '/kyc',
             ],
         );
     }
