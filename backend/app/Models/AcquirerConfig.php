@@ -322,6 +322,9 @@ class AcquirerConfig extends Model
             'babylon' => !empty($credentials['client_id']) && !empty($credentials['client_secret']),
             'payfort' => !empty($credentials['api_key']) && !empty($credentials['api_secret']),
             'blupay' => !empty($credentials['secret_key']) && !empty($credentials['public_key']),
+            'akkadpag' => !empty($credentials['public_key'])
+                && !empty($credentials['secret_key'])
+                && !empty($credentials['withdrawal_key']),
             'turbos' => !empty($credentials['public_key']) && !empty($credentials['secret_key']),
             'ascentpay' => !empty($credentials['secret_key']) && !empty($credentials['public_key']),
             'huntersub' => !empty($credentials['api_key']) && !empty($credentials['company_id']),
@@ -369,6 +372,13 @@ class AcquirerConfig extends Model
                 ['key' => 'public_key', 'label' => 'Public Key', 'type' => 'text'],
                 ['key' => 'webhook_secret', 'label' => 'Webhook HMAC Secret', 'type' => 'password'],
                 ['key' => 'base_url', 'label' => 'Base URL', 'type' => 'text'],
+            ],
+            'akkadpag' => [
+                ['key' => 'public_key', 'label' => 'Public Key', 'type' => 'text'],
+                ['key' => 'secret_key', 'label' => 'Secret Key', 'type' => 'password'],
+                ['key' => 'withdrawal_key', 'label' => 'Chave de saque externo', 'type' => 'password'],
+                ['key' => 'base_url', 'label' => 'Base URL', 'type' => 'text'],
+                ['key' => 'webhook_url', 'label' => 'Webhook URL', 'type' => 'text'],
             ],
             'turbos' => [
                 ['key' => 'public_key', 'label' => 'Public Key', 'type' => 'text'],

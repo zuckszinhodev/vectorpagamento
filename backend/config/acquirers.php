@@ -147,6 +147,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | AkkadPag
+    |--------------------------------------------------------------------------
+    |
+    | Authentication: Basic Auth (public_key:secret_key)
+    | PIX OUT: POST /v1/transfers (requires x-withdrawal-key)
+    | Transfer status: GET /v1/transfers/{id}
+    |
+    */
+    'akkadpag' => [
+        'enabled' => env('AKKADPAG_ENABLED', false),
+        'public_key' => env('AKKADPAG_PUBLIC_KEY'),
+        'secret_key' => env('AKKADPAG_SECRET_KEY'),
+        'withdrawal_key' => env('AKKADPAG_WITHDRAWAL_KEY'),
+        'base_url' => env('AKKADPAG_BASE_URL', 'https://api.akkadpag.com/v1'),
+        'webhook_url' => env('AKKADPAG_WEBHOOK_URL'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Witetec
     |--------------------------------------------------------------------------
     |

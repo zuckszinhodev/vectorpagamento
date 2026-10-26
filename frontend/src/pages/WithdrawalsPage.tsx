@@ -588,6 +588,7 @@ export default function WithdrawalsPage() {
  </p>
  </div>
  <button
+ data-tour="withdraw"
  onClick={() => {
  if (user?.kyc_status !== 'approved') {
  toast.error('Voce precisa completar a verificacao KYC antes de realizar saques.');

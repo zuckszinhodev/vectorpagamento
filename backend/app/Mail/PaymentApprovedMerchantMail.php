@@ -44,7 +44,7 @@ class PaymentApprovedMerchantMail extends Mailable
                 'customerEmail' => $customer['email'] ?? 'N/A',
                 'productDescription' => $this->charge->description ?? 'N/A',
                 'paidAt' => $this->charge->paid_at?->format('d/m/Y H:i') ?? now()->format('d/m/Y H:i'),
-                'dashboardUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://app.vectorpagamentos.com')) . '/dashboard',
+                'dashboardUrl' => config('app.frontend_url', env('FRONTEND_URL', 'https://gorillapay.site')) . '/dashboard',
             ],
         );
     }

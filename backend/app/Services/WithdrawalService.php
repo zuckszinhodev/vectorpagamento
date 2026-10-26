@@ -45,7 +45,7 @@ class WithdrawalService
         $this->rotationService = app(AcquirerRotationService::class);
 
         // PIX OUT circuit breakers follow the globally supported payout acquirers.
-        foreach (['payfort', 'blupay', 'enki', 'babylon', 'huntersub', 'sharkhubsub'] as $name) {
+        foreach (['payfort', 'blupay', 'akkadpag', 'enki', 'babylon', 'huntersub', 'sharkhubsub'] as $name) {
             $this->circuitBreakers[$name] = new CircuitBreaker("acquirer:{$name}", 3, 60);
         }
 
@@ -78,7 +78,19 @@ class WithdrawalService
             ];
         }
 
-        $isRecoverableProcessing = $withdrawal->status === 'processing' && empty($withdrawal->acquirer_transfer_id);
+        $destinationState = is_array($withdrawal->destination) ? $withdrawal->destination : [];
+        $akkadDispatchStarted = !empty($destinationState['_akkadpag_dispatch_started_at']);
+        $isRecoverableProcessing = $withdrawal->status === 'processing'
+            && empty($withdrawal->acquirer_transfer_id)
+            && !$akkadDispatchStarted;
+
+        if ($akkadDispatchStarted && empty($withdrawal->acquirer_transfer_id)) {
+            return [
+                'success' => false,
+                'ambiguous' => true,
+                'error' => 'O envio à AkkadPag já foi iniciado e não pode ser repetido automaticamente. Consulte o saque na adquirente antes de liberar ou reenviar.',
+            ];
+        }
 
         if ($withdrawal->status !== 'pending' && !$isRecoverableProcessing) {
             return ['success' => false, 'error' => "Withdrawal is not pending (status={$withdrawal->status})"];
@@ -139,14 +151,27 @@ class WithdrawalService
                 unset($destination['transfer_parts']);
             }
 
-            $withdrawal->update([
+            $updates = [
                 'status'               => 'processing',
                 'acquirer_transfer_id' => $transferId !== '' ? $transferId : ($transferParts[0]['transfer_id'] ?? null),
                 'acquirer'             => $result['acquirer'] ?? ($transferParts[0]['acquirer'] ?? 'payfort'),
                 'destination'          => $destination,
                 'failure_reason'       => null,
                 'processed_at'         => null,
-            ]);
+            ];
+
+            // When the acquirer pays out a different net (e.g. AkkadPag topping up
+            // to its minimum), record what the beneficiary actually receives. The
+            // fee stays the gateway fee charged to the seller; the wallet only
+            // moves `amount`, so balances are unaffected.
+            $actualNet = $result['provider_net_amount'] ?? $result['expected_net_amount'] ?? null;
+            $reserved = (int) round((float) $withdrawal->amount);
+            if (is_numeric($actualNet) && (int) $actualNet > 0 && (int) $actualNet <= $reserved
+                && (int) $actualNet !== (int) round((float) $withdrawal->net_amount)) {
+                $updates['net_amount'] = (int) $actualNet;
+            }
+
+            $withdrawal->update($updates);
 
             Log::info('WithdrawalService: PIX OUT sent successfully', [
                 'withdrawal_id' => $withdrawal->id,
@@ -159,6 +184,20 @@ class WithdrawalService
                 'transfer_id' => $transferId,
                 'acquirer'    => $result['acquirer'] ?? null,
                 'status'      => $result['status'] ?? 'processing',
+            ];
+        }
+
+        if (($result['ambiguous'] ?? false) === true) {
+            Log::warning('WithdrawalService: AkkadPag result requires reconciliation; funds remain reserved', [
+                'withdrawal_id' => $withdrawal->id,
+                'acquirer' => $result['acquirer'] ?? 'akkadpag',
+            ]);
+
+            return [
+                'success' => false,
+                'ambiguous' => true,
+                'acquirer' => $result['acquirer'] ?? 'akkadpag',
+                'error' => $result['error'] ?? 'Resultado do saque indeterminado; consulte a adquirente antes de repetir.',
             ];
         }
 
@@ -313,7 +352,10 @@ class WithdrawalService
 
         $withdrawals = Withdrawal::query()
             ->where('status', 'processing')
-            ->where('acquirer', 'like', 'sharkhubsub%')
+            ->where(function ($query): void {
+                $query->where('acquirer', 'like', 'sharkhubsub%')
+                    ->orWhere('acquirer', 'akkadpag');
+            })
             ->whereNotNull('acquirer_transfer_id')
             ->orderBy('updated_at')
             ->limit($limit)
@@ -325,17 +367,19 @@ class WithdrawalService
             try {
                 $transferId = (string) $withdrawal->acquirer_transfer_id;
                 $acquirerKey = (string) ($withdrawal->acquirer ?? 'sharkhubsub');
-                $sharkhub = $this->factory->getAcquirerInstance($acquirerKey);
+                $acquirer = $acquirerKey === 'akkadpag'
+                    ? $this->factory->akkadpagForAccount($withdrawal->account_id)
+                    : $this->factory->getAcquirerInstance($acquirerKey);
 
-                if (!$sharkhub) {
+                if (!$acquirer) {
                     $results['errors'][] = [
                         'withdrawal_id' => $withdrawal->id,
-                        'error' => 'SharkHubSub não configurada',
+                        'error' => "Adquirente {$acquirerKey} não configurada",
                     ];
                     continue;
                 }
 
-                $transfer = $sharkhub->getTransfer($transferId);
+                $transfer = $acquirer->getTransfer($transferId);
 
                 if (!$transfer) {
                     $results['not_found']++;
@@ -343,9 +387,11 @@ class WithdrawalService
                 }
 
                 $rawStatus = (string) ($transfer['status'] ?? $transfer['data']['status'] ?? '');
-                $mappedStatus = \App\Infrastructure\Acquirers\SharkHubSubAcquirer::mapWebhookTransferStatus($rawStatus);
+                $mappedStatus = $acquirerKey === 'akkadpag'
+                    ? \App\Infrastructure\Acquirers\AkkadPagAcquirer::mapTransferStatus($rawStatus)
+                    : \App\Infrastructure\Acquirers\SharkHubSubAcquirer::mapWebhookTransferStatus($rawStatus);
 
-                Log::info('WithdrawalService: synced SharkHubSub transfer status', [
+                Log::info('WithdrawalService: synced acquirer transfer status', [
                     'withdrawal_id' => $withdrawal->id,
                     'transfer_id' => $transferId,
                     'raw_status' => $rawStatus,
@@ -373,7 +419,7 @@ class WithdrawalService
                     'error' => $e->getMessage(),
                 ];
 
-                Log::error('WithdrawalService: error syncing SharkHubSub withdrawal', [
+                Log::error('WithdrawalService: error syncing acquirer withdrawal', [
                     'withdrawal_id' => $withdrawal->id,
                     'error' => $e->getMessage(),
                 ]);
@@ -471,6 +517,7 @@ class WithdrawalService
             'pix_key_type'         => strtoupper($destination['pix_type'] ?? 'CPF'),
             'amount'               => $netAmountCents / 100, // Reais for acquirer (they convert to centavos internally)
             'amount_cents'         => $netAmountCents,
+            'reserved_amount_cents' => (int) round((float) $withdrawal->amount),
             'description'          => "Saque Vector Pagamentos #{$withdrawal->id}",
             'destination_name'     => $destination['holder_name'] ?? $account?->name ?? 'Destinatário',
             'destination_document' => $destination['holder_document'] ?? $account?->document ?? '',
@@ -488,6 +535,18 @@ class WithdrawalService
      */
     private function sendPixOutWithFallback(array $transferData): array
     {
+        $withdrawalId = (string) ($transferData['external_ref'] ?? '');
+        $accountId = $transferData['metadata']['account_id'] ?? null;
+        $acquirerOrder = $this->factory->getPixOutAcquirerOrder();
+
+        if (($acquirerOrder[0] ?? null) === 'akkadpag') {
+            return $this->sendAkkadPagWithdrawal(
+                $transferData,
+                $withdrawalId,
+                is_string($accountId) ? $accountId : null
+            );
+        }
+
         // New engine: credentials come from the encrypted vault, the fallback
         // chain, circuit breaker and metrics are shared with the charge path.
         $routed = $this->sendPixOutViaRoutingEngine($transferData);
@@ -498,10 +557,6 @@ class WithdrawalService
         $lastError = null;
         $skipReasons = [];
         $attemptedAcquirers = [];
-        $withdrawalId = (string) ($transferData['external_ref'] ?? '');
-        $accountId = $transferData['metadata']['account_id'] ?? null;
-        $acquirerOrder = $this->factory->getPixOutAcquirerOrder();
-
         if ($acquirerOrder === []) {
             return [
                 'success' => false,
@@ -614,6 +669,83 @@ class WithdrawalService
     }
 
     /**
+     * AkkadPag does not document idempotency. Persist a one-time dispatch claim
+     * before POSTing so worker retries cannot submit the same payout twice.
+     *
+     * @param array<string, mixed> $transferData
+     * @return array<string, mixed>
+     */
+    private function sendAkkadPagWithdrawal(array $transferData, string $withdrawalId, ?string $accountId): array
+    {
+        $provider = $this->factory->akkadpagForAccount($accountId);
+        if (!$provider) {
+            return ['success' => false, 'error' => 'AkkadPag não está configurada para saque.'];
+        }
+
+        try {
+            $claimed = DB::transaction(function () use ($withdrawalId): bool {
+                $withdrawal = Withdrawal::whereKey($withdrawalId)->lockForUpdate()->first();
+                if (!$withdrawal || $withdrawal->status !== 'pending') {
+                    return false;
+                }
+
+                $destination = is_array($withdrawal->destination) ? $withdrawal->destination : [];
+                $destination['_akkadpag_dispatch_started_at'] = now()->toIso8601String();
+                $withdrawal->update([
+                    'status' => 'processing',
+                    'acquirer' => 'akkadpag',
+                    'destination' => $destination,
+                ]);
+
+                return true;
+            });
+        } catch (\Throwable $e) {
+            Log::error('WithdrawalService: could not reserve AkkadPag withdrawal for one-time dispatch', [
+                'withdrawal_id' => $withdrawalId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'ambiguous' => true,
+                'acquirer' => 'akkadpag',
+                'error' => 'Não foi possível reservar o saque com segurança. Confira o status antes de tentar novamente.',
+            ];
+        }
+
+        if (!$claimed) {
+            return [
+                'success' => false,
+                'ambiguous' => true,
+                'acquirer' => 'akkadpag',
+                'error' => 'O saque não pôde ser reservado para envio único. Consulte o status antes de tentar novamente.',
+            ];
+        }
+
+        $transferData['_akkadpag_dispatch_authorized'] = true;
+
+        try {
+            $result = $provider->sendPixTransfer($transferData);
+        } catch (\Throwable $e) {
+            Log::error('WithdrawalService: AkkadPag request outcome is unknown; keeping funds reserved', [
+                'withdrawal_id' => $withdrawalId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'ambiguous' => true,
+                'acquirer' => 'akkadpag',
+                'error' => 'Não foi possível confirmar o resultado na AkkadPag. Consulte o saque antes de repetir.',
+            ];
+        }
+
+        $result['acquirer'] = 'akkadpag';
+
+        return $result;
+    }
+
+    /**
      * Send the payout through the intelligent routing engine.
      *
      * Returns null when the engine is disabled or unavailable, in which case
@@ -722,6 +854,7 @@ class WithdrawalService
     {
         return match ($name) {
             'payfort' => $this->factory->payfortForAccount($accountId),
+            'akkadpag' => $this->factory->akkadpagForAccount($accountId),
             'enki' => $this->factory->enkiForAccount($accountId),
             'huntersub' => $this->factory->huntersubForAccount($accountId),
             'sharkhubsub' => $this->factory->sharkhubsubForAccount($accountId),

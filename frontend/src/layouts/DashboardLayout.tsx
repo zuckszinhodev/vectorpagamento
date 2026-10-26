@@ -34,6 +34,8 @@ import {
   MagnifyingGlassIcon,
   PaperAirplaneIcon,
   ArrowPathIcon,
+  CodeBracketIcon,
+  AcademicCapIcon,
 } from '@heroicons/react/24/outline';
 import { api } from '@/lib/api';
 import { notificationsService, Notification } from '@/services/api/notifications.service';
@@ -41,6 +43,8 @@ import { productsService } from '@/services/api/products.service';
 import { wazerAIService, type WazerAIChatMessage } from '@/services/api/wazerAI.service';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
+import { useTourStore, hasSeenTour } from '@/stores/tourStore';
+import ProductTour from '@/components/onboarding/ProductTour';
 import clsx from 'clsx';
 
 interface DashboardLayoutProps {
@@ -131,6 +135,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const hasOriginalAdminToken = typeof window !== 'undefined' && Boolean(sessionStorage.getItem('admin_original_token'));
   const isImpersonationSession = isImpersonating || hasOriginalAdminToken;
+  const startTour = useTourStore((s) => s.start);
+
+  // Tutorial de boas-vindas: abre sozinho uma vez por usuário (não em impersonação).
+  useEffect(() => {
+    if (!user?.id || isImpersonationSession || hasSeenTour(user.id)) return;
+    const timeout = window.setTimeout(startTour, 900);
+    return () => window.clearTimeout(timeout);
+  }, [user?.id, isImpersonationSession, startTour]);
 
   useEffect(() => {
     const currentText = searchPrompts[placeholderIndex];
@@ -658,16 +670,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <img
                     src={logoUrl}
                     alt={platformName}
-                    className="h-8 w-auto object-contain"
+                    className="h-12 w-auto object-contain"
                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                   />
                 ) : (
                   <img
                     src="/img/gorillapay-wordmark.png"
                     alt="GorillaPay"
-                    width={144}
-                    height={32}
-                    className="h-8 w-36 object-cover"
+                    width={216}
+                    height={48}
+                    className="h-12 w-auto object-contain"
                   />
                 )}
               </NavLink>
@@ -978,6 +990,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 {({ open }) => (
                   <>
                 <Menu.Button
+                  data-tour="profile-menu"
                   className={clsx(
                     'flex items-center gap-2 py-1.5 px-3 rounded-full border transition-all duration-fast',
                     open
@@ -1084,6 +1097,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       <Menu.Item>
                         {({ active }) => (
                           <button
+                            onClick={() => navigate('/docs')}
+                            className={clsx(
+                              'flex w-full items-center gap-3 rounded-element px-3 py-2.5 text-sm transition-colors duration-fast',
+                              active
+                                ? 'bg-surface-hover text-tx-primary'
+                                : 'text-tx-secondary'
+                            )}
+                          >
+                            <CodeBracketIcon className="h-4 w-4" />
+                            Documentação da API
+                          </button>
+                        )}
+                      </Menu.Item>
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
                             onClick={() => navigate('/support')}
                             className={clsx(
                               'flex w-full items-center gap-3 rounded-element px-3 py-2.5 text-sm transition-colors duration-fast',
@@ -1094,6 +1123,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           >
                             <QuestionMarkCircleIcon className="h-4 w-4" />
                             Suporte
+                          </button>
+                        )}
+                      </Menu.Item>
+                      <Menu.Item>
+                        {({ active }) => (
+                          <button
+                            onClick={startTour}
+                            className={clsx(
+                              'flex w-full items-center gap-3 rounded-element px-3 py-2.5 text-sm transition-colors duration-fast',
+                              active
+                                ? 'bg-surface-hover text-tx-primary'
+                                : 'text-tx-secondary'
+                            )}
+                          >
+                            <AcademicCapIcon className="h-4 w-4" />
+                            Tutorial da plataforma
                           </button>
                         )}
                       </Menu.Item>
@@ -1503,6 +1548,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         )}
         {children || <Outlet />}
       </main>
+      <ProductTour userId={user?.id} />
     </div>
   );
 }

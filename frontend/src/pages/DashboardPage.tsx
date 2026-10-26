@@ -770,6 +770,17 @@ export default function DashboardPage() {
 
     return (
       <div className="space-y-4 pb-6">
+        {/* Banner */}
+        <div className="rounded-xl overflow-hidden border border-white/[0.06] bg-[#0b0b0d]">
+          <img
+            src="/img/dashboard-banner-slim.webp"
+            alt="Bem-vindo ao GorillaPay"
+            className="block w-full h-auto"
+            width={2159}
+            height={314}
+          />
+        </div>
+
         {/* Top Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {showDashboardSkeleton ? (

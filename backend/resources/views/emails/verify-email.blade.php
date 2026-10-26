@@ -1,28 +1,34 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Verifique seu e-mail</title>
-    <style>
-        body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 0; padding: 20px; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; padding: 40px; }
-        .btn { display: inline-block; background: #6366f1; color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: bold; margin: 20px 0; }
-        .footer { margin-top: 30px; font-size: 12px; color: #999; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h2>Olá, {{ $userName }}!</h2>
-        <p>Obrigado por se cadastrar na Vector Pagamentos. Para completar seu registro, confirme seu e-mail clicando no botão abaixo:</p>
-        <p style="text-align:center">
-            <a href="{{ $verificationUrl }}" class="btn">Verificar E-mail</a>
-        </p>
-        <p>Se você não criou uma conta na Vector Pagamentos, ignore este e-mail.</p>
-        <p>Este link expira em <strong>24 horas</strong>.</p>
-        <div class="footer">
-            <p>Se o botão não funcionar, copie e cole o link abaixo no seu navegador:</p>
-            <p>{{ $verificationUrl }}</p>
-        </div>
-    </div>
-</body>
-</html>
+@extends('emails.layout')
+
+@section('title', 'Verifique seu e-mail - GorillaPay')
+
+@section('content')
+    <h1 style="font-size: 22px; color: #1a1a2e; margin: 0 0 16px;">Confirme seu e-mail</h1>
+
+    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">Olá, <strong>{{ $userName }}</strong>!</p>
+
+    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">
+        Obrigado por se cadastrar na GorillaPay. Para completar seu registro, confirme seu e-mail clicando no botão abaixo:
+    </p>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 20px auto;">
+        <tr>
+            <td align="center" style="background-color: #dc2626; border-radius: 8px;">
+                <a href="{{ $verificationUrl }}" style="display: inline-block; color: #ffffff; text-decoration: none; padding: 14px 32px; font-size: 15px; font-weight: 600;">Verificar e-mail</a>
+            </td>
+        </tr>
+    </table>
+
+    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">Este link expira em <strong>24 horas</strong>.</p>
+
+    <p style="font-size: 15px; color: #555555; margin: 0 0 14px;">Se você não criou uma conta na GorillaPay, ignore este e-mail.</p>
+
+    <hr style="border: none; height: 1px; background-color: #eeeeee; margin: 24px 0;">
+
+    <p style="font-size: 13px; color: #999999; margin: 0;">
+        Se o botão não funcionar, copie e cole o link abaixo no seu navegador:
+    </p>
+    <p style="font-size: 12px; color: #dc2626; word-break: break-all; margin: 8px 0 0;">
+        {{ $verificationUrl }}
+    </p>
+@endsection

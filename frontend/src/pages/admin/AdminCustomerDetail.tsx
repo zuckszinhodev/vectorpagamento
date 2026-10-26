@@ -41,6 +41,7 @@ interface CustomerDetail {
   blocked_at?: string;
   kyc_status: 'pending' | 'submitted' | 'under_review' | 'approved' | 'rejected';
   mfa_enabled: boolean;
+  fraud_risk?: { level: string; signals: string[]; window_days: number; metrics?: { total: number; settled: number } };
   created_at: string;
   last_login_at?: string;
   last_login_ip?: string;
@@ -439,7 +440,7 @@ export default function AdminCustomerDetail() {
     { key: 'fees' as const, label: 'Taxas', icon: AdjustmentsHorizontalIcon },
     { key: 'acquirers' as const, label: 'Adquirentes', icon: CreditCardIcon },
     { key: 'controls' as const, label: 'Controles', icon: ShieldCheckIcon },
-    { key: 'logs' as const, label: 'Logs / Auditoria', icon: DocumentTextIcon },
+    { key: 'logs' as const, label: 'Riscos / Auditoria', icon: DocumentTextIcon },
   ];
 
   const parsedAdjustmentAmount = Number(walletAdjustmentForm.amount.replace(/\D/g, ''));
@@ -598,10 +599,14 @@ export default function AdminCustomerDetail() {
           const mfa = customer.mfa_enabled
             ? { t: 'Ativo', c: 'bg-emerald-50 text-emerald-700' }
             : { t: 'Desativado', c: 'bg-gray-100 text-gray-500' };
-          const riskAttention = customer.status === 'blocked' || !customer.mfa_enabled || customer.kyc_status !== 'approved';
-          const risk = riskAttention
-            ? { t: 'Atenção', c: 'bg-red-50 text-red-700' }
-            : { t: 'Controlado', c: 'bg-emerald-50 text-emerald-700' };
+          const riskStyles: Record<string, { t: string; c: string }> = {
+            high: { t: 'Alto', c: 'bg-red-50 text-red-700' },
+            attention: { t: 'Atenção', c: 'bg-amber-50 text-amber-700' },
+            low: { t: 'Sem sinais nas regras avaliadas', c: 'bg-emerald-50 text-emerald-700' },
+            insufficient: { t: 'Dados insuficientes', c: 'bg-gray-100 text-gray-600' },
+            unavailable: { t: 'Indisponível', c: 'bg-gray-100 text-gray-600' },
+          };
+          const risk = riskStyles[customer.fraud_risk?.level || 'unavailable'] || riskStyles.unavailable;
           const item = (label: string, s: { t: string; c: string }) => (
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400">{label}</span>
@@ -616,7 +621,7 @@ export default function AdminCustomerDetail() {
                 <span className="text-xs text-gray-400">Último login</span>
                 <span className="text-xs font-medium text-gray-700">{customer.last_login_at ? formatDate(customer.last_login_at) : 'Sem registro'}</span>
               </div>
-              {item('Risco', risk)}
+              {item('Risco de fraude', risk)}
             </>
           );
         })()}
@@ -684,6 +689,22 @@ export default function AdminCustomerDetail() {
         />
       )}
       {activeTab === 'logs' && (
+        <div className="space-y-4">
+          <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600">
+            {customer.fraud_risk?.signals?.length ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {customer.fraud_risk.signals.map((signal) => <li key={signal}>{signal}</li>)}
+              </ul>
+            ) : (
+              <p className="mt-1">{customer.fraud_risk?.level === 'insufficient'
+                ? 'Histórico inferior a 20 cobranças pagas. Ainda não há dados suficientes para avaliar o seller.'
+                : customer.fraud_risk?.level === 'low'
+                  ? 'Nenhum sinal encontrado nas regras avaliadas.'
+                  : 'Análise indisponível no momento.'}</p>
+            )}
+            {customer.fraud_risk?.metrics && <p className="mt-1 text-xs">{customer.fraud_risk.metrics.total} cobranças no período · {customer.fraud_risk.metrics.settled} pagas, incluindo reembolsos e chargebacks.</p>}
+            <p className="mt-2 text-xs text-gray-500">Triagem por regras de chargeback, reembolso, recusas de cartão e análises antifraude registradas. Alertas exigem revisão; não comprovam fraude nem bloqueiam automaticamente.</p>
+          </div>
         <LogsTab
           logs={logsData?.data || []}
           pagination={logsData?.meta}
@@ -692,6 +713,7 @@ export default function AdminCustomerDetail() {
           setPage={setLogsPage}
           activityLogs={customer.logs || []}
         />
+        </div>
       )}
       {activeTab === 'fees' && <FeesTab customerId={customerId!} />}
       {activeTab === 'acquirers' && <AcquirersTab customerId={customerId!} />}

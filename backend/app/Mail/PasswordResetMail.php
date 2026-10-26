@@ -23,13 +23,13 @@ class PasswordResetMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Redefinir sua senha - Vector Pagamentos',
+            subject: 'Redefinir sua senha - GorillaPay',
         );
     }
 
     public function content(): Content
     {
-        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'https://app.vectorpagamentos.com'));
+        $frontendUrl = config('app.frontend_url', env('FRONTEND_URL', 'https://gorillapay.site'));
 
         return new Content(
             view: 'emails.password-reset',

@@ -712,6 +712,7 @@ class PaymentService
 
         $lockedRemaining = $isAccountLocked ? count($accountOrder) : 0;
         $lastLockedError = null;
+        $lastFailure = null;
 
         foreach ($acquirerOrder as $acquirerName) {
             $attemptStartedAt = microtime(true);
@@ -742,14 +743,16 @@ class PaymentService
                 continue;
             }
 
-            if (!$this->isPixAmountAllowedForAcquirer($charge, $acquirerName)) {
+            $amountError = $this->pixAmountErrorForAcquirer($charge, $acquirerName);
+            if ($amountError !== null) {
+                $lastFailure = ['success' => false, 'error' => $amountError, 'acquirer' => $acquirerName];
                 Log::info('PIX acquirer skipped by amount limits', [
                     'charge_id' => $charge->id,
                     'acquirer' => $acquirerName,
                     'amount' => $charge->amount,
                 ]);
                 if ($isLockedAcquirer) {
-                    $lastLockedError = 'A adquirente configurada para este seller nao aceita o valor desta cobranca.';
+                    $lastLockedError = $amountError;
                     if ($lockedRemaining <= 0) {
                         $charge->update(['status' => 'failed']);
                         return [
@@ -830,6 +833,11 @@ class PaymentService
                 }
             }
 
+            // Preserve the provider's reason if every route fails.
+            if ($result) {
+                $lastFailure = $result;
+            }
+
             // Record failure in circuit breaker
             if ($result) {
                 $cb?->recordFailure();
@@ -891,7 +899,7 @@ class PaymentService
             $charge->update(['status' => 'failed']);
             return [
                 'success' => false,
-                'error' => $lastLockedError ?? 'Nenhuma adquirente configurada para este seller conseguiu processar o PIX.',
+                'error' => $lastFailure['error'] ?? $lastLockedError ?? 'Nenhuma adquirente configurada para este seller conseguiu processar o PIX.',
             ];
         }
 
@@ -903,7 +911,7 @@ class PaymentService
             'amount' => $charge->amount,
         ]);
         
-        return [
+        return $lastFailure ?? [
             'success' => false,
             'error' => 'Nenhuma adquirente disponível conseguiu processar o pagamento. Tente novamente mais tarde.',
         ];
@@ -943,11 +951,11 @@ class PaymentService
         return false;
     }
 
-    private function isPixAmountAllowedForAcquirer(Charge $charge, string $acquirerName): bool
+    private function pixAmountErrorForAcquirer(Charge $charge, string $acquirerName): ?string
     {
         $amount = (int) ($charge->amount ?? 0);
         if ($amount <= 0) {
-            return true;
+            return null;
         }
 
         $settings = [];
@@ -991,14 +999,14 @@ class PaymentService
         [$minAmount, $maxAmount] = $this->extractPixAmountLimits($settings);
 
         if ($minAmount !== null && $amount < $minAmount) {
-            return false;
+            return PaymentFailureMessage::amountLimit($minAmount, $acquirerName, false);
         }
 
         if ($maxAmount !== null && $amount > $maxAmount) {
-            return false;
+            return PaymentFailureMessage::amountLimit($maxAmount, $acquirerName);
         }
 
-        return true;
+        return null;
     }
 
     /**
@@ -1027,15 +1035,19 @@ class PaymentService
             ?? null;
 
         return [
-            $this->normalizeAmountLimit($min),
-            $this->normalizeAmountLimit($max),
+            $this->normalizeAmountLimit($min, isset($pixSettings['min_amount_cents']) || isset($settings['min_amount_cents'])),
+            $this->normalizeAmountLimit($max, isset($pixSettings['max_amount_cents']) || isset($settings['max_amount_cents'])),
         ];
     }
 
-    private function normalizeAmountLimit(mixed $value): ?int
+    private function normalizeAmountLimit(mixed $value, bool $inCents = false): ?int
     {
         if ($value === null || $value === '') {
             return null;
+        }
+
+        if ($inCents) {
+            return is_numeric($value) && (float) $value > 0 ? (int) round((float) $value) : null;
         }
 
         if (is_string($value)) {

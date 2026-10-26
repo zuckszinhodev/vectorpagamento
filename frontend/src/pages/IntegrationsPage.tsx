@@ -637,7 +637,7 @@ export default function IntegrationsPage() {
  </div>
 
  {/* Search */}
- <div className="relative">
+ <div className="relative" data-tour="integrations">
  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-tx-muted" />
  <input
  type="text"

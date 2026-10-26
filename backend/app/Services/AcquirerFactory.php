@@ -28,6 +28,7 @@ class AcquirerFactory
 
     private ?PayFortAcquirer $payfort = null;
     private ?BluPayAcquirer $blupay = null;
+    private ?\App\Infrastructure\Acquirers\AkkadPagAcquirer $akkadpag = null;
     private ?EnkiAcquirer $enki = null;
     private ?\App\Infrastructure\Acquirers\WitetecAcquirer $witetec = null;
     private ?\App\Infrastructure\Acquirers\AsaasAcquirer $asaas = null;
@@ -37,6 +38,7 @@ class AcquirerFactory
 
     private bool $payfortInitialized = false;
     private bool $blupayInitialized = false;
+    private bool $akkadpagInitialized = false;
     private bool $enkiInitialized = false;
     private bool $witetecInitialized = false;
     private bool $asaasInitialized = false;
@@ -50,6 +52,10 @@ class AcquirerFactory
      * @var array<string, PayFortAcquirer|null>
      */
     private array $payfortByAccount = [];
+    /**
+     * @var array<string, \App\Infrastructure\Acquirers\AkkadPagAcquirer|null>
+     */
+    private array $akkadpagByAccount = [];
     /**
      * @var array<string, EnkiAcquirer|null>
      */
@@ -204,6 +210,7 @@ class AcquirerFactory
         return match ($acquirerKey) {
             'payfort' => self::isPayFortConfigured(),
             'blupay' => self::isBluPayConfigured(),
+            'akkadpag' => self::isAkkadPagConfigured(),
             'enki' => self::isEnkiConfigured(),
             'babylon' => self::isBabylonConfigured(),
             'witetec' => self::isWitetecConfigured(),
@@ -265,6 +272,7 @@ class AcquirerFactory
         $isConfigured = match ($key) {
             'payfort'   => self::isPayFortConfigured(),
             'blupay'    => self::isBluPayConfigured(),
+            'akkadpag'  => self::isAkkadPagConfigured(),
             'enki'      => self::isEnkiConfigured(),
             'babylon'   => self::isBabylonConfigured(),
             'witetec'   => self::isWitetecConfigured(),
@@ -290,6 +298,7 @@ class AcquirerFactory
         return match (true) {
             $key === 'payfort' => ($accountId ? $this->payfortForAccount($accountId) : $this->payfort()) !== null,
             $key === 'blupay' => $this->blupay() !== null,
+            $key === 'akkadpag' => ($accountId ? $this->akkadpagForAccount($accountId) : $this->akkadpag()) !== null,
             $key === 'enki' => ($accountId ? $this->enkiForAccount($accountId) : $this->enki()) !== null,
             $key === 'babylon' => $this->babylon() !== null,
             $key === 'huntersub' => ($accountId ? $this->huntersubForAccount($accountId) : $this->huntersub()) !== null,
@@ -454,6 +463,23 @@ class AcquirerFactory
 
         $creds = self::resolveCredentials('blupay');
         return $creds !== null;
+    }
+
+    public static function isAkkadPagConfigured(): bool
+    {
+        $config = AcquirerConfig::where('acquirer_key', 'akkadpag')->first();
+        if (!$config || !$config->enabled) {
+            return false;
+        }
+
+        if (config('acquirers.akkadpag.enabled', false)
+            && !empty(config('acquirers.akkadpag.public_key'))
+            && !empty(config('acquirers.akkadpag.secret_key'))
+            && !empty(config('acquirers.akkadpag.withdrawal_key'))) {
+            return true;
+        }
+
+        return self::resolveCredentials('akkadpag') !== null;
     }
 
     public static function isBabylonConfigured(): bool
@@ -665,6 +691,48 @@ class AcquirerFactory
             }
         }
         return $this->blupay;
+    }
+
+    public function akkadpag(): ?\App\Infrastructure\Acquirers\AkkadPagAcquirer
+    {
+        if (!$this->akkadpagInitialized) {
+            $this->akkadpagInitialized = true;
+
+            $envConfigured = config('acquirers.akkadpag.enabled', false)
+                && !empty(config('acquirers.akkadpag.public_key'))
+                && !empty(config('acquirers.akkadpag.secret_key'))
+                && !empty(config('acquirers.akkadpag.withdrawal_key'));
+
+            $credentials = $envConfigured ? [
+                'public_key' => config('acquirers.akkadpag.public_key', ''),
+                'secret_key' => config('acquirers.akkadpag.secret_key', ''),
+                'withdrawal_key' => config('acquirers.akkadpag.withdrawal_key', ''),
+                'base_url' => config('acquirers.akkadpag.base_url', 'https://api.akkadpag.com/v1'),
+                'webhook_url' => config('acquirers.akkadpag.webhook_url', ''),
+            ] : self::resolveCredentials('akkadpag');
+
+            if ($credentials) {
+                $this->akkadpag = new \App\Infrastructure\Acquirers\AkkadPagAcquirer($credentials);
+            }
+        }
+
+        return $this->akkadpag;
+    }
+
+    public function akkadpagForAccount(?string $accountId): ?\App\Infrastructure\Acquirers\AkkadPagAcquirer
+    {
+        if (!$accountId) {
+            return $this->akkadpag();
+        }
+
+        if (!array_key_exists($accountId, $this->akkadpagByAccount)) {
+            $credentials = self::resolveAccountCredentials($accountId, 'akkadpag');
+            $this->akkadpagByAccount[$accountId] = $credentials
+                ? new \App\Infrastructure\Acquirers\AkkadPagAcquirer($credentials)
+                : $this->akkadpag();
+        }
+
+        return $this->akkadpagByAccount[$accountId];
     }
 
     public function witetec(): ?\App\Infrastructure\Acquirers\WitetecAcquirer
@@ -980,6 +1048,7 @@ class AcquirerFactory
         return match ($acquirerKey) {
             'payfort' => $this->payfort(),
             'blupay' => $this->blupay(),
+            'akkadpag' => $this->akkadpag(),
             'enki' => $this->enki(),
             'babylon' => $this->babylon(),
             'huntersub' => $this->huntersub(),
