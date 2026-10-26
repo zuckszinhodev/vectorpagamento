@@ -58,13 +58,18 @@ function applyTailwindColors(variant: ThemeVariant) {
   root.style.setProperty('--color-dark-500', dark[500]);
 }
 
+// Padrões do build: evitam abrir no tema claro e piscar até /branding responder
+const envVariant = import.meta.env.VITE_DEFAULT_THEME_VARIANT as string | undefined;
+const DEFAULT_VARIANT: ThemeVariant = envVariant && envVariant in themes ? (envVariant as ThemeVariant) : 'classic';
+const DEFAULT_PLATFORM_NAME = import.meta.env.VITE_APP_NAME || 'VectorPagamentos';
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
       theme: 'light',
-      themeVariant: 'classic' as ThemeVariant,
-      primaryColor: '#16a34a',
-      platformName: 'VectorPagamentos',
+      themeVariant: DEFAULT_VARIANT,
+      primaryColor: themes[DEFAULT_VARIANT].preview.primary,
+      platformName: DEFAULT_PLATFORM_NAME,
       platformDescription: 'Gateway de pagamentos',
       logoUrl: '',
       setTheme: (theme: Theme) => {
@@ -109,7 +114,7 @@ export const useThemeStore = create<ThemeState>()(
       onRehydrateStorage: () => (state) => {
         // Aplicar tema quando o store for hidratado
         if (state) {
-          const variant = state.themeVariant || 'classic';
+          const variant = state.themeVariant || DEFAULT_VARIANT;
           const mode = state.theme || 'light';
           applyThemeCssVars(variant, mode);
           applyTailwindColors(variant);
