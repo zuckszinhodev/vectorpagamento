@@ -19,7 +19,22 @@ const SYSTEM_HOSTS = [
 
 const SYSTEM_SUBDOMAINS = ['api', 'app', 'www', 'checkout', 'pay', 'members', 'mail', 'ftp', 'admin'];
 
-const PLATFORM_BASE_DOMAINS = ['vectorpagamentos.com', 'vectorpagamentos.com.br'];
+// Domínio do próprio painel (VITE_APP_URL), para não depender só da lista fixa
+const APP_HOST = (() => {
+  try {
+    const url = import.meta.env.VITE_APP_URL;
+    return url ? new URL(url).hostname.toLowerCase().replace(/^www\./, '') : null;
+  } catch {
+    return null;
+  }
+})();
+
+const PLATFORM_BASE_DOMAINS = [
+  'gorillapay.tech',
+  'vectorpagamentos.com',
+  'vectorpagamentos.com.br',
+  ...(APP_HOST ? [APP_HOST] : []),
+];
 
 /**
  * Returns true if the current host is a custom domain or VectorPagamentos subdomain
@@ -30,6 +45,9 @@ export function isCustomDomain(): boolean {
 
   // System hosts → not custom
   if (SYSTEM_HOSTS.includes(host)) return false;
+
+  // Raiz do domínio da plataforma (ex.: gorillapay.tech) → painel
+  if (PLATFORM_BASE_DOMAINS.includes(host)) return false;
 
   // Localhost with port → not custom
   if (host === 'localhost' || host === '127.0.0.1') return false;
