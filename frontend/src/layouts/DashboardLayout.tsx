@@ -35,7 +35,6 @@ import {
   PaperAirplaneIcon,
   ArrowPathIcon,
   CodeBracketIcon,
-  AcademicCapIcon,
 } from '@heroicons/react/24/outline';
 import { api } from '@/lib/api';
 import { notificationsService, Notification } from '@/services/api/notifications.service';
@@ -1123,22 +1122,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                           >
                             <QuestionMarkCircleIcon className="h-4 w-4" />
                             Suporte
-                          </button>
-                        )}
-                      </Menu.Item>
-                      <Menu.Item>
-                        {({ active }) => (
-                          <button
-                            onClick={startTour}
-                            className={clsx(
-                              'flex w-full items-center gap-3 rounded-element px-3 py-2.5 text-sm transition-colors duration-fast',
-                              active
-                                ? 'bg-surface-hover text-tx-primary'
-                                : 'text-tx-secondary'
-                            )}
-                          >
-                            <AcademicCapIcon className="h-4 w-4" />
-                            Tutorial da plataforma
                           </button>
                         )}
                       </Menu.Item>

@@ -2,34 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@media (pointer: fine) {
-  html,
-  body {
-    cursor: url('/img/gorillapay-cursor.png') 7 1, auto;
-  }
-
-  a,
-  button,
-  summary,
-  [role='button'],
-  input[type='button'],
-  input[type='submit'],
-  input[type='reset'],
-  input[type='checkbox'],
-  input[type='radio'],
-  .cursor-pointer {
-    cursor: url('/img/gorillapay-cursor.png') 7 1, pointer;
-  }
-
-  button:disabled,
-  input:disabled,
-  select:disabled,
-  textarea:disabled,
-  .cursor-not-allowed {
-    cursor: not-allowed;
-  }
-}
-
 @layer base {
   /* ── Light Mode Tokens ─────────────────────────────────── */
   :root {

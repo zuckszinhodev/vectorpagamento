@@ -17,6 +17,14 @@ import {
   CreditCardIcon,
   DocumentTextIcon,
   BanknotesIcon,
+  UserIcon,
+  EnvelopeIcon,
+  IdentificationIcon,
+  PhoneIcon,
+  LinkIcon,
+  ArrowTopRightOnSquareIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 import PixIcon from '@/components/icons/PixIcon';
 import { SectionSpinner } from '@/components/ui/Spinner';
@@ -250,17 +258,26 @@ function NewPixChargeModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const [amount, setAmount] = useState('');
+  // Valor em centavos; o campo funciona como máscara de moeda (digita da direita para a esquerda)
+  const [amountCents, setAmountCents] = useState(0);
+  const amount = (amountCents / 100).toFixed(2);
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerDocument, setCustomerDocument] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [pixCode, setPixCode] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showQrCode, setShowQrCode] = useState(false);
+  const [paymentLink, setPaymentLink] = useState('');
+  const [createLink, setCreateLink] = useState(false);
+  const createLinkRef = useRef(createLink);
+  createLinkRef.current = createLink;
+  const [resultMode, setResultMode] = useState<'pix' | 'link'>('pix');
   const queryClient = useQueryClient();
 
   const createChargeMutation = useMutation({
-    mutationFn: async (data: { amount: number; customer_name: string; customer_email: string; customer_document: string }) => {
+    mutationFn: async (data: { amount: number; customer_name: string; customer_email: string; customer_document: string; customer_phone: string }) => {
+      const phone = data.customer_phone.replace(/\D/g, '');
       const response = await api.post('/charges', {
         amount: data.amount,
         payment_method: 'pix',
@@ -268,12 +285,21 @@ function NewPixChargeModal({
           name: data.customer_name,
           email: data.customer_email,
           document: data.customer_document.replace(/\D/g, ''),
+          ...(phone ? { phone } : {}),
         },
       });
       return response.data;
     },
     onSuccess: async (response) => {
       const chargeData = response.data || response;
+
+      const link = chargeData.id ? `${window.location.origin}/pix/${chargeData.id}` : '';
+      setPaymentLink(link);
+      const wantsLink = createLinkRef.current;
+      setResultMode(wantsLink ? 'link' : 'pix');
+      if (wantsLink && link) {
+        navigator.clipboard.writeText(link).catch(() => undefined);
+      }
       
       // Usar PIX retornado pela API ou gerar código simulado como fallback
       const pixCopyPaste = chargeData.pix_copy_paste || chargeData.pix_qr_code || 
@@ -303,7 +329,11 @@ function NewPixChargeModal({
         }
       }
       
-      toast.success('Cobrança PIX criada com sucesso!');
+      toast.success(
+        wantsLink && link
+          ? 'Link de pagamento criado e copiado!'
+          : 'Cobrança PIX criada com sucesso!'
+      );
       queryClient.invalidateQueries({ queryKey: ['charges'] });
     },
     onError: (error: any) => {
@@ -314,7 +344,12 @@ function NewPixChargeModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || !customerName || !customerEmail || !customerDocument) {
+    if (amountCents <= 0) {
+      toast.error('Informe o valor da cobrança');
+      return;
+    }
+
+    if (!customerName || !customerEmail || !customerDocument) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
@@ -330,14 +365,15 @@ function NewPixChargeModal({
       return;
     }
 
-    const amountValue = parseFloat(amount.replace(',', '.'));
-    if (isNaN(amountValue) || amountValue <= 0) {
-      toast.error('Valor inválido');
+    const phoneDigits = customerPhone.replace(/\D/g, '');
+    if (phoneDigits && phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+      toast.error('Telefone inválido. Use DDD + número.');
       return;
     }
 
     createChargeMutation.mutate({
-      amount: Math.round(amountValue * 100), // Converter para centavos
+      customer_phone: customerPhone,
+      amount: amountCents,
       customer_name: customerName,
       customer_email: customerEmail,
       customer_document: customerDocument,
@@ -350,16 +386,62 @@ function NewPixChargeModal({
       .catch(() => toast.error('Erro ao copiar código. Tente novamente.'));
   };
 
+  const handleCopyPaymentLink = () => {
+    navigator.clipboard.writeText(paymentLink)
+      .then(() => toast.success('Link copiado!'))
+      .catch(() => toast.error('Erro ao copiar link. Tente novamente.'));
+  };
+
   const handleClose = () => {
-    setAmount('');
+    setPaymentLink('');
+    setResultMode('pix');
+    setCreateLink(false);
+    setAmountCents(0);
     setCustomerName('');
     setCustomerEmail('');
     setCustomerDocument('');
+    setCustomerPhone('');
     setPixCode('');
     setQrCodeUrl('');
     setShowQrCode(false);
     onClose();
   };
+
+  const formatBRL = (cents: number) =>
+    (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const docDigits = customerDocument.replace(/\D/g, '');
+  const docComplete = docDigits.length === 11 || docDigits.length === 14;
+  const docValid = docComplete && validateCpfOrCnpj(docDigits);
+  const docLabel = docDigits.length > 11 ? 'CNPJ' : 'CPF';
+
+  const handleDocumentChange = (raw: string) => {
+    let v = raw.replace(/\D/g, '').slice(0, 14);
+    if (v.length <= 11) {
+      v = v.replace(/(\d{3})(\d)/, '$1.$2');
+      v = v.replace(/(\d{3})(\d)/, '$1.$2');
+      v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    } else {
+      v = v.replace(/(\d{2})(\d)/, '$1.$2');
+      v = v.replace(/(\d{3})(\d)/, '$1.$2');
+      v = v.replace(/(\d{3})(\d)/, '$1/$2');
+      v = v.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+    }
+    setCustomerDocument(v);
+  };
+
+  const handlePhoneChange = (raw: string) => {
+    const d = raw.replace(/\D/g, '').slice(0, 11);
+    let v = d;
+    if (d.length > 2) v = `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    if (d.length > 6) {
+      const split = d.length === 11 ? 7 : 6;
+      v = `(${d.slice(0, 2)}) ${d.slice(2, split)}-${d.slice(split)}`;
+    }
+    setCustomerPhone(v);
+  };
+
+  const quickAmounts = [1000, 5000, 10000, 25000, 50000];
 
   return (
     <Transition.Root show={isOpen} as={Fragment}>
@@ -388,16 +470,18 @@ function NewPixChargeModal({
               leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
             >
               <Dialog.Panel className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-2xl transform flex-col overflow-hidden rounded-2xl border border-border-DEFAULT bg-surface-elevated text-left shadow-2xl transition-all">
-                <div className="border-b border-border-DEFAULT bg-gradient-to-r from-accent-primary/10 via-transparent to-accent-secondary/10 px-5 py-4 sm:px-6">
+                <div className="border-b border-border-DEFAULT bg-gradient-to-r from-blue-500/15 via-transparent to-blue-500/5 px-5 py-4 sm:px-6">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <Dialog.Title className="text-xl font-semibold text-tx-primary">
-                        {showQrCode ? 'PIX QR Code Gerado' : 'Nova Cobrança PIX'}
+                        {showQrCode
+                          ? resultMode === 'link' ? 'Link de pagamento criado' : 'PIX QR Code Gerado'
+                          : 'Nova Cobrança PIX'}
                       </Dialog.Title>
                       <p className="mt-1 text-sm text-tx-muted">
                         {showQrCode
-                          ? 'Compartilhe o QR Code ou copie o codigo PIX para concluir o pagamento.'
-                          : 'Preencha os dados abaixo para gerar uma cobranca PIX com identificacao do cliente.'}
+                          ? 'Compartilhe o QR Code ou copie o código PIX para concluir o pagamento.'
+                          : 'Defina o valor e identifique o pagador. A cobrança aparece na sua lista assim que for gerada.'}
                       </p>
                     </div>
                     <button
@@ -411,105 +495,238 @@ function NewPixChargeModal({
 
                 {!showQrCode ? (
                   <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
-                    <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
-                      <div className="rounded-xl border border-border-DEFAULT bg-surface-card px-4 py-3">
-                        <p className="text-sm font-medium text-tx-primary">Geracao rapida</p>
-                        <p className="mt-1 text-sm text-tx-muted">
-                          A cobranca sera criada como PIX e aparecera automaticamente na sua lista de cobrancas.
-                        </p>
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="sm:col-span-2">
-                          <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                            Valor (R$)
-                          </label>
+                    <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6">
+                      {/* Valor */}
+                      <section className="rounded-2xl border border-border-DEFAULT bg-surface-card p-4 sm:p-5">
+                        <label htmlFor="pix-amount" className="text-xs font-semibold uppercase tracking-wider text-tx-muted">
+                          Valor da cobrança
+                        </label>
+                        <div className="mt-2 flex items-baseline gap-2">
+                          <span className="text-2xl font-semibold text-tx-muted">R$</span>
                           <input
+                            id="pix-amount"
                             type="text"
+                            inputMode="numeric"
+                            autoFocus
+                            className="w-full bg-transparent text-4xl font-bold tracking-tight text-tx-primary outline-none placeholder:text-tx-muted/50"
                             placeholder="0,00"
-                            className="input h-12 text-base"
-                            value={amount}
-                            onChange={(e) => setAmount(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div className="sm:col-span-2">
-                          <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                            Nome do Cliente
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Joao Silva"
-                            className="input h-12"
-                            value={customerName}
-                            onChange={(e) => setCustomerName(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                            E-mail do Cliente
-                          </label>
-                          <input
-                            type="email"
-                            placeholder="joao@email.com"
-                            className="input h-12"
-                            value={customerEmail}
-                            onChange={(e) => setCustomerEmail(e.target.value)}
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-2 block text-sm font-medium text-tx-secondary">
-                            CPF/CNPJ do Cliente
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="000.000.000-00"
-                            className="input h-12"
-                            value={customerDocument}
+                            value={amountCents > 0 ? formatBRL(amountCents) : ''}
                             onChange={(e) => {
-                              let v = e.target.value.replace(/\D/g, '');
-                              if (v.length <= 11) {
-                                v = v.replace(/(\d{3})(\d)/, '$1.$2');
-                                v = v.replace(/(\d{3})(\d)/, '$1.$2');
-                                v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-                              } else {
-                                v = v.replace(/(\d{2})(\d)/, '$1.$2');
-                                v = v.replace(/(\d{3})(\d)/, '$1.$2');
-                                v = v.replace(/(\d{3})(\d)/, '$1/$2');
-                                v = v.replace(/(\d{4})(\d{1,2})$/, '$1-$2');
-                              }
-                              setCustomerDocument(v);
+                              const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+                              setAmountCents(digits ? parseInt(digits, 10) : 0);
                             }}
-                            maxLength={18}
-                            required
                           />
                         </div>
-                      </div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {quickAmounts.map((value) => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setAmountCents(value)}
+                              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                                amountCents === value
+                                  ? 'border-accent-primary bg-accent-primary/15 text-accent-primary'
+                                  : 'border-border-DEFAULT text-tx-secondary hover:border-accent-primary/50 hover:text-tx-primary'
+                              }`}
+                            >
+                              R$ {formatBRL(value).replace(',00', '')}
+                            </button>
+                          ))}
+                        </div>
+                      </section>
+
+                      {/* Pagador */}
+                      <section className="space-y-4">
+                        <div>
+                          <h4 className="text-sm font-semibold text-tx-primary">Dados do pagador</h4>
+                          <p className="mt-0.5 text-xs text-tx-muted">
+                            Informe os dados reais de quem vai pagar. Eles são enviados à adquirente junto com a cobrança.
+                          </p>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="sm:col-span-2">
+                            <label htmlFor="pix-name" className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                              Nome completo
+                            </label>
+                            <div className="relative">
+                              <UserIcon className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
+                              <input
+                                id="pix-name"
+                                type="text"
+                                autoComplete="off"
+                                placeholder="Nome do pagador"
+                                className="input h-12 pl-11"
+                                value={customerName}
+                                onChange={(e) => setCustomerName(e.target.value)}
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label htmlFor="pix-email" className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                              E-mail
+                            </label>
+                            <div className="relative">
+                              <EnvelopeIcon className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
+                              <input
+                                id="pix-email"
+                                type="email"
+                                autoComplete="off"
+                                placeholder="email@dominio.com"
+                                className="input h-12 pl-11"
+                                value={customerEmail}
+                                onChange={(e) => setCustomerEmail(e.target.value)}
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label htmlFor="pix-phone" className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                              Telefone <span className="font-normal text-tx-muted">(opcional)</span>
+                            </label>
+                            <div className="relative">
+                              <PhoneIcon className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
+                              <input
+                                id="pix-phone"
+                                type="tel"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                placeholder="(00) 00000-0000"
+                                className="input h-12 pl-11"
+                                value={customerPhone}
+                                onChange={(e) => handlePhoneChange(e.target.value)}
+                                maxLength={15}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label htmlFor="pix-document" className="mb-1.5 block text-sm font-medium text-tx-secondary">
+                              CPF ou CNPJ
+                            </label>
+                            <div className="relative">
+                              <IdentificationIcon className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
+                              <input
+                                id="pix-document"
+                                type="text"
+                                inputMode="numeric"
+                                autoComplete="off"
+                                placeholder="000.000.000-00"
+                                className={`input h-12 pl-11 pr-10 ${docComplete && !docValid ? 'border-red-500/60' : ''}`}
+                                value={customerDocument}
+                                onChange={(e) => handleDocumentChange(e.target.value)}
+                                maxLength={18}
+                                required
+                              />
+                              {docComplete && (
+                                docValid ? (
+                                  <CheckCircleIcon className="absolute right-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-500" />
+                                ) : (
+                                  <ExclamationCircleIcon className="absolute right-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-red-500" />
+                                )
+                              )}
+                            </div>
+                            {docComplete && !docValid && (
+                              <p className="mt-1 text-xs text-red-500">{docLabel} inválido</p>
+                            )}
+                          </div>
+                        </div>
+                      </section>
+
+                      <label
+                        htmlFor="pix-create-link"
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                          createLink ? 'border-blue-500/40 bg-blue-500/10' : 'border-border-DEFAULT hover:border-blue-500/30'
+                        }`}
+                      >
+                        <input
+                          id="pix-create-link"
+                          type="checkbox"
+                          checked={createLink}
+                          onChange={(e) => setCreateLink(e.target.checked)}
+                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-border-DEFAULT accent-blue-500"
+                        />
+                        <span>
+                          <span className="flex items-center gap-1.5 text-sm font-medium text-tx-primary">
+                            <LinkIcon className="h-4 w-4 text-blue-400" />
+                            Criar link de pagamento
+                          </span>
+                          <span className="mt-0.5 block text-xs text-tx-muted">
+                            Gera uma página com QR Code e PIX copia e cola para enviar ao cliente. O link já sai copiado.
+                          </span>
+                        </span>
+                      </label>
                     </div>
 
-                    <div className="flex flex-col-reverse gap-3 border-t border-border-DEFAULT bg-surface-card px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
-                      <button
-                        type="button"
-                        onClick={handleClose}
-                        className="btn-secondary"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={createChargeMutation.isPending}
-                        className="btn-primary inline-flex items-center justify-center"
-                      >
-                        <PixIcon className="mr-2 h-5 w-5" />
-                        {createChargeMutation.isPending ? 'Gerando...' : 'Gerar cobranca PIX'}
-                      </button>
+                    <div className="flex flex-col gap-3 border-t border-border-DEFAULT bg-surface-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                      <div className="whitespace-nowrap text-sm text-tx-muted">
+                        Total{' '}
+                        <span className="font-semibold text-tx-primary">R$ {formatBRL(amountCents)}</span>
+                      </div>
+                      <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={handleClose}
+                          className="btn-secondary"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={createChargeMutation.isPending || amountCents <= 0}
+                          className="btn-primary inline-flex items-center justify-center whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <PixIcon className="mr-2 h-5 w-5" />
+                          {createChargeMutation.isPending
+                            ? 'Gerando...'
+                            : createLink ? 'Gerar cobrança e link' : 'Gerar cobrança PIX'}
+                        </button>
+                      </div>
                     </div>
                   </form>
                 ) : (
                   <div className="flex flex-1 flex-col overflow-hidden">
                     <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+                      {paymentLink && (
+                        <div className={`rounded-xl border p-4 ${resultMode === 'link' ? 'border-blue-500/40 bg-blue-500/10' : 'border-border-DEFAULT bg-surface-card'}`}>
+                          <div className="mb-2 flex items-center gap-2">
+                            <LinkIcon className="h-4 w-4 text-blue-400" />
+                            <p className="text-sm font-medium text-tx-primary">Link de pagamento</p>
+                          </div>
+                          <p className="mb-3 text-xs text-tx-muted">
+                            Envie para o cliente. Ele abre a página com o QR Code e o PIX copia e cola, e ela confirma sozinha quando o pagamento cai.
+                          </p>
+                          <div className="flex gap-2">
+                            <input
+                              readOnly
+                              value={paymentLink}
+                              className="input h-11 flex-1 font-mono text-xs"
+                              onClick={(e) => e.currentTarget.select()}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleCopyPaymentLink}
+                              className="btn-primary inline-flex shrink-0 items-center gap-1.5"
+                            >
+                              <ClipboardDocumentIcon className="h-4 w-4" />
+                              Copiar
+                            </button>
+                            <a
+                              href={paymentLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn-secondary inline-flex shrink-0 items-center"
+                              title="Abrir link"
+                            >
+                              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                            </a>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex justify-center">
                         {qrCodeUrl && (
                           <div className="rounded-2xl border border-border-DEFAULT bg-white p-4 shadow-sm">

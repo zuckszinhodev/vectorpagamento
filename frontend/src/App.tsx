@@ -75,6 +75,7 @@ const VectorIAPage = lazy(() => import('@/pages/WazerIAPage'));
 
 // Public Pages (lazy)
 const PublicCheckoutPage = lazy(() => import('@/pages/public/CheckoutPage'));
+const PixPaymentPage = lazy(() => import('@/pages/public/PixPaymentPage'));
 const DomainLandingPage = lazy(() => import('@/pages/public/DomainLandingPage'));
 const TermsPage = lazy(() => import('@/pages/TermsPage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
@@ -580,6 +581,7 @@ function App() {
       */}
       <Route path="/pay/:slug" element={<Suspense fallback={<CheckoutBoot />}><PublicCheckoutPage /></Suspense>} />
       <Route path="/checkout/:slug" element={<Suspense fallback={<CheckoutBoot />}><PublicCheckoutPage /></Suspense>} />
+      <Route path="/pix/:chargeId" element={<Suspense fallback={<CheckoutBoot />}><PixPaymentPage /></Suspense>} />
 
       {/* Legal Pages */}
       <Route path="/terms" element={<TermsPage />} />

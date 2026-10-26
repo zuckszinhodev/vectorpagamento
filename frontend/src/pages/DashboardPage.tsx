@@ -146,9 +146,14 @@ function writeGoalMilestoneState(storageKey: string | null, value: GoalMilestone
   }
 }
 
-type DashboardPeriod = '7d' | '30d' | '90d' | '1y' | 'custom';
+// YYYY-MM-DD no fuso local (toISOString usa UTC e vira o dia seguinte após 21h no Brasil)
+const toLocalDateStr = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+type DashboardPeriod = 'today' | '7d' | '30d' | '90d' | '1y' | 'custom';
 
 const periodOptions: { key: DashboardPeriod; label: string }[] = [
+  { key: 'today', label: 'Hoje' },
   { key: '7d', label: '7 dias' },
   { key: '30d', label: '30 dias' },
   { key: '90d', label: '90 dias' },
@@ -268,15 +273,17 @@ function DashboardRevenueHeroSkeleton() {
 function DateRangePicker({ 
   startDate, 
   endDate, 
-  onStartDateChange, 
-  onEndDateChange 
+  onStartDateChange,
+  onEndDateChange,
+  defaultOpen = false,
 }: {
   startDate: string;
   endDate: string;
   onStartDateChange: (date: string) => void;
   onEndDateChange: (date: string) => void;
+  defaultOpen?: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectingStart, setSelectingStart] = useState(true);
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -316,7 +323,7 @@ function DateRangePicker({
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     const date = new Date(year, month, day);
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toLocalDateStr(date);
     const start = new Date(startDate + 'T00:00:00');
     const end = new Date(endDate + 'T00:00:00');
     return date >= start && date <= end;
@@ -326,7 +333,7 @@ function DateRangePicker({
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     const date = new Date(year, month, day);
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toLocalDateStr(date);
     return dateStr === startDate || dateStr === endDate;
   };
 
@@ -334,8 +341,8 @@ function DateRangePicker({
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     const date = new Date(year, month, day);
-    const dateStr = date.toISOString().split('T')[0];
-    const today = new Date().toISOString().split('T')[0];
+    const dateStr = toLocalDateStr(date);
+    const today = toLocalDateStr(new Date());
     
     if (dateStr > today) return;
 
@@ -414,8 +421,8 @@ function DateRangePicker({
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
               const date = new Date(year, month, day);
-              const dateStr = date.toISOString().split('T')[0];
-              const isToday = dateStr === today.toISOString().split('T')[0];
+              const dateStr = toLocalDateStr(date);
+              const isToday = dateStr === toLocalDateStr(today);
               const isFuture = date > today;
               const inRange = isDateInRange(day);
               const isStartEnd = isStartOrEndDate(day);
@@ -467,6 +474,8 @@ export default function DashboardPage() {
     const start = new Date(today);
 
     switch (period) {
+      case 'today':
+        break;
       case '7d':
         start.setDate(today.getDate() - 6);
         break;
@@ -487,8 +496,8 @@ export default function DashboardPage() {
     }
 
     return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
+      start: toLocalDateStr(start),
+      end: toLocalDateStr(end),
     };
   };
 
@@ -835,9 +844,9 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {/* Line Chart */}
           <div className="lg:col-span-2 rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-5">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wider">Movimentação</h3>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center justify-end gap-1">
                 {periodOptions.map((option) => (
                   <button
                     key={option.key}
@@ -851,6 +860,15 @@ export default function DashboardPage() {
                     {option.label}
                   </button>
                 ))}
+                {selectedPeriod === 'custom' && (
+                  <DateRangePicker
+                    defaultOpen
+                    startDate={startDate}
+                    endDate={endDate}
+                    onStartDateChange={setStartDate}
+                    onEndDateChange={setEndDate}
+                  />
+                )}
               </div>
             </div>
             {showDashboardSkeleton ? (
@@ -979,12 +997,22 @@ export default function DashboardPage() {
 
         {/* Footer */}
         <footer className="border-t border-gray-800 mt-4 pt-4">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+          <div className="flex flex-col gap-3 text-xs text-gray-500 md:flex-row md:items-center md:justify-between">
             <p>{platformName} Intermediadora de Pagamentos</p>
-            <div className="flex items-center gap-4">
-              <Link to="/docs" className="transition-colors hover:text-red-400">Documentação</Link>
-              <span>{platformName} © 2026</span>
-            </div>
+            <nav aria-label="Links rápidos" className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              {[
+                { to: '/integrations', label: 'Integrações' },
+                { to: '/settings?tab=api', label: 'Chave API' },
+                { to: '/settings?tab=webhooks', label: 'Webhooks' },
+                { to: '/docs', label: 'Documentação' },
+                { to: '/support', label: 'Suporte' },
+              ].map((link) => (
+                <Link key={link.to} to={link.to} className="transition-colors hover:text-red-400">
+                  {link.label}
+                </Link>
+              ))}
+              <span className="text-gray-600">{platformName} © 2026</span>
+            </nav>
           </div>
         </footer>
       </div>

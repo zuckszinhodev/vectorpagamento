@@ -678,6 +678,56 @@ class PublicCheckoutController extends Controller
     /**
      * Check payment status (public endpoint for PIX/Boleto verification)
      */
+    /**
+     * Link de pagamento PIX: dados públicos para o cliente pagar uma cobrança.
+     * Não expõe nome, e-mail, CPF ou telefone do pagador.
+     */
+    public function showPixCharge(string $chargeId): JsonResponse
+    {
+        if (!Str::isUuid($chargeId)) {
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'charge_not_found', 'message' => 'Cobrança não encontrada'],
+            ], 404);
+        }
+
+        $charge = Charge::with('account:id,name')->find($chargeId);
+
+        if (!$charge || $charge->payment_method !== 'pix') {
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'charge_not_found', 'message' => 'Cobrança não encontrada'],
+            ], 404);
+        }
+
+        $status = $charge->status === 'paid' ? 'approved' : $charge->status;
+        if ($charge->isPending() && $charge->expires_at && $charge->expires_at->isPast()) {
+            $status = 'expired';
+        }
+
+        // pix_qr_code às vezes guarda a imagem (data URI); o copia e cola é sempre o texto EMV
+        $copyPaste = $charge->pix_copy_paste;
+        if (!$copyPaste && $charge->pix_qr_code && !str_starts_with($charge->pix_qr_code, 'data:')) {
+            $copyPaste = $charge->pix_qr_code;
+        }
+
+        $nominal = is_array($charge->metadata) ? trim((string) ($charge->metadata['nominal_name'] ?? '')) : '';
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'charge_id'      => $charge->id,
+                'status'         => $status,
+                'amount'         => $charge->amount,
+                'description'    => $charge->description,
+                'merchant_name'  => $nominal ?: ($charge->account->name ?? null),
+                'pix_copy_paste' => $status === 'pending' || $status === 'processing' ? $copyPaste : null,
+                'expires_at'     => $charge->expires_at?->toIso8601String(),
+                'paid_at'        => $charge->paid_at?->toIso8601String(),
+            ],
+        ]);
+    }
+
     public function checkStatus(string $chargeId): JsonResponse
     {
         try {

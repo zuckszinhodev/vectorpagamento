@@ -95,6 +95,8 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
     // Public Checkout (rate limited to prevent abuse)
     Route::prefix('checkout')->middleware('throttle:60,1')->group(function () {
         Route::get('/charge/{chargeId}/status', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'checkStatus']);
+        // Link de pagamento PIX: só os dados necessários para pagar (sem dados do pagador)
+        Route::get('/charge/{chargeId}/pix', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'showPixCharge']);
         Route::get('/{slug}', [\App\Http\Controllers\Api\V1\PublicCheckoutController::class, 'show']);
         // Cotacao de frete: peso e dimensoes saem do produto, nao do request.
         Route::post('/{slug}/shipping/quote', [\App\Http\Controllers\Api\V1\ShippingQuoteController::class, 'quote']);

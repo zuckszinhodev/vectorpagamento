@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeStore } from '@/stores/themeStore';
 import SEO from '@/components/SEO';
+import TurnstileWidget, { TurnstileWidgetHandle } from '@/components/TurnstileWidget';
 import toast from 'react-hot-toast';
 import {
   ArrowLeftIcon,
@@ -32,6 +33,8 @@ function Spinner() {
     </svg>
   );
 }
+
+const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
 
 const inputBaseClass =
   'h-12 w-full rounded-xl border px-11 text-sm outline-none transition-all duration-200 focus:ring-4';
@@ -65,6 +68,8 @@ export default function LoginPage() {
   const [rememberDevice, setRememberDevice] = useState(true);
   const [mfaLoading, setMfaLoading] = useState(false);
   const mfaInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const { login, verifyMfa, cancelMfa, mfaPending } = useAuthStore();
   const navigate = useNavigate();
 
@@ -75,9 +80,14 @@ export default function LoginPage() {
   } = useForm<LoginForm>();
 
   const onSubmit = async (data: LoginForm) => {
+    if (turnstileSiteKey && !turnstileToken) {
+      toast.error('Confirme a verificacao anti-robo.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await login(data.email, data.password);
+      await login(data.email, data.password, undefined, turnstileToken);
       const state = useAuthStore.getState();
 
       if (state.mfaPending) {
@@ -100,6 +110,8 @@ export default function LoginPage() {
       }
 
       toast.error(message);
+      // O token do Turnstile é de uso único; gera um novo para a próxima tentativa
+      turnstileRef.current?.reset();
     } finally {
       setIsLoading(false);
     }
@@ -322,7 +334,16 @@ export default function LoginPage() {
               {errors.password && <p className="text-sm text-red-600">{errors.password.message}</p>}
             </div>
 
-            <button type="submit" disabled={isLoading} className={`${primaryButtonClass} mt-2`}>
+            {turnstileSiteKey && (
+              <TurnstileWidget
+                ref={turnstileRef}
+                siteKey={turnstileSiteKey}
+                theme={isDark ? 'dark' : 'light'}
+                onVerify={setTurnstileToken}
+              />
+            )}
+
+            <button type="submit" disabled={isLoading || (!!turnstileSiteKey && !turnstileToken)} className={`${primaryButtonClass} mt-2`}>
               {isLoading ? (
                 <>
                   <Spinner />

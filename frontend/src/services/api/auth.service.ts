@@ -11,6 +11,7 @@ export interface LoginData {
   email: string;
   password: string;
   trusted_device_token?: string | null;
+  cf_turnstile_token?: string | null;
 }
 
 export interface AuthResponse {

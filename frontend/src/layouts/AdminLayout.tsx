@@ -86,7 +86,6 @@ const navigationGroups: NavGroup[] = [
       { name: 'Saques', href: '/admin/withdrawals', icon: BanknotesIcon, permission: 'admin.withdrawals.manage' },
       { name: 'KYC', href: '/admin/kyc', icon: DocumentCheckIcon, permission: 'admin.kyc.review' },
       { name: 'Disputas', href: '/admin/chargebacks', icon: ExclamationTriangleIcon, permission: 'admin.chargebacks.manage' },
-      { name: 'Aprovações', href: '/admin/approvals', icon: DocumentTextIcon, permission: 'admin.approvals.review' },
       { name: 'Suporte', href: '/admin/support', icon: LifebuoyIcon, permission: 'admin.customers.manage' },
     ],
   },

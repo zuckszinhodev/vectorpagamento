@@ -15,7 +15,7 @@ interface AuthState {
   mfaPending: MfaPending | null;
   adminMfaVerified: boolean;
   isImpersonating: boolean;
-  login: (email: string, password: string, trustedDeviceToken?: string | null) => Promise<void>;
+  login: (email: string, password: string, trustedDeviceToken?: string | null, turnstileToken?: string | null) => Promise<void>;
   verifyAdminMfa: (code: string) => Promise<void>;
   resetAdminMfaVerification: () => void;
   googleLogin: (credential: string) => Promise<void>;
@@ -139,9 +139,14 @@ export const useAuthStore = create<AuthState>()(
       adminMfaVerified: false,
       isImpersonating: false,
 
-      login: async (email: string, password: string, trustedDeviceToken?: string | null) => {
+      login: async (email: string, password: string, trustedDeviceToken?: string | null, turnstileToken?: string | null) => {
         try {
-          const response = await authService.login({ email, password, trusted_device_token: trustedDeviceToken ?? getTrustedDeviceToken(email) });
+          const response = await authService.login({
+            email,
+            password,
+            trusted_device_token: trustedDeviceToken ?? getTrustedDeviceToken(email),
+            cf_turnstile_token: turnstileToken,
+          });
 
           if (response.data.requires_mfa && response.data.mfa_token) {
             set({

@@ -126,6 +126,13 @@ return [
         'timeout'  => (int) env('UTMIFY_TIMEOUT', 15),
     ],
 
+    // Cloudflare Turnstile (anti-bot no login). Sem secret configurado, a verificação fica desligada.
+    'turnstile' => [
+        'secret_key' => env('TURNSTILE_SECRET_KEY'),
+        'verify_url' => 'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+        'timeout' => (int) env('TURNSTILE_TIMEOUT', 5),
+    ],
+
     'supabase' => [
         'url' => rtrim((string) env('SUPABASE_URL', ''), '/'),
         'anon_key' => env('SUPABASE_ANON_KEY'),

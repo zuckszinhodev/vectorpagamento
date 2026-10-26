@@ -28,6 +28,45 @@ class AuthController extends Controller
         private readonly AccountRegistrationService $registrationService,
     ) {
     }
+
+    /**
+     * Valida o token do Cloudflare Turnstile. Sem TURNSTILE_SECRET_KEY configurada, não bloqueia.
+     */
+    private function verifyTurnstile(?string $token, ?string $ip): bool
+    {
+        $secret = config('services.turnstile.secret_key');
+        if (empty($secret)) {
+            return true;
+        }
+
+        if (empty($token)) {
+            return false;
+        }
+
+        try {
+            $response = Http::asForm()
+                ->timeout(config('services.turnstile.timeout', 5))
+                ->post(config('services.turnstile.verify_url'), [
+                    'secret' => $secret,
+                    'response' => $token,
+                    'remoteip' => $ip,
+                ]);
+
+            if ($response->json('success') === true) {
+                return true;
+            }
+
+            Log::warning('Turnstile verification failed', [
+                'ip' => $ip,
+                'errors' => $response->json('error-codes'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Turnstile verification error', ['error' => $e->getMessage()]);
+        }
+
+        return false;
+    }
+
     /**
      * Register a new user
      */
@@ -288,11 +327,22 @@ class AuthController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
             'trusted_device_token' => ['nullable', 'string'],
+            'cf_turnstile_token' => ['nullable', 'string', 'max:2048'],
         ], [
             'email.required' => 'O e-mail é obrigatório',
             'email.email' => 'E-mail inválido',
             'password.required' => 'A senha é obrigatória',
         ]);
+
+        if (!$this->verifyTurnstile($request->input('cf_turnstile_token'), $request->ip())) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'captcha_failed',
+                    'message' => 'Verificação anti-robô falhou. Tente novamente.',
+                ],
+            ], 422);
+        }
 
         $user = User::where('email', $request->input('email'))->first();
 

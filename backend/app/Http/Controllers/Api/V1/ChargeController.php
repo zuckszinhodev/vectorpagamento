@@ -157,6 +157,7 @@ class ChargeController extends Controller
                 'customer' => ['required', 'array'],
                 'customer.name' => ['required', 'string'],
                 'customer.email' => ['required', 'email'],
+                'customer.phone' => ['nullable', 'string', 'regex:/^\d{10,13}$/'],
                 'customer.document' => [
                     'required',
                     'string',

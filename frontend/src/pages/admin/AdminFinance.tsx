@@ -671,14 +671,17 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-[860px] w-full">
+              <table className="min-w-[980px] w-full">
                 <thead>
                   <tr className="border-b border-gray-200 bg-gray-50">
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Cliente
                     </th>
                     <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
-                      Valor
+                      Valor solicitado
+                    </th>
+                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                      Líquido
                     </th>
                     <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                       Método
@@ -711,12 +714,17 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                           <p className="text-sm font-semibold text-gray-900">
                             {formatCurrency(withdrawal.amount)}
                           </p>
-                          {withdrawal.fee && withdrawal.fee > 0 && (
+                          {!!withdrawal.fee && withdrawal.fee > 0 && (
                             <p className="text-xs text-gray-500">
-                              Taxa: {formatCurrency(withdrawal.fee)}
+                              Taxa: −{formatCurrency(withdrawal.fee)}
                             </p>
                           )}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <p className="text-sm font-semibold text-emerald-700" title="Valor que cai na conta do vendedor">
+                          {formatCurrency(withdrawal.net_amount ?? withdrawal.amount - (withdrawal.fee || 0))}
+                        </p>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -969,7 +977,7 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="min-w-[1120px] w-full">
+                  <table className="min-w-[1240px] w-full">
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50">
                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -982,7 +990,10 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                           Produto
                         </th>
                         <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
-                          Valor
+                          Valor pago
+                        </th>
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500">
+                          Líquido
                         </th>
                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                           Método
@@ -1031,10 +1042,27 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                               <p className="text-sm font-semibold text-gray-900">{formatCurrency(charge.amount)}</p>
                               {charge.fee_amount > 0 && (
                                 <p className="text-xs text-gray-500">
-                                  Taxa: {formatCurrency(charge.fee_amount)}
+                                  Taxa: −{formatCurrency(charge.fee_amount)}
                                 </p>
                               )}
                             </div>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {(() => {
+                              // net_amount só é preenchido na aprovação; antes disso estima valor − taxa
+                              const net = charge.net_amount > 0
+                                ? charge.net_amount
+                                : charge.amount - (charge.fee_amount || 0);
+                              const credited = ['approved', 'paid'].includes(charge.status);
+                              return (
+                                <p
+                                  className={`text-sm font-semibold ${credited ? 'text-emerald-700' : 'text-gray-400'}`}
+                                  title={credited ? 'Valor creditado ao vendedor' : 'Previsto — não creditado'}
+                                >
+                                  {formatCurrency(net)}
+                                </p>
+                              );
+                            })()}
                           </td>
                           <td className="px-6 py-4">
                             <span className="text-sm text-gray-900">
