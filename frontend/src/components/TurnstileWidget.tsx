@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 declare global {
   interface Window {
@@ -50,15 +50,23 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
     const widgetIdRef = useRef<string | null>(null);
     const onVerifyRef = useRef(onVerify);
     onVerifyRef.current = onVerify;
+    // O tema só vale na criação: recriar o widget ao trocar de tema descartava a
+    // verificação em andamento (no celular ficava girando sem concluir)
+    const themeRef = useRef(theme);
+    const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'unavailable'>('loading');
+    const [attempt, setAttempt] = useState(0);
 
-    useImperativeHandle(ref, () => ({
-      reset: () => {
-        if (widgetIdRef.current && window.turnstile) {
-          window.turnstile.reset(widgetIdRef.current);
-          onVerifyRef.current(null);
-        }
-      },
-    }));
+    const reset = () => {
+      onVerifyRef.current(null);
+      setStatus('loading');
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.reset(widgetIdRef.current);
+      } else {
+        setAttempt((n) => n + 1);
+      }
+    };
+
+    useImperativeHandle(ref, () => ({ reset }));
 
     useEffect(() => {
       let cancelled = false;
@@ -68,15 +76,27 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
           if (cancelled || !containerRef.current || !window.turnstile) return;
           widgetIdRef.current = window.turnstile.render(containerRef.current, {
             sitekey: siteKey,
-            theme,
+            theme: themeRef.current,
             language: 'pt-br',
             size: 'flexible',
-            callback: (token: string) => onVerifyRef.current(token),
+            retry: 'auto',
+            'refresh-expired': 'auto',
+            callback: (token: string) => {
+              setStatus('ready');
+              onVerifyRef.current(token);
+            },
             'expired-callback': () => onVerifyRef.current(null),
-            'error-callback': () => onVerifyRef.current(null),
+            'error-callback': () => {
+              setStatus('error');
+              onVerifyRef.current(null);
+            },
           });
         })
-        .catch(() => onVerifyRef.current(null));
+        .catch(() => {
+          if (cancelled) return;
+          setStatus('unavailable');
+          onVerifyRef.current(null);
+        });
 
       return () => {
         cancelled = true;
@@ -85,9 +105,23 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
         }
         widgetIdRef.current = null;
       };
-    }, [siteKey, theme]);
+    }, [siteKey, attempt]);
 
-    return <div ref={containerRef} className="min-h-[65px] w-full" />;
+    return (
+      <div className="w-full">
+        <div ref={containerRef} className="min-h-[65px] w-full" />
+        {(status === 'error' || status === 'unavailable') && (
+          <p className="mt-2 text-xs text-red-500">
+            {status === 'unavailable'
+              ? 'Não foi possível carregar a verificação. Confira sua conexão ou desative bloqueadores de anúncio.'
+              : 'A verificação falhou.'}{' '}
+            <button type="button" onClick={reset} className="font-semibold underline">
+              Tentar novamente
+            </button>
+          </p>
+        )}
+      </div>
+    );
   },
 );
 

@@ -24,6 +24,10 @@ const APPLE_SCRIPT = 'https://appleid.cdn-apple.com/appleauth/static/jsapi/apple
 
 const scriptCache = new Map<string, Promise<void>>();
 
+// O Google só aceita um initialize() por página; o botão montado no momento recebe a credencial
+let googleInitialized = false;
+let googleCredentialHandler: ((credential: string) => void) | null = null;
+
 function loadScript(src: string): Promise<void> {
   const cached = scriptCache.get(src);
   if (cached) return cached;
@@ -81,20 +85,25 @@ export default function SocialLoginButtons({ isDark, onDone, onBlocked }: Social
     if (!GOOGLE_CLIENT_ID) return;
     let cancelled = false;
 
+    googleCredentialHandler = async (credential: string) => {
+      try {
+        await googleLogin(credential);
+        handlersRef.current.onDone();
+      } catch (error) {
+        handleError(error, 'Não foi possível entrar com o Google.');
+      }
+    };
+
     loadScript(GOOGLE_SCRIPT)
       .then(() => {
         if (cancelled || !googleRef.current || !window.google) return;
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: async ({ credential }) => {
-            try {
-              await googleLogin(credential);
-              handlersRef.current.onDone();
-            } catch (error) {
-              handleError(error, 'Não foi possível entrar com o Google.');
-            }
-          },
-        });
+        if (!googleInitialized) {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: ({ credential }) => googleCredentialHandler?.(credential),
+          });
+          googleInitialized = true;
+        }
         googleRef.current.innerHTML = '';
         window.google.accounts.id.renderButton(googleRef.current, {
           type: 'icon',
