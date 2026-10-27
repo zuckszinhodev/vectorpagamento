@@ -695,6 +695,7 @@ class AcquirerAdminController extends Controller
                     'payfort' => $this->checkPayfortHealth($config),
                     'blupay' => $this->checkBlupayHealth($config),
                     'enki' => $this->checkEnkiHealth(),
+                    'kokupay' => (\App\Infrastructure\Acquirers\KokuPayAcquirer::fromStoredCredentials()?->getBalance()['success'] ?? false) === true,
                     'stripe' => $this->checkStripeHealth($config),
                     'pagarme' => $this->checkPagarmeHealth($config),
                     default => true, // Assume healthy if no specific check

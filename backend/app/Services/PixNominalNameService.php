@@ -23,6 +23,24 @@ class PixNominalNameService
             ];
         }
 
+        // Koku: lê a nominal de uma cobrança já emitida (não cria PIX de teste com dados de pagador)
+        if ($config->acquirer_key === \App\Infrastructure\Acquirers\KokuPayAcquirer::KEY) {
+            $koku = \App\Infrastructure\Acquirers\KokuPayAcquirer::fromStoredCredentials();
+            if (!$koku) {
+                return ['success' => false, 'message' => 'Koku Pay sem chave de API configurada.'];
+            }
+
+            $payload = $koku->latestPixPayload();
+            if ($payload === null) {
+                return [
+                    'success' => false,
+                    'message' => 'Ainda não há cobrança Pix emitida na Koku. Gere a primeira cobrança e clique em Nominal de novo.',
+                ];
+            }
+
+            return $this->saveNominal($config, $payload);
+        }
+
         $account = $this->resolveNominalTestAccount($preferredAccountId, $config->acquirer_key);
         if (!$account) {
             return [
@@ -95,6 +113,11 @@ class PixNominalNameService
             ];
         }
 
+        return $this->saveNominal($config, $pixPayload);
+    }
+
+    private function saveNominal(AcquirerConfig $config, string $pixPayload): array
+    {
         $nominalName = $this->extractMerchantName($pixPayload);
         if ($nominalName === null) {
             return [

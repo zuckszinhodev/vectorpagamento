@@ -264,6 +264,28 @@ class KokuPayAcquirer implements AcquirerInterface
         ];
     }
 
+    /**
+     * Código Pix da cobrança mais recente já emitida, para ler a nominal (campo 59 do BR Code)
+     * sem criar cobrança nova nem enviar dados de pagador. Null se ainda não houver nenhuma.
+     */
+    public function latestPixPayload(): ?string
+    {
+        try {
+            $response = $this->client()->get($this->url('/pix/charges'), ['limit' => 20]);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        foreach ((array) ($response->successful() ? $response->json('items') : []) as $item) {
+            $payload = is_array($item) ? ($item['pix']['qr_code_payload'] ?? null) : null;
+            if (is_string($payload) && $payload !== '') {
+                return $payload;
+            }
+        }
+
+        return null;
+    }
+
     /** Saldo em centavos (o roteamento usa para a verificação de saúde). */
     public function getBalance(): array
     {
