@@ -47,9 +47,10 @@ export default function LoginPage() {
   const focusCls = isModern
     ? 'focus:border-red-500 focus:ring-red-500/10'
     : 'focus:border-emerald-500 focus:ring-emerald-500/10';
-  const accentLink = isModern ? 'text-red-600 hover:text-red-700' : 'text-emerald-600 hover:text-emerald-700';
-  const accentLabel = isModern ? 'text-red-600' : 'text-emerald-600';
-  const accentHover = isModern ? 'hover:text-red-700' : 'hover:text-emerald-700';
+  // No tema modern o fundo é quase preto: red-600 não passa no contraste mínimo (4.5:1), red-400 passa.
+  const accentLink = isModern ? 'text-red-400 hover:text-red-300' : 'text-emerald-600 hover:text-emerald-700';
+  const accentLabel = isModern ? 'text-red-400' : 'text-emerald-600';
+  const accentHover = isModern ? 'hover:text-red-300' : 'hover:text-emerald-700';
   const headingClass = isDark ? 'text-white' : 'text-neutral-900';
   const bodyClass = isDark ? 'text-neutral-400' : 'text-neutral-600';
   const labelClass = isDark ? 'text-neutral-200' : 'text-neutral-800';
@@ -333,7 +334,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className={`absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 transition-colors ${isDark ? 'hover:text-white' : 'hover:text-neutral-700'}`}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2 text-neutral-400 transition-colors ${isDark ? 'hover:text-white' : 'hover:text-neutral-700'}`}
                   aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                 >
                   {showPassword ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}

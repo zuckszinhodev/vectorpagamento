@@ -1,35 +1,28 @@
 {
-  "name": "Vector Pagamentos - Gateway de Pagamento",
-  "short_name": "Vector Pagamentos",
+  "name": "GorillaPay - Gateway de Pagamento",
+  "short_name": "GorillaPay",
   "description": "Plataforma completa de pagamentos com checkout personalizável, sistema de afiliados e gestão financeira",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#8b5cf6",
+  "background_color": "#08080c",
+  "theme_color": "#08080c",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/logo.png",
-      "sizes": "300x100",
+      "src": "/favicon.png?v=3",
+      "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/favicon.png?v=2",
-      "sizes": "1254x1254",
-      "type": "image/png"
+      "src": "/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "categories": ["finance", "business", "productivity"],
   "lang": "pt-BR",
   "dir": "ltr",
-  "scope": "/",
-  "screenshots": [
-    {
-      "src": "/img/bannersocial.png",
-      "sizes": "1200x630",
-      "type": "image/png",
-      "label": "Vector Pagamentos Dashboard"
-    }
-  ]
+  "scope": "/"
 }

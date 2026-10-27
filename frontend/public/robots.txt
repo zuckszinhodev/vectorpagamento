@@ -50,4 +50,4 @@ Disallow: /account-blocked
 # API
 Disallow: /api/
 
-Sitemap: https://app.vectorpagamentos.com.br/sitemap.xml
+Sitemap: https://gorillapay.tech/sitemap.xml

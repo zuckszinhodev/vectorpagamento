@@ -2,30 +2,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-const chunkGroups: Record<string, string[]> = {
-  'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-  'vendor-ui': ['framer-motion', '@headlessui/react', 'lucide-react', '@heroicons/react'],
-  'vendor-charts': ['chart.js', 'react-chartjs-2'],
-  'vendor-forms': ['react-hook-form', 'zod', '@tanstack/react-query', '@tanstack/react-table'],
-  'vendor-dnd': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities', '@hello-pangea/dnd'],
-  'vendor-flow': ['@xyflow/react', '@xyflow/system'],
-  'vendor-utils': ['axios', 'date-fns', 'clsx', 'tailwind-merge', 'class-variance-authority', 'zustand'],
-};
-
-function manualChunks(id: string) {
-  if (!id.includes('node_modules')) {
-    return;
-  }
-
-  const normalizedId = id.replace(/\\/g, '/');
-
-  for (const [chunkName, packages] of Object.entries(chunkGroups)) {
-    if (packages.some((pkg) => normalizedId.includes(`/node_modules/${pkg}/`))) {
-      return chunkName;
-    }
-  }
-}
-
+// Sem manualChunks: agrupar bibliotecas à mão fazia o bundler puxar chart.js
+// e @xyflow para o carregamento inicial (o login baixava os dois sem usar).
+// A divisão automática segue os import() das rotas e só baixa o que a tela usa.
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -39,7 +18,6 @@ export default defineConfig({
       output: {
         entryFileNames: 'assets/[hash].js',
         chunkFileNames: 'assets/[hash].js',
-        manualChunks,
       },
     },
   },

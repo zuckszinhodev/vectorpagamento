@@ -3,13 +3,16 @@
  * Centralized configuration for SEO meta tags and URLs
  */
 
+// Domínio em que o app está aberto. O canonical precisa apontar para ele:
+// um domínio fixo de outra marca fazia o Lighthouse acusar canonicals conflitantes.
+const BASE_URL = typeof window !== 'undefined' ? window.location.origin : 'https://gorillapay.tech';
+
 export const SEO_CONFIG = {
-  // Base URL - Change this when deploying to production
-  baseUrl: 'https://app.vectorpagamentos.com.br',
-  
+  baseUrl: BASE_URL,
+
   // Site Information
-  siteName: 'VectorPagamentos',
-  siteTitle: 'VectorPagamentos - Gateway de Pagamento Completo',
+  siteName: 'GorillaPay',
+  siteTitle: 'GorillaPay - Gateway de Pagamento Completo',
   siteDescription: 'Plataforma completa de pagamentos com checkout personalizável, sistema de afiliados, gestão de produtos digitais e físicos. Aceite PIX, cartão e boleto.',
   
   // Social Media
@@ -27,9 +30,9 @@ export const SEO_CONFIG = {
   
   // Organization Schema
   organization: {
-    name: 'VectorPagamentos',
-    url: 'https://app.vectorpagamentos.com.br',
-    logo: 'https://app.vectorpagamentos.com.br/logo.png',
+    name: 'GorillaPay',
+    url: BASE_URL,
+    logo: `${BASE_URL}/img/logo.png`,
   },
 } as const;
 

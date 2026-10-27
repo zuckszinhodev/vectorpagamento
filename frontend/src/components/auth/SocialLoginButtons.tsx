@@ -161,7 +161,7 @@ export default function SocialLoginButtons({ isDark, onDone, onBlocked }: Social
     <div className="mt-6">
       <div className="flex items-center gap-3">
         <span className={`h-px flex-1 ${isDark ? 'bg-white/10' : 'bg-neutral-200'}`} />
-        <span className={`text-xs ${isDark ? 'text-neutral-500' : 'text-neutral-400'}`}>ou continue com</span>
+        <span className={`text-xs ${isDark ? 'text-neutral-400' : 'text-neutral-500'}`}>ou continue com</span>
         <span className={`h-px flex-1 ${isDark ? 'bg-white/10' : 'bg-neutral-200'}`} />
       </div>
 
