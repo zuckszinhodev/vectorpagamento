@@ -2808,6 +2808,8 @@ class PaymentService
             return $this->syncPayFortChargeStatus($charge);
         } elseif (in_array($acquirer, ['enki'])) {
             return $this->syncEnkiChargeStatus($charge);
+        } elseif ($acquirer === \App\Infrastructure\Acquirers\KokuPayAcquirer::KEY) {
+            return $this->syncKokuPayChargeStatus($charge);
         } elseif (in_array($acquirer, ['blupay'])) {
             return $this->syncBluPayChargeStatus($charge);
         } elseif (in_array($acquirer, ['huntersub'])) {
@@ -3018,6 +3020,90 @@ class PaymentService
             ]);
             return ['success' => true, 'status' => $charge->status, 'synced' => false];
         }
+    }
+
+    /**
+     * Sync com a Koku: a consulta à API é a fonte da verdade (o webhook é só aviso).
+     * Só aplica a cobrança da Koku se pedido e valor conferirem com a nossa.
+     */
+    private function syncKokuPayChargeStatus(Charge $charge): array
+    {
+        $unchanged = ['success' => true, 'status' => $charge->status, 'synced' => false];
+        $koku = \App\Infrastructure\Acquirers\KokuPayAcquirer::fromStoredCredentials();
+
+        if (!$koku) {
+            return $unchanged;
+        }
+
+        $response = $koku->getTransaction((string) $charge->acquirer_transaction_id);
+        if (!($response['success'] ?? false)) {
+            return $unchanged;
+        }
+
+        if ($response['order_reference'] !== (string) $charge->id || $response['amount_cents'] !== (int) $charge->amount) {
+            Log::critical('Koku: cobrança consultada não confere com a local', [
+                'charge_id' => $charge->id,
+                'koku_charge_id' => $response['id'],
+                'order_reference' => $response['order_reference'],
+                'amount_cents' => $response['amount_cents'],
+                'local_amount' => $charge->amount,
+            ]);
+
+            return $unchanged;
+        }
+
+        $kokuStatus = $response['status'];
+
+        if (in_array($kokuStatus, ['paid', 'partially_refunded', 'refunded'], true)) {
+            if ($charge->status === 'approved' || $charge->status === 'refunded') {
+                // Devoluções feitas fora da plataforma não mexem em saldo aqui
+                return ['success' => true, 'status' => $charge->status, 'synced' => true];
+            }
+
+            if ($response['late_payment']) {
+                // Pago depois de expirar: a Koku abre caso de revisão e pede para não liberar sem falar com ela
+                Log::warning('Koku: pagamento tardio aguardando revisão — cobrança não aprovada automaticamente', [
+                    'charge_id' => $charge->id,
+                    'koku_charge_id' => $response['id'],
+                ]);
+                $metadata = $charge->metadata ?? [];
+                $metadata['koku_late_payment'] = true;
+                $charge->update(['metadata' => $metadata]);
+
+                return ['success' => true, 'status' => $charge->status, 'synced' => true];
+            }
+
+            $this->handleWebhookPayment($charge, [
+                'id' => $response['id'],
+                'status' => 'paid',
+                'amount' => $response['amount_cents'],
+                'fee' => $response['fee_cents'],
+                'net_amount' => $response['net_cents'],
+                'paid_at' => $response['paid_at'],
+                'pix' => ['endToEndId' => $response['end_to_end_id']],
+            ]);
+            $charge->refresh();
+
+            return ['success' => true, 'status' => $charge->status, 'synced' => true, 'side_effects_handled' => true];
+        }
+
+        $mapped = match ($kokuStatus) {
+            'failed' => 'failed',
+            // Cancelada antes do pagamento chega como expirada; para o comprador é o mesmo
+            'expired', 'cancelled' => 'expired',
+            default => null, // created / pending: nada muda
+        };
+
+        if ($mapped !== null && in_array($charge->status, ['pending', 'processing', 'waiting_payment'], true)) {
+            $this->handleWebhookPayment($charge, [
+                'id' => $response['id'],
+                'status' => $mapped,
+                'refusedReason' => $response['failure_message'] ?? 'Emissão do Pix recusada pela Koku',
+            ]);
+            $charge->refresh();
+        }
+
+        return ['success' => true, 'status' => $charge->status, 'synced' => true];
     }
 
     /**

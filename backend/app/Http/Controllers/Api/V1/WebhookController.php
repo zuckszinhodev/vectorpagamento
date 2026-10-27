@@ -780,6 +780,17 @@ class WebhookController extends Controller
     }
 
     /**
+     * Handle Koku Pay webhooks
+     *
+     * Assinatura: x-koku-signature (HMAC-SHA256 de "<t>.<corpo>"). O evento só dispara
+     * a reconsulta da cobrança na API da Koku; o corpo nunca muda status direto.
+     */
+    public function kokupay(Request $request): JsonResponse
+    {
+        return (new \App\Infrastructure\Acquirers\Webhooks\KokuPayWebhookHandler())->handle($request);
+    }
+
+    /**
      * Handle Witetec webhooks
      *
      * Events: TRANSACTION_PAID, TRANSACTION_FAILED, TRANSACTION_REFUNDED, TRANSACTION_CHARGEDBACK

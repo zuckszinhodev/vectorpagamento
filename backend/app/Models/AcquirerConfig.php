@@ -331,6 +331,7 @@ class AcquirerConfig extends Model
             'sharkhubsub' => !empty($credentials['api_key']),
             'enki' => !empty($credentials['public_key']) && !empty($credentials['secret_key']),
             'witetec' => !empty($credentials['api_key']),
+            'kokupay' => !empty($credentials['api_key']),
             default => false,
         };
     }
@@ -422,6 +423,11 @@ class AcquirerConfig extends Model
                 ['key' => 'api_key', 'label' => 'API Key', 'type' => 'password'],
                 ['key' => 'webhook_secret', 'label' => 'Webhook Secret', 'type' => 'password'],
                 ['key' => 'base_url', 'label' => 'Base URL', 'type' => 'text'],
+            ],
+            'kokupay' => [
+                ['key' => 'api_key', 'label' => 'Chave de API (koku_live_...)', 'type' => 'password'],
+                ['key' => 'webhook_secret', 'label' => 'Segredo do webhook (whsec_...)', 'type' => 'password'],
+                ['key' => 'base_url', 'label' => 'URL da API (opcional)', 'type' => 'text'],
             ],
             default => [],
         };

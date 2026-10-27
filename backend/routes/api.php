@@ -152,6 +152,7 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         Route::post('/huntersub', [\App\Http\Controllers\Api\V1\WebhookController::class, 'huntersub']);
         Route::post('/sharkhubsub', [\App\Http\Controllers\Api\V1\WebhookController::class, 'sharkhubsub']);
         Route::post('/enki', [\App\Http\Controllers\Api\V1\WebhookController::class, 'enki']);
+        Route::post('/kokupay', [\App\Http\Controllers\Api\V1\WebhookController::class, 'kokupay']);
         
         // ── Endpoints customizados ───────
         Route::post('/custom/{integrationId}', [\App\Http\Controllers\Api\V1\WebhookController::class, 'custom']);

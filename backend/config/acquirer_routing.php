@@ -75,6 +75,7 @@ return [
         'stripe' => \App\Infrastructure\Acquirers\StripeAcquirer::class,
         'pagarme' => \App\Infrastructure\Acquirers\PagarmeAcquirer::class,
         'mercadopago' => \App\Infrastructure\Acquirers\MercadoPagoAcquirer::class,
+        'kokupay' => \App\Infrastructure\Acquirers\KokuPayAcquirer::class,
     ],
 
     /*
@@ -99,6 +100,7 @@ return [
         'enki' => ['field' => 'available', 'unit' => 'cents', 'blocked' => 'reserved'],
         'blupay' => ['field' => 'pix_balance', 'unit' => 'reais', 'blocked' => 'pix_blocked'],
         'witetec' => ['field' => 'balance', 'unit' => 'reais', 'blocked' => 'blocked_balance'],
+        'kokupay' => ['field' => 'available_cents', 'unit' => 'cents', 'blocked' => 'blocked_cents'],
 
         // Campos tentados quando a adquirente não está mapeada acima.
         'fallback_fields' => ['available_balance', 'available', 'balance', 'amount'],
