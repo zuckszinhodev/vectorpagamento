@@ -21,8 +21,6 @@ import {
   EnvelopeIcon,
   IdentificationIcon,
   PhoneIcon,
-  LinkIcon,
-  ArrowTopRightOnSquareIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
@@ -268,11 +266,6 @@ function NewPixChargeModal({
   const [pixCode, setPixCode] = useState('');
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [showQrCode, setShowQrCode] = useState(false);
-  const [paymentLink, setPaymentLink] = useState('');
-  const [createLink, setCreateLink] = useState(false);
-  const createLinkRef = useRef(createLink);
-  createLinkRef.current = createLink;
-  const [resultMode, setResultMode] = useState<'pix' | 'link'>('pix');
   const queryClient = useQueryClient();
 
   const createChargeMutation = useMutation({
@@ -285,7 +278,7 @@ function NewPixChargeModal({
           name: data.customer_name,
           email: data.customer_email,
           document: data.customer_document.replace(/\D/g, ''),
-          ...(phone ? { phone } : {}),
+          phone,
         },
       });
       return response.data;
@@ -293,14 +286,6 @@ function NewPixChargeModal({
     onSuccess: async (response) => {
       const chargeData = response.data || response;
 
-      const link = chargeData.id ? `${window.location.origin}/pix/${chargeData.id}` : '';
-      setPaymentLink(link);
-      const wantsLink = createLinkRef.current;
-      setResultMode(wantsLink ? 'link' : 'pix');
-      if (wantsLink && link) {
-        navigator.clipboard.writeText(link).catch(() => undefined);
-      }
-      
       // Usar PIX retornado pela API ou gerar código simulado como fallback
       const pixCopyPaste = chargeData.pix_copy_paste || chargeData.pix_qr_code || 
         `00020126580014br.gov.bcb.pix0136${chargeData.id}@vectorpagamentos.com52040000530398654${(parseFloat(amount) * 100).toString().padStart(4, '0')}5802BR5913${customerName.substring(0, 13)}6009SAO PAULO62070503***6304`;
@@ -329,11 +314,7 @@ function NewPixChargeModal({
         }
       }
       
-      toast.success(
-        wantsLink && link
-          ? 'Link de pagamento criado e copiado!'
-          : 'Cobrança PIX criada com sucesso!'
-      );
+      toast.success('Cobrança PIX criada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['charges'] });
     },
     onError: (error: any) => {
@@ -349,7 +330,7 @@ function NewPixChargeModal({
       return;
     }
 
-    if (!customerName || !customerEmail || !customerDocument) {
+    if (!customerName || !customerEmail || !customerDocument || !customerPhone) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
@@ -366,7 +347,7 @@ function NewPixChargeModal({
     }
 
     const phoneDigits = customerPhone.replace(/\D/g, '');
-    if (phoneDigits && phoneDigits.length !== 10 && phoneDigits.length !== 11) {
+    if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
       toast.error('Telefone inválido. Use DDD + número.');
       return;
     }
@@ -386,16 +367,7 @@ function NewPixChargeModal({
       .catch(() => toast.error('Erro ao copiar código. Tente novamente.'));
   };
 
-  const handleCopyPaymentLink = () => {
-    navigator.clipboard.writeText(paymentLink)
-      .then(() => toast.success('Link copiado!'))
-      .catch(() => toast.error('Erro ao copiar link. Tente novamente.'));
-  };
-
   const handleClose = () => {
-    setPaymentLink('');
-    setResultMode('pix');
-    setCreateLink(false);
     setAmountCents(0);
     setCustomerName('');
     setCustomerEmail('');
@@ -459,26 +431,26 @@ function NewPixChargeModal({
         </Transition.Child>
 
         <div className="fixed inset-0 z-10 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-6">
+          {/* No celular o modal vira uma folha presa na parte de baixo da tela */}
+          <div className="flex min-h-full items-end justify-center text-center sm:items-center sm:p-6">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
-              enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+              enterFrom="opacity-0 translate-y-full sm:translate-y-0 sm:scale-95"
               enterTo="opacity-100 translate-y-0 sm:scale-100"
               leave="ease-in duration-200"
               leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-              leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+              leaveTo="opacity-0 translate-y-full sm:translate-y-0 sm:scale-95"
             >
-              <Dialog.Panel className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-2xl transform flex-col overflow-hidden rounded-2xl border border-border-DEFAULT bg-surface-elevated text-left shadow-2xl transition-all">
-                <div className="border-b border-border-DEFAULT bg-gradient-to-r from-blue-500/15 via-transparent to-blue-500/5 px-5 py-4 sm:px-6">
-                  <div className="flex items-start justify-between gap-4">
+              <Dialog.Panel className="relative flex max-h-[92dvh] w-full max-w-2xl transform flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border-DEFAULT bg-surface-elevated text-left shadow-2xl transition-all sm:max-h-[calc(100vh-2rem)] sm:rounded-2xl sm:border-b">
+                <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-tx-muted/30 sm:hidden" />
+                <div className="border-b border-border-DEFAULT bg-gradient-to-r from-blue-500/15 via-transparent to-blue-500/5 px-4 pb-3 pt-2 sm:px-6 sm:py-4">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <Dialog.Title className="text-xl font-semibold text-tx-primary">
-                        {showQrCode
-                          ? resultMode === 'link' ? 'Link de pagamento criado' : 'PIX QR Code Gerado'
-                          : 'Nova Cobrança PIX'}
+                      <Dialog.Title className="text-lg font-semibold text-tx-primary sm:text-xl">
+                        {showQrCode ? 'PIX QR Code Gerado' : 'Nova Cobrança PIX'}
                       </Dialog.Title>
-                      <p className="mt-1 text-sm text-tx-muted">
+                      <p className="mt-0.5 text-xs text-tx-muted sm:mt-1 sm:text-sm">
                         {showQrCode
                           ? 'Compartilhe o QR Code ou copie o código PIX para concluir o pagamento.'
                           : 'Defina o valor e identifique o pagador. A cobrança aparece na sua lista assim que for gerada.'}
@@ -486,7 +458,7 @@ function NewPixChargeModal({
                     </div>
                     <button
                       onClick={handleClose}
-                      className="rounded-full p-2 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
+                      className="-mr-2 shrink-0 rounded-full p-2 text-tx-muted transition-colors hover:bg-surface-hover hover:text-tx-primary"
                     >
                       <XMarkIcon className="h-5 w-5" />
                     </button>
@@ -494,8 +466,8 @@ function NewPixChargeModal({
                 </div>
 
                 {!showQrCode ? (
-                  <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
-                    <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6">
+                  <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-6 sm:px-6 sm:py-5">
                       {/* Valor */}
                       <section className="rounded-2xl border border-border-DEFAULT bg-surface-card p-4 sm:p-5">
                         <label htmlFor="pix-amount" className="text-xs font-semibold uppercase tracking-wider text-tx-muted">
@@ -508,7 +480,7 @@ function NewPixChargeModal({
                             type="text"
                             inputMode="numeric"
                             autoFocus
-                            className="w-full bg-transparent text-4xl font-bold tracking-tight text-tx-primary outline-none placeholder:text-tx-muted/50"
+                            className="w-full min-w-0 bg-transparent text-3xl font-bold tracking-tight sm:text-4xl text-tx-primary outline-none placeholder:text-tx-muted/50"
                             placeholder="0,00"
                             value={amountCents > 0 ? formatBRL(amountCents) : ''}
                             onChange={(e) => {
@@ -517,13 +489,13 @@ function NewPixChargeModal({
                             }}
                           />
                         </div>
-                        <div className="mt-4 flex flex-wrap gap-2">
+                        <div className="mt-4 grid grid-cols-5 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
                           {quickAmounts.map((value) => (
                             <button
                               key={value}
                               type="button"
                               onClick={() => setAmountCents(value)}
-                              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                              className={`whitespace-nowrap rounded-full border px-1 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:py-1 ${
                                 amountCents === value
                                   ? 'border-accent-primary bg-accent-primary/15 text-accent-primary'
                                   : 'border-border-DEFAULT text-tx-secondary hover:border-accent-primary/50 hover:text-tx-primary'
@@ -544,7 +516,7 @@ function NewPixChargeModal({
                           </p>
                         </div>
 
-                        <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="grid gap-3.5 sm:grid-cols-2 sm:gap-4">
                           <div className="sm:col-span-2">
                             <label htmlFor="pix-name" className="mb-1.5 block text-sm font-medium text-tx-secondary">
                               Nome completo
@@ -556,7 +528,7 @@ function NewPixChargeModal({
                                 type="text"
                                 autoComplete="off"
                                 placeholder="Nome do pagador"
-                                className="input h-12 pl-11"
+                                className="input h-12 pl-11 text-base sm:text-sm"
                                 value={customerName}
                                 onChange={(e) => setCustomerName(e.target.value)}
                                 required
@@ -575,7 +547,7 @@ function NewPixChargeModal({
                                 type="email"
                                 autoComplete="off"
                                 placeholder="email@dominio.com"
-                                className="input h-12 pl-11"
+                                className="input h-12 pl-11 text-base sm:text-sm"
                                 value={customerEmail}
                                 onChange={(e) => setCustomerEmail(e.target.value)}
                                 required
@@ -585,7 +557,7 @@ function NewPixChargeModal({
 
                           <div>
                             <label htmlFor="pix-phone" className="mb-1.5 block text-sm font-medium text-tx-secondary">
-                              Telefone <span className="font-normal text-tx-muted">(opcional)</span>
+                              Telefone
                             </label>
                             <div className="relative">
                               <PhoneIcon className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-tx-muted" />
@@ -595,10 +567,11 @@ function NewPixChargeModal({
                                 inputMode="numeric"
                                 autoComplete="off"
                                 placeholder="(00) 00000-0000"
-                                className="input h-12 pl-11"
+                                className="input h-12 pl-11 text-base sm:text-sm"
                                 value={customerPhone}
                                 onChange={(e) => handlePhoneChange(e.target.value)}
                                 maxLength={15}
+                                required
                               />
                             </div>
                           </div>
@@ -615,7 +588,7 @@ function NewPixChargeModal({
                                 inputMode="numeric"
                                 autoComplete="off"
                                 placeholder="000.000.000-00"
-                                className={`input h-12 pl-11 pr-10 ${docComplete && !docValid ? 'border-red-500/60' : ''}`}
+                                className={`input h-12 pl-11 pr-10 text-base sm:text-sm ${docComplete && !docValid ? 'border-red-500/60' : ''}`}
                                 value={customerDocument}
                                 onChange={(e) => handleDocumentChange(e.target.value)}
                                 maxLength={18}
@@ -635,98 +608,35 @@ function NewPixChargeModal({
                           </div>
                         </div>
                       </section>
-
-                      <label
-                        htmlFor="pix-create-link"
-                        className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
-                          createLink ? 'border-blue-500/40 bg-blue-500/10' : 'border-border-DEFAULT hover:border-blue-500/30'
-                        }`}
-                      >
-                        <input
-                          id="pix-create-link"
-                          type="checkbox"
-                          checked={createLink}
-                          onChange={(e) => setCreateLink(e.target.checked)}
-                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-border-DEFAULT accent-blue-500"
-                        />
-                        <span>
-                          <span className="flex items-center gap-1.5 text-sm font-medium text-tx-primary">
-                            <LinkIcon className="h-4 w-4 text-blue-400" />
-                            Criar link de pagamento
-                          </span>
-                          <span className="mt-0.5 block text-xs text-tx-muted">
-                            Gera uma página com QR Code e PIX copia e cola para enviar ao cliente. O link já sai copiado.
-                          </span>
-                        </span>
-                      </label>
                     </div>
 
-                    <div className="flex flex-col gap-3 border-t border-border-DEFAULT bg-surface-card px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                    <div className="flex flex-col gap-2.5 border-t border-border-DEFAULT bg-surface-card px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6 sm:py-4">
                       <div className="whitespace-nowrap text-sm text-tx-muted">
                         Total{' '}
                         <span className="font-semibold text-tx-primary">R$ {formatBRL(amountCents)}</span>
                       </div>
-                      <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                      <div className="grid grid-cols-[auto_1fr] gap-2 sm:flex sm:gap-3">
                         <button
                           type="button"
                           onClick={handleClose}
-                          className="btn-secondary"
+                          className="btn-secondary h-12 sm:h-auto"
                         >
                           Cancelar
                         </button>
                         <button
                           type="submit"
                           disabled={createChargeMutation.isPending || amountCents <= 0}
-                          className="btn-primary inline-flex items-center justify-center whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60"
+                          className="btn-primary inline-flex h-12 items-center justify-center whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto"
                         >
                           <PixIcon className="mr-2 h-5 w-5" />
-                          {createChargeMutation.isPending
-                            ? 'Gerando...'
-                            : createLink ? 'Gerar cobrança e link' : 'Gerar cobrança PIX'}
+                          {createChargeMutation.isPending ? 'Gerando...' : 'Gerar cobrança PIX'}
                         </button>
                       </div>
                     </div>
                   </form>
                 ) : (
-                  <div className="flex flex-1 flex-col overflow-hidden">
-                    <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
-                      {paymentLink && (
-                        <div className={`rounded-xl border p-4 ${resultMode === 'link' ? 'border-blue-500/40 bg-blue-500/10' : 'border-border-DEFAULT bg-surface-card'}`}>
-                          <div className="mb-2 flex items-center gap-2">
-                            <LinkIcon className="h-4 w-4 text-blue-400" />
-                            <p className="text-sm font-medium text-tx-primary">Link de pagamento</p>
-                          </div>
-                          <p className="mb-3 text-xs text-tx-muted">
-                            Envie para o cliente. Ele abre a página com o QR Code e o PIX copia e cola, e ela confirma sozinha quando o pagamento cai.
-                          </p>
-                          <div className="flex gap-2">
-                            <input
-                              readOnly
-                              value={paymentLink}
-                              className="input h-11 flex-1 font-mono text-xs"
-                              onClick={(e) => e.currentTarget.select()}
-                            />
-                            <button
-                              type="button"
-                              onClick={handleCopyPaymentLink}
-                              className="btn-primary inline-flex shrink-0 items-center gap-1.5"
-                            >
-                              <ClipboardDocumentIcon className="h-4 w-4" />
-                              Copiar
-                            </button>
-                            <a
-                              href={paymentLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn-secondary inline-flex shrink-0 items-center"
-                              title="Abrir link"
-                            >
-                              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-                            </a>
-                          </div>
-                        </div>
-                      )}
-
+                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5">
                       <div className="flex justify-center">
                         {qrCodeUrl && (
                           <div className="rounded-2xl border border-border-DEFAULT bg-white p-4 shadow-sm">
@@ -768,10 +678,10 @@ function NewPixChargeModal({
                       </div>
                     </div>
 
-                    <div className="flex justify-end border-t border-border-DEFAULT bg-surface-card px-5 py-4 sm:px-6">
+                    <div className="flex justify-end border-t border-border-DEFAULT bg-surface-card px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:py-4">
                       <button
                         onClick={handleClose}
-                        className="btn-primary"
+                        className="btn-primary h-12 w-full sm:h-auto sm:w-auto"
                       >
                         Fechar
                       </button>
