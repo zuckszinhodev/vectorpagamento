@@ -240,7 +240,6 @@ class WithdrawalController extends Controller
             $userId = $authUser->id;
         }
 
-        $isAdminUser = $this->isAdminWithdrawalUser($authUser, (string) $accountId, $ownerUser);
         $isInstant = $validated['is_instant'] ?? false;
 
         $idempotencyKey = trim((string) (
@@ -337,30 +336,9 @@ class WithdrawalController extends Controller
         );
         $availableBalance = (float) $wallet->available_balance;
 
-        if ($isAdminUser) {
-            $availableBalance = (float) $this->calculateAdminGatewayAvailableBalance((string) $accountId);
-
-            $pendingWithdrawalBalance = (int) Withdrawal::where('account_id', $accountId)
-                ->whereIn('status', ['pending', 'pending_approval', 'processing'])
-                ->sum('amount');
-
-            $walletUpdates = [];
-            if ((int) $wallet->available_balance !== (int) $availableBalance) {
-                $walletUpdates['available_balance'] = (int) $availableBalance;
-            }
-            if ((int) $wallet->pending_balance !== $pendingWithdrawalBalance) {
-                $walletUpdates['pending_balance'] = $pendingWithdrawalBalance;
-            }
-
-            if ($walletUpdates !== []) {
-                $wallet->update($walletUpdates);
-                $wallet->refresh();
-            }
-        }
-
         $amount = (float) $validated['amount'];
 
-        $minAllowed = $isAdminUser ? 0.0 : (float) SystemSetting::get('withdrawal_min_amount', 1000);
+        $minAllowed = (float) SystemSetting::get('withdrawal_min_amount', 1000);
         $maxAllowed = (float) SystemSetting::get('withdrawal_max_amount', 0);
 
         if ($amount < $minAllowed) {
@@ -398,7 +376,7 @@ class WithdrawalController extends Controller
         }
 
         // Calculate fee dynamically from system settings
-        $fee = $isAdminUser ? 0.0 : $this->calculateWithdrawalFee($amount, $validated['method'], $isInstant, $accountId);
+        $fee = $this->calculateWithdrawalFee($amount, $validated['method'], $isInstant, $accountId);
         $netAmount = $amount - $fee;
 
         if ($netAmount <= 0) {
@@ -498,14 +476,6 @@ class WithdrawalController extends Controller
             // Lock wallet row to prevent concurrent withdrawals
             $wallet = AccountWallet::lockForUpdate()->where('account_id', $accountId)->first();
             $availableBalance = $wallet ? (float) $wallet->available_balance : 0;
-
-            if ($isAdminUser) {
-                $availableBalance = (float) $this->calculateAdminGatewayAvailableBalance((string) $accountId);
-                if ($wallet && (int) $wallet->available_balance !== (int) $availableBalance) {
-                    $wallet->update(['available_balance' => (int) $availableBalance]);
-                    $wallet->refresh();
-                }
-            }
 
             // Re-check balance under lock (another withdrawal may have completed)
             if ($amount > $availableBalance) {
@@ -751,7 +721,6 @@ class WithdrawalController extends Controller
     public function summary(Request $request): JsonResponse
     {
         $accountId = $request->user()->account_id;
-        $isAdminUser = $this->isAdminWithdrawalUser($request->user(), (string) $accountId);
 
         // Get or create wallet
         $wallet = AccountWallet::firstOrCreate(
@@ -764,78 +733,70 @@ class WithdrawalController extends Controller
             ]
         );
 
-        if ($isAdminUser) {
-            $correctBalance = $this->calculateAdminGatewayAvailableBalance((string) $accountId);
+        // Always recalculate correct balance from approved charges with proper fees
+        $approvedCharges = Charge::where('account_id', $accountId)
+            ->where('status', 'approved')
+            ->with('transactions.splits')
+            ->get();
 
-            $pendingWithdrawalBalance = (int) Withdrawal::where('account_id', $accountId)
-                ->whereIn('status', ['pending', 'pending_approval', 'processing'])
-                ->sum('amount');
-        } else {
-            // Always recalculate correct balance from approved charges with proper fees
-            $approvedCharges = Charge::where('account_id', $accountId)
-                ->where('status', 'approved')
-                ->with('transactions.splits')
-                ->get();
+        // Pre-load all acquirer configs in a single query (avoids N+1)
+        $acquirerConfigs = AcquirerConfig::whereIn(
+            'acquirer_key',
+            $approvedCharges->pluck('acquirer')->unique()->filter()
+        )->get()->keyBy('acquirer_key');
+        $customFee = AccountCustomFee::where('account_id', $accountId)->first();
 
-            // Pre-load all acquirer configs in a single query (avoids N+1)
-            $acquirerConfigs = AcquirerConfig::whereIn(
-                'acquirer_key',
-                $approvedCharges->pluck('acquirer')->unique()->filter()
-            )->get()->keyBy('acquirer_key');
-            $customFee = AccountCustomFee::where('account_id', $accountId)->first();
-
-            $totalNet = 0;
-            foreach ($approvedCharges as $charge) {
-                if (app()->environment(['local', 'testing']) && data_get($charge->metadata, 'source') === 'refund_test') {
-                    $totalNet += (int) ($charge->net_amount ?: $charge->amount);
-                    continue;
-                }
-
-                // Split charges already have net_amount set — no additional fee calculation
-                if ($charge->payment_method === 'split') {
-                    $totalNet += $charge->net_amount ?? $charge->amount;
-                    continue;
-                }
-
-                $acquirerConfig = $acquirerConfigs->get($charge->acquirer);
-                $customGatewayFee = $customFee?->calculateGatewayFee($charge->amount, $charge->payment_method);
-                if ($acquirerConfig && !is_null($customGatewayFee)) {
-                    $fee = $customGatewayFee;
-                } elseif ($acquirerConfig) {
-                    $fee = $acquirerConfig->calculateGatewayFee($charge->amount);
-                } else {
-                    $fee = (int) round($charge->amount * 0.05) + 200;
-                }
-                $chargeNet = $charge->amount - $fee;
-
-                // Deduct splits sent to OTHER recipients from this charge's net (eager-loaded)
-                $transaction = $charge->transactions->first();
-                if ($transaction) {
-                    $splitsToOthers = (int) $transaction->splits
-                        ->where('recipient_id', '!=', $accountId)
-                        ->whereIn('status', ['transferred', 'processing', 'pending'])
-                        ->sum('net_amount');
-                    $chargeNet -= $splitsToOthers;
-                }
-
-                $totalNet += max(0, $chargeNet);
+        $totalNet = 0;
+        foreach ($approvedCharges as $charge) {
+            if (app()->environment(['local', 'testing']) && data_get($charge->metadata, 'source') === 'refund_test') {
+                $totalNet += (int) ($charge->net_amount ?: $charge->amount);
+                continue;
             }
 
-            $lockedWithdrawals = (int) Withdrawal::where('account_id', $accountId)
-                ->whereNotIn('status', ['cancelled', 'failed'])
-                ->sum('amount');
+            // Split charges already have net_amount set — no additional fee calculation
+            if ($charge->payment_method === 'split') {
+                $totalNet += $charge->net_amount ?? $charge->amount;
+                continue;
+            }
 
-            $pendingWithdrawalBalance = (int) Withdrawal::where('account_id', $accountId)
-                ->whereIn('status', ['pending', 'pending_approval', 'processing'])
-                ->sum('amount');
+            $acquirerConfig = $acquirerConfigs->get($charge->acquirer);
+            $customGatewayFee = $customFee?->calculateGatewayFee($charge->amount, $charge->payment_method);
+            if ($acquirerConfig && !is_null($customGatewayFee)) {
+                $fee = $customGatewayFee;
+            } elseif ($acquirerConfig) {
+                $fee = $acquirerConfig->calculateGatewayFee($charge->amount);
+            } else {
+                $fee = (int) round($charge->amount * 0.05) + 200;
+            }
+            $chargeNet = $charge->amount - $fee;
 
-            $manualAdjustments = (int) WalletAdjustment::query()
-                ->where('account_id', $accountId)
-                ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'debit' THEN -amount ELSE amount END), 0) AS total")
-                ->value('total');
+            // Deduct splits sent to OTHER recipients from this charge's net (eager-loaded)
+            $transaction = $charge->transactions->first();
+            if ($transaction) {
+                $splitsToOthers = (int) $transaction->splits
+                    ->where('recipient_id', '!=', $accountId)
+                    ->whereIn('status', ['transferred', 'processing', 'pending'])
+                    ->sum('net_amount');
+                $chargeNet -= $splitsToOthers;
+            }
 
-            $correctBalance = max(0, $totalNet - $lockedWithdrawals + $manualAdjustments);
+            $totalNet += max(0, $chargeNet);
         }
+
+        $lockedWithdrawals = (int) Withdrawal::where('account_id', $accountId)
+            ->whereNotIn('status', ['cancelled', 'failed'])
+            ->sum('amount');
+
+        $pendingWithdrawalBalance = (int) Withdrawal::where('account_id', $accountId)
+            ->whereIn('status', ['pending', 'pending_approval', 'processing'])
+            ->sum('amount');
+
+        $manualAdjustments = (int) WalletAdjustment::query()
+            ->where('account_id', $accountId)
+            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'debit' THEN -amount ELSE amount END), 0) AS total")
+            ->value('total');
+
+        $correctBalance = max(0, $totalNet - $lockedWithdrawals + $manualAdjustments);
 
         $walletUpdates = [];
         if ((int) $wallet->available_balance !== $correctBalance) {
@@ -1423,15 +1384,10 @@ class WithdrawalController extends Controller
         $customBoletoFeeFixed = null;
 
         // Check for per-account custom fees set by admin
-        $isAdminUser = false;
         try {
             $user = request()->user();
         } catch (\Throwable $e) {
             $user = null;
-        }
-
-        if ($user) {
-            $isAdminUser = $this->isAdminWithdrawalUser($user, (string) $user->account_id);
         }
 
         if ($user && $user->account_id) {
@@ -1473,25 +1429,6 @@ class WithdrawalController extends Controller
                 $customBoletoFeePercent = is_null($custom->boleto_fee_percent) ? null : (float) $custom->boleto_fee_percent;
                 $customBoletoFeeFixed = is_null($custom->boleto_fee_fixed) ? null : (float) $custom->boleto_fee_fixed;
             }
-        }
-
-        if ($isAdminUser) {
-            $pixFee = 0;
-            $bankFee = 0;
-            $minAmount = 0;
-            $instantEnabled = false;
-            $instantFeeType = 'fixed';
-            $instantFeeValue = 0.0;
-
-            $isCustom = false;
-            $gatewayFeePercentage = 0.0;
-            $gatewayFeeFixed = 0.0;
-            $customPixFeePercent = null;
-            $customPixFeeFixed = null;
-            $customCreditCardFeePercent = null;
-            $customCreditCardFeeFixed = null;
-            $customBoletoFeePercent = null;
-            $customBoletoFeeFixed = null;
         }
 
         $autoWithdrawalEnabled = false;
@@ -1544,96 +1481,6 @@ class WithdrawalController extends Controller
                 'custom_boleto_fee_fixed' => $customBoletoFeeFixed,
             ],
         ]);
-    }
-
-    private function isAdminWithdrawalUser(mixed $user, ?string $accountId = null, mixed $ownerUser = null): bool
-    {
-        if ($user && method_exists($user, 'getRoleName')) {
-            return in_array($user->getRoleName(), ['admin', 'support', 'financial', 'antifraud'], true);
-        }
-
-        if (($user?->type ?? null) !== 'api_key') {
-            return false;
-        }
-
-        $resolvedOwner = $ownerUser;
-        if (!$resolvedOwner && !empty($accountId)) {
-            $resolvedOwner = \App\Models\User::where('account_id', $accountId)->first();
-        }
-
-        return (bool) ($resolvedOwner
-            && method_exists($resolvedOwner, 'getRoleName')
-            && in_array($resolvedOwner->getRoleName(), ['admin', 'support', 'financial', 'antifraud'], true));
-    }
-
-    private function calculateAdminGatewayAvailableBalance(string $accountId): int
-    {
-        try {
-            $demoAccountIds = Account::where('is_demo', true)->pluck('id');
-        } catch (\Throwable $e) {
-            $demoAccountIds = collect();
-        }
-
-        $approvedChargesQuery = Charge::where('status', 'approved')
-            ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds));
-
-        try {
-            $acquirerConfigs = AcquirerConfig::query()
-                ->get()
-                ->keyBy(fn (AcquirerConfig $config) => $this->normalizeAcquirerKey((string) $config->acquirer_key));
-        } catch (\Throwable $e) {
-            $acquirerConfigs = collect();
-        }
-
-        $chargeFees = (int) ((clone $approvedChargesQuery)->sum('fee_amount') ?? 0);
-        $chargeAcquirerCosts = $this->estimateChargeAcquirerCostsForGatewayProfit((clone $approvedChargesQuery), $acquirerConfigs);
-
-        $withdrawalFees = (int) (Withdrawal::whereNotIn('status', ['failed', 'cancelled'])
-            ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
-            ->sum('fee') ?? 0);
-
-        $gatewayProfit = max(0, ($chargeFees - $chargeAcquirerCosts) + $withdrawalFees);
-
-        $lockedWithdrawals = (int) Withdrawal::where('account_id', $accountId)
-            ->whereNotIn('status', ['cancelled', 'failed'])
-            ->sum('amount');
-
-        return max(0, $gatewayProfit - $lockedWithdrawals);
-    }
-
-    private function estimateChargeAcquirerCostsForGatewayProfit($chargesQuery, $acquirerConfigs): int
-    {
-        $grouped = $chargesQuery
-            ->selectRaw('acquirer, COUNT(*) as tx_count, COALESCE(SUM(amount), 0) as total_amount')
-            ->groupBy('acquirer')
-            ->get();
-
-        $totalCosts = 0;
-
-        foreach ($grouped as $row) {
-            $acquirerKey = $this->normalizeAcquirerKey((string) ($row->acquirer ?? ''));
-            $config = $acquirerConfigs->get($acquirerKey);
-
-            if (!$config) {
-                continue;
-            }
-
-            $amountCents = (int) ($row->total_amount ?? 0);
-            $txCount = (int) ($row->tx_count ?? 0);
-
-            $percentageCost = (int) round($amountCents * ((float) ($config->acquirer_fee_percentage ?? 0) / 100));
-            $fixedCost = ((int) round((float) ($config->acquirer_fee_fixed ?? 0) * 100)) * $txCount;
-
-            $totalCosts += max(0, $percentageCost + $fixedCost);
-        }
-
-        return $totalCosts;
-    }
-
-    private function normalizeAcquirerKey(string $acquirer): string
-    {
-        $normalized = strtolower(trim($acquirer));
-        return $normalized !== '' ? $normalized : 'unknown';
     }
 
     private function buildWithdrawalIdempotencyHash(array $validated): string
