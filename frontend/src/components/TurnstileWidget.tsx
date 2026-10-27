@@ -81,6 +81,19 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
     const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'unavailable'>('loading');
     const [attempt, setAttempt] = useState(0);
     const [active, activate] = useActivation();
+    // Sem espaço reservado: o botão fica logo abaixo dos campos e só desce
+    // quando o Cloudflare insere a verificação no container.
+    const [hasWidget, setHasWidget] = useState(false);
+
+    useEffect(() => {
+      const container = containerRef.current;
+      if (!container) return;
+      const update = () => setHasWidget(container.childElementCount > 0);
+      const observer = new MutationObserver(update);
+      observer.observe(container, { childList: true });
+      update();
+      return () => observer.disconnect();
+    }, []);
 
     const reset = () => {
       onVerifyRef.current(null);
@@ -136,8 +149,9 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
     }, [siteKey, attempt, active]);
 
     return (
-      <div className="w-full">
-        <div ref={containerRef} className="min-h-[65px] w-full" />
+      // !mt-0 anula o espaçamento do formulário (space-y) enquanto não há nada para mostrar.
+      <div className={`w-full ${hasWidget || status === 'error' || status === 'unavailable' ? '' : '!mt-0'}`}>
+        <div ref={containerRef} className="w-full" />
         {(status === 'error' || status === 'unavailable') && (
           <p className="mt-2 text-xs text-red-500">
             {status === 'unavailable'
