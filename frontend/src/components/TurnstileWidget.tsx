@@ -34,6 +34,31 @@ function loadTurnstileScript(): Promise<void> {
   return scriptPromise;
 }
 
+// O Turnstile baixa ~800 KB e disputa rede e CPU com a abertura do login.
+// Ele só começa na primeira interação (ou após este tempo, se ninguém tocar
+// na página). O envio continua bloqueado até haver token: a proteção não muda.
+const ACTIVATION_FALLBACK_MS = 5000;
+const ACTIVATION_EVENTS = ['pointerdown', 'touchstart', 'keydown', 'focusin'] as const;
+
+function useActivation(): [boolean, () => void] {
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    if (active) return;
+    const activate = () => setActive(true);
+    const timer = window.setTimeout(activate, ACTIVATION_FALLBACK_MS);
+    ACTIVATION_EVENTS.forEach((event) =>
+      window.addEventListener(event, activate, { once: true, passive: true, capture: true }),
+    );
+    return () => {
+      window.clearTimeout(timer);
+      ACTIVATION_EVENTS.forEach((event) => window.removeEventListener(event, activate, { capture: true }));
+    };
+  }, [active]);
+
+  return [active, () => setActive(true)];
+}
+
 export interface TurnstileWidgetHandle {
   reset: () => void;
 }
@@ -55,10 +80,12 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
     const themeRef = useRef(theme);
     const [status, setStatus] = useState<'loading' | 'ready' | 'error' | 'unavailable'>('loading');
     const [attempt, setAttempt] = useState(0);
+    const [active, activate] = useActivation();
 
     const reset = () => {
       onVerifyRef.current(null);
       setStatus('loading');
+      activate();
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.reset(widgetIdRef.current);
       } else {
@@ -69,6 +96,7 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
     useImperativeHandle(ref, () => ({ reset }));
 
     useEffect(() => {
+      if (!active) return;
       let cancelled = false;
 
       loadTurnstileScript()
@@ -105,7 +133,7 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
         }
         widgetIdRef.current = null;
       };
-    }, [siteKey, attempt]);
+    }, [siteKey, attempt, active]);
 
     return (
       <div className="w-full">
