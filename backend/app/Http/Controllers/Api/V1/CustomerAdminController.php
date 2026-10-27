@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Mail\KycApprovedMail;
 use App\Models\User;
 use App\Models\Account;
 use App\Models\Charge;
@@ -29,6 +30,7 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use PragmaRX\Google2FA\Google2FA;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -1510,6 +1512,7 @@ class CustomerAdminController extends Controller
                 return response()->json(['success' => false, 'message' => 'Cliente não encontrado'], 404);
             }
 
+            $wasApproved = $user->kyc_status === 'approved';
             $now = now();
             $user->forceFill([
                 'kyc_status' => 'approved',
@@ -1527,6 +1530,20 @@ class CustomerAdminController extends Controller
                 'customer_id' => $user->id,
                 'admin_id' => $request->user()?->id,
             ]);
+
+            // Mesmos avisos da aprovação pelo fluxo de KYC; só na primeira aprovação.
+            if (!$wasApproved) {
+                try {
+                    Mail::to($user->email)->send(new KycApprovedMail($user));
+                } catch (\Throwable $mailException) {
+                    Log::warning('Failed to send KYC approved email', [
+                        'user_id' => $user->id,
+                        'error' => $mailException->getMessage(),
+                    ]);
+                }
+
+                try { app(\App\Services\AccountNotificationService::class)->kycApproved($user); } catch (\Throwable $e) { Log::warning('In-app notification (kyc approved) failed', ['user_id' => $user->id, 'error' => $e->getMessage()]); }
+            }
 
             return response()->json([
                 'success' => true,
