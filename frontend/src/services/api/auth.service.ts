@@ -30,6 +30,7 @@ export interface AuthResponse {
       permissions?: string[];
       kyc_status?: 'pending' | 'submitted' | 'under_review' | 'approved' | 'rejected';
       mfa_enabled?: boolean;
+  withdrawal_mfa_exempt?: boolean;
     };
     token?: {
       access_token: string;
@@ -50,6 +51,7 @@ export interface User {
   permissions?: string[];
   kyc_status?: 'pending' | 'submitted' | 'under_review' | 'approved' | 'rejected';
   mfa_enabled?: boolean;
+  withdrawal_mfa_exempt?: boolean;
 }
 
 export const authService = {

@@ -789,6 +789,7 @@ class AuthController extends Controller
                 'permissions' => $user->permissions,
                 'kyc_status' => $user->kyc_status ?? 'pending',
                 'mfa_enabled' => $user->mfa_enabled,
+                'withdrawal_mfa_exempt' => cache()->has("withdrawal_mfa_exempt:{$user->id}"),
                 'email_verified_at' => $user->email_verified_at?->format('c'),
                 'created_at' => $user->created_at->format('c'),
             ],

@@ -105,10 +105,15 @@ class WithdrawalController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        // Exceção temporária concedida pelo suporte a um usuário que não consegue
+        // ativar o 2FA: chave no cache com TTL, expira sozinha.
+        $mfaExempt = $request->user() !== null
+            && cache()->has("withdrawal_mfa_exempt:{$request->user()->id}");
+
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'min:1'],
             'method' => ['required', 'in:pix,bank_transfer'],
-            'mfa_code' => ['required', 'string', 'size:6', 'regex:/^\d{6}$/'],
+            'mfa_code' => [$mfaExempt ? 'nullable' : 'required', 'string', 'size:6', 'regex:/^\d{6}$/'],
             'idempotency_key' => ['sometimes', 'string', 'max:120'],
             'is_instant' => ['sometimes', 'boolean'],
             'destination' => ['required', 'array'],
@@ -213,6 +218,14 @@ class WithdrawalController extends Controller
 
             $ownerUser = \App\Models\User::where('account_id', $accountId)->first();
             $userId = $ownerUser ? $ownerUser->id : $accountId;
+        } elseif ($mfaExempt && (!$authUser->mfa_enabled || empty($authUser->mfa_secret))) {
+            Log::warning('Withdrawal without MFA: temporary exemption', [
+                'user_id' => $authUser->id,
+                'account_id' => $accountId,
+                'ip' => $request->ip(),
+            ]);
+
+            $userId = $authUser->id;
         } else {
             if (!$authUser->mfa_enabled || empty($authUser->mfa_secret)) {
                 return response()->json([
@@ -225,7 +238,7 @@ class WithdrawalController extends Controller
             }
 
             $google2fa = new \PragmaRX\Google2FA\Google2FA();
-            $valid = $google2fa->verifyKey($authUser->mfa_secret, $validated['mfa_code'], 1);
+            $valid = $google2fa->verifyKey($authUser->mfa_secret, (string) ($validated['mfa_code'] ?? ''), 1);
 
             if (!$valid) {
                 return response()->json([

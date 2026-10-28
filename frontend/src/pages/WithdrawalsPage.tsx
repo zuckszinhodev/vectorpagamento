@@ -398,6 +398,12 @@ export default function WithdrawalsPage() {
  return;
  }
 
+ // Exceção temporária do suporte: saca sem o passo do 2FA.
+ if (!user?.mfa_enabled && user?.withdrawal_mfa_exempt) {
+ createWithdrawalMutation.mutate({ data, mfa_code: '', idempotency_key: generateIdempotencyKey() });
+ return;
+ }
+
  // Check if user has MFA enabled
  if (!user?.mfa_enabled) {
  toast.error('Você precisa ativar a verificação em dois fatores (2FA) nas configurações antes de realizar saques.');
