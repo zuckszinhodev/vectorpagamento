@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authService, type AuthResponse, type User } from '@/services/api/auth.service';
@@ -336,7 +337,14 @@ export const useAuthStore = create<AuthState>()(
             isImpersonating: hasOriginalAdminToken,
             adminMfaVerified: !hasOriginalAdminToken && hasPersistedAdminMfaVerification(user.id),
           });
-        } catch {
+        } catch (error) {
+          // Timeout ou rede: o servidor não recusou o token, então ele fica
+          // guardado para a próxima tentativa; só a tela sai do carregamento.
+          if (axios.isAxiosError(error) && !error.response) {
+            set({ isLoading: false, isAuthenticated: false, user: null });
+            return;
+          }
+
           // Clear everything on auth failure
           hardLogout();
         }

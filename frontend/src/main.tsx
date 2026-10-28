@@ -28,8 +28,39 @@ import './styles/globals.css';
   } catch { /* ignore — helpers that guard for randomUUID still work */ }
 })();
 
-const CHUNK_RELOAD_FLAG = 'vectorpagamentos:chunk-reload';
+// Depois de um deploy, quem está com o index.html antigo pede chunks que não
+// existem mais e o Suspense fica girando para sempre. Recarrega uma vez para
+// buscar o index.html novo; o intervalo mínimo evita loop se o erro persistir.
+const CHUNK_RELOAD_KEY = 'vectorpagamentos:chunk-reload-at';
+const CHUNK_RELOAD_MIN_INTERVAL_MS = 10_000;
 
+// Chrome, Safari e Firefox usam mensagens diferentes para o mesmo erro.
+const CHUNK_ERROR_MESSAGES = [
+  'Failed to fetch dynamically imported module',
+  'Importing a module script failed',
+  'error loading dynamically imported module',
+];
+
+const reloadOnce = (): boolean => {
+  try {
+    const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || 0);
+    if (Date.now() - last < CHUNK_RELOAD_MIN_INTERVAL_MS) {
+      return false;
+    }
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+  } catch { /* sem sessionStorage: recarrega mesmo assim */ }
+
+  window.location.reload();
+  return true;
+};
+
+window.addEventListener('vite:preloadError', (event) => {
+  if (reloadOnce()) {
+    event.preventDefault();
+  }
+});
+
+// Erro de carregamento de recurso não sobe por bubbling: precisa de capture.
 window.addEventListener('error', (event) => {
   const target = event.target;
 
@@ -42,34 +73,18 @@ window.addEventListener('error', (event) => {
     return;
   }
 
-  if (sessionStorage.getItem(CHUNK_RELOAD_FLAG) === '1') {
-    sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
-    return;
-  }
-
-  sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1');
-  window.location.reload();
-});
+  reloadOnce();
+}, true);
 
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason;
   const message = typeof reason?.message === 'string' ? reason.message : '';
 
-  if (!message.includes('Failed to fetch dynamically imported module')) {
+  if (!CHUNK_ERROR_MESSAGES.some((m) => message.includes(m))) {
     return;
   }
 
-  if (sessionStorage.getItem(CHUNK_RELOAD_FLAG) === '1') {
-    sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
-    return;
-  }
-
-  sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1');
-  window.location.reload();
-});
-
-window.addEventListener('load', () => {
-  sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
+  reloadOnce();
 });
 
 const queryClient = new QueryClient({

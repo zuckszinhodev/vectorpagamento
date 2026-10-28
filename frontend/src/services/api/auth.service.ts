@@ -68,7 +68,8 @@ export const authService = {
   },
 
   async me(): Promise<{ success: boolean; data: User }> {
-    const response = await api.get('/auth/me');
+    // Com limite: sem ele, um /auth/me travado deixava a tela inicial girando para sempre.
+    const response = await api.get('/auth/me', { timeout: 20000 });
     return response.data;
   },
 
