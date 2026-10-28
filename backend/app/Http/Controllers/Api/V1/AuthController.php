@@ -1269,10 +1269,12 @@ class AuthController extends Controller
         }
 
         $google2fa = new \PragmaRX\Google2FA\Google2FA();
-        $secret = $google2fa->generateSecretKey();
 
-        // Store temporarily until user confirms with a valid code
-        cache()->put("mfa_setup:{$user->id}", $secret, 600);
+        // Clicar em "Ativar 2FA" de novo devolve o mesmo segredo: um segredo novo
+        // a cada clique deixava contas iguais no app e o usuário digitava o código
+        // da antiga. Store temporarily until user confirms with a valid code.
+        $secret = cache()->get("mfa_setup:{$user->id}") ?: $google2fa->generateSecretKey();
+        cache()->put("mfa_setup:{$user->id}", $secret, 1800);
 
         // O emissor é o nome que aparece no app autenticador: vem do branding
         // salvo no banco, não do APP_NAME fixo do .env.
@@ -1320,17 +1322,20 @@ class AuthController extends Controller
         if (!$secret) {
             return response()->json([
                 'success' => false,
-                'message' => 'Nenhuma configuração de MFA pendente. Inicie o processo novamente.',
+                'error' => ['code' => 'mfa_setup_expired'],
+                'message' => 'A configuração do 2FA expirou. Clique em "Ativar 2FA" e escaneie o novo QR code.',
             ], 400);
         }
 
         $google2fa = new \PragmaRX\Google2FA\Google2FA();
-        $valid = $google2fa->verifyKey($secret, $request->input('code'), 1);
+        // Janela de ±2 períodos (±60 s): na ativação, relógio de celular um pouco
+        // atrasado recusava todos os códigos.
+        $valid = $google2fa->verifyKey($secret, $request->input('code'), 2);
 
         if (!$valid) {
             return response()->json([
                 'success' => false,
-                'message' => 'Código MFA inválido',
+                'message' => 'Código inválido. Use o código da conta mais recente no app e confira se a hora do celular está automática.',
             ], 422);
         }
 

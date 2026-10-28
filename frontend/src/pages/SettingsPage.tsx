@@ -2031,6 +2031,14 @@ function SecuritySection({ onMfaEnabled }: { onMfaEnabled?: () => void }) {
      // Only show error toast, don't show success
      const message = err.response?.data?.message || err.response?.data?.error?.message || 'Código inválido';
      toast.error(message);
+
+     // Segredo expirou no servidor: volta ao botão para gerar outro QR code.
+     if (err.response?.data?.error?.code === 'mfa_setup_expired') {
+       setMfaStep('idle');
+       setMfaCode('');
+       setMfaSecret('');
+       setMfaQrUrl('');
+     }
    },
  });
 
@@ -2190,6 +2198,7 @@ function SecuritySection({ onMfaEnabled }: { onMfaEnabled?: () => void }) {
                </div>
                <p className="text-xs text-tx-muted text-center mb-3">
                  No app, a conta aparece como <strong className="text-tx-secondary">{issuerLabel}</strong>.
+                 Se já houver uma conta com esse nome de uma tentativa anterior, apague-a antes de escanear.
                </p>
                <p className="text-sm text-tx-muted mb-2">
                  2. Ou insira manualmente a chave secreta:
