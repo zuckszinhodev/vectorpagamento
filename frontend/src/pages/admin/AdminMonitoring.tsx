@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
-import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
+import { AdminPageShell } from '@/components/admin/AdminPageShell';
 import {
   ArrowPathIcon,
   CheckCircleIcon,
@@ -41,7 +41,7 @@ interface SecurityAlert {
   acknowledged: boolean;
 }
 
-export default function AdminMonitoring() {
+export default function AdminMonitoring(_props: { embedded?: boolean }) {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [acknowledgingAlertId, setAcknowledgingAlertId] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -50,7 +50,7 @@ export default function AdminMonitoring() {
     queryKey: ['security-dashboard'],
     queryFn: async () => {
       const response = await api.get('/admin/security/dashboard');
-      return response.data?.data || { total_requests_24h: 0, blocked_requests_24h: 0, failed_logins_24h: 0, active_sessions: 0, blocked_ips: 0, rate_limit_hits: 0, security_alerts: 0, uptime_percentage: 99.9 };
+      return response.data?.data;
     },
     refetchInterval: autoRefresh ? 10000 : false,
   });
@@ -143,28 +143,22 @@ export default function AdminMonitoring() {
 
   return (
     <AdminPageShell>
-      <AdminPageHeader
-        title="Monitoramento"
-        subtitle="Segurança e atividade em tempo real"
-        actions={
-          <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
-              <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="h-3.5 w-3.5 rounded border-gray-300 text-gray-900" />
-              Auto-refresh
-            </label>
-            <button onClick={() => refetchStats()} className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50">
-              <ArrowPathIcon className="h-4 w-4" />
-            </button>
-          </div>
-        }
-      />
+      <div className="flex items-center justify-end gap-2">
+        <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+          <input type="checkbox" checked={autoRefresh} onChange={(e) => setAutoRefresh(e.target.checked)} className="h-3.5 w-3.5 rounded border-gray-300 text-gray-900" />
+          Atualização automática
+        </label>
+        <button onClick={() => refetchStats()} aria-label="Atualizar" className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50">
+          <ArrowPathIcon className="h-4 w-4" />
+        </button>
+      </div>
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Requisições (24h)" value={stats?.total_requests_24h?.toLocaleString() || '0'} />
         <Stat label="Bloqueadas" value={stats?.blocked_requests_24h?.toLocaleString() || '0'} />
         <Stat label="Logins Falhos" value={stats?.failed_logins_24h?.toLocaleString() || '0'} />
-        <Stat label="Uptime" value={`${stats?.uptime_percentage || 99.9}%`} />
+        <Stat label="Uptime" value={stats?.uptime_percentage != null ? `${stats.uptime_percentage}%` : '—'} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

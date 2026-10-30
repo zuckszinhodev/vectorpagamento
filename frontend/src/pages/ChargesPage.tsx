@@ -249,6 +249,14 @@ function getChargeNominal(charge: Charge): string {
   return acquirerNominal || '-';
 }
 
+// Só para desenvolvimento local: import.meta.env.DEV remove o checkbox do build de produção
+const TEST_PAYER = {
+  name: 'Comprador Teste',
+  email: 'comprador.teste@example.com',
+  phone: '11999999999',
+  document: '52998224725',
+};
+
 function NewPixChargeModal({
   isOpen,
   onClose,
@@ -413,6 +421,13 @@ function NewPixChargeModal({
     setCustomerPhone(v);
   };
 
+  const handleTestPayerToggle = (checked: boolean) => {
+    setCustomerName(checked ? TEST_PAYER.name : '');
+    setCustomerEmail(checked ? TEST_PAYER.email : '');
+    handlePhoneChange(checked ? TEST_PAYER.phone : '');
+    handleDocumentChange(checked ? TEST_PAYER.document : '');
+  };
+
   const quickAmounts = [1000, 5000, 10000, 25000, 50000];
 
   return (
@@ -515,6 +530,19 @@ function NewPixChargeModal({
                             Informe os dados reais de quem vai pagar. Eles são enviados à adquirente junto com a cobrança.
                           </p>
                         </div>
+
+                        {import.meta.env.DEV && (
+                          <label htmlFor="pix-test-payer" className="flex items-center gap-2 text-sm text-tx-secondary">
+                            <input
+                              id="pix-test-payer"
+                              type="checkbox"
+                              className="h-4 w-4"
+                              checked={customerEmail === TEST_PAYER.email}
+                              onChange={(e) => handleTestPayerToggle(e.target.checked)}
+                            />
+                            Preencher com dados de teste
+                          </label>
+                        )}
 
                         <div className="grid gap-3.5 sm:grid-cols-2 sm:gap-4">
                           <div className="sm:col-span-2">

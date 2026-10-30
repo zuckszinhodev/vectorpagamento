@@ -26,6 +26,7 @@ class AdminPermission
         '#^admin/acquirers#' => 'admin.acquirers.manage',
         '#^admin/system-config#' => 'admin.config.manage',
         '#^admin/settings#' => 'admin.config.manage',
+        '#^admin/fees#' => 'admin.config.manage',
         '#^admin/api-keys#' => 'admin.config.manage',
         '#^admin/webhooks#' => 'admin.webhooks.manage',
         '#^admin/notifications#' => 'admin.notifications.manage',

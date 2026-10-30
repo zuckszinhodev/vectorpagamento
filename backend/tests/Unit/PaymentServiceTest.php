@@ -290,62 +290,6 @@ it('fills a fallback customer phone when generating enki pix', function () {
     expect($charge->fresh()->acquirer)->toBe('enki');
 });
 
-it('uses account custom fee as final fee without adding acquirer fee', function () {
-    AccountWallet::create([
-        'id' => Str::uuid()->toString(),
-        'account_id' => $this->account->id,
-        'available_balance' => 0,
-        'pending_balance' => 0,
-        'blocked_balance' => 0,
-        'currency' => 'BRL',
-    ]);
-
-    AcquirerConfig::create([
-        'id' => Str::uuid()->toString(),
-        'acquirer_key' => 'enki',
-        'display_name' => 'Enki',
-        'type' => 'gateway',
-        'enabled' => true,
-        'supported_methods' => ['pix'],
-        'gateway_fee_percentage' => 10.00,
-        'gateway_fee_fixed' => 2.00,
-        'acquirer_fee_percentage' => 1.50,
-        'acquirer_fee_fixed' => 0.50,
-    ]);
-
-    AccountCustomFee::create([
-        'id' => Str::uuid()->toString(),
-        'account_id' => $this->account->id,
-        'pix_fee_percent' => 4.00,
-        'pix_fee_fixed' => 0.00,
-    ]);
-
-    $charge = Charge::create([
-        'id' => Str::uuid()->toString(),
-        'account_id' => $this->account->id,
-        'amount' => 10000,
-        'currency' => 'BRL',
-        'payment_method' => 'pix',
-        'status' => 'approved',
-        'acquirer' => 'enki',
-        'customer' => [
-            'name' => 'Cliente Teste',
-            'email' => 'cliente@example.com',
-            'document' => '12345678900',
-        ],
-        'idempotency_key' => Str::random(32),
-    ]);
-
-    $this->service->updateWalletOnPayment($charge);
-
-    $charge->refresh();
-    $wallet = AccountWallet::where('account_id', $this->account->id)->firstOrFail();
-
-    expect((int) $charge->fee_amount)->toBe(400);
-    expect((int) $charge->net_amount)->toBe(9600);
-    expect((int) $wallet->available_balance)->toBe(9600);
-});
-
 it('honors the account pix acquirer instead of the global priority', function () {
     config([
         'acquirers.enki.enabled' => true,

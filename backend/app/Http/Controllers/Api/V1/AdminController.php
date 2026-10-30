@@ -301,16 +301,10 @@ class AdminController extends Controller
 
             $totalRevenue = (clone $approvedChargesQuery)->sum('amount');
 
-            // Gateway profit = fees charged to sellers - acquirer costs + withdrawal fees
-            $chargeFees = (clone $approvedChargesQuery)->sum('fee_amount') ?? 0;
-            $chargeAcquirerCosts = $this->estimateChargeAcquirerCosts((clone $approvedChargesQuery), $acquirerConfigs);
-
-            $withdrawalFees = \App\Models\Withdrawal::whereNotIn('status', ['failed', 'cancelled'])
-                ->when($demoAccountIds->isNotEmpty(), fn ($q) => $q->whereNotIn('account_id', $demoAccountIds))
-                ->sum('fee') ?? 0;
-
-            $gatewayProfit = ($chargeFees - $chargeAcquirerCosts) + $withdrawalFees;
-            $totalFees = $chargeFees;
+            // Gateway profit = taxas recebidas - custo das adquirentes (mesma conta da tela de Taxas)
+            $totalFees = (clone $approvedChargesQuery)->sum('fee_amount') ?? 0;
+            $gatewayProfit = app(\App\Services\SystemFeeService::class)
+                ->profitReport(null, $demoAccountIds)['totals']['profit'];
 
             // Seller payout = total net amount withdrawn by sellers (completed withdrawals)
             $sellerPayout = \App\Models\Withdrawal::where('status', 'completed')
@@ -1877,6 +1871,72 @@ class AdminController extends Controller
         }
     }
 
+    private function adminChargesQuery(Request $request)
+    {
+        $paymentMethod = $request->input('payment_method');
+        $search = $request->input('search');
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+        $acquirer = $request->input('acquirer');
+
+        $query = Charge::query();
+
+        if ($paymentMethod && $paymentMethod !== 'all') {
+            $query->where('payment_method', $paymentMethod);
+        }
+
+        if ($acquirer && $acquirer !== 'all') {
+            $query->where('acquirer', $acquirer);
+        }
+
+        if ($search) {
+            $searchTerm = '%' . $search . '%';
+            $dbDriver = config('database.default');
+            $query->where(function ($q) use ($searchTerm, $dbDriver) {
+                $q->whereRaw('CAST(id AS TEXT) LIKE ?', [$searchTerm])
+                  ->orWhere('external_id', 'like', $searchTerm)
+                  ->when($dbDriver === 'pgsql', function ($q) use ($searchTerm) {
+                      $q->orWhereRaw("COALESCE(customer->>'name','') ILIKE ?", [$searchTerm])
+                          ->orWhereRaw("COALESCE(customer->>'email','') ILIKE ?", [$searchTerm]);
+                  }, function ($q) use ($searchTerm) {
+                      $q->orWhere('customer->name', 'like', $searchTerm)
+                          ->orWhere('customer->email', 'like', $searchTerm);
+                  });
+            });
+        }
+
+        if ($dateFrom) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        if ($dateTo) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Totais por status com os mesmos filtros da lista, em todas as páginas
+     */
+    public function chargesSummary(Request $request): JsonResponse
+    {
+        $rows = $this->adminChargesQuery($request)
+            ->selectRaw('status, COUNT(*) as total, COALESCE(SUM(amount), 0) as amount')
+            ->groupBy('status')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total' => (int) $rows->sum('total'),
+                'by_status' => $rows->mapWithKeys(fn ($row) => [
+                    $row->status => ['count' => (int) $row->total, 'amount' => (int) $row->amount],
+                ]),
+            ],
+        ]);
+    }
+
     /**
      * List all charges across the platform for admin
      */
@@ -1885,13 +1945,9 @@ class AdminController extends Controller
         try {
             $perPage = min((int) $request->input('per_page', 20), 100);
             $status = $request->input('status');
-            $paymentMethod = $request->input('payment_method');
-            $search = $request->input('search');
-            $dateFrom = $request->input('date_from');
-            $dateTo = $request->input('date_to');
-            $acquirer = $request->input('acquirer');
 
-            $query = Charge::with([
+            $query = $this->adminChargesQuery($request)
+                ->with([
                     'product' => fn ($q) => $q->withTrashed()->select('id', 'name'),
                     'account' => fn ($q) => $q->select('id', 'name', 'email', 'phone', 'document'),
                     'account.users' => fn ($q) => $q->select('id', 'account_id', 'name', 'email'),
@@ -1901,38 +1957,6 @@ class AdminController extends Controller
 
             if ($status && $status !== 'all') {
                 $query->where('status', $status);
-            }
-
-            if ($paymentMethod && $paymentMethod !== 'all') {
-                $query->where('payment_method', $paymentMethod);
-            }
-
-            if ($acquirer && $acquirer !== 'all') {
-                $query->where('acquirer', $acquirer);
-            }
-
-            if ($search) {
-                $searchTerm = '%' . $search . '%';
-                                $dbDriver = config('database.default');
-                $query->where(function ($q) use ($searchTerm, $dbDriver) {
-                    $q->where('id', 'like', $searchTerm)
-                      ->orWhere('external_id', 'like', $searchTerm)
-                                            ->when($dbDriver === 'pgsql', function ($q) use ($searchTerm) {
-                                                    $q->orWhereRaw("COALESCE(customer->>'name','') ILIKE ?", [$searchTerm])
-                                                        ->orWhereRaw("COALESCE(customer->>'email','') ILIKE ?", [$searchTerm]);
-                                            }, function ($q) use ($searchTerm) {
-                                                    $q->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(customer, '$.name')) LIKE ?", [$searchTerm])
-                                                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(customer, '$.email')) LIKE ?", [$searchTerm]);
-                                            });
-                });
-            }
-
-            if ($dateFrom) {
-                $query->whereDate('created_at', '>=', $dateFrom);
-            }
-
-            if ($dateTo) {
-                $query->whereDate('created_at', '<=', $dateTo);
             }
 
             $charges = $query->paginate($perPage);

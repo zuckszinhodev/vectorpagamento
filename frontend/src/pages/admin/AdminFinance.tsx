@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { api, formatCurrency, formatDate } from '@/lib/api';
 import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
+import { downloadCsvFile } from '@/lib/csv';
 import {
+  ArrowDownTrayIcon,
   BanknotesIcon,
   MagnifyingGlassIcon,
   CheckCircleIcon,
@@ -41,7 +43,7 @@ interface Withdrawal {
   bank_name?: string;
   bank_account?: string;
   bank_agency?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'processing' | 'completed' | 'cancelled';
+  status: 'pending' | 'pending_approval' | 'approved' | 'rejected' | 'processing' | 'completed' | 'cancelled' | 'failed';
   requested_at: string;
   processed_at?: string;
   notes?: string;
@@ -80,6 +82,88 @@ interface WithdrawalConfig {
 
 type AdminFinanceMode = 'all' | 'transactions' | 'withdrawals';
 
+interface FinanceSummary {
+  total: number;
+  by_status: Record<string, { count: number; amount: number }>;
+}
+
+interface WithdrawalLog {
+  source: string;
+  event: string;
+  created_at: string;
+  metadata?: { reason?: string; reference?: string } | null;
+  new_values?: { status?: string } | null;
+}
+
+const WITHDRAWAL_STATUS_CHIPS = [
+  { value: 'all', label: 'Todos' },
+  { value: 'pending', label: 'Pendentes' },
+  { value: 'pending_approval', label: 'Aguardando aprovação' },
+  { value: 'processing', label: 'Processando' },
+  { value: 'completed', label: 'Concluídos' },
+  { value: 'failed', label: 'Falhas' },
+  { value: 'cancelled', label: 'Cancelados' },
+];
+
+const CHARGE_STATUS_CHIPS = [
+  { value: 'all', label: 'Todos' },
+  { value: 'approved', label: 'Aprovados' },
+  { value: 'pending', label: 'Pendentes' },
+  { value: 'processing', label: 'Processando' },
+  { value: 'refunded', label: 'Reembolsados' },
+  { value: 'chargeback', label: 'Chargebacks' },
+  { value: 'declined', label: 'Recusados' },
+  { value: 'failed', label: 'Falhas' },
+  { value: 'cancelled', label: 'Cancelados' },
+  { value: 'expired', label: 'Expirados' },
+];
+
+const WITHDRAWAL_EVENT_LABELS: Record<string, string> = {
+  admin_approved: 'Aprovado pelo admin',
+  admin_approved_manual: 'Aprovado manualmente',
+  admin_process_triggered: 'Envio à adquirente iniciado',
+  admin_process_failed: 'Falha no envio à adquirente',
+  admin_cancelled: 'Cancelado pelo admin',
+  admin_status_changed: 'Status alterado',
+};
+
+const EXPORT_ROW_LIMIT = 5000;
+
+// Taxas de saque são salvas na tela de Taxas: este modal não pode sobrescrevê-las
+const FEE_CONFIG_KEYS = [
+  'fee_percentage',
+  'fee_fixed',
+  'standard_withdrawal_fee_pix',
+  'standard_withdrawal_fee_bank',
+  'instant_withdrawal_enabled',
+  'instant_withdrawal_fee_type',
+  'instant_withdrawal_fee_value',
+];
+
+const summaryCount = (summary: FinanceSummary | undefined, ...statuses: string[]) =>
+  statuses.reduce((sum, status) => sum + (summary?.by_status?.[status]?.count ?? 0), 0);
+
+const summaryAmount = (summary: FinanceSummary | undefined, ...statuses: string[]) =>
+  statuses.reduce((sum, status) => sum + (summary?.by_status?.[status]?.amount ?? 0), 0);
+
+// Percorre as páginas da listagem para exportar tudo o que o filtro encontrou
+async function fetchRowsForExport(url: string, params: URLSearchParams): Promise<{ rows: any[]; truncated: boolean }> {
+  const rows: any[] = [];
+  let page = 1;
+  let lastPage = 1;
+
+  do {
+    params.set('page', String(page));
+    params.set('per_page', '100');
+    const response = await api.get(`${url}?${params.toString()}`);
+    rows.push(...(response.data?.data ?? []));
+    lastPage = response.data?.meta?.last_page ?? 1;
+    page += 1;
+  } while (page <= lastPage && rows.length < EXPORT_ROW_LIMIT);
+
+  return { rows: rows.slice(0, EXPORT_ROW_LIMIT), truncated: page <= lastPage };
+}
+
 interface AdminFinanceProps {
   mode?: AdminFinanceMode;
 }
@@ -99,6 +183,7 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [manualReference, setManualReference] = useState('');
 
   // Transaction tab states
   const [txSearch, setTxSearch] = useState('');
@@ -108,6 +193,7 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
   const [txDateFrom, setTxDateFrom] = useState('');
   const [txDateTo, setTxDateTo] = useState('');
   const [txPage, setTxPage] = useState(1);
+  const [exporting, setExporting] = useState(false);
   const [selectedCharge, setSelectedCharge] = useState<any>(null);
   const [showChargeDetailModal, setShowChargeDetailModal] = useState(false);
   const [chargeStatusForm, setChargeStatusForm] = useState({
@@ -146,6 +232,21 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
   const withdrawals: Withdrawal[] = withdrawalsData?.data ?? [];
   const pagination = withdrawalsData?.meta ?? { current_page: 1, last_page: 1, total: 0 };
 
+  const buildWithdrawalParams = () => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (methodFilter !== 'all') params.append('method', methodFilter);
+    if (dateFrom) params.append('date_from', dateFrom);
+    if (dateTo) params.append('date_to', dateTo);
+    return params;
+  };
+
+  const { data: withdrawalSummary } = useQuery<FinanceSummary>({
+    queryKey: ['admin-withdrawals-summary', search, methodFilter, dateFrom, dateTo],
+    queryFn: async () => (await api.get(`/admin/withdrawals/summary?${buildWithdrawalParams().toString()}`)).data?.data,
+    enabled: activeMainTab === 'withdrawals',
+  });
+
   const { data: configData } = useQuery({
     queryKey: ['admin-withdrawals-config'],
     queryFn: async () => {
@@ -178,6 +279,68 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
 
   const charges = chargesData?.data ?? [];
   const chargesPagination = chargesData?.meta ?? { current_page: 1, last_page: 1, total: 0 };
+
+  const buildChargeParams = () => {
+    const params = new URLSearchParams();
+    if (txSearch) params.append('search', txSearch);
+    if (txMethod !== 'all') params.append('payment_method', txMethod);
+    if (txAcquirer !== 'all') params.append('acquirer', txAcquirer);
+    if (txDateFrom) params.append('date_from', txDateFrom);
+    if (txDateTo) params.append('date_to', txDateTo);
+    return params;
+  };
+
+  const { data: chargeSummary } = useQuery<FinanceSummary>({
+    queryKey: ['admin-charges-summary', txSearch, txMethod, txAcquirer, txDateFrom, txDateTo],
+    queryFn: async () => (await api.get(`/admin/charges/summary?${buildChargeParams().toString()}`)).data?.data,
+    enabled: activeMainTab === 'transactions',
+  });
+
+  const exportCharges = async () => {
+    setExporting(true);
+    try {
+      const params = buildChargeParams();
+      if (txStatus !== 'all') params.append('status', txStatus);
+      const { rows, truncated } = await fetchRowsForExport('/admin/charges', params);
+      downloadCsvFile(
+        `transacoes-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['ID', 'Data', 'Pago em', 'Comprador', 'E-mail', 'Vendedor', 'Produto', 'Valor', 'Taxa', 'Líquido', 'Método', 'Gateway', 'Status'],
+        rows.map((c) => [
+          c.id, c.created_at, c.paid_at, c.customer_name, c.customer_email, c.seller_name, c.product_name,
+          ((c.amount ?? 0) / 100).toFixed(2), ((c.fee_amount ?? 0) / 100).toFixed(2), ((c.net_amount ?? 0) / 100).toFixed(2),
+          c.payment_method, c.acquirer, c.status,
+        ])
+      );
+      toast.success(truncated ? `Exportadas as ${rows.length} mais recentes. Refine os filtros para ver o resto.` : `${rows.length} transações exportadas`);
+    } catch {
+      toast.error('Não foi possível exportar as transações.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const exportWithdrawals = async () => {
+    setExporting(true);
+    try {
+      const params = buildWithdrawalParams();
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      const { rows, truncated } = await fetchRowsForExport('/admin/withdrawals', params);
+      downloadCsvFile(
+        `saques-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['ID', 'Solicitado em', 'Processado em', 'Seller', 'E-mail', 'Valor', 'Taxa', 'Líquido', 'Método', 'Status', 'Motivo'],
+        rows.map((w) => [
+          w.id, w.requested_at, w.processed_at, w.customer_name, w.customer_email,
+          ((w.amount ?? 0) / 100).toFixed(2), ((w.fee ?? 0) / 100).toFixed(2), ((w.net_amount ?? 0) / 100).toFixed(2),
+          w.method, w.status, w.failure_reason || w.notes || '',
+        ])
+      );
+      toast.success(truncated ? `Exportados os ${rows.length} mais recentes. Refine os filtros para ver o resto.` : `${rows.length} saques exportados`);
+    } catch {
+      toast.error('Não foi possível exportar os saques.');
+    } finally {
+      setExporting(false);
+    }
+  };
   const deletableStatuses = ['expired', 'failed', 'declined'];
   const canBulkDeleteCharges = deletableStatuses.includes(txStatus);
 
@@ -221,9 +384,17 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
   });
 
   const processMutation = useMutation({
-    mutationFn: async ({ withdrawalId, action, notes }: { withdrawalId: string; action: 'approve' | 'reject'; notes?: string }) => {
+    mutationFn: async ({ withdrawalId, action, notes, reference }: { withdrawalId: string; action: 'approve' | 'approve_manual' | 'reject'; notes?: string; reference?: string }) => {
       if (action === 'approve') {
         const response = await api.post(`/admin/withdrawals/${withdrawalId}/process`);
+        return response.data;
+      }
+
+      if (action === 'approve_manual') {
+        const response = await api.post(`/admin/withdrawals/${withdrawalId}/approve-manual`, {
+          reference: reference?.trim() || undefined,
+          notes: notes?.trim() || undefined,
+        });
         return response.data;
       }
 
@@ -237,13 +408,14 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
         const cancelReason = payload?.cancel_reason || payload?.data?.failure_reason || payload?.data?.notes || variables.notes;
         toast.success(cancelReason ? `Saque cancelado. Motivo: ${cancelReason}` : 'Saque cancelado com sucesso.');
       } else {
-        toast.success('Operação concluída com sucesso.');
+        toast.success(payload?.message || 'Operação concluída com sucesso.');
       }
 
       queryClient.invalidateQueries({ queryKey: ['admin-withdrawals'] });
       setShowDetailModal(false);
       setSelectedWithdrawal(null);
       setRejectReason('');
+      setManualReference('');
     },
     onError: (error: any) => {
       const message = error?.response?.data?.message || error?.response?.data?.error?.message || 'Erro ao processar saque.';
@@ -350,18 +522,20 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
           </span>
         );
       case 'pending':
+      case 'pending_approval':
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
             <ClockIcon className="h-3.5 w-3.5" />
-            Pendente
+            {status === 'pending_approval' ? 'Aguardando aprovação' : 'Pendente'}
           </span>
         );
       case 'rejected':
       case 'cancelled':
+      case 'failed':
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
             <XCircleIcon className="h-3.5 w-3.5" />
-            {status === 'rejected' ? 'Rejeitado' : 'Cancelado'}
+            {status === 'rejected' ? 'Rejeitado' : status === 'failed' ? 'Falhou' : 'Cancelado'}
           </span>
         );
       default:
@@ -369,15 +543,12 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
     }
   };
 
-  const pendingCount = withdrawals.filter((w: Withdrawal) => w.status === 'pending').length;
-  const pendingTotal = withdrawals
-    .filter((w: Withdrawal) => w.status === 'pending')
-    .reduce((sum: number, w: Withdrawal) => sum + w.amount, 0);
-  const completedWithdrawalsTotal = withdrawals
-    .filter((w: Withdrawal) => w.status === 'completed')
-    .reduce((sum: number, w: Withdrawal) => sum + (w.net_amount ?? w.amount), 0);
-  const approvalsCount = charges.filter((c: any) => c.status === 'approved').length;
-  const successRate = charges.length > 0 ? Math.round((approvalsCount / charges.length) * 100) : 0;
+  const isApprovable = (status: Withdrawal['status']) => ['pending', 'pending_approval', 'failed'].includes(status);
+  const isRejectable = (status: Withdrawal['status']) => ['pending', 'pending_approval'].includes(status);
+
+  const hasPendingWithdrawals = summaryCount(withdrawalSummary, 'pending') > 0;
+  const chargeTotal = chargeSummary?.total ?? 0;
+  const approvalRate = chargeTotal > 0 ? (summaryCount(chargeSummary, 'approved') / chargeTotal) * 100 : 0;
 
   const getChargeStatusBadge = (status: string) => {
     switch (status) {
@@ -456,14 +627,18 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
               >
                 Configurações
               </button>
-              {pendingCount > 0 && (
+              {hasPendingWithdrawals && (
                 <button
-                  onClick={() => processAllMutation.mutate()}
+                  onClick={() => {
+                    if (window.confirm('Processar agora os saques pendentes liberados para o automático? Vale para todos eles, não só para os filtrados na tela, e o Pix será enviado às contas de destino.')) {
+                      processAllMutation.mutate();
+                    }
+                  }}
                   disabled={processAllMutation.isPending}
                   className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-200 transition-colors"
                 >
                   <BoltIcon className="h-4 w-4" />
-                  Processar Todos ({pendingCount})
+                  Processar automáticos
                 </button>
               )}
             </div>
@@ -509,55 +684,41 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
       {activeMainTab === 'withdrawals' && (
         <>
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded-md bg-amber-50 p-4">
-          <p className="text-xs text-amber-600 mb-1">Saques Pendentes</p>
-          <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>
-        </div>
-        <div className="rounded-md bg-orange-500/10 p-4">
-          <p className="text-xs text-orange-600 mb-1">Total Pendente</p>
-          <p className="text-2xl font-bold text-orange-600">{formatCurrency(pendingTotal)}</p>
-        </div>
-        <div className="rounded-md bg-emerald-50 p-4">
-          <p className="text-xs text-emerald-600 mb-1">Taxa de Saque</p>
-          <p className="text-2xl font-bold text-emerald-600">
-            {config?.fee_percentage || 0}% + {formatCurrency(config?.fee_fixed || 0)}
-          </p>
-        </div>
-        <div className="rounded-md bg-green-50 p-4">
-          <p className="text-xs text-green-600 mb-1">Limite Auto-Aprovação</p>
-          <p className="text-2xl font-bold text-green-600">
-            {config?.auto_approve_limit ? formatCurrency(config.auto_approve_limit) : 'Manual'}
-          </p>
-        </div>
-        <div className="rounded-md bg-blue-50 p-4">
-          <p className="text-xs text-blue-600 mb-1">Saque Automático</p>
-          <p className="text-2xl font-bold text-blue-600">
-            {config?.auto_withdrawal_enabled ? (
-              <span className="text-emerald-600">Ativo</span>
-            ) : (
-              <span className="text-gray-500">Desativado</span>
-            )}
-          </p>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile
+          label="Na fila"
+          value={summaryCount(withdrawalSummary, 'pending', 'pending_approval').toLocaleString('pt-BR')}
+          hint={formatCurrency(summaryAmount(withdrawalSummary, 'pending', 'pending_approval'))}
+        />
+        <StatTile
+          label="Processando"
+          value={summaryCount(withdrawalSummary, 'processing').toLocaleString('pt-BR')}
+          hint={formatCurrency(summaryAmount(withdrawalSummary, 'processing'))}
+        />
+        <StatTile
+          label="Concluídos"
+          value={formatCurrency(summaryAmount(withdrawalSummary, 'completed'))}
+          hint={`${summaryCount(withdrawalSummary, 'completed').toLocaleString('pt-BR')} saques`}
+        />
+        <StatTile
+          label="Falhas"
+          value={summaryCount(withdrawalSummary, 'failed').toLocaleString('pt-BR')}
+          hint={formatCurrency(summaryAmount(withdrawalSummary, 'failed'))}
+          alert={summaryCount(withdrawalSummary, 'failed') > 0}
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="rounded-md bg-emerald-50 p-4">
-          <p className="text-xs text-emerald-600 mb-1">Taxa de Aprovação (transações filtradas)</p>
-          <p className="text-2xl font-bold text-emerald-600">{successRate}%</p>
-        </div>
-        <div className="rounded-md bg-sky-500/10 p-4">
-          <p className="text-xs text-sky-600 mb-1">Saques Concluídos (página atual)</p>
-          <p className="text-2xl font-bold text-sky-600">{formatCurrency(completedWithdrawalsTotal)}</p>
-        </div>
-        <div className="rounded-md bg-red-50 p-4">
-          <p className="text-xs text-red-600 mb-1">Alertas Operacionais</p>
-          <p className="text-sm font-semibold text-red-600 mt-1">
-            {pendingCount > 20 ? 'Fila de saques acima do ideal' : 'Sem alertas críticos'}
-          </p>
-        </div>
+      <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500">
+        <span>Auto-aprovação: <strong className="font-medium text-gray-700">{config?.auto_approve_limit ? `até ${formatCurrency(config.auto_approve_limit)}` : 'Manual'}</strong></span>
+        <span>Saque automático: <strong className="font-medium text-gray-700">{config?.auto_withdrawal_enabled ? 'Ativo' : 'Desativado'}</strong></span>
       </div>
+
+      <StatusChips
+        options={WITHDRAWAL_STATUS_CHIPS}
+        value={statusFilter}
+        summary={withdrawalSummary}
+        onChange={(value) => { setStatusFilter(value); setPage(1); }}
+      />
 
       {/* Filters */}
       <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -580,21 +741,6 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
             <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
               <FunnelIcon className="h-4 w-4 text-gray-500" />
               <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
-              >
-                <option value="all">Todos os status</option>
-                <option value="pending">Pendentes</option>
-                <option value="processing">Processando</option>
-                <option value="completed">Concluídos</option>
-                <option value="cancelled">Cancelados</option>
-              </select>
-
-              <select
                 value={methodFilter}
                 onChange={(e) => {
                   setMethodFilter(e.target.value);
@@ -613,6 +759,15 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
               >
                 <ArrowPathIcon className="h-4 w-4" />
                 Atualizar
+              </button>
+
+              <button
+                onClick={exportWithdrawals}
+                disabled={exporting}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-border-DEFAULT transition-colors disabled:opacity-50 sm:w-auto"
+              >
+                <ArrowDownTrayIcon className="h-4 w-4" />
+                {exporting ? 'Exportando...' : 'Exportar CSV'}
               </button>
             </div>
           </div>
@@ -763,24 +918,32 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                           >
                             <EyeIcon className="h-4 w-4" />
                           </button>
-                          {withdrawal.status === 'pending' && (
+                          {isApprovable(withdrawal.status) && (
                             <>
-                              <button
-                                onClick={() => processMutation.mutate({ withdrawalId: withdrawal.id, action: 'approve' })}
-                                className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 transition-colors"
-                              >
-                                Aprovar
-                              </button>
                               <button
                                 onClick={() => {
                                   setSelectedWithdrawal(withdrawal);
                                   setRejectReason('');
+                                  setManualReference('');
                                   setShowDetailModal(true);
                                 }}
-                                className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600 transition-colors"
+                                className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-600 transition-colors"
                               >
-                                Rejeitar
+                                Aprovar
                               </button>
+                              {isRejectable(withdrawal.status) && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedWithdrawal(withdrawal);
+                                    setRejectReason('');
+                                    setManualReference('');
+                                    setShowDetailModal(true);
+                                  }}
+                                  className="rounded-lg bg-red-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-600 transition-colors"
+                                >
+                                  Rejeitar
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
@@ -824,6 +987,37 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
       {/* Transactions Tab */}
       {activeMainTab === 'transactions' && (
         <>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StatTile
+              label="Volume aprovado"
+              value={formatCurrency(summaryAmount(chargeSummary, 'approved'))}
+              hint={`${summaryCount(chargeSummary, 'approved').toLocaleString('pt-BR')} aprovadas`}
+            />
+            <StatTile
+              label="Taxa de aprovação"
+              value={`${approvalRate.toFixed(1)}%`}
+              hint={`${chargeTotal.toLocaleString('pt-BR')} cobranças no filtro`}
+            />
+            <StatTile
+              label="Pendentes"
+              value={summaryCount(chargeSummary, 'pending', 'processing', 'authorized').toLocaleString('pt-BR')}
+              hint={formatCurrency(summaryAmount(chargeSummary, 'pending', 'processing', 'authorized'))}
+            />
+            <StatTile
+              label="Recusadas e falhas"
+              value={summaryCount(chargeSummary, 'declined', 'failed').toLocaleString('pt-BR')}
+              hint={formatCurrency(summaryAmount(chargeSummary, 'declined', 'failed'))}
+              alert={summaryCount(chargeSummary, 'declined', 'failed') > 0}
+            />
+          </div>
+
+          <StatusChips
+            options={CHARGE_STATUS_CHIPS}
+            value={txStatus}
+            summary={chargeSummary}
+            onChange={(value) => { setTxStatus(value); setTxPage(1); }}
+          />
+
           {/* Filters */}
           <div className="rounded-lg border border-gray-200 bg-white p-4">
             <div className="flex flex-col gap-4">
@@ -841,23 +1035,6 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
 
                 <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
                   <select
-                    value={txStatus}
-                    onChange={(e) => { setTxStatus(e.target.value); setTxPage(1); }}
-                    className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
-                  >
-                    <option value="all">Todos os status</option>
-                    <option value="approved">Aprovados</option>
-                    <option value="pending">Pendentes</option>
-                    <option value="processing">Processando</option>
-                    <option value="refunded">Reembolsados</option>
-                    <option value="chargeback">Chargebacks</option>
-                    <option value="declined">Recusados</option>
-                    <option value="failed">Falhas</option>
-                    <option value="cancelled">Cancelados</option>
-                    <option value="expired">Expirados</option>
-                  </select>
-
-                  <select
                     value={txMethod}
                     onChange={(e) => { setTxMethod(e.target.value); setTxPage(1); }}
                     className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
@@ -874,6 +1051,7 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                     className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none sm:w-auto"
                   >
                     <option value="all">Todos os gateways</option>
+                    <option value="kokupay">Koku Pay</option>
                     <option value="payfort">PayFort</option>
                     <option value="blupay">BluPay</option>
                     <option value="stripe">Stripe</option>
@@ -890,6 +1068,15 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                   >
                     <ArrowPathIcon className="h-4 w-4" />
                     Atualizar
+                  </button>
+
+                  <button
+                    onClick={exportCharges}
+                    disabled={exporting}
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-border-DEFAULT transition-colors disabled:opacity-50 sm:w-auto"
+                  >
+                    <ArrowDownTrayIcon className="h-4 w-4" />
+                    {exporting ? 'Exportando...' : 'Exportar CSV'}
                   </button>
 
                   <button
@@ -1729,6 +1916,8 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                 </div>
               )}
 
+              <WithdrawalTimeline withdrawal={selectedWithdrawal} />
+
               <div className="rounded-md bg-gray-50 p-3">
                 <p className="text-xs text-gray-500 mb-0.5">ID</p>
                 <div className="flex items-center gap-2">
@@ -1742,12 +1931,28 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                 </div>
               </div>
 
-              {selectedWithdrawal.status === 'pending' && (
+              {isApprovable(selectedWithdrawal.status) && (
                 <>
                   <hr className="border-gray-200" />
+                  {selectedWithdrawal.status === 'failed' && (
+                    <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                      Este saque falhou e o valor voltou ao saldo do cliente. Aprovar debita o valor novamente.
+                    </p>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-600 mb-2">
-                      Motivo da rejeição
+                      Comprovante / ID do PIX (aprovação manual)
+                    </label>
+                    <input
+                      value={manualReference}
+                      onChange={(e) => setManualReference(e.target.value)}
+                      placeholder="Ex.: E2E ID do PIX pago fora da plataforma"
+                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-400 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-2">
+                      Observação / motivo da rejeição
                     </label>
                     <textarea
                       value={rejectReason}
@@ -1758,30 +1963,47 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
                     />
                   </div>
 
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                     <button
                       onClick={() => processMutation.mutate({ withdrawalId: selectedWithdrawal.id, action: 'approve' })}
                       disabled={processMutation.isPending}
                       className="flex-1 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-600 disabled:opacity-50 transition-colors"
                     >
-                      {processMutation.isPending ? 'Processando...' : 'Aprovar'}
+                      {processMutation.isPending ? 'Processando...' : 'Aprovar via adquirente'}
                     </button>
                     <button
-                      onClick={() => processMutation.mutate({
-                        withdrawalId: selectedWithdrawal.id,
-                        action: 'reject',
-                        notes: rejectReason,
-                      })}
-                      disabled={processMutation.isPending || !rejectReason.trim()}
-                      className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                      onClick={() => {
+                        if (!window.confirm('Confirma que este PIX já foi pago fora da plataforma? O saque será marcado como concluído sem enviar nada pela adquirente.')) return;
+                        processMutation.mutate({
+                          withdrawalId: selectedWithdrawal.id,
+                          action: 'approve_manual',
+                          reference: manualReference,
+                          notes: rejectReason,
+                        });
+                      }}
+                      disabled={processMutation.isPending}
+                      className="flex-1 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
                     >
-                      {processMutation.isPending ? 'Rejeitando...' : 'Rejeitar'}
+                      Aprovar manual (já pago)
                     </button>
+                    {isRejectable(selectedWithdrawal.status) && (
+                      <button
+                        onClick={() => processMutation.mutate({
+                          withdrawalId: selectedWithdrawal.id,
+                          action: 'reject',
+                          notes: rejectReason,
+                        })}
+                        disabled={processMutation.isPending || !rejectReason.trim()}
+                        className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                      >
+                        {processMutation.isPending ? 'Rejeitando...' : 'Rejeitar'}
+                      </button>
+                    )}
                   </div>
                 </>
               )}
 
-              {selectedWithdrawal.status !== 'pending' && (
+              {!isApprovable(selectedWithdrawal.status) && (
                 <div className="flex justify-end pt-2">
                   <button
                     onClick={() => { setShowDetailModal(false); setSelectedWithdrawal(null); }}
@@ -1806,6 +2028,91 @@ export default function AdminFinance({ mode = 'all' }: AdminFinanceProps) {
         />
       )}
     </AdminPageShell>
+  );
+}
+
+function StatTile({ label, value, hint, alert = false }: { label: string; value: string; hint: string; alert?: boolean }) {
+  return (
+    <div className={`rounded-xl border p-4 ${alert ? 'border-red-500/30 bg-red-500/[0.06]' : 'border-white/[0.06] bg-[#0b0b0d]'}`}>
+      <p className="text-xs font-medium text-gray-400">{label}</p>
+      <p className="mt-1 truncate text-2xl font-bold tabular-nums text-white">{value}</p>
+      <p className="mt-0.5 truncate text-xs text-gray-500">{hint}</p>
+    </div>
+  );
+}
+
+function StatusChips({
+  options,
+  value,
+  summary,
+  onChange,
+}: {
+  options: Array<{ value: string; label: string }>;
+  value: string;
+  summary?: FinanceSummary;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="flex gap-2 overflow-x-auto pb-1">
+      {options.map((option) => {
+        const count = option.value === 'all' ? summary?.total : summary?.by_status?.[option.value]?.count;
+        const active = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={active}
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              active ? 'border-red-500 bg-red-500/10 text-white' : 'border-white/10 text-gray-400 hover:text-white'
+            }`}
+          >
+            {option.label}
+            {count ? <span className="ml-1.5 tabular-nums text-gray-500">{count.toLocaleString('pt-BR')}</span> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function WithdrawalTimeline({ withdrawal }: { withdrawal: Withdrawal }) {
+  const { data: logs = [], isLoading } = useQuery<WithdrawalLog[]>({
+    queryKey: ['admin-withdrawal-logs', withdrawal.id],
+    queryFn: async () => (await api.get(`/admin/withdrawals/${withdrawal.id}/logs?per_page=100`)).data?.data?.events ?? [],
+    retry: false,
+  });
+
+  const closingLabel =
+    { completed: 'Saque concluído', failed: 'Saque falhou', cancelled: 'Saque cancelado', rejected: 'Saque rejeitado' }[withdrawal.status as string]
+    ?? 'Processado';
+
+  const events = [
+    { key: 'requested', label: 'Saque solicitado', at: withdrawal.requested_at, detail: '' },
+    ...logs
+      .filter((log) => log.source === 'audit_log')
+      .map((log, index) => ({
+        key: `${log.event}-${index}`,
+        label: WITHDRAWAL_EVENT_LABELS[log.event] ?? log.event,
+        at: log.created_at,
+        detail: log.metadata?.reason || log.metadata?.reference || '',
+      })),
+    ...(withdrawal.processed_at ? [{ key: 'processed', label: closingLabel, at: withdrawal.processed_at, detail: '' }] : []),
+  ].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+
+  return (
+    <div className="rounded-md bg-gray-50 p-3">
+      <p className="mb-2 text-xs text-gray-500">Linha do tempo{isLoading ? ' (carregando)' : ''}</p>
+      <ol className="space-y-2 border-l border-white/10 pl-3">
+        {events.map((event) => (
+          <li key={event.key} className="relative">
+            <span className="absolute -left-[16.5px] top-1.5 h-1.5 w-1.5 rounded-full bg-red-500" />
+            <p className="text-sm text-gray-900">{event.label}</p>
+            <p className="text-xs text-gray-500">{formatDate(event.at)}{event.detail ? ` · ${event.detail}` : ''}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -1848,10 +2155,9 @@ function ConfigModal({
     holdback_days: config.holdback_days ?? 14,
     holdback_percentage: config.holdback_percentage ?? 0,
   });
-  const [activeTab, setActiveTab] = useState<'fees' | 'limits' | 'controls' | 'settlement' | 'auto' | 'holdback'>('fees');
+  const [activeTab, setActiveTab] = useState<'limits' | 'controls' | 'settlement' | 'auto' | 'holdback'>('limits');
 
   const tabs = [
-    { key: 'fees' as const, label: 'Taxas', icon: BanknotesIcon },
     { key: 'limits' as const, label: 'Limites', icon: ShieldCheckIcon },
     { key: 'controls' as const, label: 'Controle', icon: Cog6ToothIcon },
     { key: 'settlement' as const, label: 'Liquidação', icon: CalendarDaysIcon },
@@ -1866,7 +2172,7 @@ function ConfigModal({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h2 className="text-lg font-bold text-gray-900">Configurações de Saque</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Configure taxas, limites, liquidação e automação</p>
+            <p className="text-xs text-gray-500 mt-0.5">Configure limites, liquidação e automação</p>
           </div>
           <button onClick={onClose} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
             <XMarkIcon className="h-5 w-5" />
@@ -1893,112 +2199,6 @@ function ConfigModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* Taxas */}
-          {activeTab === 'fees' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Taxa de Saque Padrão</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Taxa Percentual (%)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={localConfig.fee_percentage}
-                      onChange={(e) => setLocalConfig({ ...localConfig, fee_percentage: parseFloat(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Aplicada sobre o valor do saque</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Taxa Fixa (centavos)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={localConfig.fee_fixed}
-                      onChange={(e) => setLocalConfig({ ...localConfig, fee_fixed: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Ex: 200 = R$ 2,00</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">Taxa por Método</h3>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Taxa PIX (centavos)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={localConfig.standard_withdrawal_fee_pix}
-                      onChange={(e) => setLocalConfig({ ...localConfig, standard_withdrawal_fee_pix: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Taxa adicional para saque via PIX</p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Taxa TED (centavos)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={localConfig.standard_withdrawal_fee_bank}
-                      onChange={(e) => setLocalConfig({ ...localConfig, standard_withdrawal_fee_bank: parseInt(e.target.value) || 0 })}
-                      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Taxa adicional para saque via TED</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 pt-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-gray-900">Saque Instantâneo</h3>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={localConfig.instant_withdrawal_enabled}
-                      onChange={(e) => setLocalConfig({ ...localConfig, instant_withdrawal_enabled: e.target.checked })}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-gray-300 peer-focus:ring-2 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600" />
-                  </label>
-                </div>
-                {localConfig.instant_withdrawal_enabled && (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Tipo da Taxa</label>
-                      <select
-                        value={localConfig.instant_withdrawal_fee_type}
-                        onChange={(e) => setLocalConfig({ ...localConfig, instant_withdrawal_fee_type: e.target.value as 'percentage' | 'fixed' })}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                      >
-                        <option value="percentage">Percentual (%)</option>
-                        <option value="fixed">Valor Fixo (centavos)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Valor da Taxa {localConfig.instant_withdrawal_fee_type === 'percentage' ? '(%)' : '(centavos)'}
-                      </label>
-                      <input
-                        type="number"
-                        step={localConfig.instant_withdrawal_fee_type === 'percentage' ? '0.01' : '1'}
-                        min="0"
-                        value={localConfig.instant_withdrawal_fee_value}
-                        onChange={(e) => setLocalConfig({ ...localConfig, instant_withdrawal_fee_value: parseFloat(e.target.value) || 0 })}
-                        className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {/* Limites */}
           {activeTab === 'limits' && (
             <div className="space-y-6">
@@ -2323,7 +2523,7 @@ function ConfigModal({
             Cancelar
           </button>
           <button
-            onClick={() => onSave(localConfig)}
+            onClick={() => onSave(Object.fromEntries(Object.entries(localConfig).filter(([key]) => !FEE_CONFIG_KEYS.includes(key))))}
             disabled={isSaving}
             className="flex-1 rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 transition-colors"
           >

@@ -50,9 +50,20 @@ class Product extends Model
         'images' => 'array',
         'metadata' => 'array',
         'is_active' => 'boolean',
+        'admin_blocked_at' => 'datetime',
     ];
 
     protected $appends = ['status'];
+
+    protected static function booted(): void
+    {
+        // Produto bloqueado pelo admin não volta a vender por edição do seller, API ou automação
+        static::saving(function (Product $product) {
+            if ($product->admin_blocked_at) {
+                $product->is_active = false;
+            }
+        });
+    }
 
     public function getStatusAttribute(): string
     {

@@ -54,6 +54,7 @@ class Charge extends Model
         'description',
         'fee_amount',
         'net_amount',
+        'acquirer_fee_amount',
     ];
 
     /**
@@ -66,6 +67,7 @@ class Charge extends Model
         'refunded_amount' => 'integer',
         'fee_amount' => 'integer',
         'net_amount' => 'integer',
+        'acquirer_fee_amount' => 'integer',
         'installments' => 'integer',
         'customer' => 'array',
         'billing' => 'array',

@@ -56,6 +56,8 @@ import {
   ArrowDownIcon,
 } from '@heroicons/react/24/solid';
 import {
+  BanknotesIcon,
+  CheckCircleIcon,
   CurrencyDollarIcon,
   ShoppingCartIcon,
   TicketIcon,
@@ -160,6 +162,60 @@ const periodOptions: { key: DashboardPeriod; label: string }[] = [
   { key: '1y', label: '1 ano' },
   { key: 'custom', label: 'Personalizado' },
 ];
+
+function DashboardStatCard({
+  label,
+  value,
+  Icon,
+  loading = false,
+  featured = false,
+  onClick,
+}: {
+  label: string;
+  value?: string;
+  Icon: React.ComponentType<{ className?: string }>;
+  loading?: boolean;
+  featured?: boolean;
+  onClick?: () => void;
+}) {
+  const className = `group relative w-full overflow-hidden rounded-2xl border p-5 text-left transition-all duration-200 hover:-translate-y-0.5 ${
+    featured
+      ? 'border-red-400/40 bg-gradient-to-br from-red-600 via-red-800 to-[#3a0a0d]'
+      : 'border-red-500/15 bg-gradient-to-br from-[#1c0c0f] via-[#100c0e] to-[#0b0b0d] hover:border-red-500/45'
+  }`;
+
+  const content = (
+    <>
+      <span className={`absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent ${featured ? 'via-white/50' : 'via-red-500/60'}`} />
+      <Icon className={`pointer-events-none absolute -bottom-5 -right-4 h-28 w-28 transition-transform duration-300 group-hover:scale-110 ${featured ? 'text-white/10' : 'text-red-500/[0.06]'}`} />
+      <div className="relative flex items-center gap-4">
+        <div
+          className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl ${
+            featured
+              ? 'bg-white/15 ring-1 ring-white/25'
+              : 'bg-gradient-to-br from-red-500 to-red-800'
+          }`}
+        >
+          <Icon className="h-6 w-6 text-white" />
+        </div>
+        <div className="min-w-0">
+          <p className={`text-[11px] font-semibold uppercase tracking-wider ${featured ? 'text-red-100/80' : 'text-gray-400'}`}>{label}</p>
+          {loading ? (
+            <div className="mt-1 h-7 w-24 animate-pulse rounded-md bg-white/10" />
+          ) : (
+            <p className="mt-0.5 truncate text-2xl font-extrabold tracking-tight text-white">{value}</p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  return onClick ? (
+    <button type="button" onClick={onClick} className={className}>{content}</button>
+  ) : (
+    <div className={className}>{content}</div>
+  );
+}
 
 function DashboardMetricCardSkeleton() {
   return (
@@ -604,6 +660,10 @@ export default function DashboardPage() {
     approval_rate_change: 0,
     conversion_rate: 0,
     conversion_rate_change: 0,
+    total_charges: 0,
+    approved_charges: 0,
+    pending_charges: 0,
+    rejected_charges: 0,
   };
 
   const goalMilestoneStorageKey = useMemo(
@@ -762,14 +822,20 @@ export default function DashboardPage() {
   // ═══ MODERN THEME LAYOUT ═══
   if (themeVariant === 'modern') {
     const approvalRate = summary.approval_rate || 0;
-    const pendingRate = Math.max(0, 100 - approvalRate - (summary.chargeback_rate || 2.2));
-    const rejectedRate = Math.max(0, 100 - approvalRate - pendingRate);
     const totalSales = summary.total_sales || 0;
+    const totalCharges = summary.total_charges || 0;
+    const approvedCharges = summary.approved_charges || 0;
+    const pendingCharges = summary.pending_charges || 0;
+    const rejectedCharges = summary.rejected_charges || 0;
+    // Canceladas, expiradas, estornadas e contestadas: entram no total, mas não nas outras fatias
+    const otherCharges = Math.max(0, totalCharges - approvedCharges - pendingCharges - rejectedCharges);
+    const chargePct = (count: number) => (totalCharges > 0 ? (count / totalCharges) * 100 : 0);
 
     const donutSegments = [
-      { label: 'Aprovadas', pct: approvalRate, color: '#ef4444' },
-      { label: 'Pendentes', pct: pendingRate > 0 ? pendingRate : 4.1, color: '#b91c1c' },
-      { label: 'Recusadas', pct: rejectedRate > 0 ? rejectedRate : 2.2, color: '#7f1d1d' },
+      { label: 'Aprovadas', pct: chargePct(approvedCharges), color: '#ef4444' },
+      { label: 'Pendentes', pct: chargePct(pendingCharges), color: '#b91c1c' },
+      { label: 'Recusadas', pct: chargePct(rejectedCharges), color: '#7f1d1d' },
+      ...(otherCharges > 0 ? [{ label: 'Outras', pct: chargePct(otherCharges), color: '#52525b' }] : []),
     ];
 
     const donutRadius = 90;
@@ -796,46 +862,21 @@ export default function DashboardPage() {
             Array.from({ length: 4 }).map((_, i) => <DashboardMetricCardSkeleton key={i} />)
           ) : (
             <>
-              <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-red-600/15 flex items-center justify-center flex-shrink-0">
-                  <CurrencyDollarIcon className="h-6 w-6 text-red-500" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Volume Processado</p>
-                  <p className="text-xl font-bold text-white mt-0.5">{formatCurrency(summary.total_revenue || 0)}</p>
-                </div>
-              </div>
-              <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
-                  <ShoppingCartIcon className="h-6 w-6 text-red-500" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Transações</p>
-                  <p className="text-xl font-bold text-white mt-0.5">{(totalSales).toLocaleString('pt-BR')}</p>
-                </div>
-              </div>
-              <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4 flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
-                  <svg className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Aprovação</p>
-                  <p className="text-xl font-bold text-white mt-0.5">{approvalRate.toFixed(1)}%</p>
-                </div>
-              </div>
-              <button
-                type="button"
+              <DashboardStatCard
+                featured
+                label="Disponível"
+                Icon={WalletIcon}
+                loading={showWalletSkeleton}
+                value={showBalance ? formatCurrency(walletSummary?.available_balance || 0) : '••••••'}
+              />
+              <DashboardStatCard label="Transações" Icon={ShoppingCartIcon} value={totalSales.toLocaleString('pt-BR')} />
+              <DashboardStatCard label="Aprovação" Icon={CheckCircleIcon} value={`${approvalRate.toFixed(1)}%`} />
+              <DashboardStatCard
+                label="MED"
+                Icon={ExclamationTriangleIcon}
+                value={String(dashboardResponse?.chargeback_alerts || 0)}
                 onClick={() => navigate('/chargebacks')}
-                className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4 flex items-center gap-4 text-left transition-colors hover:border-red-500/40"
-              >
-                <div className="h-12 w-12 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
-                  <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">MED</p>
-                  <p className="text-xl font-bold text-white mt-0.5">{dashboardResponse?.chargeback_alerts || 0}</p>
-                </div>
-              </button>
+              />
             </>
           )}
         </div>
@@ -910,6 +951,7 @@ export default function DashboardPage() {
                     {/* Track */}
                     <circle cx="110" cy="110" r={donutRadius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={donutStroke} />
                     {donutSegments.map((seg, i) => {
+                      if (seg.pct <= 0) return null;
                       const full = (seg.pct / 100) * donutCircumference;
                       const gapPx = seg.pct > 3 ? 7 : 0; // gap between visible segments
                       const dash = Math.max(0, full - gapPx);
@@ -932,7 +974,7 @@ export default function DashboardPage() {
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-[11px] uppercase tracking-wider text-gray-500">Total</span>
-                    <span className="text-3xl font-bold text-white">{totalSales.toLocaleString('pt-BR')}</span>
+                    <span className="text-3xl font-bold text-white">{totalCharges.toLocaleString('pt-BR')}</span>
                     <span className="text-[10px] text-gray-500 mt-0.5">transações</span>
                   </div>
                 </div>
@@ -954,50 +996,50 @@ export default function DashboardPage() {
 
         {/* Wallet */}
         {showWalletSkeleton ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {[
-              { label: 'Disponível', Icon: WalletIcon },
+              { label: 'Volume Processado', Icon: CurrencyDollarIcon },
               { label: 'Pendente', Icon: ChartBarIcon },
-              { label: 'Sacado', Icon: CurrencyDollarIcon },
+              { label: 'Sacado', Icon: BanknotesIcon },
             ].map(({ label, Icon }) => (
-              <div key={label} className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon className="h-4 w-4 text-red-500/60" />
-                  <span className="text-[11px] text-gray-500 uppercase tracking-wider">{label}</span>
+              <div key={label} className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                  <Icon className="h-6 w-6 text-red-500/60" />
                 </div>
-                <div className="h-6 w-24 rounded-md bg-white/[0.06] animate-pulse" />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+                  <div className="h-6 w-24 mt-1 rounded-md bg-white/[0.06] animate-pulse" />
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <WalletIcon className="h-4 w-4 text-red-500" />
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider">Disponível</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { label: 'Volume Processado', Icon: CurrencyDollarIcon, value: formatCurrency(summary.total_revenue || 0), loading: showDashboardSkeleton },
+              { label: 'Pendente', Icon: ChartBarIcon, value: showBalance ? formatCurrency(walletSummary?.pending_balance || 0) : '••••••', loading: false },
+              { label: 'Sacado', Icon: BanknotesIcon, value: showBalance ? formatCurrency(walletSummary?.total_withdrawn || 0) : '••••••', loading: false },
+            ].map(({ label, Icon, value, loading }) => (
+              <div key={label} className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4 flex items-center gap-4">
+                <div className="h-12 w-12 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                  <Icon className="h-6 w-6 text-red-500" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+                  {loading ? (
+                    <div className="h-6 w-24 mt-1 rounded-md bg-white/[0.06] animate-pulse" />
+                  ) : (
+                    <p className="text-xl font-bold text-white mt-0.5 truncate">{value}</p>
+                  )}
+                </div>
               </div>
-              <p className="text-lg font-bold text-red-400">{showBalance ? formatCurrency(walletSummary?.available_balance || 0) : '••••••'}</p>
-            </div>
-            <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <ChartBarIcon className="h-4 w-4 text-red-500" />
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider">Pendente</span>
-              </div>
-              <p className="text-lg font-bold text-red-400">{showBalance ? formatCurrency(walletSummary?.pending_balance || 0) : '••••••'}</p>
-            </div>
-            <div className="rounded-xl bg-[#0b0b0d] border border-white/[0.06] p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <CurrencyDollarIcon className="h-4 w-4 text-red-500" />
-                <span className="text-[11px] text-gray-400 uppercase tracking-wider">Sacado</span>
-              </div>
-              <p className="text-lg font-bold text-red-400">{showBalance ? formatCurrency(walletSummary?.total_withdrawn || 0) : '••••••'}</p>
-            </div>
+            ))}
           </div>
         )}
 
         {/* Footer */}
-        <footer className="border-t border-gray-800 mt-4 pt-4">
-          <div className="flex flex-col gap-3 text-xs text-gray-500 md:flex-row md:items-center md:justify-between">
+        <footer className="border-t border-white/[0.06] mt-4 pt-4 pb-2">
+          <div className="flex flex-col gap-3 text-xs text-gray-400 md:flex-row md:items-center md:justify-between">
             <p>{platformName} Intermediadora de Pagamentos</p>
             <nav aria-label="Links rápidos" className="flex flex-wrap items-center gap-x-4 gap-y-2">
               {[
@@ -1011,7 +1053,6 @@ export default function DashboardPage() {
                   {link.label}
                 </Link>
               ))}
-              <span className="text-gray-600">{platformName} © 2026</span>
             </nav>
           </div>
         </footer>
@@ -1415,7 +1456,6 @@ export default function DashboardPage() {
             <a href="/privacy" className="hover:text-tx-primary transition-colors">
               Política de Privacidade
             </a>
-            <span>{platformName} © 2026</span>
           </div>
         </div>
       </footer>

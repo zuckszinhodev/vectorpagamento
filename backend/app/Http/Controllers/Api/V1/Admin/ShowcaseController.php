@@ -254,12 +254,13 @@ class ShowcaseController extends Controller
 
             DB::beginTransaction();
 
-            $product->update([
+            // Campos da vitrine não são preenchíveis pelo seller: forceFill é o que realmente grava
+            $product->forceFill([
                 'showcase_status' => 'approved',
                 'showcase_visibility' => 'public',
                 'showcase_approved_at' => now(),
                 'showcase_approved_by' => $request->user()->id,
-            ]);
+            ])->save();
 
             DB::commit();
 
@@ -316,13 +317,13 @@ class ShowcaseController extends Controller
 
             DB::beginTransaction();
 
-            $product->update([
+            $product->forceFill([
                 'showcase_status' => 'rejected',
                 'showcase_visibility' => 'private',
                 'showcase_rejection_reason' => $request->input('reason'),
                 'showcase_reviewed_at' => now(),
                 'showcase_reviewed_by' => $request->user()->id,
-            ]);
+            ])->save();
 
             DB::commit();
 

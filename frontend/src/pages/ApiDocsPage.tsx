@@ -1,8 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useThemeStore } from '@/stores/themeStore';
 import {
   ArrowLeftIcon,
+  ArrowRightIcon,
+  Bars3Icon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
   DocumentTextIcon,
   KeyIcon,
   CodeBracketIcon,
@@ -835,9 +839,9 @@ interface TestResult {
   durationMs: number;
 }
 
-function EndpointCard({ ep, apiKey, onTest, active }: { ep: Endpoint; apiKey: string; onTest: (ep: Endpoint) => void; active: boolean }) {
+function EndpointCard({ id, ep, apiKey, onTest, active }: { id: string; ep: Endpoint; apiKey: string; onTest: (ep: Endpoint) => void; active: boolean }) {
   return (
-    <div className={`mt-6 rounded-xl border bg-surface-card p-5 sm:p-6 transition-colors ${active ? 'border-accent-primary' : 'border-border-DEFAULT'}`}>
+    <div id={id} className={`mt-6 scroll-mt-24 rounded-xl border bg-surface-card p-5 sm:p-6 transition-colors ${active ? 'border-accent-primary' : 'border-border-DEFAULT'}`}>
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3 flex-wrap">
           <MethodBadge method={ep.method} />
@@ -1124,18 +1128,37 @@ function Console({
 // ─────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────
-const NAV = [
-  { id: 'introduction', label: 'Introdução', icon: DocumentTextIcon },
-  { id: 'authentication', label: 'Autenticação', icon: KeyIcon },
-  { id: 'rate-limits', label: 'Rate Limits & Erros', icon: ShieldCheckIcon },
-  ...CATALOG.map((s) => ({ id: s.id, label: s.label, icon: s.icon })),
-  { id: 'webhooks', label: 'Webhooks', icon: CodeBracketIcon },
+const NAV_GROUPS = [
+  {
+    label: 'Comece por aqui',
+    items: [
+      { id: 'introduction', label: 'Introdução', icon: DocumentTextIcon },
+      { id: 'authentication', label: 'Autenticação', icon: KeyIcon },
+      { id: 'rate-limits', label: 'Rate Limits & Erros', icon: ShieldCheckIcon },
+    ],
+  },
+  {
+    label: 'Referência da API',
+    items: CATALOG.map((s) => ({ id: s.id, label: s.label, icon: s.icon })),
+  },
+  {
+    label: 'Eventos',
+    items: [{ id: 'webhooks', label: 'Webhooks', icon: CodeBracketIcon }],
+  },
 ];
+const NAV = NAV_GROUPS.flatMap((group) => group.items);
+
+const endpointId = (sectionId: string, index: number) => `${sectionId}-${index}`;
+const endpointMatches = (ep: Endpoint, query: string) =>
+  `${ep.method} ${ep.path} ${ep.title}`.toLowerCase().includes(query);
 
 export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
   const platformName = useThemeStore((s) => s.platformName);
   const [activeSection, setActiveSection] = useState('introduction');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+  const query = search.trim().toLowerCase();
   const displayKey = apiKey || 'sk_live_xxxxxxxxxxxx';
   const { copied: docsCopied, copy: copyDocs } = useCopy();
   const markdown = useMemo(() => buildMarkdown(platformName, displayKey), [platformName, displayKey]);
@@ -1157,99 +1180,174 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
         const el = document.getElementById(id);
         return { id, top: el?.getBoundingClientRect().top ?? Infinity };
       });
-      const current = offsets.find((o) => o.top >= -100) || offsets[offsets.length - 1];
+      const current = [...offsets].reverse().find((o) => o.top <= 120) || offsets[0];
       if (current) setActiveSection(current.id);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const handleShortcut = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
+
+  const navGroups = useMemo(() => {
+    if (!query) return NAV_GROUPS;
+    return NAV_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter(({ id, label }) => {
+        const section = CATALOG.find((s) => s.id === id);
+        return label.toLowerCase().includes(query) || section?.endpoints.some((ep) => endpointMatches(ep, query));
+      }),
+    })).filter((group) => group.items.length > 0);
+  }, [query]);
+
+  const searchField = (ref?: React.RefObject<HTMLInputElement>) => (
+    <div className="relative">
+      <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tx-muted" aria-hidden="true" />
+      <input
+        ref={ref}
+        type="search"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Buscar na documentação"
+        aria-label="Buscar na documentação"
+        className="h-9 w-full rounded-lg border border-border-DEFAULT bg-surface-card pl-9 pr-14 text-sm text-tx-primary placeholder:text-tx-muted focus:border-accent-primary focus:outline-none"
+      />
+      <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-tx-muted">Ctrl K</kbd>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-surface-page">
-      {/* Hero */}
-      <div className="bg-gray-900 border-b border-border-DEFAULT">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <Link
-            to="/dashboard"
-            className="mb-5 inline-flex items-center gap-2 rounded-lg border border-gray-700 px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:border-gray-500 hover:bg-gray-800 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-          >
-            <ArrowLeftIcon className="h-4 w-4" aria-hidden="true" />
-            Voltar para o dashboard
-          </Link>
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex min-w-0 items-center gap-4 sm:gap-6">
-              <img
-                src="/img/gorillapay-logo.webp"
-                alt="GorillaPay"
-                width={1024}
-                height={650}
-                className="h-auto w-20 shrink-0 object-contain sm:w-32"
-              />
-              <div className="min-w-0">
-              <h1 className="text-3xl font-bold text-white">Documentação da API {platformName}</h1>
-              <p className="mt-2 max-w-2xl text-gray-400">
-                Integre a {platformName} na sua aplicação com nossa API REST. Cobranças, pagamentos, produtos, checkouts, afiliados, saques e relatórios.
-              </p>
-              <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-2 bg-gray-800 rounded-lg px-4 py-2 border border-gray-700">
-                <span className="text-gray-400 text-sm">Base URL:</span>
-                <code className="text-accent-primary text-sm font-mono break-all">{EXTERNAL_API_BASE_URL}</code>
-              </div>
-              </div>
-            </div>
-            <button
-              onClick={() => copyDocs(markdown)}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent-primary px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover"
-              title="Copia toda a documentação em Markdown para colar em uma IA (ChatGPT, Claude, etc.)"
-            >
-              {docsCopied ? 'Documentação copiada!' : 'Copiar documentação para IA'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex gap-8">
-          {/* Mobile sidebar toggle */}
+      {/* Top bar */}
+      <header className="sticky top-0 z-40 border-b border-border-DEFAULT bg-surface-page/90 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-3 px-4 sm:gap-6 sm:px-6 lg:px-8">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden fixed bottom-4 right-4 z-50 bg-accent-primary text-white p-3 rounded-full shadow-lg"
-            aria-label="Toggle navigation"
+            className="rounded-lg p-1.5 text-tx-secondary hover:text-tx-primary lg:hidden"
+            aria-label={sidebarOpen ? 'Fechar navegação' : 'Abrir navegação'}
           >
-            <DocumentTextIcon className="w-6 h-6" />
+            {sidebarOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}
           </button>
+          <a href="#introduction" className="flex shrink-0 items-center gap-3">
+            <img
+              src="/img/gorillapay-logo.webp"
+              alt="GorillaPay"
+              width={1024}
+              height={650}
+              className="h-9 w-auto object-contain"
+            />
+            <span className="hidden text-sm font-semibold text-tx-primary sm:inline">Documentação</span>
+          </a>
+          <div className="hidden w-full max-w-sm md:block">{searchField(searchRef)}</div>
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <button
+              onClick={() => copyDocs(markdown)}
+              className="inline-flex items-center gap-2 rounded-lg border border-border-DEFAULT px-3 py-2 text-sm font-medium text-tx-secondary transition-colors hover:border-accent-primary hover:text-tx-primary"
+              title="Copia toda a documentação em Markdown para colar em uma IA (ChatGPT, Claude, etc.)"
+              aria-label="Copiar documentação para IA"
+            >
+              {docsCopied ? <CheckIcon className="h-4 w-4 text-emerald-400" /> : <SparklesIcon className="h-4 w-4" />}
+              <span className="hidden xl:inline">{docsCopied ? 'Documentação copiada!' : 'Copiar documentação para IA'}</span>
+            </button>
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+              aria-label="Voltar para o dashboard"
+            >
+              <ArrowLeftIcon className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Voltar para o dashboard</span>
+            </Link>
+          </div>
+        </div>
+      </header>
 
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex gap-8">
           {/* Sidebar */}
           <aside
-            className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky top-0 lg:top-8 left-0 z-40 lg:z-0 w-64 h-screen lg:h-auto bg-surface-card lg:bg-transparent border-r lg:border-r-0 border-border-DEFAULT p-4 lg:p-0 transition-transform lg:transition-none overflow-y-auto lg:self-start lg:shrink-0`}
+            className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky top-16 left-0 z-30 lg:z-0 w-72 lg:w-64 h-[calc(100vh-4rem)] bg-surface-page border-r border-border-DEFAULT p-4 lg:pl-0 lg:py-8 transition-transform lg:transition-none overflow-y-auto lg:self-start lg:shrink-0`}
           >
-            <nav className="space-y-1">
-              {NAV.map(({ id, label, icon: Icon }) => (
-                <a
-                  key={id}
-                  href={`#${id}`}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeSection === id
-                      ? 'bg-accent-primary/10 text-accent-primary border border-accent-primary/20'
-                      : 'text-tx-secondary hover:text-tx-primary hover:bg-surface-card'
-                  }`}
-                >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  {label}
-                </a>
+            <div className="mb-5 md:hidden">{searchField()}</div>
+            <nav className="space-y-6" aria-label="Seções da documentação">
+              {navGroups.map((group) => (
+                <div key={group.label}>
+                  <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-tx-muted">{group.label}</p>
+                  <div className="space-y-0.5">
+                    {group.items.map(({ id, label, icon: Icon }) => {
+                      const section = CATALOG.find((s) => s.id === id);
+                      const isActive = activeSection === id;
+                      const endpoints = (section?.endpoints ?? [])
+                        .map((ep, index) => ({ ep, index }))
+                        .filter(({ ep }) => !query || endpointMatches(ep, query));
+                      return (
+                        <div key={id}>
+                          <a
+                            href={`#${id}`}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                              isActive
+                                ? 'bg-accent-primary/10 text-accent-primary'
+                                : 'text-tx-secondary hover:bg-surface-card hover:text-tx-primary'
+                            }`}
+                          >
+                            <Icon className="h-5 w-5 shrink-0" />
+                            {label}
+                          </a>
+                          {(isActive || query) && endpoints.length > 0 && (
+                            <div className="my-1 ml-5 space-y-0.5 border-l border-border-DEFAULT pl-3">
+                              {endpoints.map(({ ep, index }) => (
+                                <a
+                                  key={index}
+                                  href={`#${endpointId(id, index)}`}
+                                  onClick={() => setSidebarOpen(false)}
+                                  className="block truncate rounded px-2 py-1 text-xs text-tx-muted transition-colors hover:text-tx-primary"
+                                >
+                                  {ep.title}
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
+              {navGroups.length === 0 && (
+                <p className="px-3 text-sm text-tx-muted">Nada encontrado para “{search.trim()}”.</p>
+              )}
             </nav>
           </aside>
 
           {/* Overlay for mobile sidebar */}
           {sidebarOpen && (
-            <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+            <div className="fixed inset-x-0 bottom-0 top-16 bg-black/50 z-20 lg:hidden" onClick={() => setSidebarOpen(false)} />
           )}
 
           {/* Main content */}
-          <main className="flex-1 min-w-0 space-y-16">
+          <main className="flex-1 min-w-0 space-y-16 py-8">
             {/* INTRODUCTION */}
-            <section id="introduction">
+            <section id="introduction" className="scroll-mt-24">
+              <div className="mb-10">
+                <h1 className="text-3xl font-bold text-tx-primary sm:text-4xl">Documentação da API {platformName}</h1>
+                <p className="mt-3 max-w-2xl text-tx-secondary">
+                  Integre a {platformName} na sua aplicação com nossa API REST. Cobranças, pagamentos, produtos, checkouts, afiliados, saques e relatórios.
+                </p>
+                <div className="mt-5 inline-flex max-w-full flex-wrap items-center gap-2 rounded-lg border border-border-DEFAULT bg-surface-card px-4 py-2">
+                  <span className="text-sm text-tx-muted">Base URL:</span>
+                  <code className="break-all font-mono text-sm text-accent-primary">{EXTERNAL_API_BASE_URL}</code>
+                </div>
+              </div>
+
               <h2 className="text-2xl font-bold text-tx-primary">Introdução</h2>
               <div className="mt-4 bg-surface-card rounded-xl border border-border-DEFAULT p-6 space-y-4">
                 <p className="text-tx-secondary">
@@ -1271,10 +1369,27 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
                   </div>
                 </div>
               </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {CATALOG.map(({ id, label, intro, icon: Icon }) => (
+                  <a
+                    key={id}
+                    href={`#${id}`}
+                    className="group rounded-xl border border-border-DEFAULT bg-surface-card p-4 transition-colors hover:border-accent-primary"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon className="h-5 w-5 shrink-0 text-accent-primary" />
+                      <span className="text-sm font-semibold text-tx-primary">{label}</span>
+                      <ArrowRightIcon className="ml-auto h-4 w-4 shrink-0 text-tx-muted transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                    {intro && <p className="mt-2 text-xs text-tx-secondary">{intro}</p>}
+                  </a>
+                ))}
+              </div>
             </section>
 
             {/* AUTHENTICATION */}
-            <section id="authentication">
+            <section id="authentication" className="scroll-mt-24">
               <h2 className="text-2xl font-bold text-tx-primary">Autenticação</h2>
               <div className="mt-4 bg-surface-card rounded-xl border border-border-DEFAULT p-6 space-y-4">
                 <p className="text-tx-secondary">
@@ -1300,7 +1415,7 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
             </section>
 
             {/* RATE LIMITS & ERRORS */}
-            <section id="rate-limits">
+            <section id="rate-limits" className="scroll-mt-24">
               <h2 className="text-2xl font-bold text-tx-primary">Rate Limits & Erros</h2>
               <div className="mt-4 bg-surface-card rounded-xl border border-border-DEFAULT p-6 space-y-6">
                 <div>
@@ -1357,12 +1472,13 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
 
             {/* DYNAMIC SECTIONS */}
             {CATALOG.map((section) => (
-              <section id={section.id} key={section.id}>
+              <section id={section.id} key={section.id} className="scroll-mt-24">
                 <h2 className="text-2xl font-bold text-tx-primary">{section.label}</h2>
                 {section.intro && <p className="mt-2 text-tx-secondary">{section.intro}</p>}
-                {section.endpoints.map((ep) => (
+                {section.endpoints.map((ep, index) => (
                   <EndpointCard
                     key={`${ep.method}-${ep.path}-${ep.title}`}
+                    id={endpointId(section.id, index)}
                     ep={ep}
                     apiKey={displayKey}
                     onTest={handleTest}
@@ -1373,7 +1489,7 @@ export default function ApiDocsPage({ apiKey }: { apiKey?: string | null }) {
             ))}
 
             {/* WEBHOOKS */}
-            <section id="webhooks">
+            <section id="webhooks" className="scroll-mt-24">
               <h2 className="text-2xl font-bold text-tx-primary">Webhooks</h2>
               <div className="mt-6 bg-surface-card rounded-xl border border-border-DEFAULT p-6 space-y-6">
                 <div>
@@ -1485,8 +1601,8 @@ app.post('/webhooks/vector', (req, res) => {
           </main>
 
           {/* Live console — sticky right column on desktop */}
-          <aside className="hidden xl:block w-[420px] shrink-0">
-            <div className="sticky top-8 h-[calc(100vh-4rem)] overflow-hidden rounded-xl border border-white/10 shadow-lg">
+          <aside className="hidden xl:block w-[420px] shrink-0 py-8">
+            <div className="sticky top-24 h-[calc(100vh-7rem)] overflow-hidden rounded-xl border border-white/10 shadow-lg">
               <Console
                 ep={activeEp}
                 token={token}

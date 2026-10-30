@@ -46,8 +46,7 @@ const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const KYCPage = lazy(() => import('@/pages/KYCPage'));
 
 // Admin Pages (lazy)
-const AdminDashboard = lazy(() => import('@/pages/admin/AdminDashboard'));
-const AdminControlTower = lazy(() => import('@/pages/admin/AdminControlTower'));
+const AdminCommandCenter = lazy(() => import('@/pages/admin/AdminCommandCenter'));
 const AdminCustomers = lazy(() => import('@/pages/admin/AdminCustomers'));
 const AdminCustomerDetail = lazy(() => import('@/pages/admin/AdminCustomerDetail'));
 const AdminGatewaySettings = lazy(() => import('@/pages/admin/AdminGatewaySettings'));
@@ -55,8 +54,10 @@ const AdminKYC = lazy(() => import('@/pages/admin/AdminKYC'));
 const AdminFinance = lazy(() => import('@/pages/admin/AdminFinance'));
 const AdminAcquirers = lazy(() => import('@/pages/admin/AdminAcquirers'));
 const AdminAcquirerRouting = lazy(() => import('@/pages/admin/AdminAcquirerRouting'));
-const AdminMonitoring = lazy(() => import('@/pages/admin/AdminMonitoring'));
 const AdminChargebacks = lazy(() => import('@/pages/admin/AdminChargebacks'));
+const AdminRisk = lazy(() => import('@/pages/admin/AdminRisk'));
+const AdminFees = lazy(() => import('@/pages/admin/AdminFees'));
+const AdminProducts = lazy(() => import('@/pages/admin/AdminProducts'));
 const AdminSupport = lazy(() => import('@/pages/admin/AdminSupport'));
 const LandingPagesPage = lazy(() => import('@/pages/LandingPagesPage'));
 const LandingPageEditorPage = lazy(() => import('@/pages/LandingPageEditorPage'));
@@ -286,6 +287,9 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     if (clean.startsWith('kyc')) return 'admin.kyc.review';
     if (clean.startsWith('acquirers')) return 'admin.acquirers.manage';
     if (clean.startsWith('chargebacks')) return 'admin.chargebacks.manage';
+    if (clean.startsWith('risk')) return 'admin.fraud.manage';
+    if (clean.startsWith('fees')) return 'admin.config.manage';
+    if (clean.startsWith('products')) return 'admin.showcase.manage';
     if (clean.startsWith('approvals')) return 'admin.approvals.review';
     if (clean.startsWith('monitoring')) return 'admin.security.monitor';
     if (clean.startsWith('support')) return 'admin.customers.manage';
@@ -425,7 +429,7 @@ function App() {
 
   useLayoutEffect(() => {
     const isAdminRoute = location.pathname.startsWith('/admin');
-    const effectiveTheme = isAdminRoute ? 'light' : (themeVariant === 'modern' ? 'dark' : theme);
+    const effectiveTheme = isAdminRoute ? 'dark' : (themeVariant === 'modern' ? 'dark' : theme);
 
     document.documentElement.classList.toggle('app-admin-route', isAdminRoute);
     document.documentElement.classList.toggle('app-dark-forced', false);
@@ -510,8 +514,8 @@ function App() {
           </AdminRoute>
         }
       >
-        <Route index element={<AdminDashboard />} />
-        <Route path="control-tower" element={<AdminControlTower />} />
+        <Route index element={<AdminCommandCenter />} />
+        <Route path="control-tower" element={<Navigate to="/admin?tab=operacao" replace />} />
         <Route path="customers" element={<AdminCustomers />} />
         <Route path="customers/:customerId" element={<AdminCustomerDetail />} />
         <Route path="sellers" element={<AdminCustomers />} />
@@ -523,13 +527,16 @@ function App() {
         <Route path="acquirers" element={<AdminAcquirers />} />
         <Route path="acquirers/routing" element={<AdminAcquirerRouting />} />
         <Route path="chargebacks" element={<AdminChargebacks />} />
+        <Route path="risk" element={<AdminRisk />} />
+        <Route path="fees" element={<AdminFees />} />
+        <Route path="products" element={<AdminProducts />} />
         <Route path="support" element={<AdminSupport />} />
         <Route path="approvals" element={<AdminFinance mode="transactions" />} />
         <Route path="security" element={<Navigate to="/admin" replace />} />
         <Route path="settings" element={<AdminGatewaySettings />} />
         <Route path="api" element={<Navigate to="/admin" replace />} />
         <Route path="branding" element={<Navigate to="/admin" replace />} />
-        <Route path="monitoring" element={<AdminMonitoring />} />
+        <Route path="monitoring" element={<Navigate to="/admin?tab=seguranca" replace />} />
       </Route>
 
       {/* Checkout Builder - Full screen */}

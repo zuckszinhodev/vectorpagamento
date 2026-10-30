@@ -1,7 +1,6 @@
-import { type ComponentType, useEffect, useState } from 'react';
+import { type ComponentType, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { useThemeStore } from '@/stores/themeStore';
 import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
 import {
   CreditCardIcon,
@@ -43,12 +42,6 @@ interface Acquirer {
   config?: Record<string, unknown>;
 }
 
-interface PlatformSettingsResponse {
-  payments?: {
-    default_gateway_fee?: number;
-  };
-}
-
 interface RefreshNominalResult {
   success: boolean;
   id?: string;
@@ -73,11 +66,9 @@ interface RefreshAllNominalsResponse {
 
 
 export default function AdminAcquirers() {
-  const platformName = useThemeStore((s) => s.platformName);
   const queryClient = useQueryClient();
   const [selectedAcquirer, setSelectedAcquirer] = useState<Acquirer | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [globalGatewayFee, setGlobalGatewayFee] = useState('0');
   const [draggedAcquirerId, setDraggedAcquirerId] = useState<string | null>(null);
   const [showAllModal, setShowAllModal] = useState(false);
 
@@ -87,34 +78,6 @@ export default function AdminAcquirers() {
     queryFn: async () => {
       const response = await api.get('/admin/acquirers');
       return response.data?.data || [];
-    },
-  });
-
-  const { data: platformSettings } = useQuery<PlatformSettingsResponse>({
-    queryKey: ['platform-settings-acquirer-fees'],
-    queryFn: async () => {
-      const response = await api.get('/admin/settings');
-      return response.data?.data || {};
-    },
-  });
-
-  useEffect(() => {
-    if (platformSettings?.payments?.default_gateway_fee !== undefined) {
-      setGlobalGatewayFee(String(platformSettings.payments.default_gateway_fee));
-    }
-  }, [platformSettings?.payments?.default_gateway_fee]);
-
-  const updateGlobalFeeMutation = useMutation({
-    mutationFn: async (fee: number) => {
-      await api.put('/admin/settings', { payments: { default_gateway_fee: fee } });
-    },
-    onSuccess: () => {
-      toast.success('Taxa global atualizada');
-      queryClient.invalidateQueries({ queryKey: ['platform-settings-acquirer-fees'] });
-      queryClient.invalidateQueries({ queryKey: ['platform-settings'] });
-    },
-    onError: () => {
-      toast.error('Erro ao salvar taxa global');
     },
   });
 
@@ -391,38 +354,6 @@ export default function AdminAcquirers() {
         />
       </section>
 
-      <section className="rounded-md border border-gray-200 bg-white p-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-gray-900">Taxa global padrão</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Usada como taxa padrão do gateway quando uma regra específica não sobrescreve o valor.
-            </p>
-          </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-            <label className="relative w-full sm:w-44">
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-500">%</span>
-              <input
-                type="number"
-                step="0.01"
-                min={0}
-                max={100}
-                value={globalGatewayFee}
-                onChange={(event) => setGlobalGatewayFee(event.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 pr-8 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-              />
-            </label>
-            <button
-              type="button"
-              onClick={() => updateGlobalFeeMutation.mutate(Number(globalGatewayFee) || 0)}
-              disabled={updateGlobalFeeMutation.isPending}
-              className="rounded-lg bg-accent-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-hover disabled:opacity-60"
-            >
-              {updateGlobalFeeMutation.isPending ? 'Salvando...' : 'Salvar taxa global'}
-            </button>
-          </div>
-        </div>
-      </section>
 
       {/* Acquirers List */}
       {isLoading ? (
@@ -570,29 +501,17 @@ export default function AdminAcquirers() {
               </div>
 
               {/* Fees */}
-              <div className="mb-2 grid grid-cols-2 gap-1.5 lg:grid-cols-4">
+              <div className="mb-2 grid grid-cols-2 gap-1.5">
                 <div className="rounded-md bg-gray-50 p-1.5 text-center">
-                  <p className="text-xs text-gray-500">Taxa Cashin</p>
+                  <p className="text-xs text-gray-500">Custo Cashin</p>
                   <p className="text-xs font-medium text-gray-900">
                     {formatFee(acquirer.acquirer_fee_percentage, acquirer.acquirer_fee_fixed)}
                   </p>
                 </div>
                 <div className="rounded-md bg-gray-50 p-1.5 text-center">
-                  <p className="text-xs text-gray-500">Taxa Cashout</p>
+                  <p className="text-xs text-gray-500">Custo Cashout</p>
                   <p className="text-xs font-medium text-gray-900">
                     {formatFee(acquirer.acquirer_fee_pix_out_percentage, acquirer.acquirer_fee_pix_out_fixed)}
-                  </p>
-                </div>
-                <div className="rounded-md bg-gray-50 p-1.5 text-center">
-                  <p className="text-xs text-gray-500">Global Cashin</p>
-                  <p className="text-xs font-medium text-green-700">
-                    {formatFee(acquirer.gateway_fee_percentage, acquirer.gateway_fee_fixed)}
-                  </p>
-                </div>
-                <div className="rounded-md bg-gray-50 p-1.5 text-center">
-                  <p className="text-xs text-gray-500">Global Cashout</p>
-                  <p className="text-xs font-medium text-green-700">
-                    {formatFee(acquirer.gateway_fee_pix_out_percentage, acquirer.gateway_fee_pix_out_fixed)}
                   </p>
                 </div>
               </div>
@@ -821,7 +740,6 @@ function EditAcquirerModal({
   onSave: (data: Partial<Acquirer>) => void;
   isSaving: boolean;
 }) {
-  const platformName = useThemeStore((s) => s.platformName);
   const [form, setForm] = useState({
     display_name: acquirer.display_name,
     priority: acquirer.priority,
@@ -829,10 +747,6 @@ function EditAcquirerModal({
     acquirer_fee_fixed: acquirer.acquirer_fee_fixed || 0,
     acquirer_fee_pix_out_percentage: acquirer.acquirer_fee_pix_out_percentage || 0,
     acquirer_fee_pix_out_fixed: acquirer.acquirer_fee_pix_out_fixed || 0,
-    gateway_fee_percentage: acquirer.gateway_fee_percentage || 0,
-    gateway_fee_fixed: acquirer.gateway_fee_fixed || 0,
-    gateway_fee_pix_out_percentage: acquirer.gateway_fee_pix_out_percentage || 0,
-    gateway_fee_pix_out_fixed: acquirer.gateway_fee_pix_out_fixed || 0,
     sandbox_mode: acquirer.sandbox_mode,
     supports_pix: acquirer.supports_pix,
     supports_pix_out: acquirer.supports_pix_out,
@@ -937,62 +851,6 @@ function EditAcquirerModal({
                   step="0.01"
                   value={form.acquirer_fee_pix_out_fixed}
                   onChange={(e) => setForm({ ...form, acquirer_fee_pix_out_fixed: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Gateway/Platform Fees - Cashin */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-1">Taxa da Plataforma - Cashin ({platformName})</h3>
-            <p className="text-xs text-gray-500 mb-3">Taxa que cobramos do vendedor por transação de entrada</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Percentual (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.gateway_fee_percentage}
-                  onChange={(e) => setForm({ ...form, gateway_fee_percentage: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Fixa (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.gateway_fee_fixed}
-                  onChange={(e) => setForm({ ...form, gateway_fee_fixed: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Gateway/Platform Fees - Cashout */}
-          <div>
-            <h3 className="text-sm font-semibold text-gray-600 mb-1">Taxa da Plataforma - Cashout ({platformName})</h3>
-            <p className="text-xs text-gray-500 mb-3">Taxa que cobramos do vendedor por saque/transferência</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Percentual (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.gateway_fee_pix_out_percentage}
-                  onChange={(e) => setForm({ ...form, gateway_fee_pix_out_percentage: parseFloat(e.target.value) || 0 })}
-                  className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-gray-500 mb-1">Fixa (R$)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.gateway_fee_pix_out_fixed}
-                  onChange={(e) => setForm({ ...form, gateway_fee_pix_out_fixed: parseFloat(e.target.value) || 0 })}
                   className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-900 focus:border-gray-400 focus:outline-none"
                 />
               </div>

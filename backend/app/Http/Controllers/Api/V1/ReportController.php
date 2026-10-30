@@ -142,9 +142,11 @@ private function buildDashboardData(string $accountId, string $period, Carbon $d
                 COALESCE(COUNT(CASE WHEN status IN ('approved','paid') AND paid_at BETWEEN ? AND ? THEN 1 END), 0) as sales,
                 COALESCE(SUM(CASE WHEN status IN ('pending','processing') AND created_at BETWEEN ? AND ? THEN amount END), 0) as pending_amount,
                 COALESCE(COUNT(CASE WHEN created_at BETWEEN ? AND ? THEN 1 END), 0) as total_charges,
-                COALESCE(COUNT(CASE WHEN status IN ('approved','paid') AND created_at BETWEEN ? AND ? THEN 1 END), 0) as approved_charges
+                COALESCE(COUNT(CASE WHEN status IN ('approved','paid') AND created_at BETWEEN ? AND ? THEN 1 END), 0) as approved_charges,
+                COALESCE(COUNT(CASE WHEN status IN ('pending','processing','authorized') AND created_at BETWEEN ? AND ? THEN 1 END), 0) as pending_charges,
+                COALESCE(COUNT(CASE WHEN status IN ('declined','failed') AND created_at BETWEEN ? AND ? THEN 1 END), 0) as rejected_charges
             FROM charges WHERE account_id = ?
-        ", [$dateFromRaw, $dateToRaw, $dateFromRaw, $dateToRaw, $dateFromRaw, $dateToRaw, $dateFromRaw, $dateToRaw, $dateFromRaw, $dateToRaw, $accountId]);
+        ", [$dateFromRaw, $dateToRaw, $dateFromRaw, $dateToRaw, $dateFromRaw, $dateToRaw, $dateFromRaw, $dateToRaw, $dateFromRaw, $dateToRaw, $dateFromRaw, $dateToRaw, $dateFromRaw, $dateToRaw, $accountId]);
 
         $totalRevenue = (float) $currentStats->revenue;
         $totalSales = (int) $currentStats->sales;
@@ -312,6 +314,10 @@ private function buildDashboardData(string $accountId, string $period, Carbon $d
                     'approval_rate_change' => round($approvalRateChange, 1),
                     'conversion_rate' => round($conversionRate, 1),
                     'conversion_rate_change' => round($conversionRateChange, 1),
+                    'total_charges' => $totalCharges,
+                    'approved_charges' => $approvedCharges,
+                    'pending_charges' => (int) $currentStats->pending_charges,
+                    'rejected_charges' => (int) $currentStats->rejected_charges,
                 ],
                 'chargeback_alerts' => $chargebackAlerts,
                 'pix_revenue' => $pixRevenue,

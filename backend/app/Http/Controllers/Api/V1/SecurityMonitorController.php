@@ -110,7 +110,7 @@ class SecurityMonitorController extends Controller
                     'blocked_ips' => 0,
                     'rate_limit_hits' => 0,
                     'security_alerts' => 0,
-                    'uptime_percentage' => 99.9,
+                    'uptime_percentage' => null,
                 ],
             ]);
         }

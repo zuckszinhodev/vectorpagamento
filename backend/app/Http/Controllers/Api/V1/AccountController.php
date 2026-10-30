@@ -9,7 +9,6 @@ use App\Models\Account;
 use App\Models\AccountAcquirer;
 use App\Models\AccountWallet;
 use App\Models\AcquirerConfig;
-use App\Models\AccountCustomFee;
 use App\Models\Charge;
 use App\Models\WalletAdjustment;
 use App\Domain\Acquirer\Entities\Acquirer as AcquirerEntity;
@@ -610,11 +609,6 @@ class AccountController extends Controller
             } catch (\Throwable $e) {
                 $acquirerConfigs = collect();
             }
-            try {
-                $customFee = AccountCustomFee::where('account_id', $user->account_id)->first();
-            } catch (\Throwable $e) {
-                $customFee = null;
-            }
 
             $totalRevenue = 0;
             $totalNet = 0;
@@ -627,21 +621,7 @@ class AccountController extends Controller
                     continue;
                 }
 
-                $acquirerConfig = $acquirerConfigs->get($charge->acquirer);
-                if ($acquirerConfig) {
-                    try {
-                        $customGatewayFee = $customFee?->calculateGatewayFee($charge->amount, $charge->payment_method);
-                        if (!is_null($customGatewayFee)) {
-                            $fee = $customGatewayFee;
-                        } else {
-                            $fee = $acquirerConfig->calculateGatewayFee($charge->amount);
-                        }
-                    } catch (\Throwable $e) {
-                        $fee = (int) round($charge->amount * 0.05) + 200;
-                    }
-                } else {
-                    $fee = (int) round($charge->amount * 0.05) + 200;
-                }
+                $fee = app(\App\Services\SystemFeeService::class)->forCharge($charge, $acquirerConfigs->get($charge->acquirer));
                 $totalNet += ($charge->amount - $fee);
             }
 

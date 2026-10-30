@@ -2,7 +2,8 @@ import { type ComponentType, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, formatCurrency, formatDate } from '@/lib/api';
-import { AdminPageHeader, AdminPageShell } from '@/components/admin/AdminPageShell';
+import { AdminPageShell } from '@/components/admin/AdminPageShell';
+import { downloadCsvFile } from '@/lib/csv';
 import {
   ArrowPathIcon,
   BanknotesIcon,
@@ -316,43 +317,6 @@ function persistMonitoringFiltersToStorage(filters: MonitoringStoredFilters): vo
   }
 }
 
-function csvEscape(value: unknown): string {
-  if (value === null || value === undefined) {
-    return '""';
-  }
-
-  const stringValue = Array.isArray(value)
-    ? value.map((entry) => String(entry)).join(' | ')
-    : String(value);
-
-  return `"${stringValue.replace(/"/g, '""')}"`;
-}
-
-function downloadCsvFile(fileName: string, headers: string[], rows: unknown[][]): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  const csvBody = [
-    headers.map((header) => csvEscape(header)).join(';'),
-    ...rows.map((row) => row.map((cell) => csvEscape(cell)).join(';')),
-  ].join('\n');
-
-  const csvWithBom = `\uFEFF${csvBody}`;
-  const blob = new Blob([csvWithBom], { type: 'text/csv;charset=utf-8;' });
-  const downloadUrl = window.URL.createObjectURL(blob);
-  const link = window.document.createElement('a');
-
-  link.href = downloadUrl;
-  link.download = fileName;
-  link.style.display = 'none';
-
-  window.document.body.appendChild(link);
-  link.click();
-  window.document.body.removeChild(link);
-  window.URL.revokeObjectURL(downloadUrl);
-}
-
 function buildExportTimestamp(): string {
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -364,7 +328,7 @@ function buildExportTimestamp(): string {
   return `${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
 }
 
-export default function AdminControlTower() {
+export default function AdminControlTower(_props: { embedded?: boolean }) {
   const queryClient = useQueryClient();
   const [draftControls, setDraftControls] = useState<WithdrawalConfig>(DEFAULT_CONTROLS);
   const [slaPeriod, setSlaPeriod] = useState<'24h' | '7d' | '30d' | '90d'>('30d');
@@ -789,21 +753,16 @@ export default function AdminControlTower() {
 
   return (
     <AdminPageShell>
-      <AdminPageHeader
-        
-        title="Control Tower Fintech"
-        subtitle="Centro de comando para operacao financeira, risco, compliance e resposta a incidentes"
-        actions={
-          <button
-            type="button"
-            onClick={runRefresh}
-            className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20"
-          >
-            <ArrowPathIcon className={`h-4 w-4 ${pulseQuery.isFetching ? 'animate-spin' : ''}`} />
-            Atualizar
-          </button>
-        }
-      />
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={runRefresh}
+          className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20"
+        >
+          <ArrowPathIcon className={`h-4 w-4 ${pulseQuery.isFetching ? 'animate-spin' : ''}`} />
+          Atualizar
+        </button>
+      </div>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
@@ -924,7 +883,7 @@ export default function AdminControlTower() {
         </div>
 
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900">Alertas criticos</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Alertas críticos</h3>
           <p className="mt-1 text-xs text-gray-500">Sinalizacao imediata para resposta operacional</p>
 
           <div className="mt-4 space-y-3">
@@ -1007,7 +966,7 @@ export default function AdminControlTower() {
           <div className="flex items-start gap-2">
             <FunnelIcon className="mt-0.5 h-5 w-5 text-blue-700" />
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Logs e requisicoes de usuarios</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Logs e requisições de usuários</h3>
               <p className="text-xs text-gray-500">Monitoramento centralizado de mutacoes auditadas e acessos administrativos</p>
             </div>
           </div>
@@ -1474,7 +1433,7 @@ export default function AdminControlTower() {
       <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">Modo incidente e playbooks executaveis</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Modo incidente e playbooks executáveis</h3>
             <p className="mt-1 text-xs text-gray-500">Execute respostas operacionais sem sair da Control Tower</p>
           </div>
 

@@ -530,45 +530,4 @@ class AcquirerConfig extends Model
         return $percentageFee + $fixedFee;
     }
 
-    /**
-     * Calculate the total fee (gateway + acquirer) for a given amount
-     * This is the full fee that should be deducted from the transaction
-     * 
-     * @param int $amountCents Amount in cents
-     * @return int Total fee in cents
-     */
-    public function calculateTotalFee(int $amountCents, ?string $paymentMethod = null, int $installments = 1): int
-    {
-        $gatewayFee = $this->calculateGatewayFee($amountCents, $paymentMethod, $installments);
-        $acquirerFee = $this->calculateAcquirerFee($amountCents);
-        
-        return $gatewayFee + $acquirerFee;
-    }
-
-    /**
-     * Calculate the net amount after total fees (gateway + acquirer)
-     * This is what the customer receives
-     * 
-     * @param int $amountCents Transaction amount in cents
-     * @return int Net amount in cents
-     */
-    public function calculateNetAmount(int $amountCents, ?string $paymentMethod = null, int $installments = 1): int
-    {
-        $totalFee = $this->calculateTotalFee($amountCents, $paymentMethod, $installments);
-        return $amountCents - $totalFee;
-    }
-
-    /**
-     * Calculate our profit (gateway fee - acquirer fee)
-     * 
-     * @param int $amountCents Transaction amount in cents
-     * @return int Profit in cents
-     */
-    public function calculatePlatformProfit(int $amountCents, ?string $paymentMethod = null, int $installments = 1): int
-    {
-        $gatewayFee = $this->calculateGatewayFee($amountCents, $paymentMethod, $installments);
-        $acquirerFee = $this->calculateAcquirerFee($amountCents);
-        
-        return $gatewayFee - $acquirerFee;
-    }
 }

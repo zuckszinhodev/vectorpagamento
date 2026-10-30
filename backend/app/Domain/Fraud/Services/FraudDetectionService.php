@@ -2,6 +2,8 @@
 
 namespace App\Domain\Fraud\Services;
 
+use Carbon\Carbon;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -23,6 +25,7 @@ class FraudDetectionService
     ): array {
         Log::info("Analyzing transaction for fraud", ['charge_id' => $chargeId]);
 
+        $transactionData['charge_id'] = $chargeId;
         $riskFactors = [];
         $totalScore = 0;
 
@@ -84,8 +87,8 @@ class FraudDetectionService
         $recommendation = $this->getRecommendation($totalScore, $riskFactors);
 
         // Save risk score
-        $riskScoreId = DB::table('risk_scores')->insertGetId([
-            'id' => Str::uuid(),
+        DB::table('risk_scores')->insert([
+            'id' => (string) Str::uuid(),
             'charge_id' => $chargeId,
             'total_score' => $totalScore,
             'score_breakdown' => json_encode($riskFactors),
@@ -103,7 +106,7 @@ class FraudDetectionService
         DB::table('charges')->where('id', $chargeId)->update([
             'risk_score' => $totalScore,
             'risk_level' => $riskLevel,
-            'requires_review' => $recommendation === 'review',
+            'requires_review' => in_array($recommendation, ['review', 'decline'], true),
             'device_fingerprint' => $transactionData['device_fingerprint'] ?? null,
         ]);
 
@@ -167,7 +170,7 @@ class FraudDetectionService
         // Check email velocity (max 5 transactions per hour)
         if (!empty($data['customer_email'])) {
             $emailCount = DB::table('charges')
-                ->where('customer_email', $data['customer_email'])
+                ->where('customer->email', $data['customer_email'])
                 ->where('created_at', '>', now()->subHour())
                 ->count();
 
@@ -179,27 +182,13 @@ class FraudDetectionService
 
         // Check IP velocity
         if (!empty($data['ip_address'])) {
-            $ipCount = DB::table('charges')
-                ->where('ip_address', $data['ip_address'])
-                ->where('created_at', '>', now()->subHour())
+            $ipCount = $this->chargesFromIp($data['ip_address'])
+                ->where('charges.created_at', '>', now()->subHour())
                 ->count();
 
             if ($ipCount > 10) {
                 $score += 25;
                 $violations[] = "ip_velocity:{$ipCount}";
-            }
-        }
-
-        // Check card velocity
-        if (!empty($data['card_bin'])) {
-            $cardCount = DB::table('charges')
-                ->where('card_bin', $data['card_bin'])
-                ->where('created_at', '>', now()->subMinutes(15))
-                ->count();
-
-            if ($cardCount > 3) {
-                $score += 35;
-                $violations[] = "card_velocity:{$cardCount}";
             }
         }
 
@@ -210,20 +199,30 @@ class FraudDetectionService
         ];
     }
 
+    /**
+     * Charges cujo IP foi registrado em risk_scores (charges não guarda o IP do comprador)
+     */
+    private function chargesFromIp(string $ip): Builder
+    {
+        return DB::table('charges')
+            ->join('risk_scores', 'risk_scores.charge_id', '=', 'charges.id')
+            ->where('risk_scores.ip_address', $ip);
+    }
+
     private function checkAmount(array $data): array
     {
         $score = 0;
         $flags = [];
-        $amount = $data['amount'] ?? 0;
+        $amount = $data['amount'] ?? 0; // cents
 
-        // Very high amount
-        if ($amount > 5000) {
+        // Very high amount (above R$ 5,000.00)
+        if ($amount > 500000) {
             $score += 20;
             $flags[] = 'high_amount';
         }
 
-        // Suspiciously round number
-        if ($amount > 100 && $amount == floor($amount)) {
+        // Suspiciously round number (whole reais above R$ 100.00)
+        if ($amount > 10000 && $amount % 100 === 0) {
             $score += 5;
             $flags[] = 'round_amount';
         }
@@ -231,7 +230,7 @@ class FraudDetectionService
         // Check if amount is unusual for this customer
         if (!empty($data['customer_email'])) {
             $avgAmount = DB::table('charges')
-                ->where('customer_email', $data['customer_email'])
+                ->where('customer->email', $data['customer_email'])
                 ->where('status', 'approved')
                 ->avg('amount');
 
@@ -311,16 +310,18 @@ class FraudDetectionService
 
         // Get last transaction from this customer within 2 hours
         $lastTransaction = DB::table('charges')
-            ->where('customer_email', $customerEmail)
-            ->where('created_at', '>', now()->subHours(2))
-            ->whereNotNull('ip_address')
-            ->where('ip_address', '!=', $ip)
-            ->orderBy('created_at', 'desc')
+            ->join('risk_scores', 'risk_scores.charge_id', '=', 'charges.id')
+            ->where('charges.customer->email', $customerEmail)
+            ->where('charges.created_at', '>', now()->subHours(2))
+            ->whereNotNull('risk_scores.ip_address')
+            ->where('risk_scores.ip_address', '!=', $ip)
+            ->orderBy('charges.created_at', 'desc')
+            ->select('charges.created_at')
             ->first();
 
         if ($lastTransaction) {
             // Different IP within 2 hours — flag as potential anomaly
-            $timeDiffMinutes = now()->diffInMinutes($lastTransaction->created_at);
+            $timeDiffMinutes = abs(now()->diffInMinutes(Carbon::parse($lastTransaction->created_at)));
 
             if ($timeDiffMinutes < 5) {
                 // Same customer, different IP, under 5 minutes = very suspicious
@@ -337,10 +338,11 @@ class FraudDetectionService
 
         // Check for multiple distinct IPs in a short window
         $distinctIps = DB::table('charges')
-            ->where('customer_email', $customerEmail)
-            ->where('created_at', '>', now()->subHour())
+            ->join('risk_scores', 'risk_scores.charge_id', '=', 'charges.id')
+            ->where('charges.customer->email', $customerEmail)
+            ->where('charges.created_at', '>', now()->subHour())
             ->distinct()
-            ->count('ip_address');
+            ->count('risk_scores.ip_address');
 
         if ($distinctIps >= 4) {
             $score += 30;
@@ -369,10 +371,9 @@ class FraudDetectionService
 
         // Micro-transaction from same IP (card testing pattern)
         if ($amount > 0 && $amount <= 200 && $ip) { // 200 cents = R$ 2.00
-            $microCount = DB::table('charges')
-                ->where('ip_address', $ip)
-                ->where('amount', '<=', 200)
-                ->where('created_at', '>', now()->subMinutes(30))
+            $microCount = $this->chargesFromIp($ip)
+                ->where('charges.amount', '<=', 200)
+                ->where('charges.created_at', '>', now()->subMinutes(30))
                 ->count();
 
             if ($microCount >= 5) {
@@ -386,10 +387,9 @@ class FraudDetectionService
 
         // Rapid sequential small amounts (different cards, same IP)
         if ($ip) {
-            $declinedCount = DB::table('charges')
-                ->where('ip_address', $ip)
-                ->whereIn('status', ['declined', 'failed'])
-                ->where('created_at', '>', now()->subMinutes(15))
+            $declinedCount = $this->chargesFromIp($ip)
+                ->whereIn('charges.status', ['declined', 'failed'])
+                ->where('charges.created_at', '>', now()->subMinutes(15))
                 ->count();
 
             if ($declinedCount >= 5) {
@@ -446,7 +446,8 @@ class FraudDetectionService
 
         // Check for very recent email first seen
         $firstSeen = DB::table('charges')
-            ->where('customer_email', $email)
+            ->where('customer->email', $email)
+            ->where('id', '!=', $data['charge_id'])
             ->min('created_at');
 
         if (!$firstSeen) {

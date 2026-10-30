@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, formatCurrency, formatDate } from '@/lib/api';
-import { AdminPageShell, AdminPageHeader } from '@/components/admin/AdminPageShell';
+import { AdminPageShell } from '@/components/admin/AdminPageShell';
+import { hasAdminPermission } from '@/lib/adminPermissions';
+import { useAuthStore } from '@/stores/authStore';
 import {
   ArrowPathIcon,
   ArrowTrendingDownIcon,
@@ -110,6 +112,7 @@ interface AdminPulse {
     pending_withdrawals: number;
     pending_withdrawals_amount: number;
     pending_kyc: number;
+    pending_chargebacks: number;
   };
   switches: {
     payments_enabled: boolean;
@@ -173,7 +176,9 @@ const getPaymentMethodIcon = (method: string) => {
   return BanknotesIcon;
 };
 
-export default function AdminDashboard() {
+export default function AdminDashboard(_props: { embedded?: boolean }) {
+  const { user } = useAuthStore();
+  const canSeeRisk = hasAdminPermission(user, 'admin.fraud.manage');
   const [period, setPeriod] = useState<DashboardPeriod>('month');
 
   const statsQuery = useQuery<AdminStats>({
@@ -239,6 +244,17 @@ export default function AdminDashboard() {
     refetchInterval: 20000,
   });
 
+  const riskQuery = useQuery<number>({
+    queryKey: ['admin-dashboard-risk-v2'],
+    queryFn: async () => {
+      const response = await api.get<WrappedResponse<{ high_risk_count: number }>>('/admin/fraud/dashboard?period=7d');
+      return response.data?.data?.high_risk_count ?? 0;
+    },
+    enabled: canSeeRisk,
+    retry: false,
+    refetchInterval: 60000,
+  });
+
   const stats = statsQuery.data ?? DEFAULT_STATS;
   const chart = chartQuery.data ?? { labels: [], values: [] };
   const methods = methodsQuery.data ?? [];
@@ -248,10 +264,18 @@ export default function AdminDashboard() {
   const controls = controlsQuery.data ?? {};
   const pulseData = pulseQuery.data;
 
-  const pendingWithdrawalsAmount = useMemo(
-    () => pendingWithdrawals.reduce((sum, item) => sum + (item.amount || 0), 0),
-    [pendingWithdrawals]
-  );
+  // A lista traz só os 8 primeiros: o total da fila vem do pulse
+  const pendingWithdrawalsAmount = pulseData?.queues?.pending_withdrawals_amount
+    ?? pendingWithdrawals.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+  const actionQueue = [
+    { label: 'Saques pendentes', value: pendingWithdrawalsCount, hint: formatCurrency(pendingWithdrawalsAmount), to: '/admin/withdrawals', Icon: BanknotesIcon },
+    { label: 'KYC para revisar', value: pulseData?.queues?.pending_kyc ?? stats.pending_kyc, hint: 'Sellers aguardando', to: '/admin/kyc', Icon: CheckCircleIcon },
+    { label: 'Disputas abertas', value: pulseData?.queues?.pending_chargebacks ?? 0, hint: 'MED e chargebacks', to: '/admin/chargebacks', Icon: ExclamationTriangleIcon },
+    ...(canSeeRisk
+      ? [{ label: 'Alto risco (7 dias)', value: riskQuery.data ?? 0, hint: 'Só observação', to: '/admin/risk', Icon: ShoppingBagIcon }]
+      : []),
+  ];
 
   const liquidityReserve = Math.max(0, stats.total_revenue - stats.seller_payout - pendingWithdrawalsAmount);
   const payoutPressure = stats.total_revenue > 0 ? Math.round((pendingWithdrawalsAmount / stats.total_revenue) * 100) : 0;
@@ -307,7 +331,7 @@ export default function AdminDashboard() {
         ticks: { color: '#9ca3af', font: { size: 11 } },
       },
       y: {
-        grid: { color: '#f3f4f6' },
+        grid: { color: 'rgba(255, 255, 255, 0.06)' },
         ticks: {
           color: '#9ca3af',
           font: { size: 11 },
@@ -326,10 +350,10 @@ export default function AdminDashboard() {
     datasets: [
       {
         data: chart.values,
-        borderColor: '#111827',
+        borderColor: '#ef4444',
         borderWidth: 2,
         fill: true,
-        backgroundColor: 'rgba(17, 24, 39, 0.04)',
+        backgroundColor: 'rgba(239, 68, 68, 0.08)',
       },
     ],
   };
@@ -344,35 +368,30 @@ export default function AdminDashboard() {
 
   return (
     <AdminPageShell>
-      <AdminPageHeader
-        title="Dashboard"
-        subtitle="Visão consolidada de indicadores financeiros e operacionais"
-        actions={
-          <div className="flex items-center gap-2">
-            <div className="flex rounded-lg border border-gray-200 bg-white p-0.5">
-              {PERIODS.map((item) => (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => setPeriod(item.key)}
-                  className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                    period === item.key ? 'bg-gray-900 text-white' : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
+      <div className="flex items-center justify-end gap-2">
+        <div className="flex rounded-lg border border-gray-200 bg-white p-0.5">
+          {PERIODS.map((item) => (
             <button
+              key={item.key}
               type="button"
-              onClick={refetchAll}
-              className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+              onClick={() => setPeriod(item.key)}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                period === item.key ? 'bg-gray-900 text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              <ArrowPathIcon className={`h-4 w-4 ${statsQuery.isFetching ? 'animate-spin' : ''}`} />
+              {item.label}
             </button>
-          </div>
-        }
-      />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={refetchAll}
+          aria-label="Atualizar"
+          className="rounded-lg border border-gray-200 p-2 text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+        >
+          <ArrowPathIcon className={`h-4 w-4 ${statsQuery.isFetching ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
 
       {/* Alerts */}
       {alerts.length > 0 && (
@@ -388,10 +407,29 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Key metrics */}
+      {/* Action queue */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {actionQueue.map(({ label, value, hint, to, Icon }) => (
+          <Link
+            key={label}
+            to={to}
+            className={`group flex items-center gap-3 rounded-xl border p-4 transition-colors hover:border-red-500/50 ${
+              value > 0 ? 'border-red-500/30 bg-red-500/[0.06]' : 'border-white/[0.06] bg-[#0b0b0d]'
+            }`}
+          >
+            <Icon className={`h-6 w-6 shrink-0 ${value > 0 ? 'text-red-400' : 'text-gray-500'}`} />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium text-gray-400">{label}</p>
+              <p className="text-xl font-bold tabular-nums text-white">{value.toLocaleString('pt-BR')}</p>
+              <p className="truncate text-xs text-gray-500">{hint}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      {/* Key metrics */}
+      <div className="grid gap-4 sm:grid-cols-3">
         <MetricCard title="Faturamento" value={formatCurrency(stats.total_revenue)} change={stats.revenue_change} />
-        <MetricCard title="Lucro Plataforma" value={formatCurrency(stats.gateway_profit)} change={stats.profit_change} />
         <MetricCard title="Repasse Sellers" value={formatCurrency(stats.seller_payout)} change={stats.payout_change} />
         <MetricCard title="Pendente" value={formatCurrency(stats.pending_amount)} change={stats.pending_change} />
       </div>
@@ -439,10 +477,10 @@ export default function AdminDashboard() {
             <p>Cooldown: <span className="font-medium text-gray-900">{controls.withdrawal_cooldown_seconds ?? 0}s</span></p>
           </div>
           <Link
-            to="/admin/transactions"
+            to="/admin?tab=operacao"
             className="mt-4 block w-full rounded-md bg-gray-900 px-3 py-2 text-center text-sm font-medium text-white hover:bg-gray-800"
           >
-            Gerenciar transações
+            Abrir controles
           </Link>
         </div>
       </div>
@@ -482,7 +520,7 @@ export default function AdminDashboard() {
         <div className="rounded-lg border border-gray-200 bg-white p-5">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium text-gray-900">Atividade Recente</h3>
-            <Link to="/admin/monitoring" className="text-xs font-medium text-gray-500 hover:text-gray-700">Ver tudo</Link>
+            <Link to="/admin?tab=seguranca" className="text-xs font-medium text-gray-500 hover:text-gray-700">Ver tudo</Link>
           </div>
 
           {activities.length === 0 ? (
@@ -523,7 +561,7 @@ export default function AdminDashboard() {
                     <p className="text-xs text-gray-500">{method.percentage}%</p>
                   </div>
                   <div className="mt-1 h-1.5 rounded-full bg-gray-100">
-                    <div className="h-1.5 rounded-full bg-gray-900" style={{ width: `${Math.min(method.percentage, 100)}%` }} />
+                    <div className="h-1.5 rounded-full bg-red-500" style={{ width: `${Math.min(method.percentage, 100)}%` }} />
                   </div>
                   <p className="mt-1 text-xs text-gray-500">{formatCurrency(method.amount)}</p>
                 </div>

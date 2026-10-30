@@ -441,16 +441,24 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
                 Route::get('/config', [\App\Http\Controllers\Api\V1\SystemConfigAdminController::class, 'getWithdrawalConfig']);
                 Route::put('/config', [\App\Http\Controllers\Api\V1\SystemConfigAdminController::class, 'updateWithdrawalConfig']);
                 Route::get('/', [\App\Http\Controllers\Api\V1\WithdrawalController::class, 'adminList']);
+                Route::get('/summary', [\App\Http\Controllers\Api\V1\WithdrawalController::class, 'adminSummary']);
                 Route::get('/{withdrawalId}', [\App\Http\Controllers\Api\V1\WithdrawalController::class, 'adminShow']);
                 Route::get('/{withdrawalId}/logs', [\App\Http\Controllers\Api\V1\WithdrawalController::class, 'adminLogs']);
                 Route::put('/{withdrawalId}', [\App\Http\Controllers\Api\V1\WithdrawalController::class, 'adminUpdate']);
                 Route::post('/{withdrawalId}/cancel', [\App\Http\Controllers\Api\V1\WithdrawalController::class, 'adminCancel']);
                 Route::post('/{withdrawalId}/process', [\App\Http\Controllers\Api\V1\WithdrawalController::class, 'adminProcess']);
+                Route::post('/{withdrawalId}/approve-manual', [\App\Http\Controllers\Api\V1\WithdrawalController::class, 'adminApproveManual']);
                 Route::post('/process-all', [\App\Http\Controllers\Api\V1\WithdrawalController::class, 'adminProcessAll']);
             });
 
+            // Admin: Taxas do sistema e lucro do gateway
+            Route::get('admin/fees', [\App\Http\Controllers\Api\V1\FeeAdminController::class, 'index']);
+            Route::put('admin/fees', [\App\Http\Controllers\Api\V1\FeeAdminController::class, 'update']);
+            Route::get('admin/fees/profit', [\App\Http\Controllers\Api\V1\FeeAdminController::class, 'profit']);
+
             // Admin: All Charges/Transactions
-            Route::get('admin/charges', [\App\Http\Controllers\Api\V1\AdminController::class, 'allCharges']);
+            Route::get('admin/charges',[\App\Http\Controllers\Api\V1\AdminController::class, 'allCharges']);
+            Route::get('admin/charges/summary', [\App\Http\Controllers\Api\V1\AdminController::class, 'chargesSummary']);
             Route::post('admin/charges/{chargeId}/status', [\App\Http\Controllers\Api\V1\AdminController::class, 'updateChargeStatus']);
             Route::get('admin/charges/failed-expired/count', [\App\Http\Controllers\Api\V1\AdminController::class, 'countDeletableCharges']);
             Route::delete('admin/charges/failed-expired', [\App\Http\Controllers\Api\V1\AdminController::class, 'deleteFailedAndExpiredCharges']);
@@ -472,8 +480,6 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
             Route::put('/{customerId}/status', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updateStatus']);
             Route::put('/{customerId}/withdrawal-access', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updateWithdrawalAccess']);
             Route::delete('/{customerId}', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'destroy']);
-            Route::get('/{customerId}/fees', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'getCustomFees']);
-            Route::put('/{customerId}/fees', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updateCustomFees']);
             Route::get('/{customerId}/charges', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'listCharges']);
             Route::get('/{customerId}/charges/{chargeId}', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'showCharge']);
             Route::post('/{customerId}/charges/{chargeId}/status', [\App\Http\Controllers\Api\V1\CustomerAdminController::class, 'updateChargeStatus']);
@@ -612,6 +618,12 @@ Route::prefix('v1')->group(function () use ($memberAreaRoutes) {
         // Admin: All Products Management (all accounts) - SECURITY: Added admin audit logging
         Route::prefix('admin/products')->middleware(['role:admin,owner,support,financial,antifraud', 'admin.audit', 'mfa.enabled', 'admin.permission', 'admin.rate'])->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\V1\Admin\ShowcaseController::class, 'allProducts']);
+            Route::get('/manage', [\App\Http\Controllers\Api\V1\Admin\ProductAdminController::class, 'index']);
+            Route::get('/manage/{productId}', [\App\Http\Controllers\Api\V1\Admin\ProductAdminController::class, 'show']);
+            Route::put('/manage/{productId}', [\App\Http\Controllers\Api\V1\Admin\ProductAdminController::class, 'update']);
+            Route::post('/manage/{productId}/block',[\App\Http\Controllers\Api\V1\Admin\ProductAdminController::class, 'block']);
+            Route::post('/manage/{productId}/unblock', [\App\Http\Controllers\Api\V1\Admin\ProductAdminController::class, 'unblock']);
+            Route::delete('/manage/{productId}', [\App\Http\Controllers\Api\V1\Admin\ProductAdminController::class, 'destroy']);
         });
 
         // Admin: Showcase Products Management - SECURITY: Added admin audit logging

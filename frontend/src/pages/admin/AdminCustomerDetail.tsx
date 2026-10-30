@@ -185,7 +185,7 @@ interface AuditLogItem {
   created_at: string;
 }
 
-type Tab = 'info' | 'charges' | 'withdrawals' | 'fees' | 'acquirers' | 'controls' | 'logs';
+type Tab = 'info' | 'charges' | 'withdrawals' | 'acquirers' | 'controls' | 'logs';
 
 interface WalletAdjustmentFormState {
   direction: 'credit' | 'debit';
@@ -437,7 +437,6 @@ export default function AdminCustomerDetail() {
     { key: 'info' as const, label: 'Informações', icon: UserCircleIcon },
     { key: 'charges' as const, label: 'Transações', icon: BanknotesIcon },
     { key: 'withdrawals' as const, label: 'Saques', icon: BoltIcon },
-    { key: 'fees' as const, label: 'Taxas', icon: AdjustmentsHorizontalIcon },
     { key: 'acquirers' as const, label: 'Adquirentes', icon: CreditCardIcon },
     { key: 'controls' as const, label: 'Controles', icon: ShieldCheckIcon },
     { key: 'logs' as const, label: 'Riscos / Auditoria', icon: DocumentTextIcon },
@@ -715,7 +714,6 @@ export default function AdminCustomerDetail() {
         />
         </div>
       )}
-      {activeTab === 'fees' && <FeesTab customerId={customerId!} />}
       {activeTab === 'acquirers' && <AcquirersTab customerId={customerId!} />}
       {activeTab === 'controls' && <ControlsTab customerId={customerId!} customerName={customer.name} />}
 
@@ -2516,219 +2514,6 @@ function Pagination({ pagination, page, setPage }: { pagination?: { current_page
         <button onClick={() => setPage(page + 1)} disabled={page >= pagination.last_page} className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 disabled:opacity-40">
           <ChevronRightIcon className="h-4 w-4" />
         </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Fees Tab ────────────────────────────────────────────────────────────────
-
-interface CustomFees {
-  id?: string;
-  account_id?: string;
-  pix_fee_percent: number | null;
-  pix_fee_fixed: number | null;
-  credit_card_fee_percent: number | null;
-  credit_card_fee_fixed: number | null;
-  boleto_fee_percent: number | null;
-  boleto_fee_fixed: number | null;
-  withdrawal_pix_fee: number | null;
-  withdrawal_ted_fee: number | null;
-  instant_withdrawal_fee_percent: number | null;
-  antifraude_fee_percent: number | null;
-  antifraude_fee_fixed: number | null;
-  installment_fee_percent: number | null;
-  min_withdrawal: number | null;
-  holdback_percent: number | null;
-  holdback_days: number | null;
-  notes: string | null;
-}
-
-const defaultFees: CustomFees = {
-  pix_fee_percent: null,
-  pix_fee_fixed: null,
-  credit_card_fee_percent: null,
-  credit_card_fee_fixed: null,
-  boleto_fee_percent: null,
-  boleto_fee_fixed: null,
-  withdrawal_pix_fee: null,
-  withdrawal_ted_fee: null,
-  instant_withdrawal_fee_percent: null,
-  antifraude_fee_percent: null,
-  antifraude_fee_fixed: null,
-  installment_fee_percent: null,
-  min_withdrawal: null,
-  holdback_percent: null,
-  holdback_days: null,
-  notes: null,
-};
-
-function FeesTab({ customerId }: { customerId: string }) {
-  const queryClient = useQueryClient();
-  const [fees, setFees] = useState<CustomFees>(defaultFees);
-
-  const { data: feesData, isLoading } = useQuery({
-    queryKey: ['admin-customer-fees', customerId],
-    queryFn: async () => {
-      const res = await api.get(`/admin/customers/${customerId}/fees`);
-      return res.data;
-    },
-    enabled: !!customerId,
-  });
-
-  useEffect(() => {
-    if (feesData?.data) setFees(feesData.data);
-  }, [feesData]);
-
-  const saveMutation = useMutation({
-    mutationFn: async (payload: Partial<CustomFees>) => {
-      const res = await api.put(`/admin/customers/${customerId}/fees`, payload);
-      return res.data;
-    },
-    onSuccess: () => {
-      toast.success('Taxas atualizadas com sucesso');
-      queryClient.invalidateQueries({ queryKey: ['admin-customer-fees', customerId] });
-    },
-    onError: () => toast.error('Erro ao salvar taxas'),
-  });
-
-  const handleSave = () => {
-    const { id, account_id, ...payload } = fees;
-    saveMutation.mutate(payload);
-  };
-
-  const updateField = (field: keyof CustomFees, value: string) => {
-    setFees(prev => ({ ...prev, [field]: value === '' ? null : Number(value) }));
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-900 border-t-transparent" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="rounded-lg border border-gray-200 bg-white p-5">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900">Taxas Personalizadas</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Deixe em branco para usar as taxas padrão do sistema</p>
-          </div>
-          <button
-            onClick={handleSave}
-            disabled={saveMutation.isPending}
-            className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
-          >
-            {saveMutation.isPending ? 'Salvando...' : 'Salvar Taxas'}
-          </button>
-        </div>
-
-        {/* PIX */}
-        <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">PIX</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <FeeInput label="Taxa (%)" value={fees.pix_fee_percent} onChange={(v) => updateField('pix_fee_percent', v)} suffix="%" />
-            <FeeInput label="Taxa Fixa (R$)" value={fees.pix_fee_fixed} onChange={(v) => updateField('pix_fee_fixed', v)} prefix="R$" />
-          </div>
-        </div>
-
-        {/* Cartão de Crédito */}
-        <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Cartão de Crédito</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <FeeInput label="Taxa (%)" value={fees.credit_card_fee_percent} onChange={(v) => updateField('credit_card_fee_percent', v)} suffix="%" />
-            <FeeInput label="Taxa Fixa (R$)" value={fees.credit_card_fee_fixed} onChange={(v) => updateField('credit_card_fee_fixed', v)} prefix="R$" />
-          </div>
-        </div>
-
-        {/* Boleto */}
-        <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Boleto</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <FeeInput label="Taxa (%)" value={fees.boleto_fee_percent} onChange={(v) => updateField('boleto_fee_percent', v)} suffix="%" />
-            <FeeInput label="Taxa Fixa (R$)" value={fees.boleto_fee_fixed} onChange={(v) => updateField('boleto_fee_fixed', v)} prefix="R$" />
-          </div>
-        </div>
-
-        {/* Parcelamento */}
-        <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Parcelamento</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <FeeInput label="Taxa Parcela (%)" value={fees.installment_fee_percent} onChange={(v) => updateField('installment_fee_percent', v)} suffix="%" />
-          </div>
-        </div>
-
-        {/* Saques */}
-        <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Saques</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <FeeInput label="Taxa PIX (R$)" value={fees.withdrawal_pix_fee} onChange={(v) => updateField('withdrawal_pix_fee', v)} prefix="R$" />
-            <FeeInput label="Taxa TED (R$)" value={fees.withdrawal_ted_fee} onChange={(v) => updateField('withdrawal_ted_fee', v)} prefix="R$" />
-            <FeeInput label="Saque Instantâneo (%)" value={fees.instant_withdrawal_fee_percent} onChange={(v) => updateField('instant_withdrawal_fee_percent', v)} suffix="%" />
-            <FeeInput label="Saque Mínimo (R$)" value={fees.min_withdrawal} onChange={(v) => updateField('min_withdrawal', v)} prefix="R$" />
-          </div>
-        </div>
-
-        {/* Antifraude */}
-        <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Antifraude</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <FeeInput label="Taxa (%)" value={fees.antifraude_fee_percent} onChange={(v) => updateField('antifraude_fee_percent', v)} suffix="%" />
-            <FeeInput label="Taxa Fixa (R$)" value={fees.antifraude_fee_fixed} onChange={(v) => updateField('antifraude_fee_fixed', v)} prefix="R$" />
-          </div>
-        </div>
-
-        {/* Holdback */}
-        <div className="mb-6">
-          <h4 className="text-xs font-semibold uppercase text-gray-500 mb-3">Holdback / Reserva</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <FeeInput label="Holdback (%)" value={fees.holdback_percent} onChange={(v) => updateField('holdback_percent', v)} suffix="%" />
-            <FeeInput label="Dias de Holdback" value={fees.holdback_days} onChange={(v) => updateField('holdback_days', v)} suffix="dias" />
-          </div>
-        </div>
-
-        {/* Notas */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Observações</label>
-          <textarea
-            value={fees.notes || ''}
-            onChange={(e) => setFees(prev => ({ ...prev, notes: e.target.value || null }))}
-            rows={3}
-            maxLength={1000}
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none resize-none"
-            placeholder="Notas sobre taxas específicas deste cliente..."
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FeeInput({ label, value, onChange, prefix, suffix }: {
-  label: string;
-  value: number | null;
-  onChange: (value: string) => void;
-  prefix?: string;
-  suffix?: string;
-}) {
-  return (
-    <div>
-      <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>
-      <div className="relative">
-        {prefix && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">{prefix}</span>}
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          value={value ?? ''}
-          onChange={(e) => onChange(e.target.value)}
-          className={`w-full rounded-lg border border-gray-200 bg-gray-50 py-2 text-sm text-gray-900 focus:border-gray-400 focus:outline-none ${prefix ? 'pl-8 pr-3' : suffix ? 'pl-3 pr-12' : 'px-3'}`}
-          placeholder="Padrão"
-        />
-        {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">{suffix}</span>}
       </div>
     </div>
   );

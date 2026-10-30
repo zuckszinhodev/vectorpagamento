@@ -10,7 +10,7 @@ use App\Models\User;
 use App\Models\Account;
 use App\Models\Charge;
 use App\Models\AcquirerConfig;
-use App\Models\AccountCustomFee;
+use App\Services\SystemFeeService;
 use App\Models\AccountWallet;
 use App\Models\Withdrawal;
 use App\Models\AccountAcquirer;
@@ -616,73 +616,6 @@ class CustomerAdminController extends Controller
         ]);
     }
 
-    // ── Custom Fees ──────────────────────────────────────────────
-
-    public function getCustomFees(string $customerId): JsonResponse
-    {
-        $user = User::find($customerId);
-        if (!$user) {
-            return response()->json(['success' => false, 'message' => 'Usuário não encontrado'], 404);
-        }
-
-        $fees = \App\Models\AccountCustomFee::where('account_id', $user->account_id)->first();
-
-        return response()->json(['success' => true, 'data' => $fees]);
-    }
-
-    public function updateCustomFees(Request $request, string $customerId): JsonResponse
-    {
-        $user = User::find($customerId);
-        if (!$user) {
-            return response()->json(['success' => false, 'message' => 'Usuário não encontrado'], 404);
-        }
-
-        $validated = $request->validate([
-            'pix_fee_percent' => 'nullable|numeric|min:0|max:100',
-            'pix_fee_fixed' => 'nullable|numeric|min:0',
-            'credit_card_fee_percent' => 'nullable|numeric|min:0|max:100',
-            'credit_card_fee_fixed' => 'nullable|numeric|min:0',
-            'boleto_fee_percent' => 'nullable|numeric|min:0|max:100',
-            'boleto_fee_fixed' => 'nullable|numeric|min:0',
-            'withdrawal_pix_fee' => 'nullable|numeric|min:0',
-            'withdrawal_ted_fee' => 'nullable|numeric|min:0',
-            'instant_withdrawal_fee_percent' => 'nullable|numeric|min:0|max:100',
-            'antifraude_fee_percent' => 'nullable|numeric|min:0|max:100',
-            'antifraude_fee_fixed' => 'nullable|numeric|min:0',
-            'installment_fee_percent' => 'nullable|numeric|min:0|max:100',
-            'min_withdrawal' => 'nullable|numeric|min:0',
-            'holdback_percent' => 'nullable|numeric|min:0|max:100',
-            'holdback_days' => 'nullable|integer|min:0|max:365',
-            'notes' => 'nullable|string|max:1000',
-        ]);
-
-        $approvalCheck = $this->approvalService->requireApproval($request, [
-            'action_key' => 'admin.customer.update_fees',
-            'resource_type' => 'account',
-            'resource_id' => (string) $user->account_id,
-            'request_reason' => 'Atualizacao manual de taxas personalizadas',
-            'payload' => $validated,
-            'expires_minutes' => 30,
-        ]);
-
-        if (!($approvalCheck['approved'] ?? false)) {
-            return response()->json($approvalCheck['response'], $approvalCheck['http_status'] ?? 202);
-        }
-
-        $validated['set_by_user_id'] = $request->user()->id;
-
-        $fees = \App\Models\AccountCustomFee::updateOrCreate(
-            ['account_id' => $user->account_id],
-            $validated
-        );
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Taxas personalizadas atualizadas com sucesso',
-            'data' => $fees->fresh(),
-        ]);
-    }
-
     // ── Charges ──────────────────────────────────────────────────
 
     public function listCharges(Request $request, string $customerId): JsonResponse
@@ -1053,7 +986,6 @@ class CustomerAdminController extends Controller
                 'acquirer_key',
                 $approvedCharges->pluck('acquirer')->unique()->filter()
             )->get()->keyBy('acquirer_key');
-            $customFee = AccountCustomFee::where('account_id', $accountId)->first();
 
             $totalGross = 0;
             $totalFees = 0;
@@ -1065,20 +997,7 @@ class CustomerAdminController extends Controller
                     $feeAmount = 0;
                     $netAmount = $charge->amount;
                 } else {
-                    $acquirerConfig = $acquirerConfigs->get($charge->acquirer);
-                    $paymentMethod = is_string($charge->payment_method)
-                        ? trim($charge->payment_method)
-                        : '';
-                    $customGatewayFee = $paymentMethod !== ''
-                        ? $customFee?->calculateGatewayFee($charge->amount, $paymentMethod)
-                        : null;
-                    if ($acquirerConfig && !is_null($customGatewayFee)) {
-                        $feeAmount = $customGatewayFee;
-                    } elseif ($acquirerConfig) {
-                        $feeAmount = $acquirerConfig->calculateGatewayFee($charge->amount);
-                    } else {
-                        $feeAmount = (int) round($charge->amount * 0.05) + 200;
-                    }
+                    $feeAmount = app(SystemFeeService::class)->forCharge($charge, $acquirerConfigs->get($charge->acquirer));
                     $netAmount = $charge->amount - $feeAmount;
                 }
 
@@ -1169,7 +1088,6 @@ class CustomerAdminController extends Controller
                 'acquirer_key',
                 $approvedCharges->pluck('acquirer')->unique()->filter()
             )->get()->keyBy('acquirer_key');
-            $customFee = AccountCustomFee::where('account_id', $accountId)->first();
 
             $totalNet = 0;
             foreach ($approvedCharges as $charge) {
@@ -1181,19 +1099,7 @@ class CustomerAdminController extends Controller
                     $acquirerConfig = $charge->acquirer
                         ? $acquirerConfigs->get($charge->acquirer)
                         : null;
-                    $paymentMethod = is_string($charge->payment_method)
-                        ? trim($charge->payment_method)
-                        : '';
-                    $customGatewayFee = $paymentMethod !== ''
-                        ? $customFee?->calculateGatewayFee($charge->amount, $paymentMethod)
-                        : null;
-                    if ($acquirerConfig && !is_null($customGatewayFee)) {
-                        $feeAmount = $customGatewayFee;
-                    } elseif ($acquirerConfig) {
-                        $feeAmount = $acquirerConfig->calculateGatewayFee($charge->amount);
-                    } else {
-                        $feeAmount = (int) round($charge->amount * 0.05) + 200;
-                    }
+                    $feeAmount = app(SystemFeeService::class)->forCharge($charge, $acquirerConfig);
                     $netAmount = $charge->amount - $feeAmount;
                 }
 

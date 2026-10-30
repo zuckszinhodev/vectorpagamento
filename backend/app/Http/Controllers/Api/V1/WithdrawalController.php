@@ -14,6 +14,7 @@ use App\Models\AccountWallet;
 use App\Models\WalletAdjustment;
 use App\Models\SystemSetting;
 use App\Models\AccountCustomFee;
+use App\Services\SystemFeeService;
 use App\Services\AdminApprovalService;
 use App\Services\WithdrawalService;
 use Illuminate\Database\QueryException;
@@ -757,7 +758,7 @@ class WithdrawalController extends Controller
             'acquirer_key',
             $approvedCharges->pluck('acquirer')->unique()->filter()
         )->get()->keyBy('acquirer_key');
-        $customFee = AccountCustomFee::where('account_id', $accountId)->first();
+        $systemFees = app(SystemFeeService::class);
 
         $totalNet = 0;
         foreach ($approvedCharges as $charge) {
@@ -772,15 +773,7 @@ class WithdrawalController extends Controller
                 continue;
             }
 
-            $acquirerConfig = $acquirerConfigs->get($charge->acquirer);
-            $customGatewayFee = $customFee?->calculateGatewayFee($charge->amount, $charge->payment_method);
-            if ($acquirerConfig && !is_null($customGatewayFee)) {
-                $fee = $customGatewayFee;
-            } elseif ($acquirerConfig) {
-                $fee = $acquirerConfig->calculateGatewayFee($charge->amount);
-            } else {
-                $fee = (int) round($charge->amount * 0.05) + 200;
-            }
+            $fee = $systemFees->forCharge($charge, $acquirerConfigs->get($charge->acquirer));
             $chargeNet = $charge->amount - $fee;
 
             // Deduct splits sent to OTHER recipients from this charge's net (eager-loaded)
@@ -899,40 +892,10 @@ class WithdrawalController extends Controller
         try {
             $perPage = min($request->input('per_page', 20), 100);
 
-            $query = Withdrawal::with(['account.users']);
+            $query = $this->adminWithdrawalsQuery($request)->with(['account.users']);
 
-            // Filters
-            if ($request->filled('status')) {
-                $status = $request->input('status');
-                if ($status === 'all') {
-                    // No filter — return all statuses
-                } else {
-                    $query->where('status', $status);
-                }
-            }
-
-            // Search by customer name or email
-            if ($request->filled('search')) {
-                $search = addcslashes($request->input('search'), '%_\\');
-                $query->where(function ($q) use ($search) {
-                    $q->where('id', 'ilike', "%{$search}%")
-                      ->orWhereHas('account.users', function ($sub) use ($search) {
-                          $sub->where('name', 'ilike', "%{$search}%")
-                              ->orWhere('email', 'ilike', "%{$search}%");
-                      });
-                });
-            }
-
-            if ($request->filled('method')) {
-                $query->where('method', $request->input('method'));
-            }
-
-            if ($request->filled('date_from')) {
-                $query->whereDate('created_at', '>=', $request->input('date_from'));
-            }
-
-            if ($request->filled('date_to')) {
-                $query->whereDate('created_at', '<=', $request->input('date_to'));
+            if ($request->filled('status') && $request->input('status') !== 'all') {
+                $query->where('status', $request->input('status'));
             }
 
             $withdrawals = $query->orderBy('created_at', 'desc')->paginate($perPage);
@@ -978,6 +941,58 @@ class WithdrawalController extends Controller
             \Illuminate\Support\Facades\Log::error('WithdrawalController::adminList error', ['error' => $e->getMessage()]);
             return response()->json(['success' => true, 'data' => [], 'meta' => ['current_page' => 1, 'per_page' => 20, 'total' => 0, 'last_page' => 1]]);
         }
+    }
+
+    /**
+     * Admin: Totais por status com os mesmos filtros da lista, em todas as páginas.
+     */
+    public function adminSummary(Request $request): JsonResponse
+    {
+        $rows = $this->adminWithdrawalsQuery($request)
+            ->selectRaw('status, COUNT(*) as total, COALESCE(SUM(amount), 0) as amount')
+            ->groupBy('status')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'total' => (int) $rows->sum('total'),
+                'by_status' => $rows->mapWithKeys(fn ($row) => [
+                    $row->status => ['count' => (int) $row->total, 'amount' => (int) $row->amount],
+                ]),
+            ],
+        ]);
+    }
+
+    private function adminWithdrawalsQuery(Request $request)
+    {
+        $query = Withdrawal::query();
+
+        // Search by ID, customer name or email
+        if ($request->filled('search')) {
+            $search = '%' . mb_strtolower(addcslashes($request->input('search'), '%_\\')) . '%';
+            $query->where(function ($q) use ($search) {
+                $q->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', [$search])
+                  ->orWhereHas('account.users', function ($sub) use ($search) {
+                      $sub->whereRaw('LOWER(name) LIKE ?', [$search])
+                          ->orWhereRaw('LOWER(email) LIKE ?', [$search]);
+                  });
+            });
+        }
+
+        if ($request->filled('method')) {
+            $query->where('method', $request->input('method'));
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->input('date_from'));
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->input('date_to'));
+        }
+
+        return $query;
     }
 
     private function formatWithdrawalHistoryItem(Withdrawal $withdrawal): array
@@ -1064,43 +1079,38 @@ class WithdrawalController extends Controller
             if ($newStatus === 'approved') {
                 // Process via acquirer PIX OUT (instant)
                 if (in_array($withdrawal->status, ['pending_approval', 'pending'], true)) {
-                    try {
-                        if ($withdrawal->status === 'pending_approval') {
-                            $withdrawal->update(['status' => 'pending']);
-                            $withdrawal->refresh();
-                        }
-
-                        $withdrawalService = app(WithdrawalService::class);
-                        $result = $withdrawalService->processWithdrawal($withdrawal);
-
+                    if ($withdrawal->status === 'pending_approval') {
+                        $withdrawal->update(['status' => 'pending']);
                         $withdrawal->refresh();
-
-                        if ($result['success']) {
-                            $this->logAdminWithdrawalEvent($request, $withdrawal, 'admin_approved', [
-                                'processing' => [
-                                    'success' => true,
-                                    'acquirer' => $result['acquirer'] ?? null,
-                                    'transfer_id' => $result['transfer_id'] ?? null,
-                                ],
-                            ]);
-                            DB::commit();
-                            return response()->json([
-                                'success' => true,
-                                'data'    => $withdrawal,
-                                'processing' => $result,
-                                'message' => 'Saque aprovado e enviado para processamento via PIX OUT',
-                            ]);
-                        }
-                        // If PIX OUT failed, the service already marked it as failed
-                    } catch (\Exception $e) {
-                        Log::error('Admin withdrawal processing error', [
-                            'withdrawal_id' => $withdrawal->id,
-                            'error' => $e->getMessage(),
-                        ]);
                     }
+
+                    $withdrawalService = app(WithdrawalService::class);
+                    $result = $withdrawalService->processWithdrawal($withdrawal);
+
+                    $withdrawal->refresh();
+
+                    $this->logAdminWithdrawalEvent($request, $withdrawal, $result['success'] ? 'admin_approved' : 'admin_process_failed', [
+                        'processing' => [
+                            'success' => (bool) ($result['success'] ?? false),
+                            'error' => $result['error'] ?? null,
+                            'acquirer' => $result['acquirer'] ?? null,
+                            'transfer_id' => $result['transfer_id'] ?? null,
+                        ],
+                    ]);
+                    DB::commit();
+
+                    // A failed PIX OUT must never be reported as paid; use approve-manual for that.
+                    return response()->json([
+                        'success' => (bool) $result['success'],
+                        'data'    => $withdrawal,
+                        'processing' => $result,
+                        'message' => $result['success']
+                            ? 'Saque aprovado e enviado para processamento via PIX OUT'
+                            : 'Falha ao processar saque via adquirente: ' . ($result['error'] ?? ''),
+                    ], $result['success'] ? 200 : 422);
                 }
 
-                // Fallback: mark as completed manually
+                // Already processing at the acquirer: confirm as completed
                 $newStatus = 'completed';
             }
 
@@ -1385,8 +1395,9 @@ class WithdrawalController extends Controller
         } catch (\Throwable $e) {
             $activeAcquirer = null;
         }
-        $gatewayFeePercentage = (float) ($activeAcquirer?->gateway_fee_percentage ?? 5.00);
-        $gatewayFeeFixed = (float) ($activeAcquirer?->gateway_fee_fixed ?? 2.00);
+        $pixRate = app(SystemFeeService::class)->rate('pix');
+        $gatewayFeePercentage = (float) ($pixRate['percentage'] ?? $activeAcquirer?->gateway_fee_percentage ?? 5.00);
+        $gatewayFeeFixed = (float) ($pixRate['fixed'] ?? $activeAcquirer?->gateway_fee_fixed ?? 2.00);
 
         // Per-method custom transaction fees (null = use default)
         $customPixFeePercent = null;
@@ -1594,12 +1605,24 @@ class WithdrawalController extends Controller
         }
 
         $isRecoverableProcessing = $withdrawal->status === 'processing' && empty($withdrawal->acquirer_transfer_id);
+        $isRetryable = in_array($withdrawal->status, ['pending_approval', 'failed'], true);
 
-        if ($withdrawal->status !== 'pending' && !$isRecoverableProcessing) {
+        if ($withdrawal->status !== 'pending' && !$isRecoverableProcessing && !$isRetryable) {
             return response()->json([
                 'success' => false,
                 'message' => "Saque não está em estado processável manualmente (status={$withdrawal->status})",
             ], 422);
+        }
+
+        if ($isRetryable) {
+            $reopenError = $this->reopenWithdrawalForProcessing($withdrawal);
+            if ($reopenError !== null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $reopenError,
+                ], 422);
+            }
+            $withdrawal->refresh();
         }
 
         $approvalCheck = $this->approvalService->requireApproval($request, [
@@ -1651,6 +1674,158 @@ class WithdrawalController extends Controller
                 'success' => false,
                 'message' => 'Erro ao processar saque: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Admin: Approve a withdrawal manually — the PIX was paid outside the platform,
+     * so no acquirer is called. Only records the payout and settles the wallet.
+     */
+    public function adminApproveManual(Request $request, string $withdrawalId): JsonResponse
+    {
+        $validated = $request->validate([
+            'notes' => ['nullable', 'string', 'max:500'],
+            'reference' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $withdrawal = Withdrawal::lockForUpdate()->find($withdrawalId);
+
+            if (!$withdrawal) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Saque não encontrado',
+                ], 404);
+            }
+
+            $oldStatus = (string) $withdrawal->status;
+            $reservedStatuses = ['pending_approval', 'pending', 'processing'];
+
+            if ($oldStatus === 'processing' && !empty($withdrawal->acquirer_transfer_id)) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Saque já foi enviado à adquirente; aguarde a confirmação dela.',
+                ], 422);
+            }
+
+            if (!in_array($oldStatus, [...$reservedStatuses, 'failed'], true)) {
+                DB::rollBack();
+                return response()->json([
+                    'success' => false,
+                    'message' => "Saque não pode ser aprovado manualmente (status={$oldStatus})",
+                ], 422);
+            }
+
+            $wallet = AccountWallet::lockForUpdate()->where('account_id', $withdrawal->account_id)->first();
+            $amount = (int) $withdrawal->amount;
+
+            if ($oldStatus === 'failed') {
+                // Funds were returned to available when it failed: debit them again.
+                if (!$wallet || (int) $wallet->available_balance < $amount) {
+                    DB::rollBack();
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Saldo disponível insuficiente para aprovar este saque manualmente.',
+                    ], 422);
+                }
+                $wallet->decrement('available_balance', $amount);
+            } elseif ($wallet) {
+                $wallet->decrement('pending_balance', $amount);
+            }
+
+            $destination = $withdrawal->destination ?? [];
+            $destination['manual_payment'] = [
+                'approved_by' => $request->user()?->id,
+                'reference' => $validated['reference'] ?? null,
+                'approved_at' => now()->toIso8601String(),
+            ];
+
+            $withdrawal->update([
+                'status' => 'completed',
+                'processed_at' => now(),
+                'failure_reason' => null,
+                'acquirer' => $withdrawal->acquirer ?: 'manual',
+                'destination' => $destination,
+                'notes' => $validated['notes'] ?? $withdrawal->notes,
+            ]);
+
+            $this->logAdminWithdrawalEvent($request, $withdrawal, 'admin_approved_manual', [
+                'from' => $oldStatus,
+                'to' => 'completed',
+                'reference' => $validated['reference'] ?? null,
+                'reason' => $validated['notes'] ?? null,
+            ]);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Admin manual withdrawal approval error', [
+                'withdrawal_id' => $withdrawalId,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao aprovar saque manualmente',
+            ], 500);
+        }
+
+        try { app(\App\Services\AccountNotificationService::class)->withdrawalCompleted($withdrawal->fresh() ?? $withdrawal); } catch (\Throwable $e) { Log::warning('In-app notification (withdrawal completed) failed', ['withdrawal_id' => $withdrawal->id, 'error' => $e->getMessage()]); }
+
+        return response()->json([
+            'success' => true,
+            'data' => $withdrawal->fresh(),
+            'message' => 'Saque aprovado manualmente e marcado como pago',
+        ]);
+    }
+
+    /**
+     * Put a failed / awaiting-approval withdrawal back to `pending` so it can be sent
+     * to the acquirer again. A failed one had its funds released, so reserve them again.
+     *
+     * Returns an error message, or null on success.
+     */
+    private function reopenWithdrawalForProcessing(Withdrawal $withdrawal): ?string
+    {
+        try {
+            DB::beginTransaction();
+
+            $locked = Withdrawal::lockForUpdate()->find($withdrawal->id);
+
+            if ($locked->status === 'failed') {
+                $wallet = AccountWallet::lockForUpdate()->where('account_id', $locked->account_id)->first();
+                $amount = (int) $locked->amount;
+
+                if (!$wallet || (int) $wallet->available_balance < $amount) {
+                    DB::rollBack();
+                    return 'Saldo disponível insuficiente para reprocessar este saque.';
+                }
+
+                $wallet->decrement('available_balance', $amount);
+                $wallet->increment('pending_balance', $amount);
+            } elseif ($locked->status !== 'pending_approval') {
+                DB::rollBack();
+                return "Saque mudou de estado (status={$locked->status})";
+            }
+
+            $locked->update([
+                'status' => 'pending',
+                'failure_reason' => null,
+                'processed_at' => null,
+            ]);
+
+            DB::commit();
+            return null;
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to reopen withdrawal for processing', [
+                'withdrawal_id' => $withdrawal->id,
+                'error' => $e->getMessage(),
+            ]);
+            return 'Erro ao preparar saque para reprocessamento';
         }
     }
 

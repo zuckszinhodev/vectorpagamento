@@ -4,13 +4,13 @@ namespace App\Services;
 
 use App\Mail\PaymentApprovedCustomerMail;
 use App\Mail\PaymentApprovedMerchantMail;
+use App\Jobs\AnalyzeChargeRiskJob;
 use App\Models\Charge;
 use App\Models\Checkout;
 use App\Models\Transaction;
 use App\Models\AccountWallet;
 use App\Models\AccountAcquirer;
 use App\Models\AcquirerConfig;
-use App\Models\AccountCustomFee;
 use App\Models\SystemSetting;
 use App\Domain\Acquirer\Entities\Acquirer;
 use Illuminate\Support\Facades\DB;
@@ -221,6 +221,27 @@ class PaymentService
     }
 
     /**
+     * Agenda o antifraude (só observa). Falha ao agendar nunca pode afetar o pagamento.
+     * O IP da requisição só é o do comprador no checkout público; na API é o do servidor do seller.
+     */
+    private function queueRiskAnalysis(Charge $charge): void
+    {
+        try {
+            $ip = $charge->customer['ip'] ?? null;
+            if (!$ip && request()->is('api/v1/checkout/*', 'api/v1/pay/*')) {
+                $ip = request()->ip();
+            }
+
+            AnalyzeChargeRiskJob::dispatch($charge->id, $ip);
+        } catch (\Throwable $e) {
+            Log::warning('PaymentService: risk analysis not queued', [
+                'charge_id' => $charge->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Process payment based on method
      */
     public function processPayment(Charge $charge, array $paymentData = []): array
@@ -248,6 +269,8 @@ class PaymentService
                     'error' => 'Este método de pagamento está temporariamente indisponível.',
                 ];
             }
+
+            $this->queueRiskAnalysis($charge);
 
             // Route by account-specific acquirer order when configured; otherwise use global admin priority.
             $accountId = $charge->account_id;
@@ -2668,22 +2691,17 @@ class PaymentService
 
             $feeAmount = 0;
             $netAmount = $charge->amount;
+            $acquirerCost = null;
 
             if ($acquirerConfig) {
-                // Check for per-account custom gateway fee
-                $customFee = AccountCustomFee::where('account_id', $charge->account_id)->first();
-                $customGatewayFee = $customFee?->calculateGatewayFee($charge->amount, $charge->payment_method);
-
-                if (!is_null($customGatewayFee)) {
-                    $feeAmount = $customGatewayFee;
-                } else {
-                    // Default: total fee from acquirer config
-                    $feeAmount = $acquirerConfig->calculateTotalFee(
-                        $charge->amount,
-                        $charge->payment_method,
-                        (int) ($charge->installments ?? 1)
-                    );
-                }
+                // O seller paga a taxa do sistema; a da adquirente é custo nosso
+                $feeAmount = app(SystemFeeService::class)->calculate(
+                    (int) $charge->amount,
+                    $charge->payment_method,
+                    $acquirerConfig,
+                    (int) ($charge->installments ?? 1)
+                );
+                $acquirerCost = $acquirerConfig->calculateAcquirerFee((int) $charge->amount);
 
                 $netAmount = $charge->amount - $feeAmount;
             }
@@ -2692,6 +2710,7 @@ class PaymentService
             $freshCharge->update([
                 'fee_amount' => $feeAmount,
                 'net_amount' => $netAmount,
+                'acquirer_fee_amount' => $acquirerCost,
             ]);
 
             // Rolling reserve: hold a % of the net in blocked balance for N days.
